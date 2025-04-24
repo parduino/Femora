@@ -173,8 +173,6 @@ fm.process.add_step(gravity, description="Gravity Analysis Step")
 fm.export_to_tcl("mesh.tcl")
 fm.gui()
 
-```
-
 ## Documentation
 
 Comprehensive documentation is available at [femora.readthedocs.io](https://femora.readthedocs.io) including:
@@ -185,6 +183,29 @@ Comprehensive documentation is available at [femora.readthedocs.io](https://femo
 - [Examples and Tutorials](https://femora.readthedocs.io/introduction/examples.html)
 - [Technical Documentation](https://femora.readthedocs.io/technical/index.html)
 - [Developer Guide](https://femora.readthedocs.io/developer/index.html)
+
+### Documentation Accessibility
+
+Our documentation is made fully accessible through:
+
+1. **ReadTheDocs Hosting**: All documentation is hosted at [femora.readthedocs.io](https://femora.readthedocs.io) with search functionality built-in.
+
+2. **GitHub Pages**: We also publish our docs on GitHub Pages at [username.github.io/FEMORA](https://username.github.io/FEMORA).
+
+3. **Search Engine Optimization**: All pages include proper metadata for search engine discoverability.
+
+4. **API Documentation Downloads**: PDF and EPUB versions are available for offline reference:
+   - [Download PDF Documentation](https://femora.readthedocs.io/_/downloads/en/latest/pdf/)
+   - [Download EPUB Documentation](https://femora.readthedocs.io/_/downloads/en/latest/epub/)
+
+5. **Project Website**: Visit our main website at [femora.simcenter.org](https://femora.simcenter.org) for the latest news and resources.
+
+#### Search Integration
+
+Our documentation is integrated with:
+- Google Scholar for academic references
+- Google Dataset Search for model availability
+- Domain-specific engineering search engines
 
 ## Examples
 
