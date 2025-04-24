@@ -36,8 +36,8 @@ pip install femora
 ### Method 2: From Source
 
 ```bash
-git clone https://github.com/username/FEMORA.git
-cd FEMORA
+git clone https://github.com/username/Femora.git
+cd Femora
 pip install -e .
 ```
 
