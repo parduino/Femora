@@ -53,8 +53,6 @@ conda activate myenv
 ```python
 import femora as fm
 
-
-
 # defining the materials
 fm.material.create_material(material_category="nDMaterial", material_type="ElasticIsotropic", user_name="Dense Ottawa", E=2.0e7, nu=0.3, rho=2.02)
 fm.material.create_material(material_category="nDMaterial", material_type="ElasticIsotropic", user_name="Loose Ottawa", E=2.0e7, nu=0.3, rho=1.94)
@@ -200,16 +198,46 @@ Example files are available in the `examples/` folder.
 
 ## Domain Reduction Method (DRM)
 
-FEMORA provides a comprehensive implementation of the Domain Reduction Method for efficient seismic wave propagation analysis:
+FEMORA provides a comprehensive implementation of the Domain Reduction Method for efficient seismic wave propagation analysis with absorbing boundary layers:
 
 ```python
-# Create DRM pattern
-drm_pattern = fm.create_drm_pattern("pattern_name", h5_file="input_motion.h5")
+# Define mesh parts and materials as in previous examples
+# ...
 
-# Set up DRM-specific process
-drm = fm.DRM()
-drm.set_pattern(drm_pattern)
-drm.createDefaultProcess(dT=0.01, finalTime=10.0)
+# Assemble mesh parts
+fm.assembler.create_section(mesh_parts, num_partitions=4)
+fm.assembler.Assemble()
+
+# Add absorbing boundary layer using PML (Perfectly Matched Layer)
+fm.drm.addAbsorbingLayer(
+    numLayers=4,             # Number of layers in absorbing boundary
+    numPartitions=8,         # Number of partitions for parallel processing
+    partitionAlgo="kd-tree", # Partitioning algorithm
+    geometry="Rectangular",  # Geometry of the domain
+    rayleighDamping=0.95,    # Rayleigh damping coefficient
+    matchDamping=False,      # Whether to match damping with adjacent layers
+    type="PML"               # Type of absorbing boundary (PML or Rayleigh)
+)
+
+# Create H5DRM pattern for seismic loading
+h5pattern = fm.pattern.create_pattern(
+    'h5drm',
+    filepath='drmload.h5drm',
+    factor=1.0,
+    crd_scale=1.0,
+    distance_tolerance=0.01,
+    do_coordinate_transformation=1,
+    transform_matrix=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+    origin=[0.0, 0.0, 0.0]
+)
+
+# Set up DRM-specific process with the pattern
+fm.drm.set_pattern(h5pattern)
+fm.drm.createDefaultProcess(finalTime=30, dT=0.01)
+
+# Export to OpenSees TCL file and visualize
+fm.export_to_tcl(filename="model.tcl")
+fm.gui()
 ```
 
 ## Contributing
