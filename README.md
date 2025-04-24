@@ -53,33 +53,128 @@ conda activate myenv
 ```python
 import femora as fm
 
-# Initialize FEMORA
-model = fm.MeshMaker()
 
-# Define materials
-soil = fm.material.create_elastic_isotropic("soil", E=2e8, nu=0.3, rho=2000)
 
-# Define mesh dimensions and discretization
-model.add_box_region((-50, -50, -30), (50, 50, 0), (10, 10, 6), material=soil)
+# defining the materials
+fm.material.create_material(material_category="nDMaterial", material_type="ElasticIsotropic", user_name="Dense Ottawa", E=2.0e7, nu=0.3, rho=2.02)
+fm.material.create_material(material_category="nDMaterial", material_type="ElasticIsotropic", user_name="Loose Ottawa", E=2.0e7, nu=0.3, rho=1.94)
+fm.material.create_material(material_category="nDMaterial", material_type="ElasticIsotropic", user_name="Dense Montrey", E=2.0e7, nu=0.3, rho=2.018)
 
-# Define boundary conditions
-model.fix_node_group("bottom", (0, 0, -30), (0, 0, 0), (1, 1, 1))
-model.apply_absorbing_boundary("sides", exclude="top")
+DensOttawaEle = fm.element.create_element(element_type="stdBrick", ndof=3, material="Dense Ottawa", b1=0.0, b2=0.0, b3=-9.81 * 2.02)
+LooseOttawaEle = fm.element.create_element(element_type="stdBrick", ndof=3, material="Loose Ottawa", b1=0.0, b2=0.0, b3=-9.81 * 1.94)
+MontreyEle = fm.element.create_element(element_type="stdBrick", ndof=3, material="Dense Montrey", b1=0.0, b2=0.0, b3=-9.81 * 2.018)
 
-# Set up analysis
-model.analysis.set_solver_algorithm("Newton")
-model.analysis.set_integrator("Newmark", gamma=0.5, beta=0.25)
-model.analysis.set_numberer("RCM")
+# defining the mesh parts
+Xmin = -10.0
+Xmax = 10.
+Ymin = -10.0
+Ymax = 10.
+Zmin = -18.0
+thick1 = 2.6
+thick2 = 2.4
+thick3 = 5.0 
+thick4 = 6.0
+thick5 = 2.0
+dx = 1.0
+dy = 1.0
+dz1 = 1.3
+dz2 = 1.2
+dz3 = 1.0
+dz4 = 0.5
+dz5 = 0.5
+Nx = int((Xmax - Xmin)/dx)
+Ny = int((Ymax - Ymin)/dy)
 
-# Create recorders
-model.recorder.add_node_recorder("displacement", "nodes", ["disp"])
-model.recorder.add_element_recorder("stress", "elements", ["stress"])
+fm.meshPart.create_mesh_part(category="Volume mesh",
+                             mesh_part_type="Uniform Rectangular Grid",
+                             user_name="DensOttawa1",
+                             element=DensOttawaEle,
+                             region=fm.region.get_region(0),
+                             **{'X Min': Xmin, 'X Max': Xmax, 
+                                'Y Min': Ymin, 'Y Max': Ymax, 
+                                'Z Min': Zmin, 'Z Max': Zmin + thick1, 
+                                'Nx Cells': Nx, 'Ny Cells': Ny, 'Nz Cells': int(thick1/dz1)})
+Zmin += thick1
+fm.meshPart.create_mesh_part(category="Volume mesh",
+                             mesh_part_type="Uniform Rectangular Grid",
+                             user_name="DensOttawa2",
+                            element=DensOttawaEle,
+                            region=fm.region.get_region(0),
+                            **{'X Min': Xmin, 'X Max': Xmax, 
+                                'Y Min': Ymin, 'Y Max': Ymax, 
+                                'Z Min': Zmin, 'Z Max': Zmin + thick2, 
+                                'Nx Cells': Nx, 'Ny Cells': Ny, 'Nz Cells': int(thick2/dz2)})
 
-# Export to OpenSees
-model.export_to_tcl("mesh.tcl")
+Zmin += thick2
+fm.meshPart.create_mesh_part(category="Volume mesh",
+                                mesh_part_type="Uniform Rectangular Grid",
+                                user_name="DensOttawa3",
+                                element=DensOttawaEle,
+                                region=fm.region.get_region(0),
+                                **{'X Min': Xmin, 'X Max': Xmax,
+                                'Y Min': Ymin, 'Y Max': Ymax,
+                                'Z Min': Zmin, 'Z Max': Zmin + thick3,
+                                'Nx Cells': Nx, 'Ny Cells': Ny, 'Nz Cells': int(thick3/dz3)})
+Zmin += thick3
+fm.meshPart.create_mesh_part(category="Volume mesh",
+                                mesh_part_type="Uniform Rectangular Grid",
+                                user_name="LooseOttawa",
+                                element=LooseOttawaEle,
+                                region=fm.region.get_region(0),
+                                **{'X Min': Xmin, 'X Max': Xmax,
+                                'Y Min': Ymin, 'Y Max': Ymax,
+                                'Z Min': Zmin, 'Z Max': Zmin + thick4,
+                                'Nx Cells': Nx, 'Ny Cells': Ny, 'Nz Cells': int(thick4/dz4)})
+Zmin += thick4
+fm.meshPart.create_mesh_part(category="Volume mesh",
+                                mesh_part_type="Uniform Rectangular Grid",
+                                user_name="Montrey",
+                                element=MontreyEle,
+                                region=fm.region.get_region(0),
+                                **{'X Min': Xmin, 'X Max': Xmax,
+                                'Y Min': Ymin, 'Y Max': Ymax,
+                                'Z Min': Zmin, 'Z Max': Zmin + thick5,  
+                                'Nx Cells': Nx, 'Ny Cells': Ny, 'Nz Cells': int(thick5/dz5)})
 
-# Launch the GUI for visualization
-model.gui()
+
+
+#  Create assembly Sections
+fm.assembler.create_section(meshparts=["DensOttawa1", "DensOttawa2", "DensOttawa3"], num_partitions=2)
+fm.assembler.create_section(["LooseOttawa"], num_partitions=2)
+fm.assembler.create_section(["Montrey"], num_partitions=2)
+
+# Assemble the mesh parts
+fm.assembler.Assemble()
+
+
+# Create a TimeSeries for the uniform excitation
+timeseries = fm.timeSeries.create_time_series(series_type="path",filePath="kobe.acc",fileTime="kobe.time")
+
+# Create a pattern for the uniform excitation
+kobe = fm.pattern.create_pattern(pattern_type="uniformexcitation",dof=1, time_series=timeseries)
+
+
+# boundary conditions
+fm.constraint.mp.create_laminar_boundary(dofs=[1,2], direction=3)
+fm.constraint.sp.fixMacroZmin(dofs=[1,2,3])
+
+
+# Create a recorder for the whole model
+recorder = fm.recorder.create_recorder("vtkhdf", file_base_name="result.vtkhdf",resp_types=["disp", "vel", "accel", "stress3D6", "strain3D6", "stress2D3", "strain2D3"], delta_t=0.02)
+
+# Create a gravity analysis step
+gravity = fm.analysis.create_default_transient_analysis(username="gravity", dt=0.01, num_steps=50)
+
+
+# Add the recorder and gravity analysis step to the process
+fm.process.add_step(kobe, description="Uniform Excitation (Kobe record)")
+fm.process.add_step(recorder, description="Recorder of the whole model")
+fm.process.add_step(gravity, description="Gravity Analysis Step")
+
+
+fm.export_to_tcl("mesh.tcl")
+fm.gui()
+
 ```
 
 ## Documentation
