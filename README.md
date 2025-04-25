@@ -190,7 +190,7 @@ Our documentation is made fully accessible through:
 
 1. **ReadTheDocs Hosting**: All documentation is hosted at [femora.readthedocs.io](https://femora.readthedocs.io) with search functionality built-in.
 
-2. **GitHub Pages**: We also publish our docs on GitHub Pages at [username.github.io/FEMORA](https://amnp95.github.io/FEMORA).
+2. **GitHub Pages**: We also publish our docs on GitHub Pages [here](https://amnp95.github.io/FEMORA).
 
 3. **Search Engine Optimization**: All pages include proper metadata for search engine discoverability.
 
