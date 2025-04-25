@@ -190,15 +190,13 @@ Our documentation is made fully accessible through:
 
 1. **ReadTheDocs Hosting**: All documentation is hosted at [femora.readthedocs.io](https://femora.readthedocs.io) with search functionality built-in.
 
-2. **GitHub Pages**: We also publish our docs on GitHub Pages at [username.github.io/FEMORA](https://username.github.io/FEMORA).
+2. **GitHub Pages**: We also publish our docs on GitHub Pages at [username.github.io/FEMORA](https://amnp95.github.io/FEMORA).
 
 3. **Search Engine Optimization**: All pages include proper metadata for search engine discoverability.
 
 4. **API Documentation Downloads**: PDF and EPUB versions are available for offline reference:
    - [Download PDF Documentation](https://femora.readthedocs.io/_/downloads/en/latest/pdf/)
    - [Download EPUB Documentation](https://femora.readthedocs.io/_/downloads/en/latest/epub/)
-
-5. **Project Website**: Visit our main website at [femora.simcenter.org](https://femora.simcenter.org) for the latest news and resources.
 
 #### Search Integration
 
