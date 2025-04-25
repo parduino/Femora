@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "femora"
+version = "0.1.0"
+description = "Fast Efficient Meshing for OpenSees-based Resilience Analysis"
+readme = "README.md"
+authors = [
+    {name = "Amin Pakzad", email = "amnp95@uw.edu"},
+    {name = "Pedro Arduino", email = "parduino@uw.edu"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.8"
+dynamic = ["dependencies"]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[project.urls]
+Homepage = "https://github.com/amnp95/Femora"
+Documentation = "https://amnp95.github.io/Femora"
+Repository = "https://github.com/amnp95/Femora"
+
+[project.scripts]
+femora = "femora.main:main"
