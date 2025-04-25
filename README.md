@@ -172,7 +172,7 @@ fm.process.add_step(gravity, description="Gravity Analysis Step")
 
 fm.export_to_tcl("mesh.tcl")
 fm.gui()
-
+```
 ## Documentation
 
 Comprehensive documentation is available at [femora.readthedocs.io](https://femora.readthedocs.io) including:
