@@ -24,24 +24,46 @@ FEMORA (Fast Efficient Meshing for OpenSees-based Resilience Analysis) is a Pyth
 
 ### Requirements
 
-- Python 3.8 or higher
+- Python 3.9 or higher
 - OpenSees (for running exported models)
+
+### Using Virtual Environments (Recommended)
+
+It's recommended to install FEMORA in a virtual environment to avoid conflicts with other Python packages:
+
+```bash
+# Create a virtual environment
+python -m venv femora-env
+
+# Activate the virtual environment
+# On Windows
+femora-env\Scripts\activate
+# On Unix or MacOS
+source femora-env/bin/activate
+```
 
 ### Method 1: Using pip
 
 ```bash
+# Basic installation
 pip install femora
+
+# With GUI support
+pip install femora[gui]
+
+# Full installation with all dependencies
+pip install femora[all]
 ```
 
 ### Method 2: From Source
 
 ```bash
-git clone https://github.com/username/Femora.git
+git clone https://github.com/amnp95/Femora.git
 cd Femora
-pip install -e .
+pip install -e .          # Basic installation
+pip install -e ".[gui]"   # With GUI support
+pip install -e ".[all]"   # Full installation with all dependencies
 ```
-
-
 
 ## Documentation
 
@@ -54,8 +76,6 @@ Comprehensive documentation is available at [amnp95.github.io/Femora](https://am
 - [Technical Documentation](https://amnp95.github.io/Femora/technical/index.html)
 - [Developer Guide](https://amnp95.github.io/Femora/developer/index.html)
 
-
-
 ## Examples
 
 FEMORA includes several comprehensive examples:
@@ -63,9 +83,7 @@ FEMORA includes several comprehensive examples:
 1. **[3D Layered Soil Profile for Seismic Analysis](https://amnp95.github.io/Femora/introduction/example1.html)**
 2. **[Multi-layer Soil Model with Absorbing Boundaries](https://amnp95.github.io/Femora/introduction/example2.html)**
 
-
 Example files are available in the `examples/` folder.
-
 
 ## Contributing
 
