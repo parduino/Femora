@@ -45,7 +45,7 @@ pip install -e .
 
 ## Documentation
 
-Comprehensive documentation is available at [femora.readthedocs.io](https://femora.readthedocs.io) including:
+Comprehensive documentation is available at [amnp95.github.io/Femora](https://amnp95.github.io/Femora) including:
 
 - [Getting Started Guide](https://amnp95.github.io/Femora/introduction/getting_started.html)
 - [Installation Instructions](https://amnp95.github.io/Femora/introduction/installation.html)
@@ -60,9 +60,9 @@ Comprehensive documentation is available at [femora.readthedocs.io](https://femo
 
 FEMORA includes several comprehensive examples:
 
-1. **[3D Layered Soil Profile for Seismic Analysis](https://femora.readthedocs.io/introduction/example1.html)**
-2. **[Multi-layer Soil Model with Absorbing Boundaries](https://femora.readthedocs.io/introduction/example2.html)**
-3. **[Soil-Structure Interaction with Building on Multi-layered Soil](https://femora.readthedocs.io/introduction/example3.html)**
+1. **[3D Layered Soil Profile for Seismic Analysis](https://amnp95.github.io/Femora/introduction/example1.html)**
+2. **[Multi-layer Soil Model with Absorbing Boundaries](https://amnp95.github.io/Femora/introduction/example2.html)**
+
 
 Example files are available in the `examples/` folder.
 
@@ -96,7 +96,7 @@ If you use FEMORA in your research, please cite:
   author = {Pakzad, Amin},
   title = {FEMORA: Fast Efficient Meshing for OpenSees-based Resilience Analysis},
   year = {2025},
-  url = {https://github.com/username/FEMORA}
+  url = {https://github.com/amnp95/Femora}
 }
 ```
 
