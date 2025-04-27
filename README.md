@@ -25,7 +25,6 @@ FEMORA (Fast Efficient Meshing for OpenSees-based Resilience Analysis) is a Pyth
 ### Requirements
 
 - Python 3.9 or higher
-- OpenSees (for running exported models)
 
 ### Using Virtual Environments (Recommended)
 
@@ -111,7 +110,7 @@ If you use FEMORA in your research, please cite:
 
 ```bibtex
 @software{femora2025,
-  author = {Pakzad, Amin},
+  author = {Pakzad, Amin and Arduino, Pedro},
   title = {FEMORA: Fast Efficient Meshing for OpenSees-based Resilience Analysis},
   year = {2025},
   url = {https://github.com/amnp95/Femora}
