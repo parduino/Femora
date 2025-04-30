@@ -325,6 +325,25 @@ class Assembler:
         if self.AssembeledMesh is not None:
             del self.AssembeledMesh
             self.AssembeledMesh = None
+
+    def plot(self, **kwargs) -> None:
+        """
+        Plot the assembled mesh using PyVista.
+        
+        This method visualizes the assembled mesh for the Assembler instance.
+        It uses the PyVista plotting capabilities to render the mesh with
+        optional parameters for customization.
+
+        Args:
+            **kwargs: Additional keyword arguments to customize the plot (e.g., color, opacity)
+        
+        Raises:
+            ValueError: If no assembled mesh exists to plot
+        """
+        if self.AssembeledMesh is None:
+            raise ValueError("No assembled mesh exists to plot")
+        else:
+            self.AssembeledMesh.plot(**kwargs)
         
             
 
@@ -608,6 +627,27 @@ class AssemblySection:
             actor: PyVista actor to assign to this assembly section for visualization
         """
         self.actor = actor
+
+    def plot(self,**kwargs) -> None:
+
+        """
+        Plot the assembled mesh using PyVista.
+        
+        This method visualizes the assembled mesh for the assembly section.
+        It uses the PyVista plotting capabilities to render the mesh with
+        optional parameters for customization.
+
+        Args:
+            **kwargs: Additional keyword arguments to customize the plot (e.g., color, opacity)
+        
+        """
+        if self.mesh is None:
+            raise ValueError("Mesh has not been assembled yet")
+        else:
+            self.mesh.plot(**kwargs)
+        
+        
+
 
 
 
