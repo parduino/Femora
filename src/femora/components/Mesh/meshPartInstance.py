@@ -769,7 +769,9 @@ class ExternalMesh(MeshPart):
                 "Used for importing pre-generated meshes from external sources",
                 "Suitable for complex geometries created in other software",
                 "Useful when working with irregular or complex domain shapes",
-                "Can transform meshes with scaling, rotation, and translation operations"
+                "Can transform meshes with scaling, rotation, and translation operations",
+                "Right now it only supports one kind of element type, but it can be extended to support more",
+                "The compatibility of the element type is not checked, so it is the user's responsibility to check that the element type is compatible with the mesh part type"
             ],
             "limitations": [
                 "Quality and compatibility of imported meshes depends on the source",
@@ -786,4 +788,4 @@ class ExternalMesh(MeshPart):
         }
 
 # Register the Custom Mesh part type under the General mesh category
-MeshPartRegistry.register_mesh_part_type('General mesh', 'External Mesh', ExternalMesh)
+MeshPartRegistry.register_mesh_part_type('General mesh', 'External mesh', ExternalMesh)
