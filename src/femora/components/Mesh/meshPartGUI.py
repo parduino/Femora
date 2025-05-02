@@ -523,9 +523,9 @@ class MeshPartCreationDialog(QDialog):
             QMessageBox.warning(self, "Error", "Please select an element type before creating.")
             return
         
-        comp_elements = self.mesh_part_class.get_compatible_elements()
-        if element_type not in comp_elements:
-            QMessageBox.warning(self, "Error", f"Element type {element_type} is not compatible with this mesh part.\n Compatible elements are: {comp_elements}")
+        comp_elements = self.mesh_part_class.is_elemnt_compatible(element_type)
+        if not self.mesh_part_class.is_elemnt_compatible(element_type):
+            QMessageBox.warning(self, "Error", f"Element type {element_type} is not compatible with this mesh part.\n Compatible elements are: {self.mesh_part_class._compatible_elements}")
             return
 
         dialog = ElementCreationDialog(element_type, parent=self)
