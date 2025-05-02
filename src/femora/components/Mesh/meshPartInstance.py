@@ -9,12 +9,13 @@ Classes:
     StructuredRectangular3D: A class representing a 3D structured rectangular mesh part.
     CustomRectangularGrid3D: A class representing a 3D custom rectangular grid mesh part.
     GeometricStructuredRectangular3D: A class representing a 3D geometric structured rectangular mesh part.
+    CustomMesh: A class representing a custom mesh part that can load from a file or accept an existing PyVista mesh.
 
 Functions:
     generate_mesh: Generates a structured rectangular mesh.
     get_parameters: Returns a list of parameters for the mesh part type.
     validate_parameters: Validates the input parameters for the mesh part.
-    get_compatible_elements: Returns a list of compatible element types.
+    is_elemnt_compatible: Returns True if the element is compatible with the mesh part type.
     update_parameters: Updates the mesh part parameters.
     get_Notes: Returns notes for the mesh part type.
 
@@ -27,6 +28,7 @@ from typing import Dict, List, Tuple, Union
 from abc import ABC, abstractmethod
 import numpy as np
 import pyvista as pv
+import os
 from femora.components.Mesh.meshPartBase import MeshPart, MeshPartRegistry
 from femora.components.Element.elementBase import Element
 from femora.components.Region.regionBase import RegionBase
@@ -37,6 +39,7 @@ class StructuredRectangular3D(MeshPart):
     """
     Structured Rectangular 3D Mesh Part
     """
+    _compatible_elements = ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
     def __init__(self, user_name: str, element: Element, region: RegionBase=None,**kwargs):
         """
         Initialize a 3D Structured Rectangular Mesh Part
@@ -148,13 +151,13 @@ class StructuredRectangular3D(MeshPart):
         return valid_params
     
     @classmethod
-    def get_compatible_elements(cls) -> List[str]:
+    def is_elemnt_compatible(cls, element:str) -> bool:
         """
         Get the list of compatible element types
         Returns:
             List[str]: List of compatible element types
         """
-        return ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
+        return element in cls._compatible_elements
     
 
 
@@ -204,6 +207,7 @@ class CustomRectangularGrid3D(MeshPart):
     """
     Custom Rectangular Grid 3D Mesh Part
     """
+    _compatible_elements = ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
     def __init__(self, user_name: str, element: Element, region: RegionBase=None,**kwargs):
         """
         Initialize a 3D Custom Rectangular Grid Mesh Part
@@ -283,13 +287,13 @@ class CustomRectangularGrid3D(MeshPart):
         return valid_params
 
     @classmethod
-    def get_compatible_elements(cls) -> List[str]:
+    def is_elemnt_compatible(cls, element:str) -> bool:
         """
         Get the list of compatible element types
         Returns:
             List[str]: List of compatible element types
         """
-        return ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
+        return element in ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
 
 
     def update_parameters(self, **kwargs) -> None:
@@ -341,6 +345,7 @@ class GeometricStructuredRectangular3D(MeshPart):
     """
     Geometric Structured Rectangular 3D Mesh Part
     """
+    _compatible_elements = ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
     def __init__(self, user_name: str, element: Element, region: RegionBase=None,**kwargs):
         """
         Initialize a 3D Geometric Structured Rectangular Mesh Part
@@ -513,13 +518,13 @@ class GeometricStructuredRectangular3D(MeshPart):
         return valid_params
     
     @classmethod
-    def get_compatible_elements(cls) -> List[str]:
+    def is_elemnt_compatible(cls, element:str) -> bool:
         """
         Get the list of compatible element types
         Returns:
             List[str]: List of compatible element types
         """
-        return ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
+        return element in ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
     
     def update_parameters(self, **kwargs) -> None:
         """
@@ -561,3 +566,224 @@ class GeometricStructuredRectangular3D(MeshPart):
     
 # Register the 3D Geometric Structured Rectangular mesh part type
 MeshPartRegistry.register_mesh_part_type('Volume mesh', 'Geometric Rectangular Grid', GeometricStructuredRectangular3D)
+
+
+class ExternalMesh(MeshPart):
+    """
+    Custom Mesh Part that can load from a file or accept an existing PyVista mesh
+    """
+    _compatible_elements = ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
+    
+    def __init__(self, user_name: str, element: Element, region: RegionBase=None, **kwargs):
+        """
+        Initialize a Custom Mesh Part
+        
+        Args:
+            user_name (str): Unique user name for the mesh part
+            element (Element): Associated element
+            region (RegionBase, optional): Associated region
+            **kwargs: Additional keyword arguments
+                mesh (pv.UnstructuredGrid): Existing PyVista mesh to use
+                filepath (str): Path to mesh file to load
+                scale (float): Scale factor for the mesh
+                rotate_x (float): Rotation angle around X-axis in degrees
+                rotate_y (float): Rotation angle around Y-axis in degrees
+                rotate_z (float): Rotation angle around Z-axis in degrees
+                translate_x (float): Translation along X-axis
+                translate_y (float): Translation along Y-axis
+                translate_z (float): Translation along Z-axis
+                transform_args (Dict): Optional transformation arguments dictionary
+                    containing any of the above transformation parameters
+        """
+        super().__init__(
+            category='volume mesh',
+            mesh_type='Custom Mesh',
+            user_name=user_name,
+            element=element,
+            region=region
+        )
+        self.params = self.validate_parameters(**kwargs)
+        self.generate_mesh()
+
+    def generate_mesh(self) -> pv.UnstructuredGrid:
+        """
+        Generate a mesh by loading from file or using the provided mesh and apply transformations
+        
+        Returns:
+            pv.UnstructuredGrid: Generated mesh
+        """
+        if 'mesh' in self.params:
+            # Use the provided mesh
+            self.mesh = self.params['mesh']
+        elif 'filepath' in self.params:
+            # Load mesh from file
+            self.mesh = pv.read(self.params['filepath'])
+        else:
+            raise ValueError("Either 'mesh' or 'filepath' parameter is required")
+            
+        # Apply scale if specified
+        if 'scale' in self.params:
+            self.mesh.scale(self.params['scale'], inplace=True)
+            
+        # Apply rotations if specified (in X, Y, Z order)
+        if 'rotate_x' in self.params:
+            self.mesh.rotate_x(self.params['rotate_x'], inplace=True)
+        if 'rotate_y' in self.params:
+            self.mesh.rotate_y(self.params['rotate_y'], inplace=True)
+        if 'rotate_z' in self.params:
+            self.mesh.rotate_z(self.params['rotate_z'], inplace=True)
+            
+        # Apply translation if specified
+        translate_x = self.params.get('translate_x', 0)
+        translate_y = self.params.get('translate_y', 0)
+        translate_z = self.params.get('translate_z', 0)
+        
+        # Only translate if at least one component is non-zero
+        if translate_x != 0 or translate_y != 0 or translate_z != 0:
+            self.mesh.translate([translate_x, translate_y, translate_z], inplace=True)
+            
+        # Ensure we have an unstructured grid
+        if not isinstance(self.mesh, pv.UnstructuredGrid):
+            try:
+                self.mesh = self.mesh.cast_to_unstructured_grid()
+            except Exception as e:
+                raise ValueError(f"Failed to convert mesh to unstructured grid: {str(e)}")
+            
+        return self.mesh
+
+    @classmethod
+    def get_parameters(cls) -> List[Tuple[str, str]]:
+        """
+        Get the list of parameters for this mesh part type.
+        
+        Returns:
+            List[Tuple[str, str]]: List of parameter names and descriptions
+        """
+        return [
+            ("mesh", "Existing PyVista mesh object (pv.UnstructuredGrid or convertible)"),
+            ("filepath", "Path to mesh file to load (str)"),
+            ("scale", "Scale factor for the mesh (float)"),
+            ("rotate_x", "Rotation angle around X-axis in degrees (float)"),
+            ("rotate_y", "Rotation angle around Y-axis in degrees (float)"),
+            ("rotate_z", "Rotation angle around Z-axis in degrees (float)"),
+            ("translate_x", "Translation along X-axis (float)"),
+            ("translate_y", "Translation along Y-axis (float)"),
+            ("translate_z", "Translation along Z-axis (float)"),
+        ]
+    
+    @classmethod
+    def validate_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str, pv.UnstructuredGrid, Dict]]:
+        """
+        Check if the mesh part input parameters are valid.
+        
+        Returns:
+            Dict[str, Union[int, float, str, pv.UnstructuredGrid, Dict]]: Dictionary of parameters with valid values
+        """
+        valid_params = {}
+        
+        # Check if either mesh or filepath is provided
+        if 'mesh' in kwargs:
+            try:
+                # Verify it's a PyVista mesh
+                mesh = kwargs['mesh']
+                if not isinstance(mesh, (pv.UnstructuredGrid, pv.PolyData, pv.StructuredGrid)):
+                    raise ValueError("'mesh' parameter must be a PyVista mesh")
+                valid_params['mesh'] = mesh
+            except Exception as e:
+                raise ValueError(f"Invalid mesh object: {str(e)}")
+        elif 'filepath' in kwargs:
+            filepath = kwargs['filepath']
+            if not isinstance(filepath, str):
+                raise ValueError("'filepath' parameter must be a string")
+            if not os.path.exists(filepath):
+                raise FileNotFoundError(f"Mesh file not found: {filepath}")
+            valid_params['filepath'] = filepath
+        else:
+            raise ValueError("Either 'mesh' or 'filepath' parameter is required")
+        
+        # Process transformation parameters
+        transform_params = ['scale', 'rotate_x', 'rotate_y', 'rotate_z', 
+                           'translate_x', 'translate_y', 'translate_z']
+        
+        # Handle transform_args dict if provided
+        if 'transform_args' in kwargs and isinstance(kwargs['transform_args'], dict):
+            # Extract parameters from transform_args
+            for param in transform_params:
+                if param in kwargs['transform_args']:
+                    try:
+                        valid_params[param] = float(kwargs['transform_args'][param])
+                    except ValueError:
+                        raise ValueError(f"Transform parameter '{param}' must be a number")
+        
+        # Direct parameters override those in transform_args
+        for param in transform_params:
+            if param in kwargs:
+                try:
+                    valid_params[param] = float(kwargs[param])
+                except ValueError:
+                    raise ValueError(f"Parameter '{param}' must be a number")
+                    
+        # Scale must be positive if provided
+        if 'scale' in valid_params and valid_params['scale'] <= 0:
+            raise ValueError("Scale factor must be greater than 0")
+            
+        return valid_params
+    
+    @classmethod
+    def is_elemnt_compatible(cls, element:str) -> bool:
+        """
+        Check if an element type is compatible with this mesh part
+        
+        Args:
+            element (str): Element type name to check
+            
+        Returns:
+            bool: True if compatible, False otherwise
+        """
+        return element in cls._compatible_elements
+    
+    def update_parameters(self, **kwargs) -> None:
+        """
+        Update mesh part parameters
+        
+        Args:
+            **kwargs: Keyword arguments to update
+        """
+        # Merge with existing parameters to maintain required params
+        merged_params = {**self.params, **kwargs}
+        validated_params = self.validate_parameters(**merged_params)
+        self.params = validated_params
+        self.generate_mesh()  # Regenerate the mesh with new parameters
+
+    @staticmethod
+    def get_Notes() -> Dict[str, Union[str, list]]:
+        """
+        Get notes for the mesh part type
+        
+        Returns:
+            Dict[str, Union[str, list]]: Dictionary containing notes about the mesh part
+        """
+        return {
+            "description": "Handles custom meshes imported from files or existing PyVista meshes",
+            "usage": [
+                "Used for importing pre-generated meshes from external sources",
+                "Suitable for complex geometries created in other software",
+                "Useful when working with irregular or complex domain shapes",
+                "Can transform meshes with scaling, rotation, and translation operations"
+            ],
+            "limitations": [
+                "Quality and compatibility of imported meshes depends on the source",
+                "Some mesh types may require conversion to unstructured grid",
+                "Not all mesh formats preserve all required metadata"
+            ],
+            "tips": [
+                "Ensure imported meshes have appropriate element types for analysis",
+                "Check mesh quality after import (aspect ratio, skewness, etc.)",
+                "Parameters can be provided directly or in the transform_args dict",
+                "Transformations are applied in this order: scale → rotate → translate",
+                "Common file formats include .vtk, .vtu, .stl, .obj, and .ply"
+            ]
+        }
+
+# Register the Custom Mesh part type under the General mesh category
+MeshPartRegistry.register_mesh_part_type('General mesh', 'External Mesh', ExternalMesh)
