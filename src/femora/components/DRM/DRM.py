@@ -119,7 +119,7 @@ class DRM:
                                       numberer=self.meshmaker.analysis.numberer.get_numberer("RCM"),
                                       system=self.meshmaker.analysis.system.create_system(system_type="mumps",icntl14=200, icntl7=7),
                                       algorithm=self.meshmaker.analysis.algorithm.create_algorithm(algorithm_type="modifiednewton", factor_once=True),
-                                      test=self.meshmaker.analysis.test.create_test("relativeenergyincr",tol=1e-4, max_iter=10, print_flag=2),
+                                      test=self.meshmaker.analysis.test.create_test("energyincr",tol=1e-4, max_iter=10, print_flag=5),
                                       integrator=self.meshmaker.analysis.integrator.create_integrator(integrator_type="newmark", gamma=0.5, beta=0.25, form="D"),
                                       dt=dT,
                                       num_steps=20,
@@ -130,7 +130,7 @@ class DRM:
                                         numberer=self.meshmaker.analysis.numberer.get_numberer("RCM"),
                                         system=self.meshmaker.analysis.system.create_system(system_type="mumps",icntl14=200, icntl7=7),
                                         algorithm=self.meshmaker.analysis.algorithm.create_algorithm(algorithm_type="modifiednewton", factor_once=True),
-                                        test=self.meshmaker.analysis.test.create_test("relativeenergyincr",tol=1e-4, max_iter=10, print_flag=2),
+                                        test=self.meshmaker.analysis.test.create_test("energyincr",tol=1e-4, max_iter=10, print_flag=5),
                                         integrator=self.meshmaker.analysis.integrator.create_integrator(integrator_type="newmark", gamma=0.5, beta=0.25, form="D"),
                                         dt=dT,
                                         num_steps=50,
@@ -143,7 +143,7 @@ class DRM:
                                     numberer=self.meshmaker.analysis.numberer.get_numberer("RCM"),
                                     system=self.meshmaker.analysis.system.create_system(system_type="mumps",icntl14=200, icntl7=7),
                                     algorithm=self.meshmaker.analysis.algorithm.create_algorithm(algorithm_type="modifiednewton", factor_once=True),
-                                    test=self.meshmaker.analysis.test.create_test("relativeenergyincr",tol=1e-4, max_iter=10, print_flag=2),
+                                    test=self.meshmaker.analysis.test.create_test("energyincr",tol=1e-4, max_iter=10, print_flag=5),
                                     integrator=self.meshmaker.analysis.integrator.create_integrator(integrator_type="newmark", gamma=0.5, beta=0.25, form="D"),
                                     dt=dT,
                                     final_time=finalTime,
@@ -157,7 +157,7 @@ class DRM:
         # self.meshmaker.process.add_step(component=c5, description="Fixing Zmin")
         self.meshmaker.process.add_step(component=GravityElastic, description="Analysis Gravity Elastic (Transient)")
         self.meshmaker.process.add_step(component=GravityPlastic, description="Analysis Gravity Plastic (Transient)")
-        
+    
         self.meshmaker.process.add_step(component=vtkRecordr, description="Recorder vtkhdf")
 
         self.meshmaker.process.add_step(component=self.h5drmpattern, description="Pattern H5DRM")
