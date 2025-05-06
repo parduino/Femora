@@ -7,9 +7,10 @@ from femora.components.Constraint.spConstraint import SPConstraint
 from femora.components.Pattern.patternBase import Pattern
 from femora.components.Recorder.recorderBase import Recorder
 from femora.components.Analysis.analysis import Analysis
+from femora.components.Actions.action import Action
 
 # Define a union type for all components that can be used in the process
-ProcessComponent = Union[SPConstraint, mpConstraint, Pattern, Recorder, Analysis]
+ProcessComponent = Union[SPConstraint, mpConstraint, Pattern, Recorder, Analysis, Action]
 
 class ProcessManager:
     """
@@ -52,8 +53,19 @@ class ProcessManager:
             int: Index of the added step
         """
         # Store a weak reference to the component
-        component_ref = weakref.ref(component)
-        # component_ref = component
+        if not isinstance(component, Action):
+            # If the component is not an Action, store a weak reference
+            component_ref = weakref.ref(component)
+        elif isinstance(component, Action):
+            # If the component is an Action, store a strong reference
+            # This is because Actions are not expected to be weakly referenced
+            # and should be kept alive for the duration of the process
+            component_ref = component
+        else:
+            raise TypeError("Invalid component type. Must be one of the allowed types.")
+        
+
+
         
         step = {
             "component": component_ref,
@@ -141,7 +153,9 @@ class ProcessManager:
         tcl_script = ""
         for step in self.steps:
             component = step["component"]
-            component = component() if component else None
+            if isinstance(component, weakref.ref):
+                # If it's a weak reference, resolve it
+                component = component()
             description = step["description"]
             tcl_script += f"# {description} ======================================\n\n"
             tcl_script += f"{component.to_tcl()}\n\n\n"
