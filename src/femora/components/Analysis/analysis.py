@@ -220,6 +220,9 @@ class Analysis(AnalysisComponent):
         
         # Generate TCL commands for each component
         commands = []
+        commands.append("if {$pid == 0} {" + f'puts "{120*"="}" ' + "}")
+        commands.append("if {$pid == 0} {" + f'puts "Starting analysis : {self.name}"' + "}")
+        commands.append(commands[0])
         commands.append(self.constraint_handler.to_tcl())
         commands.append(self.numberer.to_tcl())
         commands.append(self.system.to_tcl())
@@ -242,8 +245,9 @@ class Analysis(AnalysisComponent):
             else:
                 commands.append(f"set AnalysisStep 0")
                 commands.append("while {"+f" $AnalysisStep < {self.num_steps}"+"} {")
+                commands.append('\tif {$pid==0} {puts "$AnalysisStep' +f'/{self.num_steps}"' +"}")
                 commands.append(f"\tset Ok [analyze 1 {self.dt}]")   
-                commands.append(f"\tincr $AnalysisStep 1")
+                commands.append(f"\tincr AnalysisStep 1")
                 commands.append("}")
 
         # wipe analysis command
