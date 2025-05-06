@@ -160,4 +160,46 @@ class exit(Action):
         return "exit"
 
 
+class ActionManager:
+    """
+    A container for all action classes in femora.
+    
+    This class provides direct access to the action classes rather than instances,
+    allowing users to create instances when needed by calling the class.
+    """
+    _instance = None
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(ActionManager, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+    
+    def __init__(self):
+        if self._initialized:
+            return
+        self._initialized = True
         
+        # Store the action classes directly
+        self.wipe = wipe
+        self.wipeAnalysis = wipeAnalysis
+        self.updateMaterialStageToElastic = updateMaterialStageToElastic
+        self.updateMaterialStageToPlastic = updateMaterialStageToPlastic
+        self.reset = reset
+        self.loadConst = loadConst
+        self.exit = exit
+        self.seTime = seTime
+    
+    @classmethod
+    def get_instance(cls):
+        """
+        Get the singleton instance of ActionManager.
+        
+        Returns:
+            ActionManager: The singleton instance
+        """
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+
