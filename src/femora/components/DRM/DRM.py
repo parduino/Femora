@@ -4,7 +4,7 @@ from pyvista import Cube, MultiBlock, StructuredGrid
 import tqdm
 from pykdtree.kdtree import KDTree as pykdtree
 from femora.components.Pattern.patternBase import H5DRMPattern
-
+from femora.components.Actions.action import ActionManager
 class DRM:
     """
     Singleton class for Domain Reduction Method helper functions
@@ -149,7 +149,7 @@ class DRM:
                                     final_time=finalTime,
                                     )
         
-
+        setTime = ActionManager().seTime(pseudo_time=0.0)
         # self.meshmaker.process.add_step(component=c1, description="Fixing Xmax")
         # self.meshmaker.process.add_step(component=c2, description="Fixing Xmin")   
         # self.meshmaker.process.add_step(component=c3, description="Fixing Ymax")
@@ -157,7 +157,9 @@ class DRM:
         # self.meshmaker.process.add_step(component=c5, description="Fixing Zmin")
         self.meshmaker.process.add_step(component=GravityElastic, description="Analysis Gravity Elastic (Transient)")
         self.meshmaker.process.add_step(component=GravityPlastic, description="Analysis Gravity Plastic (Transient)")
-    
+
+        self.meshmaker.process.add_step(component=setTime, description="Set Time to zero after gravity analysis")
+
         self.meshmaker.process.add_step(component=vtkRecordr, description="Recorder vtkhdf")
 
         self.meshmaker.process.add_step(component=self.h5drmpattern, description="Pattern H5DRM")
