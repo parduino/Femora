@@ -158,6 +158,25 @@ class exit(Action):
 
     def to_tcl(self) -> str:
         return "exit"
+    
+    
+class tcl(Action):
+    """
+    Action to execute a TCL command.
+
+    This action allows the execution of a TCL command directly.
+    """
+    def __init__(self, command: str):
+        """
+        Initialize the tcl action with a command.
+
+        Args:
+            command (str): The TCL command to execute.
+        """
+        self.command = command
+
+    def to_tcl(self) -> str:
+        return self.command
 
 
 class ActionManager:
