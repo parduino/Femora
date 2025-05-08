@@ -159,7 +159,7 @@ class exit(Action):
     def to_tcl(self) -> str:
         return "exit"
     
-    
+
 class tcl(Action):
     """
     Action to execute a TCL command.
@@ -208,6 +208,7 @@ class ActionManager:
         self.loadConst = loadConst
         self.exit = exit
         self.seTime = seTime
+        self.tcl = tcl
 
     
     
