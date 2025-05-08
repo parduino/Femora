@@ -77,19 +77,33 @@ class ProcessManager:
 
     def insert_step(self, index: int, component: ProcessComponent, description: str = "") -> bool:
         """
-        Insert a step at a specific position
+        Insert a step at a specific position. Allows for negative indexing.
         
         Args:
-            index: Position to insert the step
+            index: Position to insert the step (negative index allowed)
             component: The component object to use in this step (must be one of the allowed component types)
             description: Description of the step
             
         Returns:
             bool: True if successful, False otherwise
         """
+        # Adjust negative index to positive index
+        if index < 0:
+            index += len(self.steps) + 1
+
         if 0 <= index <= len(self.steps):
-            # Store a weak reference to the component
-            component_ref = weakref.ref(component)
+
+            if not isinstance(component, Action):
+                # If the component is not an Action, store a weak reference
+                component_ref = weakref.ref(component)
+            elif isinstance(component, Action):
+                # If the component is an Action, store a strong reference
+                # This is because Actions are not expected to be weakly referenced
+                # and should be kept alive for the duration of the process
+                component_ref = component
+            else:
+                raise TypeError("Invalid component type. Must be one of the allowed types.")
+
             
             step = {
                 "component": component_ref,
@@ -104,6 +118,7 @@ class ProcessManager:
                 
             return True
         return False
+
 
     def remove_step(self, index: int) -> bool:
         """
