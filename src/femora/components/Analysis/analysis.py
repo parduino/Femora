@@ -220,7 +220,7 @@ class Analysis(AnalysisComponent):
         
         # Generate TCL commands for each component
         commands = []
-        commands.append("if {$pid == 0} {" + f'puts "{120*"="}" ' + "}")
+        commands.append("if {$pid == 0} {" + f'puts [string repeat "=" 120] ' + "}")
         commands.append("if {$pid == 0} {" + f'puts "Starting analysis : {self.name}"' + "}")
         commands.append(commands[0])
         commands.append(self.constraint_handler.to_tcl())
