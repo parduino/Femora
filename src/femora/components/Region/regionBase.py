@@ -614,6 +614,16 @@ class RegionManager:
         """
         RegionBase.print_regions()
 
+    def GlobalRegion(self):
+        """
+        Get the GlobalRegion instance.
+        
+        Returns:
+            GlobalRegion: The global region instance
+        """
+        return RegionBase.get_region(0)
+    
+    
 if __name__ == "__main__":
     from femora.components.Damping.dampingBase import RayleighDamping, ModalDamping
     # ---- Test Global Region ----
