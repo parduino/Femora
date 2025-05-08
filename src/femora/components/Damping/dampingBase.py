@@ -194,7 +194,7 @@ class RayleighDamping(DampingBase):
 
     def to_tcl(self) -> str:
         """Returns the TCL code of the damping"""
-        res = f"# damping rayleigh {self.tag} {self.alphaM} {self.betaK} {self.betaKInit} {self.betaKComm}"
+        res = f"# damping rayleigh {self.tag} {self.alphaM} {self.betaK} {self.betaKInit} {self.betaKComm} (normal rayleigh damping)"
         return res
     
     @staticmethod
@@ -419,6 +419,11 @@ class FrequencyRayleighDamping(RayleighDamping):
     @staticmethod
     def get_Type() -> str:
         return "Frequency Rayleigh"
+    
+    def to_tcl(self) -> str:
+        """Returns the TCL code of the damping"""
+        res = f"# damping rayleigh {self.tag} {self.alphaM} {self.betaK} {self.betaKInit} {self.betaKComm} (frequency rayleigh damping with f1 = {self.f1} and f2 = {self.f2} and damping factor = {self.dampingFactor})"
+        return res
 
 
 
