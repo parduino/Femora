@@ -14,17 +14,19 @@ radius = 85.0  # Radius of the semihemisphere
 
 # according to the center of the semihemisphere and it raduis the bounds
 # of the mesh is as follows:
-#       xmin = center_x - radius = - 55.0
-#       xmax = center_x + radius = 55.0
-#       ymin = center_y - radius = - 55.0
-#       ymax = center_y + radius = 55.0
+#       xmin = center_x - radius = - 85.0
+#       xmax = center_x + radius = 85.0
+#       ymin = center_y - radius = - 85.0
+#       ymax = center_y + radius = 85.0
 #       zmin = center_z - radius = - 15.0
 #       zmax = center_z + radius = 40.0
-# so according to the above values only the layer 1 and layer 2 are intersecting with the semihemisphere
-# lets create 
+# so according to the below values only the layer 1 and layer 2 are intersecting with the semihemisphere
 
 
 
+# =========================================================
+# Layering and initial information
+# =========================================================
 
 # layers [ layer, rho(m/ton), vp(m/s), vs(m/s), xi_s, xi_p, thickness(m) ]
 layers = [
@@ -57,12 +59,44 @@ Ny = int((ymax-ymin)/dy)
 
 
 
+# =========================================================
+# Defining soft material for the basin
+# =========================================================
+# using Soft material in the basin
+BASIN = True
+softMat_vs = 150
+softMat_vp = 300
+softMat_xi_s = 0.03
+softMat_xi_p = 0.01
+softMat_rho  = 1.8
+softMat_vs_vp_ratio   = (softMat_vp / softMat_vs) ** 2
+softMat_nu            = (softMat_vs_vp_ratio - 2) / (2 * (softMat_vs_vp_ratio - 1))
+softMat_E = 2 * softMat_rho * (softMat_vs ** 2) * (1 + softMat_nu)
+# softMat_E = softMat_E / 1000.
+# softMat_rho = softMat_rho / 1000.
+sofmat = fm.material.create_material("nDMaterial", "ElasticIsotropic",
+                                user_name=f"softMaterial",
+                                E=softMat_E, nu=softMat_nu, rho=softMat_rho)
+
+softele = fm.element.create_element(element_type="stdBrick",
+                                ndof=3,
+                                material=sofmat,
+                                b1=0,
+                                b2=0,
+                                b3=0)
+softMat_damp = fm.damping.create_damping("frequency rayleigh", dampingFactor=softMat_xi_s, f1=3, f2=15)
+softMat_reg = fm.region.create_region("elementRegion", damping=softMat_damp)
+
+
+# =========================================================
+# Defining a helpher function
+# =========================================================
 def helperfunction(layer, rho, vp, vs, xi_s, xi_p, thickness):
     vp_vs_ratio = (vp / vs) ** 2
     nu = (vp_vs_ratio - 2) / (2 * (vp_vs_ratio - 1))
     E = 2 * rho * (vs ** 2) * (1 + nu)
-    E = E / 1000
-    rho = rho / 1000
+    # E = E / 1000.
+    # rho = rho / 1000.
     mat = fm.material.create_material("nDMaterial", "ElasticIsotropic",
                                 user_name=f"Layer{layer}",
                                 E=E, nu=nu, rho=rho)
@@ -180,9 +214,16 @@ fm.meshPart.create_mesh_part("General mesh", "External mesh",
                         region=reg,
                         mesh=boxwithhole)
 
-fm.meshPart.create_mesh_part("General mesh", "External mesh",
-                                      user_name=f"basin{layer}",
-                                      element=ele,
+if BASIN:
+    fm.meshPart.create_mesh_part("General mesh", "External mesh",
+                                        user_name=f"basin{layer}",
+                                        element=softele,
+                                        region=softMat_reg,
+                                        mesh=semihemisphere)
+else:
+    fm.meshPart.create_mesh_part("General mesh", "External mesh",
+                                        user_name=f"basin{layer}",
+                                        element=ele,
                                         region=reg,
                                         mesh=semihemisphere)
 # =========================================================
@@ -219,11 +260,57 @@ fm.meshPart.create_mesh_part("General mesh", "External mesh",
                         region=reg,
                         mesh=boxwithhole)
 
-fm.meshPart.create_mesh_part("General mesh", "External mesh",
-                                      user_name=f"basin{layer}",
-                                      element=ele,
-                                        region=reg,
-                                        mesh=semihemisphere)
+
+if BASIN:
+    fm.meshPart.create_mesh_part("General mesh", "External mesh",
+                                            user_name=f"basin{layer}",
+                                            element=softele,
+                                            region=softMat_reg,
+                                            mesh=semihemisphere)
+else:
+    fm.meshPart.create_mesh_part("General mesh", "External mesh",
+                                            user_name=f"basin{layer}",
+                                            element=ele,
+                                            region=reg,
+                                            mesh=semihemisphere)
+# =========================================================
+# plotting if you want to see the mesh
+# =========================================================
+PLOTTING = False
+if PLOTTING:
+    pl = pv.Plotter()
+    pl.add_mesh(fm.meshPart.get_mesh_part("basin1").mesh, show_edges=True, color="red", opacity=1.0)
+    pl.add_mesh(fm.meshPart.get_mesh_part("basin2").mesh, show_edges=True, color="blue", opacity=1.0)
+    pl.show_axes_all()
+    pl.show_grid()
+    # pl.export_html("basin.html")
+    pl.show()
+
+    pl = pv.Plotter()
+    pl.add_mesh(fm.meshPart.get_mesh_part("Layer1").mesh, show_edges=True, color="red", opacity=1.0)
+    pl.add_mesh(fm.meshPart.get_mesh_part("Layer2").mesh, show_edges=True, color="blue", opacity=1.0)
+    pl.add_mesh(fm.meshPart.get_mesh_part("Layer3").mesh, show_edges=True, color="green", opacity=1.0)
+    pl.add_mesh(fm.meshPart.get_mesh_part("Layer4").mesh, show_edges=True, color="yellow", opacity=1.0)
+    pl.add_mesh(fm.meshPart.get_mesh_part("Layer5").mesh, show_edges=True, color="orange", opacity=1.0)
+    pl.add_mesh(fm.meshPart.get_mesh_part("Layer6").mesh, show_edges=True, color="purple", opacity=1.0)
+    pl.show_axes_all()
+    pl.show_grid()
+    # pl.export_html("layers.html")
+    pl.show()
+
+    pl = pv.Plotter()
+    pl.add_mesh(fm.meshPart.get_mesh_part("Layer1").mesh, show_edges=True, color="royalblue", opacity=1.0)
+    pl.add_mesh(fm.meshPart.get_mesh_part("Layer2").mesh, show_edges=True, color="royalblue", opacity=1.0)
+    pl.add_mesh(fm.meshPart.get_mesh_part("Layer3").mesh, show_edges=True, color="royalblue", opacity=1.0)
+    pl.add_mesh(fm.meshPart.get_mesh_part("Layer4").mesh, show_edges=True, color="royalblue", opacity=1.0)
+    pl.add_mesh(fm.meshPart.get_mesh_part("Layer5").mesh, show_edges=True, color="royalblue", opacity=1.0)      
+    pl.add_mesh(fm.meshPart.get_mesh_part("Layer6").mesh, show_edges=True, color="royalblue", opacity=1.0)
+    pl.add_mesh(fm.meshPart.get_mesh_part("basin1").mesh, show_edges=True, color="red", opacity=1.0)
+    pl.add_mesh(fm.meshPart.get_mesh_part("basin2").mesh, show_edges=True, color="red", opacity=1.0)
+    pl.show_axes_all()
+    pl.show_grid()
+    # pl.export_html("layers_basin.html")
+    pl.show()
 
 
 
@@ -232,14 +319,14 @@ layers = ["Layer1", "Layer2",
               "Layer3", "Layer4", 
               "Layer5", "Layer6"]
 
-fm.assembler.create_section(layers, num_partitions=4)
+fm.assembler.create_section(layers, num_partitions=8)
 
 basins = ["basin1", "basin2"]
-fm.assembler.create_section(basins, num_partitions=4)
+fm.assembler.create_section(basins, num_partitions=2)
 
 fm.assembler.Assemble()
 fm.drm.addAbsorbingLayer(numLayers=8,
-                        numPartitions=4,
+                        numPartitions=8,
                         partitionAlgo="kd-tree",
                         geometry="Rectangular",
                         rayleighDamping=0.95,
@@ -256,8 +343,31 @@ h5pattern = fm.pattern.create_pattern( 'h5drm',
                                         transform_matrix=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
                                         origin=[0.0, 0.0, 0.0])
 fm.drm.set_pattern(h5pattern)
-fm.drm.createDefaultProcess(finalTime=30, dT=0.01)
-# fm.export_to_tcl(filename="model.tcl")
 
-# fm.export_to_vtk("mesh.vtk")
-fm.gui()
+
+
+
+# =========================================================
+# Defining default process
+# =========================================================
+if not BASIN:
+    resultdirectoryname = "Regular"
+else:
+    resultdirectoryname = f"Vs{int(softMat_vs)}"
+
+
+fm.drm.createDefaultProcess(finalTime=25, dT=0.01,
+                            vtkhdfrecorder_file=f"{resultdirectoryname}/result",
+                            GravityElasticOptions={"num_steps":10},
+                            GravityPlasticOptions={"num_steps":1})
+
+
+# =========================================================
+# add a explicit tcl command to make the result directory
+# =========================================================
+
+fm.process.insert_step(index=0, component=fm.actions.tcl(f"file mkdir {resultdirectoryname}"), description="making result directory")
+
+
+fm.export_to_tcl(filename="model.tcl")
+# fm.gui()
