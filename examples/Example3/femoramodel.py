@@ -63,6 +63,7 @@ Ny = int((ymax-ymin)/dy)
 # Defining soft material for the basin
 # =========================================================
 # using Soft material in the basin
+# keeping the ratio of vp/vs = 2.0
 BASIN = True
 softMat_vs = 150
 softMat_vp = 300
