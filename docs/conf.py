@@ -91,7 +91,7 @@ html_js_files = [
 ]
 
 # -- Logo configuration -----------------------------------------------------
-html_logo = 'images/Simcenter_Femora2.png'
+html_logo = 'images/Femoralogo.png'
 html_theme_options = {
     'logo_only': True,
 }
