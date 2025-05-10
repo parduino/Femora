@@ -85,6 +85,11 @@ html_css_files = [
     'css/custom.css',
 ]
 
+# -- Custom JavaScript files ------------------------------------------------
+html_js_files = [
+    'js/copy-button.js',
+]
+
 # -- Logo configuration -----------------------------------------------------
 html_logo = 'images/Simcenter_Femora2.png'
 html_theme_options = {
