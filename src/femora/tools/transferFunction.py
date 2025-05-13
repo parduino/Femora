@@ -317,6 +317,11 @@ class TransferFunction:
         # Inverse Fourier transform
         surface_acc = np.fft.irfft(surface_fft, n)
 
+        index = np.where(freq<self.f_max)[0]
+        freq = freq[index]
+        acc_fft = acc_fft[index]
+        surface_fft = surface_fft[index]
+
         res =  {'surface_acc' : surface_acc}
         if freqFlag:
             res['freq'] = freq
@@ -360,41 +365,43 @@ class TransferFunction:
 
         # Use provided figure or create a new one
         if fig is None:
-            fig = plt.figure(figsize=(10, 16))
+            fig = plt.figure(figsize=(8, 11))
         
         # Clear any existing axes
         fig.clear()
         
         # Create 5 subplots
         axs = [fig.add_subplot(5, 1, i+1) for i in range(5)]
+        axs.reverse()
+        box = dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3')
 
         # 1. Time history
         axs[0].plot(time, acc)
-        axs[0].set_title("Input Time History")
+        axs[0].set_title("Input Time History", loc="right", y=0.9, bbox=box)
         axs[0].set_xlabel("Time (s)")
         axs[0].set_ylabel("Acceleration (g)")
 
         # 2. Frequency content (FFT magnitude)
         axs[1].plot(freq, np.abs(acc_fft))
-        axs[1].set_title("Frequency Content (|FFT|)")
+        axs[1].set_title("Frequency Content (|FFT|)", loc="right", y=0.9, bbox=box)
         axs[1].set_xlabel("Frequency (Hz)")
         axs[1].set_ylabel("|FFT|")
 
         # 3. Transfer function
         axs[2].plot(self.f, np.abs(self.TF_uu))
-        axs[2].set_title("Transfer Function")
+        axs[2].set_title("Transfer Function", loc="right", y=0.9, bbox=box)
         axs[2].set_xlabel("Frequency (Hz)")
         axs[2].set_ylabel("|TF|")
 
         # 4. Product in frequency domain
         axs[3].plot(freq, np.abs(surface_fft))
-        axs[3].set_title("Product: |FFT(input) * TF|")
+        axs[3].set_title("Product: |FFT(input) * TF|", loc="right", y=0.9, bbox=box)
         axs[3].set_xlabel("Frequency (Hz)")
         axs[3].set_ylabel("|Output FFT|")
 
         # 5. Inverse FFT (surface motion)
         axs[4].plot(time_history.time, surface_acc)
-        axs[4].set_title("Surface Motion (Inverse FFT)")
+        axs[4].set_title("Surface Motion (Inverse FFT)", loc="right", y=0.9, bbox=box)
         axs[4].set_xlabel("Time (s)")
         axs[4].set_ylabel("Acceleration (g)")
 
@@ -889,12 +896,8 @@ if __name__ == "__main__":
 
 
     # Example: load a PEER file
-    record = TimeHistory.load(file_path="C:/Users/aminp/OneDrive/Desktop/DRMGUI/src/femora/tools/motions/RSN88_SFERN_FSD-UP.AT2")
-
-
-    # plot the record 
-    plt.plot(record.time, record.acceleration)
-    plt.show()
+    record = TimeHistory.load(acc_file="/home/amnp95/Projects/Femora/examples/Example1/kobe.acc",
+                              time_file="/home/amnp95/Projects/Femora/examples/Example1/kobe.time")
 
     tf.compute()
 
