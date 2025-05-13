@@ -27,6 +27,7 @@ Example:
     >>> f, TF_uu, TF_inc = tf.compute()
 """
 import numpy as np
+from scipy.fft import fft, ifft, fftfreq
 import matplotlib.pyplot as plt
 from typing import List, Dict, Union, Optional, Tuple, Any
 import os
@@ -301,41 +302,50 @@ class TransferFunction:
         if not self.computed:
             raise ValueError("Transfer function not computed yet")
 
-        # Compute Fourier transform of input motion
-        n = len(time_history.acceleration)
 
+        dt = time_history.dt
+        acc = time_history.acceleration
+        n = len(acc)
+        
+        # FFT of the base motion
+        acc_fft = fft(acc)
+        freqs = fftfreq(n, dt)
 
-        time_history.time = np.linspace(0, time_history.time[-1], n)
-        dt = time_history.time[1] - time_history.time[0]
+        # Prepare transfer function
+        TF = self.TF_uu  # should be complex-valued, len = len(f)
+        TF_freq = self.f  # positive frequency range of TF
 
+        # Interpolate TF to match the fft frequencies
+        TF_interp = np.interp(np.abs(freqs), TF_freq, TF, left=0, right=0)
 
-        freq = np.fft.rfftfreq(n, dt)
-        acc_fft = np.fft.rfft(time_history.acceleration)
-        surface_fft = np.fft.rfft(time_history.acceleration)
+        # Make the TF symmetric for inverse FFT (real time signal)
+        TF_interp = TF_interp.astype(complex)
 
-        # Interpolate transfer function to match frequency points
-        tf_interp = np.interp(freq, self.f, np.abs(self.TF_uu))
+        # Apply TF to base motion in frequency domain
+        surface_fft = acc_fft * TF_interp
 
-        # Apply transfer function
-        surface_fft = acc_fft * tf_interp
+        # Inverse FFT to get surface time history
+        surface_motion = np.real(ifft(surface_fft))
 
-        # Inverse Fourier transform
-        surface_acc = np.fft.irfft(surface_fft, n)
+        # Return desired outputs
+        result = {
+            "surface_acc": surface_motion,
+        }
 
-        index = np.where(freq<self.f_max)[0]
-        freq = freq[index]
+        index = np.where((freqs > 0) & (freqs < self.f_max))[0]
+        freqs = freqs[index]
         acc_fft = acc_fft[index]
         surface_fft = surface_fft[index]
 
-        res =  {'surface_acc' : surface_acc}
         if freqFlag:
-            res['freq'] = freq
+            result["freq"] = freqs
         if acc_fftFlag:
-            res['acc_fft'] = acc_fft
+            result["acc_fft"] = acc_fft
         if surface_fftFlag:
-            res['surface_fft'] = surface_fft
-        
-        return res
+            result["surface_fft"] = surface_fft
+
+        return result
+
 
     def plot_surface_motion(self, time_history: TimeHistory,
                           fig=None, **kwargs) -> 'matplotlib.figure.Figure':
@@ -585,6 +595,7 @@ class TransferFunction:
         ax.set_xlim(0, 1)
         ax.set_xticks([])  # Remove x-axis ticks
         ax.set_xticklabels([])  # Remove x-axis labels
+        fig.tight_layout()
         
         return fig
 
@@ -889,12 +900,12 @@ if __name__ == "__main__":
     # Create transfer function instance
     tf = TransferFunction(soil_profile, rock, f_max=25.0)
 
-    # Example of using new functionality
-    print("\nProfile Summary:")
-    print(tf.get_profile_summary())
+
 
     # Add a new layer
     tf.add_layer({"h": 5.0, "vs": 300.0, "rho": 1500.0, "damping": 0.05})
+
+    tf.update_soil_profile([{"h": 18.0, "vs": 199.0, "rho": 1530.0, "damping": 0.03}])
 
 
 
@@ -905,6 +916,7 @@ if __name__ == "__main__":
                               time_file="/home/amnp95/Projects/Femora/examples/Example1/kobe.time")
 
     tf.compute()
+    tf.plot_soil_profile()
 
     # Plot the transfer function
     tf.plot()
