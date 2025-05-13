@@ -47,14 +47,19 @@ class TimeHistory:
         self.time = np.array(time)
         self.acceleration = np.array(acceleration)
         self.metadata = metadata or {}
-        if len(self.time) != len(self.acceleration):
+        if len(time) != len(acceleration):
             raise ValueError("Time and acceleration arrays must have the same length")
         # dt is optional, only if time is uniform
-        diffs = np.diff(self.time)
-        if len(diffs) > 0 and np.allclose(diffs, diffs[0]):
+        diffs = np.diff(time)
+        if len(diffs) < 1:
+            raise ValueError("Time array must have at least two points") 
+        if np.allclose(diffs, diffs[0]):
             self.dt = diffs[0]
         else:
-            self.dt = None
+            self.dt = np.min(diffs)
+            self.time = np.arange(time[0], time[-1]+1.0e-6, self.dt) 
+            self.acceleration = np.interp(self.time, time, acceleration)
+        
 
     @staticmethod
     def load(file_path: str = None, format: str = 'auto', time_file: str = None, acc_file: str = None, delimiter: str = ',', skiprows: int = 0) -> 'TimeHistory':
