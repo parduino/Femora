@@ -27,7 +27,7 @@ Example:
     >>> f, TF_uu, TF_inc = tf.compute()
 """
 import numpy as np
-from scipy.fft import fft, ifft, fftfreq
+from numpy.fft import fft, ifft, fftfreq
 import matplotlib.pyplot as plt
 from typing import List, Dict, Union, Optional, Tuple, Any
 import os
