@@ -290,6 +290,9 @@ class FixMacroZ_min(SPConstraint):
         """
         # Use -1 as a placeholder for node tag since it applies to multiple nodes
         super().__init__(-1, dofs)
+        # check if the dofs are 0 or 1
+        if not all(dof in [0, 1] for dof in dofs):
+            raise ValueError("DOFs must be 0 or 1")
         self.tol = tol
     
     def to_tcl(self) -> str:
