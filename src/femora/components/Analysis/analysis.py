@@ -352,7 +352,8 @@ class AnalysisManager:
             self._initialized = True
     
     def create_default_transient_analysis(self, username: str, dt: float, num_steps: int = None, 
-                                         final_time: float = None) -> Analysis:
+                                         final_time: float = None,
+                                         options:Dict[str, AnalysisComponent]=dict()) -> Analysis:
         """
         Create a default transient analysis with predefined components:
         - ParallelRCM numberer
@@ -382,12 +383,13 @@ class AnalysisManager:
         analysis_name = f"defualtTransient_{username}"
         
         # Create components
-        numberer = self.numberer.create_numberer("parallelrcm")
-        integrator = self.integrator.create_integrator("newmark", gamma=0.5, beta=0.25)
-        system = self.system.create_system("mumps", icntl14=100, icntl7=7)
-        test = self.test.create_test("energyincr", tol=1e-3, max_iter=20, print_flag=2)
-        algorithm = self.algorithm.create_algorithm("modifiednewton", factor_once=True)
-        constraint_handler = self.constraint.create_handler("transformation")
+        numberer = options.get("numberer", self.numberer.create_numberer("parallelrcm"))
+        integrator = options.get("integrator", self.integrator.create_integrator("newmark", gamma=0.5, beta=0.25))
+        system = options.get("system", self.system.create_system("mumps", icntl14=100, icntl7=7))
+        test = options.get("test", self.test.create_test("energyincr", tol=1e-3, max_iter=20, print_flag=2))
+        algorithm = options.get("algorithm", self.algorithm.create_algorithm("modifiednewton", factor_once=True))
+        constraint_handler = options.get("constraint_handler", self.constraint.create_handler("transformation"))
+
         
         # Create and return the analysis
         return self.create_analysis(
