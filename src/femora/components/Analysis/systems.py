@@ -258,7 +258,16 @@ class SystemManager:
         if cls._instance is None:
             cls._instance = super(SystemManager, cls).__new__(cls)
         return cls._instance
-
+    
+    def __init__(self):
+        self.bandGeneral = BandGeneralSystem
+        self.bandSPD = BandSPDSystem 
+        self.profileSPD = ProfileSPDSystem
+        self.fullGeneral = FullGeneralSystem
+        self.superLU = SuperLUSystem
+        self.umfpack = UmfpackSystem
+        self.mumps = MumpsSystem
+        
     def create_system(self, system_type: str, **kwargs) -> System:
         """Create a new system"""
         return System.create_system(system_type, **kwargs)
