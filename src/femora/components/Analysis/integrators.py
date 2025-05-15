@@ -664,11 +664,26 @@ class IntegratorManager:
     Singleton class for managing integrators
     """
     _instance = None
+    
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(IntegratorManager, cls).__new__(cls)
         return cls._instance
+    
+    def __init__(self):
+        self.newmark = NewmarkIntegrator
+        self.hht = HHTIntegrator
+        self.generalizedAlpha = GeneralizedAlphaIntegrator
+        self.trbdf2 = TRBDF2Integrator
+        self.centralDifference = CentralDifferenceIntegrator
+        self.explicitDifference = ExplicitDifferenceIntegrator
+        self.pfem = PFEMIntegrator
+        self.loadControl = LoadControlIntegrator
+        self.displacementControl = DisplacementControlIntegrator
+        self.parallelDisplacementControl = ParallelDisplacementControlIntegrator
+        self.minUnbalDispNorm = MinUnbalDispNormIntegrator
+        self.arcLength = ArcLengthIntegrator
 
     def create_integrator(self, integrator_type: str, **kwargs) -> Integrator:
         """Create a new integrator"""
