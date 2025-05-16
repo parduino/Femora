@@ -10,7 +10,7 @@ os.chdir(os.path.dirname(__file__))
 # Maximum time to plot (seconds)
 MAX_TIME = 40.0
 
-def read_vtk_data(file_pattern, max_time):
+def read_vtk_data(file_pattern, max_time,coord=[0., 0., 0.], res_type="acceleration"):
     """Read and process VTK HDF files."""
     files = sorted(glob.glob(file_pattern))
     for filename in files:
@@ -21,12 +21,12 @@ def read_vtk_data(file_pattern, max_time):
                     continue
 
                 # Find the closest point to (0, 0, 0)
-                distances = np.linalg.norm(points - np.array([0., 0., 0.]), axis=1)
+                distances = np.linalg.norm(points - np.array(coord), axis=1)
                 closest_index = np.argmin(distances)
                 if distances[closest_index] > 1e-3:
                     continue
 
-                acc = f["VTKHDF"]["PointData"]["acceleration"][()]
+                acc = f["VTKHDF"]["PointData"][res_type][()]
                 accoffset = f["VTKHDF"]["Steps"]["PointDataOffsets"]["acceleration"][()]
                 acc = acc[accoffset + closest_index]
 
