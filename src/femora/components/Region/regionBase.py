@@ -135,6 +135,21 @@ class RegionBase(ABC):
     def damping(self):
         """Remove the damping behavior from this region."""
         self._damping_ref = None 
+        
+    def set_damping(self, damping_instance: Type[DampingBase]):
+        """
+        Set the damping behavior of this region.
+        
+        This method provides an alternative way to assign damping to a region,
+        with the same functionality as the damping property setter.
+        
+        Args:
+            damping_instance (Type[DampingBase], required): The damping instance to assign
+            
+        Raises:
+            TypeError: If damping_instance is not a subclass of DampingBase
+        """
+        self.damping = damping_instance
 
     def __str__(self) -> str:
         """
@@ -909,7 +924,7 @@ class RegionManager:
 
         self.elementRegion = ElementRegion
         self.nodeRegion = NodeRegion
-        self.globalRegion = GlobalRegion
+        self.globalRegion = GlobalRegion()
 
     @property
     def regions(self):
