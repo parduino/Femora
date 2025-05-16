@@ -7,7 +7,7 @@ G = 62.e6                        # Shear modulus in Pa
 gamma = 15.3                     # Unit weight in kN/m^3
 rho = gamma * 1000 / 9.81        # Density in kg/m^3
 Vs = (G / rho) ** 0.5            # Shear wave velocity in m/s
-nu = 0.499                       # Assumed value for Poisson's ratio
+nu = 0.3                       # Assumed value for Poisson's ratio
 E = 2 * G * (1 + nu)             # Young's modulus in Pa
 E = E / 1000.                    # Convert to kPa
 rho = rho / 1000.                # Convert to kg/m^3
@@ -82,13 +82,13 @@ kobe = fm.pattern.create_pattern(pattern_type="uniformexcitation",dof=1, time_se
 
 
 # boundary conditions
-fm.constraint.mp.create_laminar_boundary(bounds=(-17.9,0),dofs=[1,2,3], direction=3)
+fm.constraint.mp.create_laminar_boundary(bounds=(-17.9,0),dofs=[1,2, 3], direction=3)
 fm.constraint.sp.fixMacroZmin(dofs=[1,1,1],tol=1e-3)
 
 
 # Create a recorder for the whole model
 mkdir = fm.actions.tcl("file mkdir Results")
-recorder = fm.recorder.create_recorder("vtkhdf", file_base_name="Results/result.vtkhdf",resp_types=["accel" ], delta_t=0.001)
+recorder = fm.recorder.create_recorder("vtkhdf", file_base_name="Results/result.vtkhdf",resp_types=["accel", "disp"], delta_t=0.02)
 
 # gravity analysis
 newmark_gamma = 0.6
