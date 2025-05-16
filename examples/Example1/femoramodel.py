@@ -88,7 +88,7 @@ fm.constraint.sp.fixMacroZmin(dofs=[1,1,1],tol=1e-3)
 
 # Create a recorder for the whole model
 mkdir = fm.actions.tcl("file mkdir Results")
-recorder = fm.recorder.create_recorder("vtkhdf", file_base_name="Results/result.vtkhdf",resp_types=["accel", "disp"], delta_t=0.02)
+recorder = fm.recorder.create_recorder("vtkhdf", file_base_name="Results/result.vtkhdf",resp_types=["accel", "disp"], delta_t=0.001)
 
 # gravity analysis
 newmark_gamma = 0.6
