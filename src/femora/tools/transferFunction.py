@@ -471,6 +471,13 @@ class TransferFunction:
         vs = np.array([l["vs"] for l in self.soil_profile], dtype=float)
         rho = np.array([l["rho"] for l in self.soil_profile], dtype=float)
         damp = np.array([l.get("damping", 0.0) for l in self.soil_profile], dtype=float)
+        damptype = np.array([l.get("damping_type", "constant") for l in self.soil_profile], dtype=str)
+        F1 = np.array([l.get("f1", 1.0) for l in self.soil_profile], dtype=float)
+        F2 = np.array([l.get("f2", 10.0) for l in self.soil_profile], dtype=float)
+        omega1 = 2 * np.pi * F1
+        omega2 = 2 * np.pi * F2
+        A0 = 2 * damp * omega1 * omega2 / (omega1 + omega2)
+        A1 = 2 * damp / (omega1 + omega2)
 
         vs_bed = self.rock["vs"]
         rho_bed = self.rock["rho"]
@@ -491,7 +498,14 @@ class TransferFunction:
             # Total layer product L = Ln … L2 L1
             L = np.identity(2, dtype=complex)
             for j in range(len(h)):
-                cj = np.sqrt(1 + 1j*damp[j]*2)  # viscoelastic correction
+                if damptype[j].lower() == "constant":
+                    damping = damp[j]
+                elif damptype[j].lower() == "rayleigh":
+                    a0 = A0[j]
+                    a1 = A1[j]
+                    damping = a0 / (2 * w) + a1 * w / 2
+                    
+                cj = np.sqrt(1 + 1j*damping*2)  # viscoelastic correction
                 rj = w * h[j] / vs[j] * cj
                 L = self._layer_matrix(alpha[j], rj) @ L
 
