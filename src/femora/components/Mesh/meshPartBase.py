@@ -11,6 +11,7 @@ Modules:
     typing: A module that provides runtime support for type hints.
     femora.components.Element.elementBase: A module that defines the Element and ElementRegistry classes.
     femora.components.Material.materialBase: A module that defines the Material class.
+    femora.components.Region.regionBase: A module that defines the RegionBase and GlobalRegion classes.
 Usage:
     This module is intended to be used as part of a larger DRM analysis application. 
     The MeshPart class should be subclassed to create specific types of mesh parts, 
@@ -32,29 +33,34 @@ class MeshPart(ABC):
     """
     # Class-level tracking of mesh part names to ensure uniqueness
     _mesh_parts = {}
+    _compatible_elements = []  # Base class empty list
 
     def __init__(self, category: str, mesh_type: str, user_name: str, element: Element, region: RegionBase=None):
         """
-        Initialize a MeshPart instance
-
+        Initialize a mesh part with a category, type, and unique user name
+        
         Args:
-            category (str): Mesh part category 
-            mesh_type (str): Specific type within the category
-            user_name (str): User-defined unique name for the mesh part
-            element (Optional[Element]): Associated element 
-            region (RegionBase): Region to which the mesh part belongs
+            category (str): General category of mesh part (e.g., 'volume mesh', 'surface mesh')
+            mesh_type (str): Specific type of mesh (e.g., 'Structured Rectangular Grid')
+            user_name (str): Unique user-defined name for the mesh part
+            element (Element): Associated element for the mesh part
+            region (RegionBase, optional): Associated region for the mesh part. Defaults to None.
+        
+        Raises:
+            ValueError: If a mesh part with the same user_name already exists
         """
-        # Validate unique user name
+        # Check for duplicate name
         if user_name in self._mesh_parts:
             raise ValueError(f"Mesh part with name '{user_name}' already exists")
-
+        
+        # Set basic properties
         self.category = category
         self.mesh_type = mesh_type
         self.user_name = user_name
         self.element = element
-        self.region = region if region is not None else GlobalRegion()
+        self.region = region if region is not None else GlobalRegion()  # Use global region if none specified
         
-        # Generate mesh based on type and kwargs
+        # Initialize mesh attribute (to be populated by generate_mesh)
         self.mesh = None
         
         # Optional pyvista actor (initially None)
@@ -130,15 +136,17 @@ class MeshPart(ABC):
         pass
 
     @classmethod
-    @abstractmethod
-    def get_compatible_elements(cls) -> List[str]:
+    def is_elemnt_compatible(cls, element: str) -> bool:
         """
-        Get the list of compatible element types
-
+        Check if an element type is compatible with this mesh part
+        
+        Args:
+            element (str): Element type name to check
+            
         Returns:
-            List[str]: List of compatible element types
+            bool: True if compatible, False otherwise
         """
-        pass
+        return element in cls._compatible_elements
 
     @abstractmethod
     def update_parameters(self, **kwargs) -> None:
@@ -162,7 +170,7 @@ class MeshPart(ABC):
             self.element.assign_material(material)
         else:
             raise ValueError("No material to assign to the element")
-        
+    
     def assign_actor(self, actor) -> None:
         """
         Assign a pyvista actor to the mesh part
@@ -181,7 +189,8 @@ class MeshPartRegistry:
         "Volume mesh" : {},
         "Surface mesh" : {},
         "Line mesh" : {},
-        "Point mesh" : {}
+        "Point mesh" : {},
+        "General mesh" : {}
     }
 
     def __new__(cls, *args, **kwargs):
@@ -413,6 +422,6 @@ class MeshPartManager:
             "success": True, 
             "message": f"Cleared {count} mesh parts"
         }
-    
 
-    
+
+

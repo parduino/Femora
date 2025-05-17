@@ -4,7 +4,7 @@ from pyvista import Cube, MultiBlock, StructuredGrid
 import tqdm
 from pykdtree.kdtree import KDTree as pykdtree
 from femora.components.Pattern.patternBase import H5DRMPattern
-
+from femora.components.Actions.action import ActionManager
 class DRM:
     """
     Singleton class for Domain Reduction Method helper functions
@@ -56,46 +56,75 @@ class DRM:
         """
         self.h5drmpattern = pattern
 
-    def createDefaultProcess(self, dT, finalTime):
+    def createDefaultProcess(self, dT, finalTime, 
+                             vtkhdfrecorder=True,
+                             vtkhdfrecorder_file="result",
+                             vtkhdfrecorder_resp_types=["disp", "vel", "accel", "stress3D6", "strain3D6"],
+                             vtkhdfrecorder_delta_t=0.02,
+                             GravityElasticOptions={},
+                             GravityPlasticOptions={},
+                             DynamicAnalysisOptions={},
+                            ):
         """
-        Create the default process for doing Domain Reduction method analysis.
+        Create the default process for Domain Reduction Method (DRM) analysis.
         
-        This method sets up a complete analysis process for DRM simulation, including:
-        1. Setting boundary conditions using macros
-        2. Creating the vtkhdf recorder
-        3. Creating specific recorders
-        4. Setting up gravity analysis
-        5. Configuring dynamic analysis
+        Sets up a complete analysis process including boundary conditions, recorders,
+        gravity analysis phases, and dynamic analysis for seismic simulation.
         
         Args:
-            dT (float): Time step for the analysis
-            finalTime (float): Final simulation time
-            
+            dT (float): Time step for the dynamic analysis
+            finalTime (float): Total simulation time
+            vtkhdfrecorder (bool): Whether to create VTK HDF recorder (default: True)
+            vtkhdfrecorder_file (str): Base name for VTK HDF output files (default: "result")
+            vtkhdfrecorder_resp_types (list): Response types to record in VTK HDF output 
+                                             (default: ["disp", "vel", "accel", "stress3D6", "strain3D6"])
+            vtkhdfrecorder_delta_t (float): Time interval for recording data (default: 0.02)
+            GravityElasticOptions (dict): Options for the elastic gravity analysis phase
+                - constraint_handler: Constraint handler component (default: "plain")
+                - numberer: Equation numberer component (default: "ParallelRCM")
+                - system: System of equations component (default: "mumps" with icntl14=200, icntl7=7)
+                - algorithm: Solution algorithm component (default: "modifiednewton" with factor_once=True)
+                - test: Convergence test component (default: "energyincr" with tol=1e-4, max_iter=10, print_flag=5)
+                - integrator: Time integrator component (default: "newmark" with gamma=0.5, beta=0.25, form="D")
+                - dt: Time step (default: value of dT parameter)
+                - num_steps: Number of steps for this phase (default: 20)
+            GravityPlasticOptions (dict): Options for the plastic gravity analysis phase
+                - Same options as GravityElasticOptions but default num_steps is 50
+            DynamicAnalysisOptions (dict): Options for the dynamic analysis phase
+                - Same options as GravityElasticOptions but with final_time instead of num_steps
+        
         Raises:
             ValueError: If pattern is not set or is not of type H5DRMPattern
+            ValueError: If time step or number of steps parameters are invalid
+            ValueError: If option dictionaries are not properly formatted
+        
+        Notes:
+            This method follows a sequence of:
+            1. Applying gravity loads in an elastic phase
+            2. Applying gravity loads in a plastic phase
+            3. Resetting time to zero
+            4. Setting up recorders
+            5. Applying the DRM load pattern
+            6. Running the dynamic analysis
         """
-        # check if the pattern is set
+        # Check if the pattern is set
         if self.h5drmpattern is None:
             raise ValueError("The pattern is not set\n Please set the pattern first")
         else:
             if not isinstance(self.h5drmpattern, H5DRMPattern):
                 raise ValueError("The pattern should be of type H5DRMPattern")
         
-
-
-        # first clear all the previous process
+        # Clear all previous process components
         self.meshmaker.process.clear_steps()
         self.meshmaker.analysis.clear_all()
         self.meshmaker.recorder.clear_all()
         self.meshmaker.constraint.sp.clear_all()
-        # self.meshmaker.analysis.numberer.clear_all()
         self.meshmaker.analysis.system.clear_all()
         self.meshmaker.analysis.algorithm.clear_all()
         self.meshmaker.analysis.test.clear_all()
         self.meshmaker.analysis.integrator.clear_all()
 
-
-        # create the fixities
+        # Create boundary conditions (fixities)
         dofsVals = [1,1,1,1,1,1,1,1,1]
         c1 = self.meshmaker.constraint.sp.fixMacroXmax(dofs=dofsVals)
         c2 = self.meshmaker.constraint.sp.fixMacroXmin(dofs=dofsVals)
@@ -103,53 +132,165 @@ class DRM:
         c4 = self.meshmaker.constraint.sp.fixMacroYmin(dofs=dofsVals)
         c5 = self.meshmaker.constraint.sp.fixMacroZmin(dofs=dofsVals)
 
-        # create the vtkhdf recorder
-        vtkRecordr = self.meshmaker.recorder.create_recorder(recorder_type="vtkhdf",
-                                      file_base_name="result",
-                                      resp_types=["disp", "vel", "accel", "stress3D6", "strain3D6"],
-                                      delta_t=0.02)
-        
-        # create the specific recorders
-        # ....  to be implemented
+        # Create the VTK HDF recorder if requested
+        vtkRecordr = None
+        if vtkhdfrecorder:
+            try:
+                vtkRecordr = self.meshmaker.recorder.create_recorder(
+                    recorder_type="vtkhdf",
+                    file_base_name=vtkhdfrecorder_file,
+                    resp_types=vtkhdfrecorder_resp_types,
+                    delta_t=vtkhdfrecorder_delta_t,
+                )
+            except Exception as e:
+                print("Error creating vtkhdf recorder:", e)
+                raise
 
-        # create the gravity analysis
-        GravityElastic = self.meshmaker.analysis.create_analysis(name="Gravity-Elastic",
-                                      analysis_type="Transient",
-                                      constraint_handler=self.meshmaker.analysis.constraint.create_handler("plain"),
-                                      numberer=self.meshmaker.analysis.numberer.get_numberer("RCM"),
-                                      system=self.meshmaker.analysis.system.create_system(system_type="mumps",icntl14=200, icntl7=7),
-                                      algorithm=self.meshmaker.analysis.algorithm.create_algorithm(algorithm_type="modifiednewton", factor_once=True),
-                                      test=self.meshmaker.analysis.test.create_test("relativeenergyincr",tol=1e-4, max_iter=10, print_flag=2),
-                                      integrator=self.meshmaker.analysis.integrator.create_integrator(integrator_type="newmark", gamma=0.5, beta=0.25, form="D"),
-                                      dt=dT,
-                                      num_steps=20,
-                                      )
-        GravityPlastic = self.meshmaker.analysis.create_analysis(name="Gravity-Plastic",
-                                        analysis_type="Transient",
-                                        constraint_handler=self.meshmaker.analysis.constraint.create_handler("plain"),
-                                        numberer=self.meshmaker.analysis.numberer.get_numberer("RCM"),
-                                        system=self.meshmaker.analysis.system.create_system(system_type="mumps",icntl14=200, icntl7=7),
-                                        algorithm=self.meshmaker.analysis.algorithm.create_algorithm(algorithm_type="modifiednewton", factor_once=True),
-                                        test=self.meshmaker.analysis.test.create_test("relativeenergyincr",tol=1e-4, max_iter=10, print_flag=2),
-                                        integrator=self.meshmaker.analysis.integrator.create_integrator(integrator_type="newmark", gamma=0.5, beta=0.25, form="D"),
-                                        dt=dT,
-                                        num_steps=50,
-                                        )
+        # Set up the elastic gravity analysis
+        if not isinstance(GravityElasticOptions, dict):
+            raise ValueError("The GravityElasticOptions should be a dictionary")
+            
+        tmpconstraint = GravityElasticOptions.get("constraint_handler", 
+                                                 self.meshmaker.analysis.constraint.create_handler("plain"))
+        tmpnumberer = GravityElasticOptions.get("numberer", 
+                                               self.meshmaker.analysis.numberer.get_numberer("ParallelRCM"))
+        tmpsystem = GravityElasticOptions.get("system", 
+                                             self.meshmaker.analysis.system.create_system(
+                                                 system_type="mumps", icntl14=200, icntl7=7))
+        tmpalgorithm = GravityElasticOptions.get("algorithm", 
+                                                self.meshmaker.analysis.algorithm.create_algorithm(
+                                                    algorithm_type="modifiednewton", factor_once=True))
+        tmptest = GravityElasticOptions.get("test", 
+                                           self.meshmaker.analysis.test.create_test(
+                                               "energyincr", tol=1e-4, max_iter=10, print_flag=5))
+        tmpintegrator = GravityElasticOptions.get("integrator", 
+                                                 self.meshmaker.analysis.integrator.create_integrator(
+                                                     integrator_type="newmark", gamma=0.5, beta=0.25, form="D"))
+        tmpdT = GravityElasticOptions.get("dt", dT)
+        tmpnumSteps = GravityElasticOptions.get("num_steps", 20)
         
+        # Validate parameters
+        if not isinstance(tmpdT, (int, float)):
+            raise ValueError("The time step should be a number")
+        if tmpdT <= 0:
+            raise ValueError("The time step should be greater than 0")
+        if not isinstance(tmpnumSteps, (int, float)):
+            raise ValueError("The number of steps should be a number")
+        if tmpnumSteps <= 0:
+            raise ValueError("The number of steps should be greater than 0")
+
+        # Create the elastic gravity analysis
+        GravityElastic = self.meshmaker.analysis.create_analysis(
+            name="Gravity-Elastic",
+            analysis_type="Transient",
+            constraint_handler=tmpconstraint,
+            numberer=tmpnumberer,
+            system=tmpsystem,
+            algorithm=tmpalgorithm,
+            test=tmptest,
+            integrator=tmpintegrator,
+            dt=tmpdT,
+            num_steps=tmpnumSteps,
+        )
+        
+        # Set up the plastic gravity analysis
+        if not isinstance(GravityPlasticOptions, dict):
+            raise ValueError("The GravityPlasticOptions should be a dictionary")
+            
+        tmpconstraint = GravityPlasticOptions.get("constraint_handler", 
+                                                 self.meshmaker.analysis.constraint.create_handler("plain"))
+        tmpnumberer = GravityPlasticOptions.get("numberer", 
+                                               self.meshmaker.analysis.numberer.get_numberer("ParallelRCM"))
+        tmpsystem = GravityPlasticOptions.get("system", 
+                                             self.meshmaker.analysis.system.create_system(
+                                                 system_type="mumps", icntl14=200, icntl7=7))
+        tmpalgorithm = GravityPlasticOptions.get("algorithm", 
+                                                self.meshmaker.analysis.algorithm.create_algorithm(
+                                                    algorithm_type="modifiednewton", factor_once=True))
+        tmptest = GravityPlasticOptions.get("test", 
+                                           self.meshmaker.analysis.test.create_test(
+                                               "energyincr", tol=1e-4, max_iter=10, print_flag=5))
+        tmpintegrator = GravityPlasticOptions.get("integrator", 
+                                                 self.meshmaker.analysis.integrator.create_integrator(
+                                                     integrator_type="newmark", gamma=0.5, beta=0.25, form="D"))
+        tmpdT = GravityPlasticOptions.get("dt", dT)
+        tmpnumSteps = GravityPlasticOptions.get("num_steps", 50)
+
+        # Validate parameters
+        if not isinstance(tmpdT, (int, float)):
+            raise ValueError("The time step should be a number")
+        if tmpdT <= 0:
+            raise ValueError("The time step should be greater than 0")
+        if not isinstance(tmpnumSteps, (int, float)):
+            raise ValueError("The number of steps should be a number")
+        if tmpnumSteps <= 0:
+            raise ValueError("The number of steps should be greater than 0")
+        
+        # Create the plastic gravity analysis
+        GravityPlastic = self.meshmaker.analysis.create_analysis(
+            name="Gravity-Plastic",
+            analysis_type="Transient",
+            constraint_handler=tmpconstraint,
+            numberer=tmpnumberer,
+            system=tmpsystem,
+            algorithm=tmpalgorithm,
+            test=tmptest,
+            integrator=tmpintegrator,
+            dt=tmpdT,
+            num_steps=tmpnumSteps,
+        )
+        
+        # Set up the dynamic analysis
+        if not isinstance(DynamicAnalysisOptions, dict):
+            raise ValueError("The DynamicAnalysisOptions should be a dictionary")
+            
+        tmpconstraint = DynamicAnalysisOptions.get("constraint_handler", 
+                                                  self.meshmaker.analysis.constraint.create_handler("plain"))
+        tmpnumberer = DynamicAnalysisOptions.get("numberer", 
+                                                self.meshmaker.analysis.numberer.get_numberer("ParallelRCM"))
+        tmpsystem = DynamicAnalysisOptions.get("system", 
+                                              self.meshmaker.analysis.system.create_system(
+                                                  system_type="mumps", icntl14=200, icntl7=7))
+        tmpalgorithm = DynamicAnalysisOptions.get("algorithm", 
+                                                 self.meshmaker.analysis.algorithm.create_algorithm(
+                                                     algorithm_type="modifiednewton", factor_once=True))
+        tmptest = DynamicAnalysisOptions.get("test", 
+                                            self.meshmaker.analysis.test.create_test(
+                                                "energyincr", tol=1e-4, max_iter=10, print_flag=5))
+        tmpintegrator = DynamicAnalysisOptions.get("integrator", 
+                                                  self.meshmaker.analysis.integrator.create_integrator(
+                                                      integrator_type="newmark", gamma=0.5, beta=0.25, form="D"))
+        tmpdT = DynamicAnalysisOptions.get("dt", dT)
+        finalTime = DynamicAnalysisOptions.get("final_time", finalTime)
+
+        # Validate parameters
+        if not isinstance(finalTime, (int, float)):
+            raise ValueError("The final time should be a number")
+        if finalTime <= 0:
+            raise ValueError("The final time should be greater than 0")
+        if not isinstance(tmpdT, (int, float)):
+            raise ValueError("The time step should be a number")
+        if tmpdT <= 0:
+            raise ValueError("The time step should be greater than 0")
+        
+        # Create the dynamic analysis
         DynamicAnalysis = self.meshmaker.analysis.create_analysis(
-                                    name="DynamicAnalysis",
-                                    analysis_type="Transient",
-                                    constraint_handler=self.meshmaker.analysis.constraint.create_handler("plain"),
-                                    numberer=self.meshmaker.analysis.numberer.get_numberer("RCM"),
-                                    system=self.meshmaker.analysis.system.create_system(system_type="mumps",icntl14=200, icntl7=7),
-                                    algorithm=self.meshmaker.analysis.algorithm.create_algorithm(algorithm_type="modifiednewton", factor_once=True),
-                                    test=self.meshmaker.analysis.test.create_test("relativeenergyincr",tol=1e-4, max_iter=10, print_flag=2),
-                                    integrator=self.meshmaker.analysis.integrator.create_integrator(integrator_type="newmark", gamma=0.5, beta=0.25, form="D"),
-                                    dt=dT,
-                                    final_time=finalTime,
-                                    )
+            name="DynamicAnalysis",
+            analysis_type="Transient",
+            constraint_handler=tmpconstraint,
+            numberer=tmpnumberer,
+            system=tmpsystem,
+            algorithm=tmpalgorithm,
+            test=tmptest,
+            integrator=tmpintegrator,
+            dt=tmpdT,
+            final_time=finalTime,
+        )
         
-
+        # Create an action to reset time after gravity analysis
+        setTime = ActionManager().seTime(pseudo_time=0.0)
+        
+        # Add all steps to the process flow
         # self.meshmaker.process.add_step(component=c1, description="Fixing Xmax")
         # self.meshmaker.process.add_step(component=c2, description="Fixing Xmin")   
         # self.meshmaker.process.add_step(component=c3, description="Fixing Ymax")
@@ -157,11 +298,12 @@ class DRM:
         # self.meshmaker.process.add_step(component=c5, description="Fixing Zmin")
         self.meshmaker.process.add_step(component=GravityElastic, description="Analysis Gravity Elastic (Transient)")
         self.meshmaker.process.add_step(component=GravityPlastic, description="Analysis Gravity Plastic (Transient)")
+        self.meshmaker.process.add_step(component=setTime, description="Set Time to zero after gravity analysis")
         
-        self.meshmaker.process.add_step(component=vtkRecordr, description="Recorder vtkhdf")
-
+        if vtkRecordr:
+            self.meshmaker.process.add_step(component=vtkRecordr, description="Recorder vtkhdf")
+        
         self.meshmaker.process.add_step(component=self.h5drmpattern, description="Pattern H5DRM")
-
         self.meshmaker.process.add_step(component=DynamicAnalysis, description="Analysis Dynamic (Transient)")
 
     def addAbsorbingLayer(self, numLayers: int, numPartitions: int, partitionAlgo: str, geometry:str, 

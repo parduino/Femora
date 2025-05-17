@@ -362,7 +362,10 @@ class VTKHDFRecorder(Recorder):
 
         # separete name and format of the file
         name = self.file_base_name.split(".")
-        fileformat = name[-1]
+        if len(name) <2:
+            fileformat = "vtkhdf"
+        else:
+            fileformat = name[-1]
         name = name[0]
         name = name+"$pid"
         file_base_name = name+"." + fileformat

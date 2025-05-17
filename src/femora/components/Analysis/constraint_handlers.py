@@ -221,6 +221,14 @@ class ConstraintHandlerManager:
         if cls._instance is None:
             cls._instance = super(ConstraintHandlerManager, cls).__new__(cls)
         return cls._instance
+    
+    def __init__(self):
+        self.transfomation = TransformationConstraintHandler
+        self.plain = PlainConstraintHandler
+        self.penalty = PenaltyConstraintHandler
+        self.lagrange = LagrangeConstraintHandler
+        self.auto = AutoConstraintHandler
+        
 
     def create_handler(self, handler_type: str, **kwargs) -> ConstraintHandler:
         """Create a new constraint handler"""

@@ -27,9 +27,13 @@ fm.assembler.Assemble()
 """
 
 from .components.MeshMaker import MeshMaker
+from .components.Actions.action import ActionManager
 
 # Create a MeshMaker instance to be used when importing the module
 _instance = MeshMaker()
+
+# Create an independent ActionManager instance
+_action_manager = ActionManager()
 
 # Export all attributes from the MeshMaker instance to the module level
 for attr_name in dir(_instance):
@@ -50,6 +54,9 @@ pattern = _instance.pattern
 recorder = _instance.recorder
 process = _instance.process
 drm = _instance.drm
+
+# Add actions as a separate direct property
+actions = _action_manager
 
 # Also expose the underlying MeshMaker class and instance
 MeshMaker = MeshMaker

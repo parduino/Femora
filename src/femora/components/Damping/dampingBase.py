@@ -3,8 +3,26 @@ from typing import List, Dict, Type, Optional, Union, Tuple
 import gc
 
 class DampingBase:
+    """
+    Base class for all damping models in structural analysis.
+    
+    This abstract class provides the foundation for implementing different types of damping
+    models in structural dynamics. It manages damping instances through a class-level registry
+    and provides common functionality for all derived damping classes.
+    
+    Attributes:
+        name (str): Descriptive name of the damping instance, automatically generated
+        tag (int): Unique identifier for the damping instance
+        _dampings (dict): Class-level registry of all damping instances
+    """
     _dampings = {}
     def __init__(self):
+        """
+        Initialize a new damping instance.
+        
+        Automatically assigns a unique tag and name to the damping instance and
+        registers it in the class-level registry.
+        """
         tag = self._get_next_tag()
         self.name = f"damping{tag}"
         self.tag = tag
@@ -12,12 +30,28 @@ class DampingBase:
 
     @classmethod
     def _get_next_tag(cls):
-        """Returns the next available tag for a new damping"""
+        """
+        Returns the next available tag for a new damping.
+        
+        Tags are assigned sequentially starting from 1.
+        
+        Returns:
+            int: The next available tag number
+        """
         return len(cls._dampings) + 1
     
     @classmethod
     def remove_damping(cls, tag):
-        """Removes a damping from the list of dampings"""
+        """
+        Removes a damping from the list of dampings.
+        
+        Args:
+            tag (int): The tag of the damping to remove
+            
+        Note:
+            After removal, all remaining dampings have their tags updated
+            to maintain sequential numbering.
+        """
         if tag in cls._dampings:
             del cls._dampings[tag]
             cls._update_tags()
@@ -25,12 +59,28 @@ class DampingBase:
 
     @staticmethod
     def get_damping(tag):
-        """Returns the damping with the given tag"""
+        """
+        Returns the damping with the given tag.
+        
+        Args:
+            tag (int): The tag of the damping to retrieve
+            
+        Returns:
+            DampingBase: The damping instance with the specified tag
+            
+        Raises:
+            KeyError: If no damping with the given tag exists
+        """
         return DampingBase._dampings[tag]
     
 
     def remove(self):
-        """Removes the damping from the list of dampings"""
+        """
+        Removes the damping from the list of dampings.
+        
+        This instance method removes the current damping object from the
+        registry and updates the tags of all remaining damping instances.
+        """
         refrences = gc.get_referrers(self)
         tag = self.tag
         self.__class__.remove_damping(tag)
@@ -39,7 +89,13 @@ class DampingBase:
 
     @classmethod
     def _update_tags(cls):
-        """Updates the tags of all dampings"""
+        """
+        Updates the tags of all dampings.
+        
+        This method ensures that damping tags remain sequential after
+        a damping has been removed. It renumbers all tags and updates
+        the corresponding damping names.
+        """
         tags = cls._dampings.keys()
         tags = sorted(tags)
         new_dampings = {}
@@ -50,6 +106,12 @@ class DampingBase:
         cls._dampings = new_dampings
         
     def __str__(self) -> str:
+        """
+        Returns a string representation of the damping object.
+        
+        Returns:
+            str: A formatted string showing the damping class name, name, and tag
+        """
         res = f"Damping Class:\t{self.__class__.__name__}"
         res += f"\n\tName: {self.name}"
         res += f"\n\tTag: {self.tag}"
@@ -57,48 +119,99 @@ class DampingBase:
     
     @classmethod
     def print_dampings(cls):
-        """Prints all the dampings"""
+        """
+        Prints all the dampings currently registered.
+        
+        Outputs a formatted representation of each damping instance
+        to the console, showing their class, name, tag, and parameters.
+        """
         print("Printing all dampings:")
         for tag in cls._dampings:
             print(cls._dampings[tag])
 
-   
-
-        
-
-
     @staticmethod
     def get_Parameters() -> List[Tuple[str, str]]:
-        """Returns the parameters of the damping"""
+        """
+        Returns the parameters of the damping.
+        
+        Returns:
+            List[Tuple[str, str]]: List of parameter name-description pairs
+        """
         pass
 
     @staticmethod
     def get_Notes() -> Dict[str, Union[str, list]]:
-        """Returns the notes of the damping"""
+        """
+        Returns the notes of the damping.
+        
+        Returns:
+            Dict[str, Union[str, list]]: Dictionary containing notes and references
+                about the damping model
+        """
         pass
     
     @abstractmethod
     def get_values(self)-> Dict[str, Union[str, int, float, list]]:
-        """Returns the values of the parameters of the damping"""
+        """
+        Returns the values of the parameters of the damping.
+        
+        Returns:
+            Dict[str, Union[str, int, float, list]]: Dictionary containing the
+                current parameter values of the damping instance
+        """
         pass
 
     @abstractmethod
     def update_values(self, **kwargs) -> None:
-        """Updates the values of the parameters of the damping"""
+        """
+        Updates the values of the parameters of the damping.
+        
+        Args:
+            **kwargs: Parameter name-value pairs to update
+            
+        Raises:
+            ValueError: If parameter validation fails
+        """
         pass
 
     @abstractmethod
     def to_tcl(self) -> str:
-        """Returns the TCL code of the damping"""
-        pass
+        """
+        Returns the TCL code of the damping.
         
-
-
-
+        Returns:
+            str: OpenSees TCL command string for defining this damping
+        """
+        pass
 
 
 class RayleighDamping(DampingBase):
+    """
+    Implementation of Rayleigh damping model.
+    
+    Rayleigh damping is a classical damping model used in structural dynamics,
+    defined as a linear combination of mass and stiffness matrices.
+    
+    Attributes:
+        alphaM (float): Factor applied to mass matrix
+        betaK (float): Factor applied to current stiffness matrix
+        betaKInit (float): Factor applied to initial stiffness matrix
+        betaKComm (float): Factor applied to committed stiffness matrix
+    """
     def __init__(self, **kwargs):
+        """
+        Initialize a Rayleigh damping instance.
+        
+        Args:
+            **kwargs: Keyword arguments defining the damping properties:
+                alphaM (float): Factor applied to mass matrix (default=0.0)
+                betaK (float): Factor applied to current stiffness matrix (default=0.0)
+                betaKInit (float): Factor applied to initial stiffness matrix (default=0.0)
+                betaKComm (float): Factor applied to committed stiffness matrix (default=0.0)
+                
+        Raises:
+            ValueError: If parameters are invalid or out of range
+        """
         kwargs = self.validate(**kwargs)
         super().__init__()
         self.alphaM = kwargs["alphaM"]
@@ -106,8 +219,13 @@ class RayleighDamping(DampingBase):
         self.betaKInit = kwargs["betaKInit"]
         self.betaKComm = kwargs["betaKComm"]
 
-    
     def __str__(self) -> str:
+        """
+        Returns a string representation of the Rayleigh damping object.
+        
+        Returns:
+            str: A formatted string showing the damping class, name, tag, and parameters
+        """
         res = super().__str__()
         res += f"\n\talphaM: {self.alphaM}"
         res += f"\n\tbetaK: {self.betaK}"
@@ -115,11 +233,14 @@ class RayleighDamping(DampingBase):
         res += f"\n\tbetaKComm: {self.betaKComm}"
         return res
 
-
-
     @staticmethod
     def get_Parameters() -> List[Tuple[str, str]]:
-        """Returns the parameters of the damping"""
+        """
+        Returns the parameters of the Rayleigh damping.
+        
+        Returns:
+            List[Tuple[str, str]]: List of parameter name-description pairs for Rayleigh damping
+        """
         return [
             ("alphaM", "factor applied to elements or nodes mass matrix (optional, default=0.0)"),
             ("betaK", "factor applied to elements or nodes stiffness matrix (optional, default=0.0)"),
@@ -129,7 +250,13 @@ class RayleighDamping(DampingBase):
     
     @staticmethod
     def get_Notes() -> Dict[str, Union[str, list]]:
-        """Returns the notes of the damping"""
+        """
+        Returns the notes of the Rayleigh damping.
+        
+        Returns:
+            Dict[str, Union[str, list]]: Dictionary containing explanatory notes and references
+                about Rayleigh damping
+        """
         return {
         "Notes": [
             "The damping matrix is calculated as: C = α<sub>M</sub> M + β<sub>K</sub>  K + β<sub>KInit</sub> Kinit + β<sub>KComm</sub>  Kcomm",
@@ -143,7 +270,18 @@ class RayleighDamping(DampingBase):
     
     @staticmethod
     def validate(**kwargs)-> Dict[str, Union[str, list]]:
-        """Validates the damping"""
+        """
+        Validates the Rayleigh damping parameters.
+        
+        Args:
+            **kwargs: Parameter name-value pairs to validate
+            
+        Returns:
+            Dict[str, Union[str, list]]: Validated parameters
+            
+        Raises:
+            ValueError: If any parameter is invalid or out of range
+        """
         newkwargs = {
             "alphaM": 0.0,
             "betaK": 0.0,
@@ -151,14 +289,12 @@ class RayleighDamping(DampingBase):
             "betaKComm": 0.0
         }
 
-
         #  check if the values are floats and are between 0 and 1
         for key in newkwargs:
             try:
                 newkwargs[key] = float(kwargs.get(key, 0.0))
             except ValueError:
                 raise ValueError(f"{key} should be a float")
-
 
         for key in newkwargs:
             try:
@@ -177,6 +313,13 @@ class RayleighDamping(DampingBase):
         return newkwargs
 
     def get_values(self)-> Dict[str, Union[str, int, float, list]]:
+        """
+        Returns the current values of the Rayleigh damping parameters.
+        
+        Returns:
+            Dict[str, Union[str, int, float, list]]: Dictionary containing the
+                current parameter values
+        """
         return {
             "alphaM": self.alphaM,
             "betaK": self.betaK,
@@ -185,7 +328,15 @@ class RayleighDamping(DampingBase):
         }
     
     def update_values(self, **kwargs) -> None:
-        """Updates the values of the parameters of the damping"""
+        """
+        Updates the values of the Rayleigh damping parameters.
+        
+        Args:
+            **kwargs: Parameter name-value pairs to update
+            
+        Raises:
+            ValueError: If parameter validation fails
+        """
         kwargs = self.validate(**kwargs)
         self.alphaM = kwargs["alphaM"]
         self.betaK = kwargs["betaK"]
@@ -193,23 +344,61 @@ class RayleighDamping(DampingBase):
         self.betaKComm = kwargs["betaKComm"]
 
     def to_tcl(self) -> str:
-        """Returns the TCL code of the damping"""
-        res = f"# damping rayleigh {self.tag} {self.alphaM} {self.betaK} {self.betaKInit} {self.betaKComm}"
+        """
+        Returns the TCL code for the Rayleigh damping.
+        
+        Returns:
+            str: OpenSees TCL command string for defining Rayleigh damping
+        """
+        res = f"# damping rayleigh {self.tag} {self.alphaM} {self.betaK} {self.betaKInit} {self.betaKComm} (normal rayleigh damping)"
         return res
     
     @staticmethod
     def get_Type() -> str:
+        """
+        Returns the type identifier for Rayleigh damping.
+        
+        Returns:
+            str: The string "Rayleigh" identifying this damping type
+        """
         return "Rayleigh"
 
 
 class ModalDamping(DampingBase):
+    """
+    Implementation of Modal damping model.
+    
+    Modal damping allows specifying different damping ratios for different
+    vibration modes of a structure.
+    
+    Attributes:
+        numberofModes (int): Number of modes to consider for modal damping
+        dampingFactors (list): List of damping ratios for each mode
+    """
     def __init__(self, **kwargs):
+        """
+        Initialize a Modal damping instance.
+        
+        Args:
+            **kwargs: Keyword arguments defining the modal damping properties:
+                numberofModes (int): Number of modes to consider
+                dampingFactors (str or list): Comma-separated string or list of damping ratios
+                
+        Raises:
+            ValueError: If parameters are invalid or out of range
+        """
         kwargs = self.validate(**kwargs)
         super().__init__()
         self.numberofModes = kwargs["numberofModes"]
         self.dampingFactors = kwargs["dampingFactors"]
     
     def __str__(self) -> str:
+        """
+        Returns a string representation of the Modal damping object.
+        
+        Returns:
+            str: A formatted string showing the damping class, name, tag, and parameters
+        """
         res = super().__str__()
         res += f"\n\tNumber of Modes: {self.numberofModes}"
         res += f"\n\tDamping Factors: {self.dampingFactors}"
@@ -217,7 +406,12 @@ class ModalDamping(DampingBase):
     
     @staticmethod
     def get_Parameters() -> List[Tuple[str, str]]:
-        """Returns the parameters of the damping"""
+        """
+        Returns the parameters of the Modal damping.
+        
+        Returns:
+            List[Tuple[str, str]]: List of parameter name-description pairs for Modal damping
+        """
         return [
             ("numberofModes", "number of modes to consider for modal damping (integer greater than 0)"),
             ("dampingFactors", "damping factors for each mode (list of comma separated floats between 0 and 1)"),
@@ -225,7 +419,13 @@ class ModalDamping(DampingBase):
     
     @staticmethod
     def get_Notes() -> Dict[str, Union[str, list]]:
-        """Returns the notes of the damping"""
+        """
+        Returns the notes of the Modal damping.
+        
+        Returns:
+            Dict[str, Union[str, list]]: Dictionary containing explanatory notes and references
+                about Modal damping
+        """
         return {
         "References": ["https://opensees.github.io/OpenSeesDocumentation/user/manual/model/damping/modalDamping.html",
                        "https://portwooddigital.com/2019/09/12/be-careful-with-modal-damping/",
@@ -235,7 +435,18 @@ class ModalDamping(DampingBase):
 
     @staticmethod
     def validate(**kwargs)-> Dict[str, Union[str, list]]:
-        """Validates the damping"""
+        """
+        Validates the Modal damping parameters.
+        
+        Args:
+            **kwargs: Parameter name-value pairs to validate
+            
+        Returns:
+            Dict[str, Union[str, list]]: Validated parameters
+            
+        Raises:
+            ValueError: If any parameter is invalid or out of range
+        """
         numberofModes = 0
         dampingFactors = []
 
@@ -276,29 +487,79 @@ class ModalDamping(DampingBase):
         }
     
     def get_values(self) -> Dict[str, Union[str, int, float, list]]:
+        """
+        Returns the current values of the Modal damping parameters.
+        
+        Returns:
+            Dict[str, Union[str, int, float, list]]: Dictionary containing the
+                current parameter values
+        """
         return {
             "numberofModes": self.numberofModes,
             "dampingFactors": ",".join([str(x) for x in self.dampingFactors])
         }
     
     def update_values(self, **kwargs) -> None:
-        """Updates the values of the parameters of the damping"""
+        """
+        Updates the values of the Modal damping parameters.
+        
+        Args:
+            **kwargs: Parameter name-value pairs to update
+            
+        Raises:
+            ValueError: If parameter validation fails
+        """
         kwargs = self.validate(**kwargs)
         self.numberofModes = kwargs["numberofModes"]
         self.dampingFactors = kwargs["dampingFactors"]
     
     def to_tcl(self) -> str:
-        """Returns the TCL code of the damping"""
+        """
+        Returns the TCL code for the Modal damping.
+        
+        Returns:
+            str: OpenSees TCL command string for defining Modal damping
+        """
         res = f"-modalDamping {' '.join([str(x) for x in self.dampingFactors])}"
         return res
     
     @staticmethod
     def get_Type() -> str:
+        """
+        Returns the type identifier for Modal damping.
+        
+        Returns:
+            str: The string "Modal" identifying this damping type
+        """
         return "Modal"
                 
 
 class FrequencyRayleighDamping(RayleighDamping):
+    """
+    Implementation of Frequency-dependent Rayleigh damping model.
+    
+    This class extends RayleighDamping by allowing specification of target
+    frequencies and a damping ratio, from which the Rayleigh coefficients
+    are automatically calculated.
+    
+    Attributes:
+        f1 (float): Lower bound target frequency
+        f2 (float): Upper bound target frequency
+        dampingFactor (float): Target damping ratio
+    """
     def __init__(self, **kwargs):
+        """
+        Initialize a Frequency Rayleigh damping instance.
+        
+        Args:
+            **kwargs: Keyword arguments defining the damping properties:
+                f1 (float): Lower bound target frequency (default=0.2 Hz)
+                f2 (float): Upper bound target frequency (default=20 Hz)
+                dampingFactor (float): Target damping ratio (required)
+                
+        Raises:
+            ValueError: If parameters are invalid or out of range
+        """
         kwargs = self.validate(**kwargs)
         super().__init__(**kwargs)
         self.f1 = kwargs["f1"]
@@ -312,6 +573,12 @@ class FrequencyRayleighDamping(RayleighDamping):
         }
 
     def __str__(self) -> str:
+        """
+        Returns a string representation of the Frequency Rayleigh damping object.
+        
+        Returns:
+            str: A formatted string showing the damping class, name, tag, and parameters
+        """
         res = super().__str__()
         res += f"\n\tf1: {self.f1}"
         res += f"\n\tf2: {self.f2}"
@@ -320,7 +587,13 @@ class FrequencyRayleighDamping(RayleighDamping):
     
     @staticmethod
     def get_Parameters() -> List[Tuple[str, str]]:
-        """Returns the parameters of the damping"""
+        """
+        Returns the parameters of the Frequency Rayleigh damping.
+        
+        Returns:
+            List[Tuple[str, str]]: List of parameter name-description pairs for 
+                Frequency Rayleigh damping
+        """
         return [
             ("dampingFactor", "damping factor for the frequency range (float between 0 and 1) (required)"),
             ("f1", "lower bound Target Frequency (float greater than 0) (optional, default=0.2)"),
@@ -329,7 +602,13 @@ class FrequencyRayleighDamping(RayleighDamping):
     
     @staticmethod
     def get_Notes() -> Dict[str, Union[str, list]]:
-        """Returns the notes of the damping"""
+        """
+        Returns the notes of the Frequency Rayleigh damping.
+        
+        Returns:
+            Dict[str, Union[str, list]]: Dictionary containing explanatory notes and references
+                about Frequency Rayleigh damping including mathematical formulation
+        """
         return {
         "Notes": [
             '''
@@ -346,7 +625,21 @@ class FrequencyRayleighDamping(RayleighDamping):
 
     @staticmethod
     def validate(**kwargs)-> Dict[str, Union[str, list]]:
-        """Validates the damping"""
+        """
+        Validates the Frequency Rayleigh damping parameters.
+        
+        Converts frequency and damping specifications into Rayleigh coefficients.
+        
+        Args:
+            **kwargs: Parameter name-value pairs to validate
+            
+        Returns:
+            Dict[str, Union[str, list]]: Validated parameters with calculated
+                Rayleigh coefficients
+            
+        Raises:
+            ValueError: If any parameter is invalid or out of range
+        """
         f1 = 0.2 # Hz 
         f2 = 20  # Hz
         dampingFactor = 0
@@ -398,6 +691,13 @@ class FrequencyRayleighDamping(RayleighDamping):
         }
     
     def get_values(self) -> Dict[str, Union[str, int, float, list]]:
+        """
+        Returns the current values of the Frequency Rayleigh damping parameters.
+        
+        Returns:
+            Dict[str, Union[str, int, float, list]]: Dictionary containing the
+                current parameter values (frequency and damping specifications)
+        """
         return {
             "dampingFactor": self.dampingFactor,
             "f1": self.f1,
@@ -406,7 +706,18 @@ class FrequencyRayleighDamping(RayleighDamping):
     
 
     def update_values(self, **kwargs) -> None:
-        """Updates the values of the parameters of the damping"""
+        """
+        Updates the values of the Frequency Rayleigh damping parameters.
+        
+        Recalculates the Rayleigh coefficients based on the new frequency and
+        damping specifications.
+        
+        Args:
+            **kwargs: Parameter name-value pairs to update
+            
+        Raises:
+            ValueError: If parameter validation fails
+        """
         kwargs = self.validate(**kwargs)
         self.f1 = kwargs["f1"]
         self.f2 = kwargs["f2"]
@@ -418,12 +729,56 @@ class FrequencyRayleighDamping(RayleighDamping):
 
     @staticmethod
     def get_Type() -> str:
+        """
+        Returns the type identifier for Frequency Rayleigh damping.
+        
+        Returns:
+            str: The string "Frequency Rayleigh" identifying this damping type
+        """
         return "Frequency Rayleigh"
-
+    
+    def to_tcl(self) -> str:
+        """
+        Returns the TCL code for the Frequency Rayleigh damping.
+        
+        Returns:
+            str: OpenSees TCL command string for defining Frequency Rayleigh damping
+        """
+        res = f"# damping rayleigh {self.tag} {self.alphaM} {self.betaK} {self.betaKInit} {self.betaKComm} (frequency rayleigh damping with f1 = {self.f1} and f2 = {self.f2} and damping factor = {self.dampingFactor})"
+        return res
 
 
 class UniformDamping(DampingBase):
+    """
+    Implementation of Uniform damping model.
+    
+    Uniform damping provides a constant damping ratio across a specified
+    frequency range for all elements in a model.
+    
+    Attributes:
+        dampingRatio (float): Target equivalent viscous damping ratio
+        freql (float): Lower bound of the frequency range
+        freq2 (float): Upper bound of the frequency range
+        Ta (float, optional): Activation time for damping
+        Td (float, optional): Deactivation time for damping
+        tsTagScaleFactorVsTime (int, optional): Time series tag for damping scaling
+    """
     def __init__(self, **kwargs):
+        """
+        Initialize a Uniform damping instance.
+        
+        Args:
+            **kwargs: Keyword arguments defining the uniform damping properties:
+                dampingRatio (float): Target equivalent viscous damping ratio (required)
+                freql (float): Lower bound of the frequency range (required)
+                freq2 (float): Upper bound of the frequency range (required)
+                Ta (float, optional): Activation time for damping
+                Td (float, optional): Deactivation time for damping
+                tsTagScaleFactorVsTime (int, optional): Time series tag for damping scaling
+                
+        Raises:
+            ValueError: If parameters are invalid or out of range
+        """
         kwargs = self.validate(**kwargs)
         super().__init__()
         self.dampingRatio = kwargs["dampingRatio"]
@@ -434,6 +789,12 @@ class UniformDamping(DampingBase):
         self.tsTagScaleFactorVsTime = kwargs.get("tsTagScaleFactorVsTime", None)
 
     def __str__(self) -> str:
+        """
+        Returns a string representation of the Uniform damping object.
+        
+        Returns:
+            str: A formatted string showing the damping class, name, tag, and parameters
+        """
         res = super().__str__()
         res += f"\n\tDamping Ratio: {self.dampingRatio}"
         res += f"\n\tLower Frequency: {self.freql}"
@@ -443,10 +804,14 @@ class UniformDamping(DampingBase):
         res += f"\n\ttsTagScaleFactorVsTime: {self.tsTagScaleFactorVsTime if self.tsTagScaleFactorVsTime is not None else 'No time series'}"
         return res
     
-
     @staticmethod
     def get_Parameters() -> List[Tuple[str, str]]:
-        """Returns the parameters of the damping"""
+        """
+        Returns the parameters of the Uniform damping.
+        
+        Returns:
+            List[Tuple[str, str]]: List of parameter name-description pairs for Uniform damping
+        """
         return [
             ("dampingRatio", "target equivalent viscous damping ratio (float between 0 and 1) (required)"),
             ("freql", "lower bound of the frequency range (in units of T^-1) (float greater than 0) (required)"),
@@ -458,7 +823,13 @@ class UniformDamping(DampingBase):
     
     @staticmethod
     def get_Notes() -> Dict[str, Union[str, list]]:
-        """Returns the notes of the damping"""
+        """
+        Returns the notes of the Uniform damping.
+        
+        Returns:
+            Dict[str, Union[str, list]]: Dictionary containing explanatory notes and references
+                about Uniform damping
+        """
         return {
             "References": [
                 "https://opensees.github.io/OpenSeesDocumentation/user/manual/model/damping/elementalDamping/UniformDamping.html",
@@ -467,7 +838,18 @@ class UniformDamping(DampingBase):
     
     @staticmethod
     def validate(**kwargs)-> Dict[str, Union[str, list]]:
-        """Validates the damping"""
+        """
+        Validates the Uniform damping parameters.
+        
+        Args:
+            **kwargs: Parameter name-value pairs to validate
+            
+        Returns:
+            Dict[str, Union[str, list]]: Validated parameters
+            
+        Raises:
+            ValueError: If any parameter is invalid or out of range
+        """
 
         # make them float
         try :
@@ -502,6 +884,13 @@ class UniformDamping(DampingBase):
         return kwargs
         
     def get_values(self) -> Dict[str, Union[str, int, float, list]]:
+        """
+        Returns the current values of the Uniform damping parameters.
+        
+        Returns:
+            Dict[str, Union[str, int, float, list]]: Dictionary containing the
+                current parameter values
+        """
         return {
             "dampingRatio": self.dampingRatio,
             "freql": self.freql,
@@ -514,7 +903,15 @@ class UniformDamping(DampingBase):
         }
     
     def update_values(self, **kwargs) -> None:
-        """Updates the values of the parameters of the damping"""
+        """
+        Updates the values of the Uniform damping parameters.
+        
+        Args:
+            **kwargs: Parameter name-value pairs to update
+            
+        Raises:
+            ValueError: If parameter validation fails
+        """
         kwargs = self.validate(**kwargs)
         self.dampingRatio = kwargs["dampingRatio"]
         self.freql = kwargs["freql"]
@@ -526,7 +923,12 @@ class UniformDamping(DampingBase):
         self.tsTagScaleFactorVsTime = kwargs.get("tsTagScaleFactorVsTime", None) # tsTagScaleFactorVsTime is optional so we use get
 
     def to_tcl(self) -> str:
-        """Returns the TCL code of the damping"""
+        """
+        Returns the TCL code for the Uniform damping.
+        
+        Returns:
+            str: OpenSees TCL command string for defining Uniform damping
+        """
         res = f"damping Uniform {self.tag} {self.dampingRatio} {self.freql} {self.freq2}"
         if self.Ta is not None:
             res += f" -activateTime  {self.Ta}"
@@ -539,14 +941,42 @@ class UniformDamping(DampingBase):
     
     @staticmethod
     def get_Type() -> str:
+        """
+        Returns the type identifier for Uniform damping.
+        
+        Returns:
+            str: The string "Uniform" identifying this damping type
+        """
         return "Uniform"
 
 
-
-
-
 class SecantStiffnessProportional (DampingBase):
+    """
+    Implementation of Secant Stiffness Proportional damping model.
+    
+    This damping model applies damping proportional to the secant stiffness
+    of elements, which is useful for nonlinear analysis.
+    
+    Attributes:
+        dampingFactor (float): Coefficient used in the secant stiffness-proportional damping
+        Ta (float, optional): Activation time for damping
+        Td (float, optional): Deactivation time for damping
+        tsTagScaleFactorVsTime (int, optional): Time series tag for damping scaling
+    """
     def __init__(self, **kwargs):
+        """
+        Initialize a Secant Stiffness Proportional damping instance.
+        
+        Args:
+            **kwargs: Keyword arguments defining the damping properties:
+                dampingFactor (float): Coefficient used in damping (required)
+                Ta (float, optional): Activation time for damping
+                Td (float, optional): Deactivation time for damping
+                tsTagScaleFactorVsTime (int, optional): Time series tag for damping scaling
+                
+        Raises:
+            ValueError: If parameters are invalid or out of range
+        """
         kwargs = self.validate(**kwargs)
         super().__init__()
         self.dampingFactor = kwargs["dampingFactor"]
@@ -555,6 +985,12 @@ class SecantStiffnessProportional (DampingBase):
         self.tsTagScaleFactorVsTime = kwargs.get("tsTagScaleFactorVsTime", None)
     
     def __str__(self) -> str:
+        """
+        Returns a string representation of the Secant Stiffness Proportional damping object.
+        
+        Returns:
+            str: A formatted string showing the damping class, name, tag, and parameters
+        """
         res = super().__str__()
         res += f"\n\tDamping Factor: {self.dampingFactor}"
         res += f"\n\tTa: {self.Ta if self.Ta is not None else 'default'}"
@@ -564,7 +1000,13 @@ class SecantStiffnessProportional (DampingBase):
     
     @staticmethod
     def get_Parameters() -> List[Tuple[str, str]]:
-        """Returns the parameters of the damping"""
+        """
+        Returns the parameters of the Secant Stiffness Proportional damping.
+        
+        Returns:
+            List[Tuple[str, str]]: List of parameter name-description pairs for
+                Secant Stiffness Proportional damping
+        """
         return [
             ("dampingFactor", "coefficient used in the secant stiffness-proportional damping (float between 0 and 1) (required)"),
             ("Ta", "time when the damping is activated (float) (optional)"),
@@ -574,7 +1016,13 @@ class SecantStiffnessProportional (DampingBase):
     
     @staticmethod
     def get_Notes() -> Dict[str, Union[str, list]]:
-        """Returns the notes of the damping"""
+        """
+        Returns the notes of the Secant Stiffness Proportional damping.
+        
+        Returns:
+            Dict[str, Union[str, list]]: Dictionary containing explanatory notes and references
+                about Secant Stiffness Proportional damping
+        """
         return {
             "Notes": [
                 """The formulation of the damping matrix is:
@@ -589,7 +1037,18 @@ class SecantStiffnessProportional (DampingBase):
     
     @staticmethod
     def validate(**kwargs)-> Dict[str, Union[str, list]]:
-        """Validates the damping"""
+        """
+        Validates the Secant Stiffness Proportional damping parameters.
+        
+        Args:
+            **kwargs: Parameter name-value pairs to validate
+            
+        Returns:
+            Dict[str, Union[str, list]]: Validated parameters
+            
+        Raises:
+            ValueError: If any parameter is invalid or out of range
+        """
         # make them float
         try :
             for key in ["dampingFactor", "Ta", "Td"]:
@@ -615,6 +1074,13 @@ class SecantStiffnessProportional (DampingBase):
         return kwargs
     
     def get_values(self) -> Dict[str, Union[str, int, float, list]]:
+        """
+        Returns the current values of the Secant Stiffness Proportional damping parameters.
+        
+        Returns:
+            Dict[str, Union[str, int, float, list]]: Dictionary containing the
+                current parameter values
+        """
         return {
             "dampingFactor": self.dampingFactor,
             **{k: v for k, v in {
@@ -625,7 +1091,15 @@ class SecantStiffnessProportional (DampingBase):
         }
     
     def update_values(self, **kwargs) -> None:
-        """Updates the values of the parameters of the damping"""
+        """
+        Updates the values of the Secant Stiffness Proportional damping parameters.
+        
+        Args:
+            **kwargs: Parameter name-value pairs to update
+            
+        Raises:
+            ValueError: If parameter validation fails
+        """
         kwargs = self.validate(**kwargs)
         self.dampingFactor = kwargs["dampingFactor"]
 
@@ -635,7 +1109,12 @@ class SecantStiffnessProportional (DampingBase):
         self.tsTagScaleFactorVsTime = kwargs.get("tsTagScaleFactorVsTime", None)
     
     def to_tcl(self) -> str:
-        """Returns the TCL code of the damping"""
+        """
+        Returns the TCL code for the Secant Stiffness Proportional damping.
+        
+        Returns:
+            str: OpenSees TCL command string for defining Secant Stiffness Proportional damping
+        """
         res = f"damping SecStiff {self.tag} {self.dampingFactor}"
         if self.Ta is not None:
             res += f" -activateTime  {self.Ta}"
@@ -648,8 +1127,13 @@ class SecantStiffnessProportional (DampingBase):
     
     @staticmethod
     def get_Type() -> str:
+        """
+        Returns the type identifier for Secant Stiffness Proportional damping.
+        
+        Returns:
+            str: The string "Secant Stiffness Proportional" identifying this damping type
+        """
         return "Secant Stiffness Proportional"
-
 
 
 class DampingManager:
@@ -688,6 +1172,20 @@ class DampingManager:
         if cls._instance is None:
             cls._instance = super(DampingManager, cls).__new__(cls)
         return cls._instance
+    
+    def __init__(self):
+        """
+        Initialize the DampingManager.
+        
+        This method is called only once when the first instance of DampingManager is created.
+        It sets up the necessary attributes and prepares the manager for use.
+        """
+        # Initialize any required attributes here
+        self.rayleigh = RayleighDamping
+        self.modal = ModalDamping
+        self.frequencyRayleigh = FrequencyRayleighDamping
+        self.uniform = UniformDamping
+        self.secantStiffnessProportional = SecantStiffnessProportional
 
     @classmethod
     def get_instance(cls):
@@ -780,10 +1278,18 @@ class DampingManager:
             List[str]: A list of damping type names that can be used with create_damping()
         """
         return DampingRegistry.get_available_types()
-    
 
 
 class DampingRegistry:
+    """
+    Registry of available damping types for dynamic structural analysis.
+    
+    The DampingRegistry maintains a dictionary of damping types and their corresponding
+    classes, allowing for dynamic registration and creation of damping objects.
+    
+    This class uses class methods exclusively and is not intended to be instantiated.
+    It serves as a factory for creating damping instances of various types.
+    """
     _damping_types = {
         'frequency rayleigh': FrequencyRayleighDamping,
         'rayleigh': RayleighDamping,
@@ -794,25 +1300,54 @@ class DampingRegistry:
 
     @classmethod
     def create_damping(cls, damping_type: str, **kwargs) -> DampingBase:
+        """
+        Create a new damping instance of the specified type.
+        
+        Args:
+            damping_type (str): The type of damping to create (case insensitive)
+            **kwargs: Parameter name-value pairs for the damping type
+            
+        Returns:
+            DampingBase: A new instance of the requested damping type
+            
+        Raises:
+            ValueError: If the damping type is unknown
+        """
         if damping_type.lower() not in cls._damping_types:
             raise ValueError(f"Unknown damping type: {damping_type}")
         return cls._damping_types[damping_type.lower()](**kwargs)
 
     @classmethod
     def get_available_types(cls) -> List[str]:
+        """
+        Get a list of available damping types that can be created.
+        
+        Returns:
+            List[str]: A list of damping type names that can be used with create_damping()
+        """
         return list(cls._damping_types.keys())
 
     @classmethod
     def register_damping_type(cls, name: str, damping_class: Type[DampingBase]):
+        """
+        Register a new damping type.
+        
+        Args:
+            name (str): The name to use for this damping type (will be converted to lowercase)
+            damping_class (Type[DampingBase]): The class to instantiate for this damping type
+        """
         cls._damping_types[name.lower()] = damping_class
 
     @classmethod
     def remove_damping_type(cls, name: str):
+        """
+        Remove a registered damping type.
+        
+        Args:
+            name (str): The name of the damping type to remove
+        """
         if name.lower() in cls._damping_types:
             del cls._damping_types[name.lower()]
-
- 
-
 
 
 if __name__ == "__main__":
@@ -825,8 +1360,6 @@ if __name__ == "__main__":
     RayleighDamping2 = RayleighDamping(alphaM=0.5, betaK=0.6, betaKInit=0.7, betaKComm=0.8)
     ModalDamping1 = ModalDamping(numberofModes=2, dampingFactors="0.1,0.2")
     ModalDamping2 = ModalDamping(numberofModes=3, dampingFactors="0.3,0.4,0.5")
-
-
 
     DampingBase.print_dampings()
 

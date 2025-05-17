@@ -25,9 +25,12 @@ dependencies = [
     "pykdtree>=1.4.1",
     "pyvista>=0.45.0",
     "tapipy>=1.8.2",
+    "tqdm",
 ]
 
 [project.optional-dependencies]
+jupyter = ["pyvista[all]"]
+
 gui = [
     "pyvistaqt>=0.11.2", 
     "PySide6>=6.9.0",
@@ -35,7 +38,7 @@ gui = [
     "qtconsole>=5.6.1",
     "ipykernel>=6.29.5",
     # Add constraints for problematic dependencies
-    "jsonschema>=4.17.3,<4.18.0",
+    "jsonschema>=4.18.0",
     "nbformat>=5.3.0,<5.4.0",
     "frozenlist>=1.3.0,<1.4.0",
     "jinja2>=3.0.3,<3.1.0"

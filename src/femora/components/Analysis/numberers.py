@@ -146,6 +146,11 @@ class NumbererManager:
         # Initialize by creating all three numberer instances if they don't exist
         if not NumbererManager._numberer_instances:
             self._initialize_default_numberers()
+        self.rcm = RCMNumberer
+        self.plain = PlainNumberer
+        self.amd = AMDNumberer
+        self.parallelrcm = ParallelRCMNumberer
+        
     
     def _initialize_default_numberers(self):
         """

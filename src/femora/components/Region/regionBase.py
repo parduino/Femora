@@ -4,11 +4,44 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Type, Optional, Union
 
 class RegionBase(ABC):
+    """
+    Abstract base class for defining regions in a structural model.
+    
+    RegionBase provides a foundation for defining and managing regions in a structural model,
+    which can be used to associate specific properties or behaviors (such as damping) 
+    with parts of the model. Regions are automatically tracked with unique tags.
+    
+    The class maintains a registry of all region instances, including a special "global region"
+    with tag 0 that represents the entire model. Regions can be retrieved by their tags,
+    and the class ensures that tags remain unique.
+    
+    Attributes:
+        _regions (dict): Class-level dictionary mapping tags to region instances
+        _global_region (RegionBase): Reference to the global region instance (tag 0)
+        
+    Note:
+        This is an abstract class. Concrete region implementations should be created
+        through subclasses like ElementRegion, NodeRegion, or GlobalRegion.
+    """
     _regions = {}  # Dictionary to hold regions
     _global_region = None  # Global region instance
 
     def __new__(cls, tag=None, damping: Type[DampingBase] = None):
-
+        """
+        Control the creation of new region instances to maintain unique tags.
+        
+        This method ensures that:
+        1. If a region with the requested tag already exists, return that instance
+        2. If tag=0 is requested, create or return the global region
+        3. Otherwise create a new region instance
+        
+        Args:
+            tag (int, optional): Unique identifier for the region
+            damping (Type[DampingBase], optional): Damping behavior to assign to this region
+            
+        Returns:
+            RegionBase: Either an existing or new region instance
+        """
         if tag in cls._regions:
             return cls._regions[tag]
         
@@ -21,10 +54,18 @@ class RegionBase(ABC):
         instance = super().__new__(cls)
         return instance
 
-
-
     def __init__(self, tag=None, damping: Type[DampingBase] = None):
+        """
+        Initialize a region with a tag and optional damping.
         
+        Args:
+            tag (int, optional): Unique identifier for the region. If None, a new tag is assigned.
+                                If 0, this creates or references the global region.
+            damping (Type[DampingBase], optional): Damping behavior to assign to this region
+            
+        Raises:
+            ValueError: If tag=0 is used with a class that is not GlobalRegion
+        """
         if tag == 0:
             # check the region is type of global region for tag 0
             if not isinstance(self, GlobalRegion):
@@ -47,28 +88,76 @@ class RegionBase(ABC):
 
     @property
     def tag(self):
+        """
+        Get the unique identifier for this region.
+        
+        Returns:
+            int: The region's tag
+        """
         return self._tag
     
     @property
     def name(self):
+        """
+        Get the name of this region.
+        
+        Returns:
+            str: The region's name
+        """
         return self._name
     
     @property
     def damping(self):
+        """
+        Get the damping behavior assigned to this region.
+        
+        Returns:
+            DampingBase or None: The damping instance, or None if not assigned
+        """
         return self._damping() if self._damping else None
 
     @damping.setter
     def damping(self, value: Optional[Type[DampingBase]]):
+        """
+        Assign a damping behavior to this region.
+        
+        Args:
+            value (Type[DampingBase], optional): The damping instance to assign
+            
+        Raises:
+            TypeError: If value is not a subclass of DampingBase
+        """
         if value is not None and not issubclass(value.__class__, DampingBase):
             raise TypeError("damping must be a subclass of DampingBase")
         self._damping = weakref.ref(value) if value else None 
 
     @damping.deleter
     def damping(self):
+        """Remove the damping behavior from this region."""
         self._damping_ref = None 
-
+        
+    def set_damping(self, damping_instance: Type[DampingBase]):
+        """
+        Set the damping behavior of this region.
+        
+        This method provides an alternative way to assign damping to a region,
+        with the same functionality as the damping property setter.
+        
+        Args:
+            damping_instance (Type[DampingBase], required): The damping instance to assign
+            
+        Raises:
+            TypeError: If damping_instance is not a subclass of DampingBase
+        """
+        self.damping = damping_instance
 
     def __str__(self) -> str:
+        """
+        Get a string representation of this region.
+        
+        Returns:
+            str: A multi-line string describing the region's properties
+        """
         type_name = self.get_type()
         res = f"Region class"
         res += f"\n\tTag: {self.tag}"
@@ -80,12 +169,22 @@ class RegionBase(ABC):
 
     @classmethod
     def _get_next_tag(cls):
-        """Get the next available tag."""
+        """
+        Get the next available tag for a new region.
+        
+        Returns:
+            int: Next available tag number
+        """
         return len(cls._regions)
 
     @classmethod
     def _update_tags(cls):
-        """Update tags and names of all regions except the global region."""
+        """
+        Update tags and names of all regions except the global region.
+        
+        This method ensures that region tags remain sequential after
+        regions are removed.
+        """
         tags = sorted(cls._regions.keys())
         if 0 in tags:
             tags.remove(0)  # Preserve the global region tag
@@ -99,7 +198,15 @@ class RegionBase(ABC):
 
     @classmethod
     def remove_region(cls, tag):
-        """Remove a region by its tag."""
+        """
+        Remove a region by its tag.
+        
+        Args:
+            tag (int): The tag of the region to remove
+            
+        Raises:
+            ValueError: If attempting to remove the global region (tag 0)
+        """
         if tag == 0:
             raise ValueError("Cannot remove the global region (tag 0)")
         if tag in cls._regions:
@@ -108,64 +215,147 @@ class RegionBase(ABC):
 
     @classmethod
     def get_region(cls, tag) -> Optional["RegionBase"]:
-        """Get a region by its tag."""
+        """
+        Get a region by its tag.
+        
+        Args:
+            tag (int): The tag of the region to retrieve
+            
+        Returns:
+            RegionBase or None: The region with the specified tag, or None if not found
+        """
         return cls._regions.get(tag)
 
     @classmethod
     def get_all_regions(cls) -> Dict[int, "RegionBase"]:
-        """Get all regions."""
+        """
+        Get all registered regions.
+        
+        Returns:
+            Dict[int, RegionBase]: Dictionary mapping tags to region instances
+        """
         return cls._regions
 
     @classmethod
     def clear(cls) -> None:
-        """Clear all regions, including the global region."""
+        """
+        Clear all regions, including the global region.
+        
+        This resets the region registry to an empty state.
+        """
         cls._regions = {}
         cls._global_region = None
 
     @staticmethod
     def print_regions() -> None:
-        """Print all regions."""
+        """
+        Print information about all registered regions.
+        
+        Displays detailed information about each region instance currently registered.
+        """
         for tag, region in RegionBase.get_all_regions().items():
             print(region)
 
-
     @abstractmethod
     def to_tcl(self) -> str:
-        """Convert the region to a TCL representation."""
+        """
+        Convert the region to a TCL representation.
+        
+        Returns:
+            str: TCL command string that defines this region
+        """
         pass
 
     @abstractmethod
     def validate(self):
-        """Validate region parameters."""
+        """
+        Validate region parameters.
+        
+        Raises:
+            ValueError: If region parameters are invalid
+        """
         pass
 
     @staticmethod
     @abstractmethod
     def get_Parameters() -> Dict[str, str]:
-        """Get parameters for the region."""
+        """
+        Get parameters for the region.
+        
+        Returns:
+            Dict[str, str]: Dictionary mapping parameter names to their types
+        """
         pass
 
     @staticmethod
     @abstractmethod
     def getNotes() -> Dict[str, list[str]]:
-        """Get notes for the region."""
+        """
+        Get notes for the region.
+        
+        Returns:
+            Dict[str, list[str]]: Dictionary containing notes and references for the region
+        """
         pass
 
     @staticmethod
     @abstractmethod
     def get_type(self) -> str:
+        """
+        Get the type name of this region.
+        
+        Returns:
+            str: The region type name
+        """
         pass
 
     @abstractmethod
     def setComponent(self, component:str, value:list[int]):
+        """
+        Set components for this region.
+        
+        Args:
+            component (str): The type of component to set
+            value (list[int]): List of component values
+            
+        Raises:
+            ValueError: If the component type is invalid for this region
+        """
         pass
 
 
 class GlobalRegion(RegionBase):
+    """
+    A special region representing the entire structural model.
+    
+    GlobalRegion is a singleton class that represents the entire model as a region.
+    It is automatically created with tag 0 and is used as the default region when
+    no specific region is specified.
+    
+    This class ensures that only one global region exists at any time.
+    
+    Args:
+        damping (Type[DampingBase], optional): Damping behavior to assign to this region
+    """
     def __new__(cls, damping: Type[DampingBase] = None):
+        """
+        Create or return the singleton global region instance.
+        
+        Args:
+            damping (Type[DampingBase], optional): Damping behavior to assign to this region
+            
+        Returns:
+            GlobalRegion: The global region instance (tag 0)
+        """
         return super().__new__(cls, tag=0)
 
     def __init__(self, damping: Type[DampingBase] = None):
+        """
+        Initialize the global region.
+        
+        Args:
+            damping (Type[DampingBase], optional): Damping behavior to assign to this region
+        """
         super().__init__(tag=0, damping=damping)
         self.elements = None
         self.element_range = None
@@ -173,7 +363,12 @@ class GlobalRegion(RegionBase):
         self.node_range = None
 
     def to_tcl(self) -> str:
-        """TCL representation for global region."""
+        """
+        TCL representation for global region.
+        
+        Returns:
+            str: TCL command string for the global region
+        """
         return "region 0"
 
     def validate(self):
@@ -182,24 +377,53 @@ class GlobalRegion(RegionBase):
 
     @staticmethod
     def get_Parameters() -> Dict[str, str]:
-        """No parameters for global region."""
+        """
+        No parameters for global region.
+        
+        Returns:
+            Dict[str, str]: Empty dictionary as global region has no parameters
+        """
         return {}
 
     @staticmethod
     def getNotes() -> Dict[str, list[str]]:
-        """Notes about global region."""
-        # return "Global region representing entire model"
+        """
+        Notes about global region.
+        
+        Returns:
+            Dict[str, list[str]]: Dictionary containing notes and references for the global region
+        """
         return {
             "Notes": [
                 "Global region representing entire model"
             ],
             "References": []    
         }
+        
     @staticmethod
     def get_type() -> str:
+        """
+        Get the type name of the global region.
+        
+        Returns:
+            str: Always returns "GlobalRegion"
+        """
         return "GlobalRegion"
     
     def setComponent(self, component:str, values:list[int]):
+        """
+        Set component values for the global region.
+        
+        The global region can have elements, element ranges, nodes, or node ranges
+        assigned to it.
+        
+        Args:
+            component (str): One of "element", "elementRange", "node", "nodeRange"
+            values (list[int]): List of element/node IDs or [start, end] range
+            
+        Raises:
+            ValueError: If the component type is invalid or range doesn't have exactly 2 elements
+        """
         if component == "element":
             self.elements = values
             self.element_range = None
@@ -230,15 +454,60 @@ class GlobalRegion(RegionBase):
         
 
 def initialize_region_base():
-    """Initialize the RegionBase with the global region."""
+    """
+    Initialize the RegionBase with the global region.
+    
+    This function creates the global region (tag 0) if it doesn't exist.
+    It's typically called when setting up a new model or resetting the region system.
+    """
     GlobalRegion()
 
 
 class ElementRegion(RegionBase):
+    """
+    A region defined by a set of elements or an element range.
+    
+    ElementRegion represents a collection of elements in a structural model
+    that can have specific properties or behaviors assigned to them, such as
+    damping characteristics. Elements can be specified either as a list of
+    individual element IDs or as a continuous range.
+    
+    Parameters:
+        damping (Type[DampingBase], optional): Damping behavior to assign to this region
+        **kwargs: Additional parameters including:
+            tag (int, optional): Unique identifier for the region
+            elements (list[int], optional): List of element IDs to include in the region
+            element_range (list[int], optional): Two-element list specifying start and end
+                of an element range [start, end]
+            element_only (bool, optional): If True, includes only the specified elements
+                
+    Note:
+        Cannot specify both elements and element_range simultaneously
+    """
     def __new__(cls, damping: Type[DampingBase] = None, **kwargs):
+        """
+        Create a new ElementRegion instance.
+        
+        Args:
+            damping (Type[DampingBase], optional): Damping behavior to assign to this region
+            **kwargs: Additional parameters including tag, elements, element_range, element_only
+            
+        Returns:
+            ElementRegion: A new ElementRegion instance
+        """
         return super().__new__(cls, tag=kwargs.pop("tag", None))
     
     def __init__(self, damping: Type[DampingBase] = None ,**kwargs):
+        """
+        Initialize an ElementRegion instance.
+        
+        Args:
+            damping (Type[DampingBase], optional): Damping behavior to assign to this region
+            **kwargs: Additional parameters including tag, elements, element_range, element_only
+            
+        Raises:
+            ValueError: If both elements and element_range are provided simultaneously
+        """
         super().__init__(tag=kwargs.pop("tag", None), damping=damping)
         self.elements = []
         self.element_range = []
@@ -250,8 +519,13 @@ class ElementRegion(RegionBase):
             self.element_range = validated["element_range"]
             self.element_only = validated["element_only"]
 
-
     def to_tcl(self):
+        """
+        Generate TCL representation for the ElementRegion.
+        
+        Returns:
+            str: TCL command string for the ElementRegion
+        """
         cmd = f"eval \"region {self.tag}"
         if len(self.element_range) > 0:
             cmd += " -eleRange {} {}".format(*self.element_range)
@@ -269,17 +543,27 @@ class ElementRegion(RegionBase):
         cmd += "\""
         return cmd
     
-
     def __str__(self):
+        """
+        Get a string representation of the ElementRegion.
+        
+        Returns:
+            str: A multi-line string describing the ElementRegion's properties
+        """
         res = super().__str__()
         res += f"\n\tNum of Elements: {len(self.elements)}"
         res += f"\n\tElement Range: {self.element_range}"
         res += f"\n\tElement Only: {self.element_only}"
         return res
 
-
     @staticmethod
     def get_Parameters():
+        """
+        Get parameters for the ElementRegion.
+        
+        Returns:
+            Dict[str, str]: Dictionary mapping parameter names to their types
+        """
         return {
             "elements": "lineEdit",
             "element_range": "lineEdit",
@@ -288,6 +572,12 @@ class ElementRegion(RegionBase):
     
     @staticmethod
     def getNotes()->Dict[str, list[str]]:
+        """
+        Get notes for the ElementRegion.
+        
+        Returns:
+            Dict[str, list[str]]: Dictionary containing notes and references for the ElementRegion
+        """
         return {
             "Notes": [
                 "Use elements list for specific elements: [1, 2, 3, ...]"
@@ -303,11 +593,18 @@ class ElementRegion(RegionBase):
 
     @staticmethod
     def validate(**kwargs) -> Dict[str, Union[str, bool, list]]:
-        # check if elements or element_range is provided
-        # if "elements" not in kwargs and "element_range" not in kwargs:
-        #     raise ValueError("Either elements or element_range should be provided")
+        """
+        Validate parameters for the ElementRegion.
         
-        # check if elements and element_range are provided at the same time
+        Args:
+            **kwargs: Parameters to validate
+            
+        Returns:
+            Dict[str, Union[str, bool, list]]: Validated parameters
+            
+        Raises:
+            ValueError: If parameters are invalid
+        """
         if "elements" in kwargs and "element_range" in kwargs:
             raise ValueError("Both elements and element_range cannot be provided at the same time")
         
@@ -317,7 +614,6 @@ class ElementRegion(RegionBase):
 
         if "elements" in kwargs:
             elements = kwargs["elements"]
-            # elements should be list of integers check that
             if not isinstance(elements, list):
                 raise ValueError("elements should be a list of integers")
             for e in elements:
@@ -348,9 +644,25 @@ class ElementRegion(RegionBase):
     
     @staticmethod
     def get_type() -> str:
+        """
+        Get the type name of the ElementRegion.
+        
+        Returns:
+            str: Always returns "ElementRegion"
+        """
         return "ElementRegion"
     
     def setComponent(self, component:str, value:list[int]):
+        """
+        Set component values for the ElementRegion.
+        
+        Args:
+            component (str): One of "element", "elementRange"
+            value (list[int]): List of element IDs or [start, end] range
+            
+        Raises:
+            ValueError: If the component type is invalid or range doesn't have exactly 2 elements
+        """
         if component == "element":
             self.elements = value
             self.element_range = []
@@ -365,10 +677,50 @@ class ElementRegion(RegionBase):
 
 
 class NodeRegion(RegionBase):
+    """
+    A region defined by a set of nodes or a node range.
+    
+    NodeRegion represents a collection of nodes in a structural model
+    that can have specific properties or behaviors assigned to them, such as
+    damping characteristics. Nodes can be specified either as a list of
+    individual node IDs or as a continuous range.
+    
+    Parameters:
+        damping (Type[DampingBase], optional): Damping behavior to assign to this region
+        **kwargs: Additional parameters including:
+            tag (int, optional): Unique identifier for the region
+            nodes (list[int], optional): List of node IDs to include in the region
+            node_range (list[int], optional): Two-element list specifying start and end
+                of a node range [start, end]
+            node_only (bool, optional): If True, includes only the specified nodes
+                
+    Note:
+        Cannot specify both nodes and node_range simultaneously
+    """
     def __new__(cls, damping: Type[DampingBase] = None, **kwargs):
+        """
+        Create a new NodeRegion instance.
+        
+        Args:
+            damping (Type[DampingBase], optional): Damping behavior to assign to this region
+            **kwargs: Additional parameters including tag, nodes, node_range, node_only
+            
+        Returns:
+            NodeRegion: A new NodeRegion instance
+        """
         return super().__new__(cls, tag=kwargs.pop("tag", None))
     
     def __init__(self, damping: Type[DampingBase] = None, **kwargs):
+        """
+        Initialize a NodeRegion instance.
+        
+        Args:
+            damping (Type[DampingBase], optional): Damping behavior to assign to this region
+            **kwargs: Additional parameters including tag, nodes, node_range, node_only
+            
+        Raises:
+            ValueError: If both nodes and node_range are provided simultaneously
+        """
         super().__init__(tag=kwargs.pop("tag", None), damping=damping)
         self.nodes = []
         self.node_range = []
@@ -380,8 +732,13 @@ class NodeRegion(RegionBase):
             self.node_range = validated["node_range"]
             self.node_only = validated["node_only"]
 
-
     def to_tcl(self):
+        """
+        Generate TCL representation for the NodeRegion.
+        
+        Returns:
+            str: TCL command string for the NodeRegion
+        """
         cmd = f"region {self.tag}"
         if len(self.node_range) > 0:
             cmd += " -node" + ("Only" if self.node_only else "") + "Range"
@@ -397,9 +754,13 @@ class NodeRegion(RegionBase):
                 cmd += f"-damping {self.damping.tag}"
         return cmd
     
-
-
     def __str__(self):
+        """
+        Get a string representation of the NodeRegion.
+        
+        Returns:
+            str: A multi-line string describing the NodeRegion's properties
+        """
         res = super().__str__()
         res += f"\n\tNum of Nodes: {len(self.nodes)}"
         res += f"\n\tNode Range: {self.node_range}"
@@ -407,6 +768,12 @@ class NodeRegion(RegionBase):
 
     @staticmethod
     def get_Parameters():
+        """
+        Get parameters for the NodeRegion.
+        
+        Returns:
+            Dict[str, str]: Dictionary mapping parameter names to their types
+        """
         return {
             "nodes": "lineEdit",
             "node_range": "lineEdit"
@@ -414,6 +781,12 @@ class NodeRegion(RegionBase):
 
     @staticmethod
     def getNotes()->Dict[str, list[str]]:
+        """
+        Get notes for the NodeRegion.
+        
+        Returns:
+            Dict[str, list[str]]: Dictionary containing notes and references for the NodeRegion
+        """
         return {
             "Notes": [
                 "Use nodes list for specific nodes: [1, 2, 3, ...]",
@@ -429,9 +802,18 @@ class NodeRegion(RegionBase):
 
     @staticmethod
     def validate(**kwargs) -> Dict[str, Union[str, list]]:
-        # if "nodes" not in kwargs and "node_range" not in kwargs:
-        #     raise ValueError("Either nodes or node_range should be provided")
+        """
+        Validate parameters for the NodeRegion.
         
+        Args:
+            **kwargs: Parameters to validate
+            
+        Returns:
+            Dict[str, Union[str, list]]: Validated parameters
+            
+        Raises:
+            ValueError: If parameters are invalid
+        """
         if "nodes" in kwargs and "node_range" in kwargs:
             raise ValueError("Both nodes and node_range cannot be provided at the same time")
         
@@ -470,9 +852,25 @@ class NodeRegion(RegionBase):
 
     @staticmethod
     def get_type() -> str:
+        """
+        Get the type name of the NodeRegion.
+        
+        Returns:
+            str: Always returns "NodeRegion"
+        """
         return "NodeRegion"
     
     def setComponent(self, component:str, value:list[int]):
+        """
+        Set component values for the NodeRegion.
+        
+        Args:
+            component (str): One of "node", "nodeRange"
+            value (list[int]): List of node IDs or [start, end] range
+            
+        Raises:
+            ValueError: If the component type is invalid or range doesn't have exactly 2 elements
+        """
         if component == "node":
             self.nodes = value
             self.node_range = []
@@ -484,6 +882,7 @@ class NodeRegion(RegionBase):
         else:
             raise ValueError(f"""Invalid component {component} for NodeRegion
                              valid components are node and nodeRange""")
+
 
 class RegionManager:
     """
@@ -497,7 +896,6 @@ class RegionManager:
     All region objects created through this manager are automatically tracked and tagged,
     simplifying the process of defining and managing model regions. A special GlobalRegion
     with tag 0 is automatically created when the RegionManager is initialized.
-    
     """
     _instance = None
     def __new__(cls):
@@ -523,6 +921,10 @@ class RegionManager:
         if not self._initialized:
             self._initialized = True
             initialize_region_base()
+
+        self.elementRegion = ElementRegion
+        self.nodeRegion = NodeRegion
+        self.globalRegion = GlobalRegion()
 
     @property
     def regions(self):
@@ -614,6 +1016,16 @@ class RegionManager:
         """
         RegionBase.print_regions()
 
+    def GlobalRegion(self):
+        """
+        Get the GlobalRegion instance.
+        
+        Returns:
+            GlobalRegion: The global region instance
+        """
+        return RegionBase.get_region(0)
+    
+    
 if __name__ == "__main__":
     from femora.components.Damping.dampingBase import RayleighDamping, ModalDamping
     # ---- Test Global Region ----

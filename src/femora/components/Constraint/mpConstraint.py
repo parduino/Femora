@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from abc import ABC, abstractmethod
 from femora.components.Assemble.Assembler import Assembler
 from pykdtree.kdtree import KDTree
@@ -197,7 +197,7 @@ class mpConstraintManager:
         return rigidDiaphragm(direction, master_node, slave_nodes)
 
 
-    def create_laminar_boundary(self, dofs: List[int], direction: int = 3, tol=1e-2) -> None:
+    def create_laminar_boundary(self, dofs: List[int], bounds: Tuple[float, float], direction: int = 3, tol: float = 1e-2) -> None:
         """
         Create a laminar boundary constraint.
 
@@ -256,9 +256,17 @@ class mpConstraintManager:
         distances, indices = kdtree.query(points, k=1)
         nodeTags = indices + 1
         
-        import pyvista as pv
         # attach the nodeTags to the points at the first column
         z = points[:, direction-1]
+
+        # filter the z based on bounds
+        boundmin = bounds[0]
+        boundmax = bounds[1]
+        mask = (z >= boundmin - tolerance) & (z <= boundmax + tolerance)
+        z = z[mask]
+        nodeTags = nodeTags[mask]
+        points = points[mask]
+
         z_rounded = np.round(z / tolerance) * tolerance
 
         # Use np.unique with return_inverse to group fast
@@ -268,7 +276,6 @@ class mpConstraintManager:
         # Build dictionary-like grouping in NumPy style
         Taggroups = [nodeTags[group_ids == i] for i in range(len(unique_z))]
         groups = [points[group_ids == i] for i in range(len(unique_z))]
-
 
         # now add mp constraints
         for i, group in enumerate(Taggroups):
