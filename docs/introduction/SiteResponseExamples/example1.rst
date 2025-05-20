@@ -366,7 +366,7 @@ The full source code for this example is available in the FEMORA repository:
 
 Here's a snippet of the Python code used to create the model:
 
-.. literalinclude:: ../../examples/SiteResponse/Example1/femoramodel.py
+.. literalinclude:: ../../../examples/SiteResponse/Example1/femoramodel.py
    :language: python
    :caption: Example 1 - Single-Column Site Response Analysis
    :name: example1-code
