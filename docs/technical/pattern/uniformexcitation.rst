@@ -35,8 +35,8 @@ Usage Example
 
 .. code-block:: python
 
-   from femora.components.Pattern.patternBase import PatternManager
-   from femora.components.TimeSeries.timeSeriesBase import TimeSeries
+   from Femora.components.Pattern.patternBase import PatternManager
+   from Femora.components.TimeSeries.timeSeriesBase import TimeSeries
 
    # Create a time series
    time_series = TimeSeries(tag=1, values=[0.0, 0.1, 0.2, 0.3])

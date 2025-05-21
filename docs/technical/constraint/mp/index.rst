@@ -6,7 +6,7 @@ Multi-point constraints create relationships between multiple nodes in your mesh
 Understanding the MP Constraint Manager
 ---------------------------------------
 
-The ``MPConstraintManager`` is a core component of FEMORA that provides a centralized system for creating, managing, and applying multi-point constraints to your model. It implements the Singleton pattern to ensure a single, consistent point of constraint management across the entire application.
+The ``MPConstraintManager`` is a core component of Femora that provides a centralized system for creating, managing, and applying multi-point constraints to your model. It implements the Singleton pattern to ensure a single, consistent point of constraint management across the entire application.
 
 MP constraints define relationships between multiple nodes in your mesh, allowing you to:
 
@@ -26,7 +26,7 @@ There are two ways to access the MP Constraint Manager:
 
    .. code-block:: python
       
-      from femora.components.Constraint.mpConstraint import mpConstraintManager
+      from Femora.components.Constraint.mpConstraint import mpConstraintManager
       
       # Get the singleton instance
       mp_manager = mpConstraintManager()
@@ -34,13 +34,13 @@ There are two ways to access the MP Constraint Manager:
       # Use MP manager directly
       mp_manager.create_equal_dof(...)
 
-2. **Through FEMORA** (Recommended): Access via the FEMORA class and the Constraint module
+2. **Through Femora** (Recommended): Access via the Femora class and the Constraint module
 
    .. code-block:: python
       
-      import femora as fm
+      import Femora as fm
       
-      # Create a FEMORA instance
+      # Create a Femora instance
        
       
       # Access the MPConstraintManager through the constraint property
@@ -49,7 +49,7 @@ There are two ways to access the MP Constraint Manager:
       # Add constraints using the manager
       mp_manager.create_equal_dof(...)
 
-The second approach is recommended as it provides a unified interface to all of FEMORA's components and ensures proper initialization of all dependencies.
+The second approach is recommended as it provides a unified interface to all of Femora's components and ensures proper initialization of all dependencies.
 
 
 Managing MP Constraints
@@ -84,7 +84,7 @@ MP Constraint Manager API Reference
 
 Below is the complete API reference for the MPConstraintManager class:
 
-.. autoclass:: femora.components.Constraint.mpConstraint.mpConstraintManager
+.. autoclass:: Femora.components.Constraint.mpConstraint.mpConstraintManager
    :members:
    :undoc-members:
    :show-inheritance:
@@ -92,7 +92,7 @@ Below is the complete API reference for the MPConstraintManager class:
 Available MP Constraint Types
 -----------------------------
 
-FEMORA provides several types of MP constraints:
+Femora provides several types of MP constraints:
 
 .. toctree::
    :maxdepth: 1

@@ -4,7 +4,7 @@ Process
 Understanding the Process Component
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The ``Process`` component is a core part of the FEMORA library that manages the sequence of operations in a structural analysis. It implements a system for defining, organizing, and executing analysis steps in a coherent order.
+The ``Process`` component is a core part of the Femora library that manages the sequence of operations in a structural analysis. It implements a system for defining, organizing, and executing analysis steps in a coherent order.
 
 The Process component provides functionality to:
 - Add steps to the analysis process
@@ -24,7 +24,7 @@ There are two ways to access the Process component in your code:
    
    .. code-block:: python
       
-      from femora.components.Process.process import ProcessManager
+      from Femora.components.Process.process import ProcessManager
       
       # Get the singleton instance
       process_manager = ProcessManager()
@@ -32,19 +32,19 @@ There are two ways to access the Process component in your code:
       # Use the process manager directly
       process_manager.add_step(...)
 
-2. **Through FEMORA** (Recommended): Access via the FEMORA class's .process property
+2. **Through Femora** (Recommended): Access via the Femora class's .process property
    
    .. code-block:: python
       
-      import femora as fm
+      import Femora as fm
       
-      # Create a FEMORA instance
+      # Create a Femora instance
        
       
       # Access the ProcessManager through the .process property
       fm.process.add_step(...)
 
-The second approach is recommended as it provides a unified interface to all of FEMORA's components and ensures proper initialization of all dependencies.
+The second approach is recommended as it provides a unified interface to all of Femora's components and ensures proper initialization of all dependencies.
 
 How Process Works
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -76,7 +76,7 @@ The Process component supports the following types of components:
 ProcessManager API Reference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: femora.components.Process.process.ProcessManager
+.. autoclass:: Femora.components.Process.process.ProcessManager
 
 Process Management
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -107,9 +107,9 @@ Example of creating and managing a process:
 
 .. code-block:: python
 
-   import femora as fm
+   import Femora as fm
    
-   # Create a FEMORA instance
+   # Create a Femora instance
     
    
    # Create components for the process

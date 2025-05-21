@@ -20,9 +20,9 @@ Usage
 
 .. code-block:: python
 
-   import femora as fm
+   import Femora as fm
    
-   # Create FEMORA instance
+   # Create Femora instance
     
    
    # First assemble the mesh

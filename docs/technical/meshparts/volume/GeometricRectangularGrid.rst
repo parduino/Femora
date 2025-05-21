@@ -59,9 +59,9 @@ The following example demonstrates how to create a 3D rectangular domain with ge
 
 .. code-block:: python
 
-   import femora as fm
+   import Femora as fm
    
-   # Create a FEMORA instance
+   # Create a Femora instance
     
    
    # Create a material

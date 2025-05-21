@@ -36,8 +36,8 @@ Parameters:
     .. code-block:: python
 
         # Direct creation
-        from femora.components.Element.elementsOpenSees import SSPQuadElement
-        from femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial
+        from Femora.components.Element.elementsOpenSees import SSPQuadElement
+        from Femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial
 
         # Create a material first
         material = ElasticIsotropicMaterial(user_name="Steel", E=200e9, nu=0.3, rho=7850)
@@ -52,8 +52,8 @@ Parameters:
             b2=-9.81  # Gravity in y-direction
         )
 
-        # Via FEMORA
-        import femora as fm
+        # Via Femora
+        import Femora as fm
          
 
         # Create material

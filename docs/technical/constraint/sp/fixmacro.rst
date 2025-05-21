@@ -17,7 +17,7 @@ These macros are typically defined in the TCL file based on model dimensions.
 Available Macro Constraints
 ---------------------------
 
-FEMORA provides six types of macro-based constraints:
+Femora provides six types of macro-based constraints:
 
 1. **fixMacroXmin**: Apply constraints at the minimum X coordinate
 2. **fixMacroXmax**: Apply constraints at the maximum X coordinate
@@ -41,9 +41,9 @@ Usage
 
 .. code-block:: python
 
-   import femora as fm
+   import Femora as fm
    
-   # Create FEMORA instance
+   # Create Femora instance
     
    
    # First assemble the mesh

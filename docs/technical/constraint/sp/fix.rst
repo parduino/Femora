@@ -1,7 +1,7 @@
 Fix Constraint
 ==============
 
-The ``fix`` constraint is the most basic type of single-point constraint in FEMORA. It applies constraints to specific degrees of freedom at individual nodes.
+The ``fix`` constraint is the most basic type of single-point constraint in Femora. It applies constraints to specific degrees of freedom at individual nodes.
 
 Description
 -----------
@@ -21,9 +21,9 @@ Usage
 
 .. code-block:: python
 
-   import femora as fm
+   import Femora as fm
    
-   # Create FEMORA instance
+   # Create Femora instance
     
    
    # First assemble the mesh

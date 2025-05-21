@@ -52,9 +52,9 @@ The following example demonstrates how to create a simple 3D rectangular domain 
 
 .. code-block:: python
 
-   import femora as fm
+   import Femora as fm
    
-   # Create a FEMORA instance
+   # Create a Femora instance
     
    
    # Create a material

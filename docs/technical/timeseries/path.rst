@@ -39,7 +39,7 @@ Parameters:
     .. code-block:: python
 
         # Using direct values
-        from femora.components.TimeSeries.timeSeriesBase import TimeSeriesManager
+        from Femora.components.TimeSeries.timeSeriesBase import TimeSeriesManager
         
         ts_manager = TimeSeriesManager()
         path_ts = ts_manager.create_time_series(
@@ -58,8 +58,8 @@ Parameters:
             useLast=True
         )
 
-        # Via FEMORA
-        import femora as fm
+        # Via Femora
+        import Femora as fm
         
          
         path_ts = fm.timeSeries.create_time_series(

@@ -15,8 +15,8 @@ Usage
 
 .. code-block:: python
 
-    from femora.components.Region.regionBase import RegionManager
-    from femora.components.Damping.dampingBase import DampingManager
+    from Femora.components.Region.regionBase import RegionManager
+    from Femora.components.Damping.dampingBase import DampingManager
     
     # Get the region manager instance
     region_manager = RegionManager()

@@ -25,9 +25,9 @@ Usage
 
 .. code-block:: python
 
-   import femora as fm
+   import Femora as fm
    
-   # Create FEMORA instance
+   # Create Femora instance
     
    
    # First assemble the mesh
@@ -100,5 +100,5 @@ A common application is creating a soil box model for dynamic analysis:
 Function Reference
 ------------------
 
-.. autofunction:: femora.components.Constraint.mpConstraint.mpConstraintManager.create_laminar_boundary
+.. autofunction:: Femora.components.Constraint.mpConstraint.mpConstraintManager.create_laminar_boundary
    :noindex:

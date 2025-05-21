@@ -4,7 +4,7 @@ Assembler
 Introduction
 ------------
 
-The ``Assembler`` component in FEMORA is responsible for combining multiple mesh parts into a unified model, partitioning the model for parallel computing, and managing the combined mesh. It provides a centralized system for creating and managing assembly sections, which are groups of mesh parts that are combined into a single mesh.
+The ``Assembler`` component in Femora is responsible for combining multiple mesh parts into a unified model, partitioning the model for parallel computing, and managing the combined mesh. It provides a centralized system for creating and managing assembly sections, which are groups of mesh parts that are combined into a single mesh.
 
 The Assembler system consists of two main classes:
 
@@ -25,7 +25,7 @@ There are two ways to access the Assembler:
 
    .. code-block:: python
       
-      from femora.components.Assemble.Assembler import Assembler
+      from Femora.components.Assemble.Assembler import Assembler
       
       # Get the singleton instance
       assembler = Assembler()
@@ -33,16 +33,16 @@ There are two ways to access the Assembler:
       # Or use the class method
       assembler = Assembler.get_instance()
 
-2. **Through FEMORA** (recommended):
+2. **Through Femora** (recommended):
 
    .. code-block:: python
       
-      import femora as fm
+      import Femora as fm
       
-      # Create a FEMORA instance
+      # Create a Femora instance
        
       
-      # Access the Assembler through FEMORA
+      # Access the Assembler through Femora
       assembler = fm.assembler
 
 The second approach is recommended as it ensures proper initialization of dependencies.
@@ -89,7 +89,7 @@ There are two ways to create an AssemblySection:
 
    .. code-block:: python
    
-      from femora.components.Assemble.Assembler import AssemblySection
+      from Femora.components.Assemble.Assembler import AssemblySection
       
       # Create an assembly section with two mesh parts
       section = AssemblySection(
@@ -148,12 +148,12 @@ This creates a unified mesh from all assembly sections, with consistent cell dat
 API Reference
 -------------
 
-.. autoclass:: femora.components.Assemble.Assembler.Assembler
+.. autoclass:: Femora.components.Assemble.Assembler.Assembler
     :members:
     :undoc-members:
     :show-inheritance:
 
-.. autoclass:: femora.components.Assemble.Assembler.AssemblySection
+.. autoclass:: Femora.components.Assemble.Assembler.AssemblySection
     :members:
     :undoc-members:
     :show-inheritance:

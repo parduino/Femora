@@ -30,7 +30,7 @@ Parameters:
     .. code-block:: python
 
         # Direct creation
-        from femora.components.TimeSeries.timeSeriesBase import TimeSeriesManager
+        from Femora.components.TimeSeries.timeSeriesBase import TimeSeriesManager
         
         ts_manager = TimeSeriesManager()
         
@@ -52,8 +52,8 @@ Parameters:
             factor=0.5
         )
 
-        # Via FEMORA
-        import femora as fm
+        # Via Femora
+        import Femora as fm
         import math
         
          
