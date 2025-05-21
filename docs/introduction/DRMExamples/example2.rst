@@ -478,7 +478,7 @@ Code Access
 
 The full source code for this example is available in the Femora repository:
 
-.. literalinclude:: ../../examples/Example2/femoramodel.py
+.. literalinclude:: ../../../examples/DRM/Example2/femoramodel.py
    :language: python
    :caption: Example 2 - Multi-layer Soil Model with Absorbing Boundaries
    :name: example2-code

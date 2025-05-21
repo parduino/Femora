@@ -110,3 +110,19 @@ if surface_time is not None and surface_acc is not None:
     f_analytical, TF_analytical, _ = tf.compute()
 
     plot_transfer_function(f, TF_num, f_analytical, np.abs(TF_analytical))
+
+    # compare with uniform soil in example1
+    uniform_soil = [
+        {"h": 18, "vs": 200, "rho": 19.33*1000/9.81, "damping": 0.03, "damping_type":"rayleigh", "f1": 2.76, "f2": 13.84},
+    ]
+    tf_uniform = TransferFunction(soil_profile=uniform_soil, rock=rock, f_max=22)
+    f_uniform, TF_uniform, _ = tf_uniform.compute()
+
+    # Plot both transfer functions
+    plt.plot(f_analytical, np.abs(TF_analytical), "r--", label="Analytical (Layerd Soil)")
+    plt.plot(f_uniform, np.abs(TF_uniform), "g-.", label="Analytical (Uniform Soil)")
+    plt.xlabel("Frequency (Hz)")
+    plt.ylabel("|TF(f)|")
+    plt.legend()
+    plt.grid(True)
+    plt.show()

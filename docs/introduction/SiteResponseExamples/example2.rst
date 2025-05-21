@@ -10,14 +10,14 @@ This example builds upon Example 1 by demonstrating a 1D site response analysis 
 2. Applying the ``TransferFunction`` class in Femora to compute analytical solutions
 3. Comparing numerical results with analytical transfer functions calculated from the soil profile
 
-This example demonstrates Femora's ability to handle realistic soil profiles with varying properties while maintaining accuracy compared to analytical solutions.
+The same frequency sweep input motion from Example 1 is used in this example.
 
-.. figure:: ../images/SiteResponse/Example2/FrequencySweep.jpg
-   :width: 600px
-   :align: center
-   :alt: Frequency Sweep Input Motion
+.. figure:: ../images/SiteResponse/Example2/Schematic.png
+  :width: 600px
+  :align: center
+  :alt: Schematic of Multi-layered Soil Profile
 
-   Frequency sweep input motion used in this example, similar to Example 1
+  Schematic representation of the multi-layered soil profile used in this example.
 
 Model Description
 -----------------
@@ -191,12 +191,10 @@ The multi-layered soil profile results in a more complex transfer function compa
 
    Comparison of transfer functions between uniform soil (Example 1) and multi-layered soil (Example 2)
 
-The presence of multiple layers with varying stiffness creates additional resonance frequencies and more complex amplification patterns, which is more representative of real-world soil conditions.
 
 Simulation Visualization
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-The wave propagation visualization shows distinct behavior at the layer interfaces:
 
 .. raw:: html
 
@@ -275,3 +273,10 @@ The full source code for this example is available in the Femora repository:
 * Python script: ``examples/SiteResponse/Example2/femoramodel.py``
 * Transfer function script: ``examples/SiteResponse/Example2/TransferFunction.py``
 * Post-processing script: ``examples/SiteResponse/Example2/plot.py``
+
+Below is the complete code for this example:
+
+.. literalinclude:: ../../../examples/SiteResponse/Example2/femoramodel.py
+   :language: python
+   :caption: Example 2 - Site Response Analysis with Multiple Materials
+   :name: Site_Response_example2-code

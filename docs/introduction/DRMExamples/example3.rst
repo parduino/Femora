@@ -511,7 +511,7 @@ Below is the complete code for Example3's femoramodel.py:
 .. literalinclude:: ../../../examples/DRM/Example3/femoramodel.py
    :language: python
    :name: example3-code
-   :caption: Complete code for Example3 model
+   :caption: Example3 - Seismic Wave Basin Effects Model with External Mesh
 
 To run this example, ensure that:
 
