@@ -268,7 +268,7 @@ When using the DRM component, consider the following performance aspects:
 API Reference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: Femora.components.DRM.DRM.DRM 
+.. autoclass:: femora.components.DRM.DRM.DRM 
    :members: createDefaultProcess, addAbsorbingLayer, set_pattern, set_meshmaker
    :undoc-members:
    :show-inheritance:

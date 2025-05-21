@@ -16,7 +16,7 @@ First, we need to import the Femora library and set up our working environment:
 .. code-block:: python
 
    import os
-   import Femora as fm
+   import femora as fm
    
    # Set working directory to the location of your model files
    # This ensures that output files (like mesh.tcl) will be saved in the same directory as your script
@@ -376,7 +376,7 @@ Here's the complete code for this quick start example:
 .. code-block:: python
 
    import os
-   import Femora as fm
+   import femora as fm
    
    # Set working directory to the location of your model files
    # This ensures that output files (like mesh.tcl) will be saved in the same directory as your script

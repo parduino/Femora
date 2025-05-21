@@ -60,8 +60,8 @@ Parameters:
     .. code-block:: python
 
         # Direct creation
-        from Femora.components.Element.elementsOpenSees import PML3DElement
-        from Femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial
+        from femora.components.Element.elementsOpenSees import PML3DElement
+        from femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial
 
         # Create a material first
         material = ElasticIsotropicMaterial(user_name="Soil", E=5e7, nu=0.25, rho=1800)
@@ -81,8 +81,8 @@ Parameters:
             R=1e-8
         )
 
-        # Via Femora
-        import Femora as fm
+        # Via femora
+        import femora as fm
          
 
         # Create material

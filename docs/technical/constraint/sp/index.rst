@@ -19,7 +19,7 @@ There are two ways to access the SP Constraint Manager:
 
    .. code-block:: python
       
-      from Femora.components.Constraint.spConstraint import SPConstraintManager
+      from femora.components.Constraint.spConstraint import SPConstraintManager
       
       # Get the singleton instance
       sp_manager = SPConstraintManager()
@@ -31,7 +31,7 @@ There are two ways to access the SP Constraint Manager:
 
    .. code-block:: python
       
-      import Femora as fm
+      import femora as fm
       
       # Create a Femora instance
        
@@ -107,7 +107,7 @@ SP Constraint Manager API Reference
 
 Below is the complete API reference for the SPConstraintManager class:
 
-.. autoclass:: Femora.components.Constraint.spConstraint.SPConstraintManager
+.. autoclass:: femora.components.Constraint.spConstraint.SPConstraintManager
    :members:
    :undoc-members:
    :show-inheritance:

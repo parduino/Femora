@@ -23,7 +23,7 @@ There are two ways to access the Analysis component in your code:
    
    .. code-block:: python
       
-      from Femora.components.Analysis.analysis import AnalysisManager
+      from femora.components.Analysis.analysis import AnalysisManager
       
       # Get the singleton instance
       analysis_manager = AnalysisManager()
@@ -35,7 +35,7 @@ There are two ways to access the Analysis component in your code:
    
    .. code-block:: python
       
-      import Femora as fm
+      import femora as fm
       
       # Create a Femora instance
        
@@ -122,7 +122,7 @@ Each analysis requires six key components:
 AnalysisManager API Reference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: Femora.components.Analysis.analysis.AnalysisManager
+.. autoclass:: femora.components.Analysis.analysis.AnalysisManager
 
 Analysis Creation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -141,13 +141,13 @@ Example of creating a custom analysis:
 
 .. code-block:: python
 
-   from Femora.components.Analysis.analysis import AnalysisManager
-   from Femora.components.Analysis.constraint_handlers import PlainHandler
-   from Femora.components.Analysis.numberers import PlainNumberer
-   from Femora.components.Analysis.systems import BandGeneral
-   from Femora.components.Analysis.algorithms import Newton
-   from Femora.components.Analysis.convergenceTests import NormDispIncr
-   from Femora.components.Analysis.integrators import LoadControl
+   from femora.components.Analysis.analysis import AnalysisManager
+   from femora.components.Analysis.constraint_handlers import PlainHandler
+   from femora.components.Analysis.numberers import PlainNumberer
+   from femora.components.Analysis.systems import BandGeneral
+   from femora.components.Analysis.algorithms import Newton
+   from femora.components.Analysis.convergenceTests import NormDispIncr
+   from femora.components.Analysis.integrators import LoadControl
 
    # Get the analysis manager
    analysis_manager = AnalysisManager()

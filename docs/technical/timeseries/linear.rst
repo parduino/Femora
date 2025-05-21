@@ -23,7 +23,7 @@ The linear time series creates a function that increases linearly with time, mul
     .. code-block:: python
 
         # Direct creation
-        from Femora.components.TimeSeries.timeSeriesBase import TimeSeriesManager
+        from femora.components.TimeSeries.timeSeriesBase import TimeSeriesManager
         
         ts_manager = TimeSeriesManager()
         
@@ -34,7 +34,7 @@ The linear time series creates a function that increases linearly with time, mul
         )
 
         # Via Femora
-        import Femora as fm
+        import femora as fm
         
          
         linear_ts = fm.timeSeries.create_time_series(

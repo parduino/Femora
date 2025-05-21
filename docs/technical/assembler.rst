@@ -25,7 +25,7 @@ There are two ways to access the Assembler:
 
    .. code-block:: python
       
-      from Femora.components.Assemble.Assembler import Assembler
+      from femora.components.Assemble.Assembler import Assembler
       
       # Get the singleton instance
       assembler = Assembler()
@@ -37,12 +37,12 @@ There are two ways to access the Assembler:
 
    .. code-block:: python
       
-      import Femora as fm
+      import femora as fm
       
       # Create a Femora instance
        
       
-      # Access the Assembler through Femora
+      # Access the Assembler through femora
       assembler = fm.assembler
 
 The second approach is recommended as it ensures proper initialization of dependencies.
@@ -89,7 +89,7 @@ There are two ways to create an AssemblySection:
 
    .. code-block:: python
    
-      from Femora.components.Assemble.Assembler import AssemblySection
+      from femora.components.Assemble.Assembler import AssemblySection
       
       # Create an assembly section with two mesh parts
       section = AssemblySection(
@@ -148,12 +148,12 @@ This creates a unified mesh from all assembly sections, with consistent cell dat
 API Reference
 -------------
 
-.. autoclass:: Femora.components.Assemble.Assembler.Assembler
+.. autoclass:: femora.components.Assemble.Assembler.Assembler
     :members:
     :undoc-members:
     :show-inheritance:
 
-.. autoclass:: Femora.components.Assemble.Assembler.AssemblySection
+.. autoclass:: femora.components.Assemble.Assembler.AssemblySection
     :members:
     :undoc-members:
     :show-inheritance:

@@ -17,7 +17,7 @@ There are two ways to access the RegionManager in your code:
    
    .. code-block:: python
       
-      from Femora.components.Region.regionBase import RegionManager
+      from femora.components.Region.regionBase import RegionManager
       
       # Get the singleton instance
       region_manager = RegionManager()
@@ -25,11 +25,11 @@ There are two ways to access the RegionManager in your code:
       # Use the region manager directly
       region_manager.create_region(...)
 
-2. **Through Femora** (Recommended): Access via the Femora class's .region property
+2. **Through femora** (Recommended): Access via the Femora class's .region property
    
    .. code-block:: python
       
-      import Femora as fm
+      import femora as fm
       
       # Create a Femora instance
        
@@ -77,7 +77,7 @@ RegionManager API Reference
 
 Key Methods:
 
-.. autoclass:: Femora.components.Region.regionBase.RegionManager
+.. autoclass:: femora.components.Region.regionBase.RegionManager
    :members:
    :undoc-members:
    :show-inheritance:
@@ -103,8 +103,8 @@ Usage Example
 
 .. code-block:: python
 
-   from Femora.components.Region.regionBase import RegionManager
-   from Femora.components.Damping.dampingBase import DampingManager
+   from femora.components.Region.regionBase import RegionManager
+   from femora.components.Damping.dampingBase import DampingManager
    
    # Get the region manager instance
    region_manager = RegionManager()

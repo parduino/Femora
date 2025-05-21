@@ -14,7 +14,7 @@ The model created in this example consists of:
 * PML absorbing boundaries to prevent wave reflections
 * DRM loading applied from an external file
 
-.. figure:: ../images/Femora_logo.png
+.. figure:: ../images/femora_logo.png
    :width: 600px
    :align: center
    :alt: Multi-layer Soil Model with PML Boundaries
@@ -374,7 +374,7 @@ Let's examine the key components of the Example 2 code:
 
    .. code-block:: python
 
-       import Femora as fm
+       import femora as fm
        import os
 
        # Change directory to the current file's location
@@ -478,13 +478,13 @@ Code Access
 
 The full source code for this example is available in the Femora repository:
 
-.. literalinclude:: ../../examples/Example2/Femoramodel.py
+.. literalinclude:: ../../examples/Example2/femoramodel.py
    :language: python
    :caption: Example 2 - Multi-layer Soil Model with Absorbing Boundaries
    :name: example2-code
 
 * Example directory: ``examples/Example2/``
-* Python script: ``examples/Example2/Femoramodel.py``
+* Python script: ``examples/Example2/femoramodel.py``
 * Data file: ``drmload.h5drm`` (required for running the example)
 
 Key Concepts Demonstrated

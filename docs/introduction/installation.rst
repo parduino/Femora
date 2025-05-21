@@ -23,7 +23,7 @@ The easiest way to install Femora is using pip:
 
 .. code-block:: bash
 
-   pip install Femora
+   pip install femora
 
 From Source
 ~~~~~~~~~~~
@@ -60,8 +60,8 @@ To verify that Femora has been installed correctly, run:
 
 .. code-block:: python
 
-   import Femora
-   print(Femora.__version__)
+   import femora
+   print(femora.__version__)
 
 This should display the version number of your Femora installation.
 
@@ -98,7 +98,7 @@ Common Installation Issues
    
       python -m venv Femora_env
       source Femora_env/bin/activate  # On Windows: Femora_env\Scripts\activate
-      pip install Femora
+      pip install femora
 
 3. **Permission Errors**:
    
@@ -106,7 +106,7 @@ Common Installation Issues
    
    .. code-block:: bash
    
-      pip install --user Femora
+      pip install --user femora
 
 Getting Help
 ~~~~~~~~~~~~
@@ -114,5 +114,5 @@ Getting Help
 If you continue to experience installation issues, please:
 
 1. Check the GitHub issues page for similar problems and solutions
-2. Contact the support team at support@Femora.org
-3. Join our community forum at https://community.Femora.org
+2. Contact the support team at support@femora.org
+3. Join our community forum at https://community.femora.org

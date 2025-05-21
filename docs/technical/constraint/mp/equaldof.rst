@@ -20,7 +20,7 @@ Usage
 
 .. code-block:: python
 
-   import Femora as fm
+   import femora as fm
    
    # Create Femora instance
     

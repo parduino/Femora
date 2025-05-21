@@ -17,7 +17,7 @@ There are two ways to access the TimeSeriesManager in your code:
 
    .. code-block:: python
 
-      from Femora.components.TimeSeries.timeSeriesBase import TimeSeriesManager
+      from femora.components.TimeSeries.timeSeriesBase import TimeSeriesManager
 
       # Get the singleton instance
       timeseries_manager = TimeSeriesManager()
@@ -29,7 +29,7 @@ There are two ways to access the TimeSeriesManager in your code:
 
    .. code-block:: python
 
-      import Femora as fm
+      import femora as fm
 
       # Create a Femora instance
        
@@ -58,7 +58,7 @@ When a time series is created, the TimeSeriesManager:
 TimeSeriesManager API Reference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: Femora.components.TimeSeries.timeSeriesBase.TimeSeriesManager
+.. autoclass:: femora.components.TimeSeries.timeSeriesBase.TimeSeriesManager
    :members:
    :undoc-members:
    :show-inheritance:
@@ -142,9 +142,9 @@ Usage Example
 
 .. code-block:: python
 
-   import Femora as fm
+   import femora as fm
 
-   # Create a Femora instance
+   # Create a femora instance
     
 
    # Create a constant time series

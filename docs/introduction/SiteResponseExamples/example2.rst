@@ -37,16 +37,19 @@ Model Description
 Unlike Example 1 which used a single material with uniform properties, this example uses three distinct materials:
 
 * Layer 1 (Bottom):
+
   * Shear wave velocity (Vs): 262.5 m/s
   * Unit weight (γ): 19.9 kN/m³
   * Rayleigh damping: 3% at frequencies 2.76Hz and 13.84Hz
 
 * Layer 2 (Middle):
+
   * Shear wave velocity (Vs): 196.3 m/s
   * Unit weight (γ): 19.1 kN/m³
   * Rayleigh damping: 3% at frequencies 2.76Hz and 13.84Hz
 
 * Layer 3 (Top):
+
   * Shear wave velocity (Vs): 144.3 m/s
   * Unit weight (γ): 19.8 kN/m³
   * Rayleigh damping: 3% at frequencies 2.76Hz and 13.84Hz
@@ -215,7 +218,7 @@ The ``TransferFunction`` class in Femora provides a simple way to calculate anal
 
 .. code-block:: python
 
-    from Femora.tools.transferFunction import TransferFunction
+    from femora.tools.transferFunction import TransferFunction
     
     # Define soil profile from top to bottom
     soil = [
@@ -269,6 +272,6 @@ Code Access
 The full source code for this example is available in the Femora repository:
 
 * Example directory: ``examples/SiteResponse/Example2/``
-* Python script: ``examples/SiteResponse/Example2/Femoramodel.py``
+* Python script: ``examples/SiteResponse/Example2/femoramodel.py``
 * Transfer function script: ``examples/SiteResponse/Example2/TransferFunction.py``
 * Post-processing script: ``examples/SiteResponse/Example2/plot.py``

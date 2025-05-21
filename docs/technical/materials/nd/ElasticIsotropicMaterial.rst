@@ -28,12 +28,12 @@ Parameters:
     .. code-block:: python
 
         # Direct creation
-        from Femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial
+        from femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial
         elastic_material = ElasticIsotropicMaterial("Concrete", E=30e6, nu=0.2, rho=2400)
 
         or 
 
         # Via Femora
-        import Femora as fm
+        import femora as fm
          
         fm.material.create_material("nDMaterial", "ElasticIsotropic", "Concrete", E=30e6, nu=0.2, rho=2400)

@@ -503,12 +503,12 @@ Code Access
 The full source code for this example is available in the Femora repository:
 
 * Example directory: ``examples/DRM/Example3/``
-* Python script: ``examples/DRM/Example3/Femoramodel.py``
+* Python script: ``examples/DRM/Example3/femoramodel.py``
 * Data file: ``drmload.h5drm`` (required for running the example)
 
-Below is the complete code for Example3's Femoramodel.py:
+Below is the complete code for Example3's femoramodel.py:
 
-.. literalinclude:: ../../../examples/DRM/Example3/Femoramodel.py
+.. literalinclude:: ../../../examples/DRM/Example3/femoramodel.py
    :language: python
    :name: example3-code
    :caption: Complete code for Example3 model

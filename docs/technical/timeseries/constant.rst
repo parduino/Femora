@@ -21,7 +21,7 @@ Parameters:
     .. code-block:: python
 
         # Direct creation
-        from Femora.components.TimeSeries.timeSeriesBase import TimeSeriesManager
+        from femora.components.TimeSeries.timeSeriesBase import TimeSeriesManager
         
         ts_manager = TimeSeriesManager()
         
@@ -32,7 +32,7 @@ Parameters:
         )
 
         # Via Femora
-        import Femora as fm
+        import femora as fm
         
          
         constant_ts = fm.timeSeries.create_time_series(

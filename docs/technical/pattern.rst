@@ -17,7 +17,7 @@ There are two ways to access the PatternManager in your code:
 
    .. code-block:: python
 
-      from Femora.components.Pattern.patternBase import PatternManager
+      from femora.components.Pattern.patternBase import PatternManager
 
       # Get the singleton instance
       pattern_manager = PatternManager()
@@ -29,7 +29,7 @@ There are two ways to access the PatternManager in your code:
 
    .. code-block:: python
 
-      import Femora as fm
+      import femora as fm
 
       # Create a Femora instance
        
@@ -58,7 +58,7 @@ When a pattern is created, the PatternManager:
 PatternManager API Reference
 ----------------------------
 
-.. autoclass:: Femora.components.Pattern.patternBase.PatternManager
+.. autoclass:: femora.components.Pattern.patternBase.PatternManager
    :members:
    :undoc-members:
    :show-inheritance:
@@ -78,7 +78,7 @@ Usage Example
 
 .. code-block:: python
 
-   from Femora.components.Pattern.patternBase import PatternManager
+   from femora.components.Pattern.patternBase import PatternManager
 
    # Get the pattern manager instance
    pattern_manager = PatternManager()

@@ -52,7 +52,7 @@ The following example demonstrates how to create a simple 3D rectangular domain 
 
 .. code-block:: python
 
-   import Femora as fm
+   import femora as fm
    
    # Create a Femora instance
     

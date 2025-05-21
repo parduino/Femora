@@ -24,7 +24,7 @@ There are two ways to access the Process component in your code:
    
    .. code-block:: python
       
-      from Femora.components.Process.process import ProcessManager
+      from femora.components.Process.process import ProcessManager
       
       # Get the singleton instance
       process_manager = ProcessManager()
@@ -36,7 +36,7 @@ There are two ways to access the Process component in your code:
    
    .. code-block:: python
       
-      import Femora as fm
+      import femora as fm
       
       # Create a Femora instance
        
@@ -76,7 +76,7 @@ The Process component supports the following types of components:
 ProcessManager API Reference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: Femora.components.Process.process.ProcessManager
+.. autoclass:: femora.components.Process.process.ProcessManager
 
 Process Management
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -107,7 +107,7 @@ Example of creating and managing a process:
 
 .. code-block:: python
 
-   import Femora as fm
+   import femora as fm
    
    # Create a Femora instance
     

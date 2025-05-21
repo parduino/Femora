@@ -17,7 +17,7 @@ There are two ways to access the MaterialManager in your code:
    
    .. code-block:: python
       
-      from Femora.components.Material.materialBase import MaterialManager
+      from femora.components.Material.materialBase import MaterialManager
       
       # Get the singleton instance
       material_manager = MaterialManager.get_instance()
@@ -29,7 +29,7 @@ There are two ways to access the MaterialManager in your code:
    
    .. code-block:: python
       
-      import Femora as fm
+      import femora as fm
       
       # Create a Femora instance
        
@@ -79,7 +79,7 @@ The MaterialManager implements an intelligent tagging system that:
 MaterialManager API Reference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: Femora.components.Material.materialBase.MaterialManager
+.. autoclass:: femora.components.Material.materialBase.MaterialManager
 
 Material Creation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -67,7 +67,7 @@ The DampingManager implements an intelligent tagging system that:
 DampingManager API Reference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: Femora.components.Damping.dampingBase.DampingManager
+.. autoclass:: femora.components.Damping.dampingBase.DampingManager
    :members:
    :undoc-members:
    :show-inheritance:

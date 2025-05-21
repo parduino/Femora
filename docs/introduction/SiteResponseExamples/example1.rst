@@ -359,14 +359,14 @@ Code Access
 The full source code for this example is available in the Femora repository:
 
 * Example directory: ``examples/SiteResponse/Example1/``
-* Python script: ``examples/SiteResponse/Example1/Femoramodel.py``
+* Python script: ``examples/SiteResponse/Example1/femoramodel.py``
 * Data files: ``FrequencySweep.acc`` and ``FrequencySweep.time``
 * Post-processing script: ``examples/SiteResponse/Example1/plot.py``
 * Animation script: ``examples/SiteResponse/Example1/movie.py`` (for creating the simulation movie)
 
 Here's a snippet of the Python code used to create the model:
 
-.. literalinclude:: ../../../examples/SiteResponse/Example1/Femoramodel.py
+.. literalinclude:: ../../../examples/SiteResponse/Example1/femoramodel.py
    :language: python
    :caption: Example 1 - Single-Column Site Response Analysis
    :name: example1-code

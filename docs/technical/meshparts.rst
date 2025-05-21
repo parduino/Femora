@@ -17,7 +17,7 @@ There are two ways to access the MeshPartManager in your code:
    
    .. code-block:: python
       
-      from Femora.components.Mesh.meshPartBase import MeshPartManager
+      from femora.components.Mesh.meshPartBase import MeshPartManager
       
       # Create a manager instance
       manager = MeshPartManager()
@@ -32,7 +32,7 @@ There are two ways to access the MeshPartManager in your code:
    
    .. code-block:: python
       
-      import Femora as fm
+      import femora as fm
       
       # Create a Femora instance
        
@@ -108,7 +108,7 @@ The MeshPart base class implements an object-oriented design that:
 MeshPartManager API Reference
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: Femora.components.Mesh.meshPartBase.MeshPartManager
+.. autoclass:: femora.components.Mesh.meshPartBase.MeshPartManager
    :noindex:
    :members:
    :undoc-members:

@@ -25,7 +25,7 @@ Usage
 
 .. code-block:: python
 
-   import Femora as fm
+   import femora as fm
    
    # Create Femora instance
     
@@ -100,5 +100,5 @@ A common application is creating a soil box model for dynamic analysis:
 Function Reference
 ------------------
 
-.. autofunction:: Femora.components.Constraint.mpConstraint.mpConstraintManager.create_laminar_boundary
+.. autofunction:: femora.components.Constraint.mpConstraint.mpConstraintManager.create_laminar_boundary
    :noindex:
