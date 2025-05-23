@@ -30,9 +30,10 @@ import numpy as np
 from numpy.fft import fft, ifft, fftfreq
 import matplotlib.pyplot as plt
 from typing import List, Dict, Union, Optional, Tuple, Any
+from pyvista import UnstructuredGrid, Cube
 import os
 import re
-from datetime import datetime
+from tqdm import tqdm
 
 class TimeHistory:
     """Class to store and process acceleration time history data."""
@@ -275,6 +276,253 @@ class TransferFunction:
             self.TF_inc = None
             
             self.computed = False
+
+
+    @staticmethod 
+    def _get_DRM_points(mesh: UnstructuredGrid,
+                        props: Dict[str, Any]) -> np.ndarray:
+        """
+        Extract DRM points from a mesh.
+        Args:
+            mesh (UnstructuredGrid): The mesh from which to extract points.
+            Props (Dict[str, Any]): Dictionary containing properties of the mesh.
+                - 'shape': Shape of the mesh (e.g., 'box', 'cylinder')
+
+        Returns:
+            np.ndarray: Array of DRM points.
+        """
+        # Extract DRM points from the mesh
+        if props['shape'] == 'box':
+            # Extract points from a box mesh
+            bounds = mesh.bounds
+            eps = 1e-6
+            bounds = tuple(np.array(bounds) + np.array([eps, -eps, eps, -eps, eps, 10]))
+            normal = [0, 0, 1]
+            origin = [0, 0, bounds[5]-eps]
+
+            cube = Cube(bounds=bounds)
+            cube = cube.clip(normal=normal, origin=origin)
+            clipped = mesh.copy().clip_surface(cube, invert=False, crinkle=True)
+            cellCenters = clipped.cell_centers(vertex=True)
+
+            Coords = clipped.points
+            xmin, xmax, ymin, ymax, zmin, zmax = cellCenters.bounds
+            # print(f"Bounds: {xmin}, {xmax}, {ymin}, {ymax}, {zmin}, {zmax}")
+            # print(clipped.bounds)
+            # filter out points inside the bounds with a small tolerance
+
+            mask =  (Coords[:, 0] > xmin) & (Coords[:, 0] < xmax) & \
+                    (Coords[:, 1] > ymin) & (Coords[:, 1] < ymax) & \
+                    (Coords[:, 2] > zmin) 
+
+
+            Coords = Coords[~mask]
+
+            # Correct vlalues
+            bin_size = 1e-3
+            Coords = np.round(Coords / bin_size) * bin_size
+        else:
+            raise ValueError("other shape not supported not implemented yet. Please use box shape for now. props['shape'] = 'box')")
+
+
+        # organize the coordinates by z
+        return Coords
+    
+
+    def _get_DRM_soil_profile(self, coords: np.ndarray):
+        """
+        Refine the soil profile based on the coordinates of the mesh.
+
+        Args:
+            coords (np.ndarray): Array of coordinates from the mesh.
+
+        Returns:
+            List[Dict]: Refined soil profile.
+        """
+        # Refine the soil profile based on the coordinates
+
+        coords = coords[np.argsort(-coords[:, 2])]
+        
+        # Create a new soil profile based on the coordinates
+        unique_z, indices = np.unique(coords[:, 2], return_inverse=True)
+        unique_z = unique_z[::-1]  # Reverse order to match zmax to zmin
+        indices = indices[::-1]  # Reverse order to match zmax to zmin
+        # print(f"Unique z values: {unique_z}")
+        # print(f"Indices: {indices}")
+        # print(f"z values: {coords[:, 2]}")
+        # print(f"z values: {unique_z[indices]}")
+
+
+        # from the uniq z calcute h
+        h = -np.diff(unique_z)  # negative because z is descending
+        depth = np.cumsum(h)
+        # add zero at the beginning of depth
+        maxdepth = depth[-1]
+
+
+        if np.abs(maxdepth - self.get_total_depth()) > 1e-2:
+            raise ValueError(f"the length of the soil profile is not equal to the length of the mesh")
+        
+
+        # Create a depth array from soil profile
+        ProfileDepth = []
+        for i in range(len(self.soil_profile)):
+            ProfileDepth.append(self.soil_profile[i]['h'])
+        ProfileDepth = np.cumsum(ProfileDepth)
+        
+        # combine profiel depth with the depth
+        ProfileDepth = np.array(ProfileDepth)
+        combinedepth = np.concatenate((ProfileDepth, depth))
+        combinedepth = np.unique(combinedepth)
+        # now create the new soil profile
+        new_soil_profile = []
+        i = 0
+        j = 0
+        elev = 0
+        for j,zz in enumerate(ProfileDepth):
+            while zz > combinedepth[i]-1e-2:
+                # print(f"zz: {zz}, depth[index]: {combinedepth[i]}, h:{combinedepth[i] - elev}")
+                new_layer = self.soil_profile[j].copy()
+                new_layer['h'] = float(combinedepth[i] - elev)
+                new_soil_profile.append(new_layer)
+                elev = combinedepth[i]
+                i += 1
+                if i >= len(combinedepth):
+                    break
+            
+
+        return new_soil_profile
+    
+    def depth_tf(self, mesh: UnstructuredGrid, props: Dict[str, Any], base_time_history: TimeHistory = None, progress_bar: Optional[tqdm] = None) -> None:
+
+        if progress_bar is None:
+            progress_bar = tqdm(total=100, desc="Computing DRM", unit="%", leave=False)
+        progress_bar.update(0)
+        coords = self._get_DRM_points(mesh, props)
+        progress_bar.update(5)
+        newProfile = self._get_DRM_soil_profile(coords)
+        progress_bar.update(5)
+    
+        # now compute transferfunction
+        h = np.array([l["h"] for l in newProfile], dtype=float)
+        vs = np.array([l["vs"] for l in newProfile], dtype=float)
+        rho = np.array([l["rho"] for l in newProfile], dtype=float)
+        damp = np.array([l.get("damping", 0.0) for l in newProfile], dtype=float)
+        damptype = np.array([l.get("damping_type", "constant") for l in newProfile], dtype=str)
+        F1 = np.array([l.get("f1", 1.0) for l in newProfile], dtype=float)
+        F2 = np.array([l.get("f2", 10.0) for l in newProfile], dtype=float)
+
+
+        omega1 = 2 * np.pi * F1
+        omega2 = 2 * np.pi * F2
+        A0 = 2 * damp * omega1 * omega2 / (omega1 + omega2)
+        A1 = 2 * damp / (omega1 + omega2)
+
+        vs_bed = self.rock["vs"]
+        rho_bed = self.rock["rho"]
+        damp_bed = self.rock.get("damping", 0.0)
+
+        # Interface impedance ratios α_j (layer j / layer j+1)
+        alpha = rho*vs / np.append(rho[1:], rho_bed) / np.append(vs[1:], vs_bed)
+
+        # Frequency grid
+        f = np.linspace(1e-6, self.f_max, self.n_freqs)  # avoid ω=0
+        omega = 2*np.pi*f
+
+        TF_uu = np.empty_like(f, dtype=complex)
+        DRM_TFs = []
+        
+        for i in range(len(h)):
+            # Loop over ω
+            for k, w in enumerate(omega):
+                # Total layer product L = Ln … L2 L1
+                L = np.identity(2, dtype=complex)
+                for j in range(i,len(h)):
+                    if damptype[j].lower() == "constant":
+                        damping = damp[j]
+                    elif damptype[j].lower() == "rayleigh":
+                        a0 = A0[j]
+                        a1 = A1[j]
+                        damping = a0 / (2 * w) + a1 * w / 2
+                        
+                    cj = np.sqrt(1 + 1j*damping*2)  # viscoelastic correction
+                    rj = w * h[j] / vs[j] * cj
+                    L = self._layer_matrix(alpha[j], rj) @ L
+                    
+
+                den = L[0,0] + L[0,1] + L[1,0] + L[1,1]  # u_top / u_base
+                TF_uu[k] = 2.0 / den
+
+            DRM_TFs.append(TF_uu.copy())
+            # Update progress bar
+            progress_bar.n = i * 30 // len(h)  + 10
+            progress_bar.refresh()
+        progress_bar.n = 40
+
+        return f, DRM_TFs
+
+
+        # dt = base_time_history.dt
+        # acc = base_time_history.acceleration
+        # n = len(acc)
+
+        
+        # # FFT of the base motion
+        # acc_fft = fft(acc)
+        # freqs = fftfreq(n, dt)
+
+        # accelrations = []
+        # for i,TF in enumerate(DRM_TFs):
+        #     # Prepare transfer function
+        #     TF_freq = f
+
+        #     # Interpolate TF to match the fft frequencies
+        #     TF_interp = np.interp(np.abs(freqs), TF_freq, TF, left=0, right=0)
+
+        #     # Make the TF symmetric for inverse FFT (real time signal)
+        #     TF_interp = TF_interp.astype(complex)
+
+        #     # Apply TF to base motion in frequency domain
+        #     surface_fft = acc_fft * TF_interp
+
+        #     # Inverse FFT to get surface time history
+        #     surface_motion = np.real(ifft(surface_fft))
+        #     accelrations.append(surface_motion.copy())
+
+        #     # update progress bar
+        #     progress_bar.n = i * 30 // len(h) + 40
+        #     progress_bar.refresh()
+        
+
+        # Z = np.cumsum(-h)
+        # Z -= Z[0]
+        # print(f"Z: {Z}")
+        # return accelrations, Z, dt, n, DRM_TFs, f
+
+        
+
+
+        
+
+
+
+
+    
+
+
+
+
+        # progress_bar.n = 100
+        # progress_bar.refresh()
+
+        print(len(DRM_TFs))
+            
+
+
+            
+
+
+
 
 
     def compute_surface_motion(self, 
@@ -897,12 +1145,10 @@ class TransferFunction:
 # ------------------- example / quick test ------------------------------------
 if __name__ == "__main__":
     import matplotlib.pyplot as plt 
-    soil_profile = [
-        {"h": 2.0,   "vs": 200.0, "rho": 1500.0, "damping": 0.05},
-        {"h": 54.0,  "vs": 400.0, "rho": 1500.0, "damping": 0.05},
-        {"h": 7.0,   "vs": 700.0, "rho": 1500.0, "damping": 0.05},
-        {"h": 22.0,  "vs": 520.0, "rho": 1500.0, "damping": 0.05},
-        {"h": 100.0, "vs": 650.0, "rho": 1500.0, "damping": 0.05},
+    soil = [
+        {"h": 2,  "vs": 144.2535646321813, "rho": 19.8*1000/9.81, "damping": 0.03, "damping_type":"rayleigh", "f1": 2.76, "f2": 13.84},
+        {"h": 6,  "vs": 196.2675276462639, "rho": 19.1*1000/9.81, "damping": 0.03, "damping_type":"rayleigh", "f1": 2.76, "f2": 13.84},
+        {"h": 10, "vs": 262.5199305117452, "rho": 19.9*1000/9.81, "damping": 0.03, "damping_type":"rayleigh", "f1": 2.76, "f2": 13.84},
     ]
 
     rock = {
@@ -912,31 +1158,61 @@ if __name__ == "__main__":
     }
 
     # Create transfer function instance
-    tf = TransferFunction(soil_profile, rock, f_max=25.0)
-
-
-
-    # Add a new layer
-    tf.add_layer({"h": 5.0, "vs": 300.0, "rho": 1500.0, "damping": 0.05})
-
-    tf.update_soil_profile([{"h": 18.0, "vs": 199.0, "rho": 1530.0, "damping": 0.03}])
+    tf = TransferFunction(soil, rock, f_max=25.0)
 
 
 
 
 
-    # Example: load a PEER file
-    record = TimeHistory.load(acc_file="/home/amnp95/Projects/Femora/examples/Example1/kobe.acc",
-                              time_file="/home/amnp95/Projects/Femora/examples/Example1/kobe.time")
 
-    tf.compute()
-    tf.plot_soil_profile()
 
-    # Plot the transfer function
-    tf.plot()
-    tf.plot_surface_motion(record)
 
+
+    # # Example: load a PEER file
+    record = TimeHistory.load(acc_file="/home/amnp95/Projects/Femora/examples/SiteResponse/Example1/FrequencySweep.acc",
+                              time_file="/home/amnp95/Projects/Femora/examples/SiteResponse/Example1/FrequencySweep.time")
+
+    # tf.compute()
+    # tf.plot_soil_profile()
+
+    # # Plot the transfer function
+    # tf.plot()
+    # tf.plot_surface_motion(record)
+
+    # plt.show()
+
+    import pyvista as pv
+    import numpy as np
+
+    x = np.linspace(-10, 10, 100)
+    y = np.linspace(-15, 15, 50)
+    z = np.linspace(-18, 0, 30)
+
+    x, y, z = np.meshgrid(x, y, z, indexing='ij')
+
+    mesh = pv.StructuredGrid(x, y, z)
+    mesh = pv.UnstructuredGrid(mesh)
+
+
+    accelrations, Z, dt, n = tf._compute_DRM(mesh, {"shape": "box", "normal": "z"}, base_time_history=record)
+    import matplotlib.pyplot as plt
+    # Plot the results
+    index = 0
+    time = np.arange(0, n*dt, dt)
+    acc = accelrations[index]
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(time, acc)
+    plt.title(f"Surface Motion for Layer {index+1}")
+    plt.xlabel("Time (s)")  
+    plt.ylabel("Acceleration (g)")
+    plt.grid()
     plt.show()
+
+    # pl = pv.Plotter()
+    # pl.add_mesh(mesh, show_edges=True)
+    # pl.add_mesh(pv.PolyData(coords), color='red', point_size=5, render_points_as_spheres=True)
+    # pl.show()
 
 
 
