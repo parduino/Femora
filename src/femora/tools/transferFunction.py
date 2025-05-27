@@ -544,14 +544,9 @@ class TransferFunction:
 
         Returns:
             Dict[str, np.ndarray]: Dictionary with results.
-
-        Raises:
-            ValueError: If no time history is available or transfer function not computed.
         """
         if time_history is None:
             raise ValueError("No time history available")
-        if not self.computed:
-            raise ValueError("Transfer function not computed yet")
         if not (0 <= padFactor < 1):
             raise ValueError("padFactor must be between 0 (inclusive) and 1 (exclusive)")
 
