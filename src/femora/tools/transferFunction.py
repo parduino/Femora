@@ -644,6 +644,7 @@ class TransferFunction:
         axs.reverse()
         box = dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3')
         blue = '#3182bd'
+        red = '#ef3b2c'
 
         # 1. Time history
         axs[0].plot(time, acc, color=blue)
@@ -673,10 +674,12 @@ class TransferFunction:
         axs[3].set_xlim(0, self.f_max)
 
         # 5. Inverse FFT (surface motion)
-        axs[4].plot(time_history.time, surface_acc, color=blue)
+        axs[4].plot(time_history.time, surface_acc, color=blue,label='Surface Motion')
         axs[4].set_title("Surface Motion (Inverse FFT)", loc="right", y=0.9, bbox=box)
         axs[4].set_xlabel("Time (s)")
         axs[4].set_ylabel("Acceleration (g)")
+        axs[4].plot(time_history.time, acc, color=red, alpha=0.7, label='Input Motion')
+        axs[4].legend(loc='lower right')
 
         for i, ax in enumerate(axs):
             ax.grid(True, which='both', linestyle='--', linewidth=0.5)
@@ -1197,13 +1200,13 @@ if __name__ == "__main__":
         "damping": 0.05,
     }
 
-    # soil = [
-    #   {"h": 18,  "vs": 199.5, "rho": 15.3*1000/9.81, "damping": 0.03 },
-    #    ]
+    soil = [
+      {"h": 100,  "vs": 199.5, "rho": 15.3*1000/9.81, "damping": 0.03 },
+       ]
     rock = {"vs": 8000, "rho": 2000.0, "damping": 0.00}
 
     # Create transfer function instance
-    tf = TransferFunction(soil, rock, f_max=25.0)
+    tf = TransferFunction(soil, rock, f_max=50.0)
 
 
 
