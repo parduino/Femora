@@ -526,67 +526,73 @@ class TransferFunction:
 
 
     def compute_surface_motion(self, 
-                               time_history:TimeHistory,
-                               freqFlag:bool = False,
-                               acc_fftFlag:bool = False,
-                               surface_fftFlag:bool = False,
+                               time_history: TimeHistory,
+                               freqFlag: bool = False,
+                               acc_fftFlag: bool = False,
+                               surface_fftFlag: bool = False,
+                               padFactor: float = 0.02
                                ) -> Dict[str, np.ndarray]:
         """
         Compute surface motion using the transfer function.
 
         Args:
-            time_history (Optional[TimeHistory]): Input time history. If None,
-                                                uses the last loaded time history.
+            time_history (TimeHistory): Input time history.
+            freqFlag (bool): If True, include frequency array in result.
+            acc_fftFlag (bool): If True, include input FFT in result.
+            surface_fftFlag (bool): If True, include output FFT in result.
+            padFactor (float): Zero-padding factor (0 to 1, default 0.02).
 
         Returns:
-            Tuple[np.ndarray, np.ndarray]: Time and surface acceleration arrays
+            Dict[str, np.ndarray]: Dictionary with results.
 
         Raises:
-            ValueError: If no time history is available
+            ValueError: If no time history is available or transfer function not computed.
         """
         if time_history is None:
             raise ValueError("No time history available")
-        
         if not self.computed:
             raise ValueError("Transfer function not computed yet")
-
+        if not (0 <= padFactor < 1):
+            raise ValueError("padFactor must be between 0 (inclusive) and 1 (exclusive)")
 
         dt = time_history.dt
+        n_pad = int(time_history.npts * padFactor)
         acc = time_history.acceleration
-        n = len(acc)
+        delta_T = n_pad * dt
+
+        if n_pad > 0:
+            acc = np.pad(acc, (n_pad, n_pad), mode='constant')
         
-        # FFT of the base motion
-        acc_fft = fft(acc)
-        freqs = fftfreq(n, dt)
+        
+        time = np.arange(0, len(acc) * dt, dt)
+        n = len(acc)
+        freq = np.fft.rfftfreq(len(acc), d=dt)
+        acc_fft = np.fft.rfft(acc)
+        f, TF_uu, _ = self.compute(frequency=freq)
 
-        # Prepare transfer function
-        TF = self.TF_uu  # should be complex-valued, len = len(f)
-        TF_freq = self.f  # positive frequency range of TF
+        if len(TF_uu) != len(freq):
+            raise ValueError("Transfer function length does not match frequency length")
+        # Apply transfer function in frequency domain
+        surface_fft = TF_uu * acc_fft  # complex multiplication
 
-        # Interpolate TF to match the fft frequencies
-        TF_interp = np.interp(np.abs(freqs), TF_freq, TF, left=0, right=0)
+        # Inverse FFT to get surface motion
+        surface_acc = np.fft.irfft(surface_fft)
 
-        # Make the TF symmetric for inverse FFT (real time signal)
-        TF_interp = TF_interp.astype(complex)
+        if len(surface_acc) != len(acc):
+            # make them equal length
+            min_length = min(len(surface_acc), len(acc))
+            surface_acc = surface_acc[:min_length]
+            acc = acc[:min_length]
+            time = time[:min_length]
 
-        # Apply TF to base motion in frequency domain
-        surface_fft = acc_fft * TF_interp
+        print(len(surface_acc), len(time))
+        mask = time >= delta_T
+        surface_acc = surface_acc[mask]
+        surface_acc = surface_acc[:time_history.npts]  # match original time history length
 
-        # Inverse FFT to get surface time history
-        surface_motion = np.real(ifft(surface_fft))
-
-        # Return desired outputs
-        result = {
-            "surface_acc": surface_motion,
-        }
-
-        index = np.where((freqs > 0) & (freqs < self.f_max))[0]
-        freqs = freqs[index]
-        acc_fft = acc_fft[index]
-        surface_fft = surface_fft[index]
-
+        result = {"surface_acc": surface_acc}
         if freqFlag:
-            result["freq"] = freqs
+            result["freq"] = freq
         if acc_fftFlag:
             result["acc_fft"] = acc_fft
         if surface_fftFlag:
@@ -637,36 +643,43 @@ class TransferFunction:
         axs = [fig.add_subplot(5, 1, i+1) for i in range(5)]
         axs.reverse()
         box = dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3')
+        blue = '#3182bd'
 
         # 1. Time history
-        axs[0].plot(time, acc)
+        axs[0].plot(time, acc, color=blue)
         axs[0].set_title("Input Time History", loc="right", y=0.9, bbox=box)
         axs[0].set_xlabel("Time (s)")
         axs[0].set_ylabel("Acceleration (g)")
 
         # 2. Frequency content (FFT magnitude)
-        axs[1].plot(freq, np.abs(acc_fft))
+        axs[1].plot(freq, np.abs(acc_fft), color=blue)
         axs[1].set_title("Frequency Content (|FFT|)", loc="right", y=0.9, bbox=box)
         axs[1].set_xlabel("Frequency (Hz)")
         axs[1].set_ylabel("|FFT|")
+        axs[1].set_xlim(0, self.f_max)
 
         # 3. Transfer function
-        axs[2].plot(self.f, np.abs(self.TF_uu))
+        axs[2].plot(self.f, np.abs(self.TF_uu), color=blue)
         axs[2].set_title("Transfer Function", loc="right", y=0.9, bbox=box)
         axs[2].set_xlabel("Frequency (Hz)")
         axs[2].set_ylabel("|TF|")
+        axs[2].set_xlim(0, self.f_max)
 
         # 4. Product in frequency domain
-        axs[3].plot(freq, np.abs(surface_fft))
+        axs[3].plot(freq, np.abs(surface_fft), color=blue)
         axs[3].set_title("Product: |FFT(input) * TF|", loc="right", y=0.9, bbox=box)
         axs[3].set_xlabel("Frequency (Hz)")
         axs[3].set_ylabel("|Output FFT|")
+        axs[3].set_xlim(0, self.f_max)
 
         # 5. Inverse FFT (surface motion)
-        axs[4].plot(time_history.time, surface_acc)
+        axs[4].plot(time_history.time, surface_acc, color=blue)
         axs[4].set_title("Surface Motion (Inverse FFT)", loc="right", y=0.9, bbox=box)
         axs[4].set_xlabel("Time (s)")
         axs[4].set_ylabel("Acceleration (g)")
+
+        for i, ax in enumerate(axs):
+            ax.grid(True, which='both', linestyle='--', linewidth=0.5)
 
         fig.tight_layout()
         return fig
@@ -695,74 +708,99 @@ class TransferFunction:
                               [ (1-alpha)*e_pos, (1+alpha)*e_neg ]],
                              dtype=complex)
 
-    def compute(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def compute(self, frequency: np.ndarray = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        Compute the transfer functions for the soil profile.
-
-        This method calculates both the transfer function between the top and base
-        of the soil column (TF_uu) and the transfer function between the top and
-        incident wave (TF_inc) using the transfer matrix method.
+        Compute the transfer functions for the soil profile using the transfer matrix method.
 
         Returns:
-            Tuple[np.ndarray, np.ndarray, np.ndarray]: A tuple containing:
-                - f: Array of frequencies in Hz
-                - TF_uu: Complex transfer function u_top/u_base
-                - TF_inc: Complex transfer function u_top/u_incident
-
-        Note:
-            The computation is performed in the frequency domain using the
-            transfer matrix method. Results are stored in instance variables
-            and also returned.
+            Tuple[np.ndarray, np.ndarray, np.ndarray]:
+                - Frequencies in Hz
+                - TF_uu: u_top/u_base
+                - TF_inc: u_top/u_incident
         """
-        # Unpack layers
-        h = np.array([l["h"] for l in self.soil_profile], dtype=float)
-        vs = np.array([l["vs"] for l in self.soil_profile], dtype=float)
-        rho = np.array([l["rho"] for l in self.soil_profile], dtype=float)
-        damp = np.array([l.get("damping", 0.0) for l in self.soil_profile], dtype=float)
-        damptype = np.array([l.get("damping_type", "constant") for l in self.soil_profile], dtype=str)
-        F1 = np.array([l.get("f1", 1.0) for l in self.soil_profile], dtype=float)
-        F2 = np.array([l.get("f2", 10.0) for l in self.soil_profile], dtype=float)
+        # Add bedrock layer
+        bedrock_layer = {**self.rock, 'h': 0.0}
+        all_layers = self.soil_profile + [bedrock_layer]
+        num_layers = len(all_layers)
+
+        # Extract properties
+        h = np.array([l['h'] for l in all_layers], dtype=float)
+        Vs = np.array([l['vs'] for l in all_layers], dtype=float)
+        rho = np.array([l['rho'] for l in all_layers], dtype=float)
+        xi = np.array([l.get('damping', 0.0) for l in all_layers], dtype=float)
+        damptype = np.array([l.get('damping_type', 'constant') for l in all_layers], dtype=str)
+        F1 = np.array([l.get('f1', 1.0) for l in all_layers], dtype=float)
+        F2 = np.array([l.get('f2', 10.0) for l in all_layers], dtype=float)
+
+        # Pre-compute Rayleigh damping parameters
         omega1 = 2 * np.pi * F1
         omega2 = 2 * np.pi * F2
-        A0 = 2 * damp * omega1 * omega2 / (omega1 + omega2)
-        A1 = 2 * damp / (omega1 + omega2)
+        A0 = 2 * xi * omega1 * omega2 / (omega1 + omega2)
+        A1 = 2 * xi / (omega1 + omega2)
 
-        vs_bed = self.rock["vs"]
-        rho_bed = self.rock["rho"]
-        damp_bed = self.rock.get("damping", 0.0)
+        # Handle frequency array
+        if frequency is not None:
+            freq_array = np.asarray(frequency, dtype=float)
+            if np.any(freq_array < 0):
+                raise ValueError("Frequency values must be positive.")
+            freq_array = np.sort(freq_array)
+            freq_array[0] = max(freq_array[0], 1.0e-8)
+        else:
+            self.freq_resolution = 0.05
+            TF_size = int(np.floor(self.f_max / self.freq_resolution))
+            freq_array = np.linspace(self.freq_resolution, self.freq_resolution * TF_size, num=TF_size)
 
-        # Interface impedance ratios α_j (layer j / layer j+1)
-        alpha = rho*vs / np.append(rho[1:], rho_bed) / np.append(vs[1:], vs_bed)
+        # Compute damping per layer and frequency
+        damping = np.zeros((num_layers, len(freq_array)))
+        for j in range(num_layers):
+            if damptype[j].lower() == "constant":
+                damping[j, :] = xi[j]
+            elif damptype[j].lower() == "rayleigh":
+                w = 2 * np.pi * freq_array
+                damping[j, :] = A0[j] / (2 * w) + A1[j] * w / 2
 
-        # Frequency grid
-        self.f = np.linspace(1e-6, self.f_max, self.n_freqs)  # avoid ω=0
-        omega = 2*np.pi*self.f
+        # Initialize output arrays
+        TF_uu = np.ones(len(freq_array), dtype=np.complex128)
+        TF_inc = np.ones(len(freq_array), dtype=np.complex128)
+        j_index = np.arange(num_layers - 2, -1, -1)
 
-        self.TF_uu = np.empty_like(self.f, dtype=complex)
-        self.TF_inc = np.empty_like(self.f, dtype=complex)
+        # Compute complex Vs* and alpha* for all frequencies
+        omega_all = 2 * np.pi * freq_array                             # (n_freq,)
+        vs_star_f = Vs[:, None] * np.sqrt(1 + 2j * damping)            # (num_layers, n_freq)
+        k_star_f  = omega_all[None, :] / vs_star_f                     # (num_layers, n_freq)
+        alpha_star_f = (rho[:-1, None] * vs_star_f[:-1]) / (rho[1:, None] * vs_star_f[1:])  # (num_layers-1, n_freq)
+        e_pos_f = np.exp(1j * k_star_f[:-1] * h[:-1, None])            # (num_layers-1, n_freq)
+        e_neg_f = np.exp(-1j * k_star_f[:-1] * h[:-1, None])           # (num_layers-1, n_freq)
 
-        # Loop over ω
-        for k, w in enumerate(omega):
-            # Total layer product L = Ln … L2 L1
-            L = np.identity(2, dtype=complex)
-            for j in range(len(h)):
-                if damptype[j].lower() == "constant":
-                    damping = damp[j]
-                elif damptype[j].lower() == "rayleigh":
-                    a0 = A0[j]
-                    a1 = A1[j]
-                    damping = a0 / (2 * w) + a1 * w / 2
-                    
-                cj = np.sqrt(1 + 1j*damping*2)  # viscoelastic correction
-                rj = w * h[j] / vs[j] * cj
-                L = self._layer_matrix(alpha[j], rj) @ L
 
-            den = L[0,0] + L[0,1] + L[1,0] + L[1,1]  # u_top / u_base
-            self.TF_uu[k] = 2.0 / den
-            den_inc = L[0,0] + L[0,1]  # u_top / S_inc
-            self.TF_inc[k] = 1.0 / den_inc
+        for i in range(len(freq_array)):
+            alpha_star = alpha_star_f[:, i]
+            e_pos = e_pos_f[:, i]
+            e_neg = e_neg_f[:, i]
 
+            # Initialize transfer matrix
+            E = np.eye(2, dtype=np.complex128)
+
+            # Loop over layers (bottom to top)
+            for j in j_index:
+                alpha = alpha_star[j]
+                D = 0.5 * np.array([
+                    [(1 + alpha) * e_pos[j], (1 - alpha) * e_neg[j]],
+                    [(1 - alpha) * e_pos[j], (1 + alpha) * e_neg[j]]
+                ], dtype=np.complex128)
+                E = E @ D
+
+            # Compute transfer functions
+            TF_inc[i] = 2.0 / (E[0, 0] + E[0, 1])
+            TF_uu[i]  = 2.0 / (E[0, 0] + E[0, 1] + E[1, 0] + E[1, 1])
+
+        # Store and return results
+        self.f = freq_array
+        self.TF_uu = TF_uu
+        self.TF_inc = TF_inc
+        self.TF_ro = TF_inc / 2.0
         self.computed = True
+
         return self.f, self.TF_uu, self.TF_inc
 
     def plot(self, plot_type: str = 'uu', ax=None, **kwargs) -> 'matplotlib.figure.Figure':
@@ -1145,6 +1183,8 @@ class TransferFunction:
 # ------------------- example / quick test ------------------------------------
 if __name__ == "__main__":
     import matplotlib.pyplot as plt 
+    import os
+    os.chdir(os.path.dirname(__file__))
     soil = [
         {"h": 2,  "vs": 144.2535646321813, "rho": 19.8*1000/9.81, "damping": 0.03, "damping_type":"rayleigh", "f1": 2.76, "f2": 13.84},
         {"h": 6,  "vs": 196.2675276462639, "rho": 19.1*1000/9.81, "damping": 0.03, "damping_type":"rayleigh", "f1": 2.76, "f2": 13.84},
@@ -1156,6 +1196,11 @@ if __name__ == "__main__":
         "rho": 1500.0,
         "damping": 0.05,
     }
+
+    # soil = [
+    #   {"h": 18,  "vs": 199.5, "rho": 15.3*1000/9.81, "damping": 0.03 },
+    #    ]
+    rock = {"vs": 8000, "rho": 2000.0, "damping": 0.00}
 
     # Create transfer function instance
     tf = TransferFunction(soil, rock, f_max=25.0)
@@ -1169,45 +1214,48 @@ if __name__ == "__main__":
 
 
     # # Example: load a PEER file
-    record = TimeHistory.load(acc_file="/home/amnp95/Projects/Femora/examples/SiteResponse/Example1/FrequencySweep.acc",
-                              time_file="/home/amnp95/Projects/Femora/examples/SiteResponse/Example1/FrequencySweep.time")
+    record = TimeHistory.load(acc_file="../../../examples/SiteResponse/Example1/FrequencySweep.acc",
+                              time_file="../../../examples/SiteResponse/Example1/FrequencySweep.time")
+    
+    record = TimeHistory.load(acc_file="../../../examples/SiteResponse/Example1/kobe.acc",
+                            time_file="../../../examples/SiteResponse/Example1/kobe.time")
 
-    # tf.compute()
-    # tf.plot_soil_profile()
+    tf.compute()
+    tf.plot_soil_profile()
 
-    # # Plot the transfer function
-    # tf.plot()
-    # tf.plot_surface_motion(record)
+    # Plot the transfer function
+    tf.plot()
+    tf.plot_surface_motion(record)
 
-    # plt.show()
-
-    import pyvista as pv
-    import numpy as np
-
-    x = np.linspace(-10, 10, 100)
-    y = np.linspace(-15, 15, 50)
-    z = np.linspace(-18, 0, 30)
-
-    x, y, z = np.meshgrid(x, y, z, indexing='ij')
-
-    mesh = pv.StructuredGrid(x, y, z)
-    mesh = pv.UnstructuredGrid(mesh)
-
-
-    accelrations, Z, dt, n = tf._compute_DRM(mesh, {"shape": "box", "normal": "z"}, base_time_history=record)
-    import matplotlib.pyplot as plt
-    # Plot the results
-    index = 0
-    time = np.arange(0, n*dt, dt)
-    acc = accelrations[index]
-
-    plt.figure(figsize=(10, 5))
-    plt.plot(time, acc)
-    plt.title(f"Surface Motion for Layer {index+1}")
-    plt.xlabel("Time (s)")  
-    plt.ylabel("Acceleration (g)")
-    plt.grid()
     plt.show()
+
+    # import pyvista as pv
+    # import numpy as np
+
+    # x = np.linspace(-10, 10, 100)
+    # y = np.linspace(-15, 15, 50)
+    # z = np.linspace(-18, 0, 30)
+
+    # x, y, z = np.meshgrid(x, y, z, indexing='ij')
+
+    # mesh = pv.StructuredGrid(x, y, z)
+    # mesh = pv.UnstructuredGrid(mesh)
+
+
+    # accelrations, Z, dt, n = tf._compute_DRM(mesh, {"shape": "box", "normal": "z"}, base_time_history=record)
+    # import matplotlib.pyplot as plt
+    # # Plot the results
+    # index = 0
+    # time = np.arange(0, n*dt, dt)
+    # acc = accelrations[index]
+
+    # plt.figure(figsize=(10, 5))
+    # plt.plot(time, acc)
+    # plt.title(f"Surface Motion for Layer {index+1}")
+    # plt.xlabel("Time (s)")  
+    # plt.ylabel("Acceleration (g)")
+    # plt.grid()
+    # plt.show()
 
     # pl = pv.Plotter()
     # pl.add_mesh(mesh, show_edges=True)
