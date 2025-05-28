@@ -6,5 +6,7 @@ tmp/
 *.tcl
 *.bash
 *.vtkhdf
+*.vtk
 docs/_build
 dist/
+src/femora/tools/motions
