@@ -36,18 +36,76 @@ import re
 from tqdm import tqdm
 
 class TimeHistory:
-    """Class to store and process acceleration time history data."""
-    def __init__(self, time: np.ndarray, acceleration: np.ndarray, metadata: Optional[Dict[str, Any]] = None):
+    """
+    Class to store and process acceleration time history data.
+    This class supports loading time history data from various formats. The class give access to
+    the time history data, computes velocity and displacement from acceleration, and provides
+    methods to compute response spectra and transfer functions.
+
+    Attributes:
+        time (np.ndarray): Time array in seconds
+        acceleration (np.ndarray): Acceleration array
+        gravity (float): Gravitational acceleration in m/s² (default: 9.81)
+        unit_in_g (bool): If True, acceleration is in g (default: True)
+        metadata (Optional[Dict[str, Any]]): Metadata about the time history
+        dt (Optional[float]): Time step if time is uniform, otherwise None
+    Raises:
+        ValueError: If time and acceleration arrays are not of the same length
+        ValueError: If time array is not strictly increasing
+        ValueError: If time or acceleration arrays are empty
+    Returns:
+        TimeHistory: An instance of the TimeHistory class containing the time and acceleration data.
+
+    Examples:
+        >>> from femora.tools.transferFunction import TimeHistory
+        >>> import numpy as np
+
+        # Create a TimeHistory instance with time and acceleration data
+        >>> time = np.array([0.0, 0.1, 0.2, 0.3])
+        >>> acceleration = np.array([0.0, 1.0, 0.5, -0.5])
+        >>> th = TimeHistory(time, acceleration)
+        >>> print(th.duration)  # Output: 0.3
+
+        # create a TimeHistory from a file
+        >>> th = TimeHistory.load(file_path='path/to/time_history.csv', format='csv')
+        >>> th = TimeHistory.load(file_path='path/to/time_history.peer', format='peer')
+        >>> th = TimeHistory.load(time_file='path/to/time_values.txt', acc_file='path/to/acceleration_values.txt', delimiter=',')
+    """
+
+    def __init__(self, time: np.ndarray, 
+                       acceleration: np.ndarray, 
+                       unit_in_g: bool = True,
+                       gravity: float = 9.81,
+                       metadata: Optional[Dict[str, Any]] = None):
         """
         Initialize time history data.
 
         Args:
             time (np.ndarray): Time array in seconds
-            acceleration (np.ndarray): Acceleration array in g
+            acceleration (np.ndarray): Acceleration array
+            unit_in_g (bool): If True, acceleration is in g (default: True)
+            gravity (float): Gravitational acceleration in if unit is in g (default: 9.81 m/s²)
             metadata (Optional[Dict]): Dictionary containing metadata about the time history
+        
+        Raises:
+            ValueError: If time and acceleration arrays are not of the same length
+            ValueError: If time array is not strictly increasing
+        
+        Returns:
+            None
         """
+        # check if the time is increasing
+        if not np.all(np.diff(time) >= 0):
+            raise ValueError("Time array must be strictly increasing")
+        if len(time) == 0 or len(acceleration) == 0:
+            raise ValueError("Time and acceleration arrays must not be empty")
+        if len(time) != len(acceleration):
+            raise ValueError("Time and acceleration arrays must have the same length")
+        
         self.time = np.array(time)
         self.acceleration = np.array(acceleration)
+        self.gravity = gravity
+        self.unit_in_g = unit_in_g
         self.metadata = metadata or {}
         if len(time) != len(acceleration):
             raise ValueError("Time and acceleration arrays must have the same length")
@@ -64,7 +122,14 @@ class TimeHistory:
         
 
     @staticmethod
-    def load(file_path: str = None, format: str = 'auto', time_file: str = None, acc_file: str = None, delimiter: str = ',', skiprows: int = 0) -> 'TimeHistory':
+    def load(file_path: str = None, 
+             format: str = 'auto', 
+             time_file: str = None, 
+             acc_file: str = None, 
+             delimiter: str = ',', 
+             unit_in_g: bool = True,
+             gravity: float = 9.81,
+             skiprows: int = 0) -> 'TimeHistory':
         """
         Load a time history from a single file (auto, peer, csv) or from two files (time and acceleration).
         Args:
@@ -80,7 +145,11 @@ class TimeHistory:
         if time_file and acc_file:
             time = np.loadtxt(time_file, delimiter=delimiter, skiprows=skiprows)
             acc = np.loadtxt(acc_file, delimiter=delimiter, skiprows=skiprows)
-            return TimeHistory(time, acc, metadata={'source': 'separate_files', 'time_file': time_file, 'acc_file': acc_file})
+            return TimeHistory(time, 
+                               acc, 
+                               unit_in_g=unit_in_g,
+                               gravity=gravity,
+                               metadata={'source': 'separate_files', 'time_file': time_file, 'acc_file': acc_file})
         if file_path is None:
             raise ValueError("file_path must be provided if not loading from two files.")
         if format == 'auto':
@@ -165,6 +234,20 @@ class TimeHistory:
         """Get the duration of the time history in seconds."""
         return self.time[-1] - self.time[0]
 
+    @property
+    def velocity(self) -> np.ndarray:
+        """Compute the velocity from the acceleration time history."""
+        if self.unit_in_g:
+            return np.cumsum(self.acceleration * self.gravity) * self.dt
+        else:
+            return np.cumsum(self.acceleration) * self.dt
+        
+    @property
+    def displacement(self) -> np.ndarray:
+        """Compute the displacement from the acceleration time history."""
+        return np.cumsum(self.velocity) * self.dt
+    
+    
     @property
     def npts(self) -> int:
         """Get the number of points in the time history."""
@@ -417,16 +500,20 @@ class TransferFunction:
         dt = time_history.dt
         n_pad = int(time_history.npts * padFactor)
         acc = time_history.acceleration
-        delta_T = n_pad * dt
+        delta_T = n_pad * dt *9.81
 
         if n_pad > 0:
             acc = np.pad(acc, (n_pad, n_pad), mode='constant')
         
+        vel = np.cumsum(acc, axis=0) * dt
+        disp = np.cumsum(vel, axis=0) * dt
         
         time = np.arange(0, len(acc) * dt, dt)
         n = len(acc)
         freq = np.fft.rfftfreq(len(acc), d=dt)
         acc_fft = np.fft.rfft(acc)
+        vel_fft = np.fft.rfft(vel)
+        disp_fft = np.fft.rfft(disp)
         
 
         f, H = self.compute_all_layers(soilProfile=newProfile,
@@ -437,9 +524,14 @@ class TransferFunction:
             raise ValueError("Transfer function length does not match frequency length")
         
         acc_fft = H * acc_fft.reshape(-1,1)  # complex multiplication
+        vel_fft = H * vel_fft.reshape(-1,1)  # complex multiplication
+        disp_fft = H * disp_fft.reshape(-1,1)  # complex multiplication
         print(f"acc_fft shape: {acc_fft.shape}, H shape: {H.shape}, freq shape: {freq.shape}")
 
         acc = np.fft.irfft(acc_fft, axis=0)
+        vel = np.fft.irfft(vel_fft, axis=0)
+        disp = np.fft.irfft(disp_fft, axis=0)
+        
         print(f"acc shape: {acc.shape}, time shape: {time.shape}")
         if len(acc) != len(time):
             # make them equal length
@@ -450,15 +542,56 @@ class TransferFunction:
         
         mask = time >= delta_T
         acc = acc[mask,:]
+        vel = vel[mask,:]
+        disp = disp[mask,:]
         time = time[mask]
         time = time - time[0]  # start time at 0
 
 
+
+
+
+
+
+        # # do integration to get the velocity and displacement
+        # vel  = np.cumsum(acc, axis=0) * dt
+        # # baseline correction on the velocity
+        # N = vel.shape[0]
+        # offset = np.matmul(np.arange(1, N + 1, 1).reshape(-1, 1) / (N + 1.0),
+        #     vel[-1, :].reshape(1, -1),
+        # )
+        # vel -= offset
+
+
+
+
+
+
+
+
+
+        # # baseline correction on the displacement
+        # disp = np.cumsum(vel, axis=0) * dt
+        # N = disp.shape[0]
+        # offset = np.matmul(np.arange(1, N + 1, 1).reshape  (-1, 1) / (N + 1.0),
+        # disp[-1, :].reshape(1, -1),
+        #     )
+        # disp -= offset
+        # dt = time[1] - time[0]  # Recalculate dt based on the time array
+        # vel = np.cumsum(acc, axis=0) * dt
+        # disp = np.cumsum(vel, axis=0) * dt
+
+        # velmean = np.mean(vel, axis=0)
+        # dispmean = np.mean(disp, axis=0)
+        # # baseline correction on the velocity
+        # vel -= velmean
+        # # baseline correction on the displacement
+        # disp -= dispmean
         
         
 
     
-        return f, H, acc, h, time
+        return f, H, acc, h, time,vel, disp
             
 
 
@@ -625,29 +758,6 @@ class TransferFunction:
         fig.tight_layout()
         return fig
         
-    @staticmethod
-    def _layer_matrix(alpha: float, r: float) -> np.ndarray:
-        """
-        Compute the layer matrix for a given impedance ratio and phase.
-
-        This method computes the 2x2 transfer matrix for a single layer in the
-        frequency domain, considering the impedance ratio and phase shift.
-
-        Args:
-            alpha (float): Impedance ratio between adjacent layers
-            r (float): Phase shift parameter (ωh/vs)
-
-        Returns:
-            np.ndarray: 2x2 complex transfer matrix for the layer
-
-        Note:
-            The layer matrix is used in the transfer matrix method to propagate
-            waves through the soil profile.
-        """
-        e_pos, e_neg = np.exp(1j * r), np.exp(-1j * r)
-        return 0.5 * np.array([[ (1+alpha)*e_pos, (1-alpha)*e_neg],
-                              [ (1-alpha)*e_pos, (1+alpha)*e_neg ]],
-                             dtype=complex)
 
     def compute(self, frequency: np.ndarray = None, 
                 soilProfile:List[Dict] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
