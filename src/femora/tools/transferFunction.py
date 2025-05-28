@@ -826,36 +826,29 @@ class TransferFunction:
         k_star = k_star_f.T  # (n_freq, num_layers)
 
         alpha_star_f = (rho[:-1, None] * vs_star_f[:-1]) / (rho[1:, None] * vs_star_f[1:])  # (num_layers-1, n_freq)
+        alpha_star_f = alpha_star_f.T 
 
         A = np.zeros((len(freq_array), num_layers), dtype=np.complex128)
         B = np.zeros((len(freq_array), num_layers), dtype=np.complex128)
         A[:, 0] = 1
         B[:, 0] = 1
 
-        for i,w in enumerate(omega_all):
-            alpha = alpha_star_f[:, i]
-            for k in range(num_layers - 1):
-                A[i, k + 1] = 0.5 * A[i, k] * (1 + alpha[k]) * np.exp(
-                    1j * k_star[i, k] * h[k]
-                ) + 0.5 * B[i, k] * (1 - alpha[k]) * np.exp(
-                    -1j * k_star[i, k] * h[k]
-                )  # left half
-                B[i, k + 1] = 0.5 * A[i, k] * (1 - alpha[k]) * np.exp(
-                    1j * k_star[i, k] * h[k]
-                ) + 0.5 * B[i, k] * (1 + alpha[k]) * np.exp(
-                    -1j * k_star[i, k] * h[k]
-                )  # left half      
+        # Precompute exponentials for all (freq, layer)
+        exp_pos = np.exp(1j * k_star[:, :-1] * h[:-1])   # (n_freq, num_layers-1)
+        exp_neg = np.exp(-1j * k_star[:, :-1] * h[:-1])  # (n_freq, num_layers-1)
 
-        H = np.zeros((len(freq_array), num_layers), dtype=np.complex128)
+        # Propagate A, B through layers
+        for k in range(num_layers - 1):
+            a = A[:, k]
+            b = B[:, k]
+            alpha = alpha_star_f[:, k]
+            A[:, k + 1] = 0.5 * a * (1 + alpha) * exp_pos[:, k] + 0.5 * b * (1 - alpha) * exp_neg[:, k]
+            B[:, k + 1] = 0.5 * a * (1 - alpha) * exp_pos[:, k] + 0.5 * b * (1 + alpha) * exp_neg[:, k]
 
+        # Compute transfer function
+        H = (A + B) / (A[:, [-1]] + B[:, [-1]])  # (n_freq, num_layers)
+        H[0] = np.real(H[0]) 
 
-        # Compute transfer functions
-        for k in range(num_layers):
-            # H[:, k] = (A[:, k] + B[:, k])/ A[:, -1]
-            H[:, k] = (A[:, k] + B[:, k]) / (A[:, -1] + B[:, -1])
-            H[0, k] = np.real(H[0, k])
-
-        print(f"A[]")
 
 
         return freq_array, H
