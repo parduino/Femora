@@ -293,6 +293,8 @@ class TimeHistory:
 
         return periods, sa
 
+
+
 class TransferFunction:
     _instance = None
     _initialized = False
@@ -500,20 +502,15 @@ class TransferFunction:
         dt = time_history.dt
         n_pad = int(time_history.npts * padFactor)
         acc = time_history.acceleration
-        delta_T = n_pad * dt *9.81
+        delta_T = n_pad * dt
 
         if n_pad > 0:
             acc = np.pad(acc, (n_pad, n_pad), mode='constant')
-        
-        vel = np.cumsum(acc, axis=0) * dt
-        disp = np.cumsum(vel, axis=0) * dt
         
         time = np.arange(0, len(acc) * dt, dt)
         n = len(acc)
         freq = np.fft.rfftfreq(len(acc), d=dt)
         acc_fft = np.fft.rfft(acc)
-        vel_fft = np.fft.rfft(vel)
-        disp_fft = np.fft.rfft(disp)
         
 
         f, H = self.compute_all_layers(soilProfile=newProfile,
@@ -524,73 +521,54 @@ class TransferFunction:
             raise ValueError("Transfer function length does not match frequency length")
         
         acc_fft = H * acc_fft.reshape(-1,1)  # complex multiplication
-        vel_fft = H * vel_fft.reshape(-1,1)  # complex multiplication
-        disp_fft = H * disp_fft.reshape(-1,1)  # complex multiplication
-        print(f"acc_fft shape: {acc_fft.shape}, H shape: {H.shape}, freq shape: {freq.shape}")
 
         acc = np.fft.irfft(acc_fft, axis=0)
-        vel = np.fft.irfft(vel_fft, axis=0)
-        disp = np.fft.irfft(disp_fft, axis=0)
-        
-        print(f"acc shape: {acc.shape}, time shape: {time.shape}")
+
+
         if len(acc) != len(time):
             # make them equal length
-            print(f"len(acc): {len(acc)}, len(time): {len(time)}")
             min_length = min(len(acc), len(time))
             acc = acc[:min_length,:]
             time = time[:min_length]
         
         mask = time >= delta_T
         acc = acc[mask,:]
-        vel = vel[mask,:]
-        disp = disp[mask,:]
         time = time[mask]
         time = time - time[0]  # start time at 0
+        time = time + time_history.time[0]  # align with original time history
+
+
+        if time_history.unit_in_g:
+            g = time_history.gravity
+            vel = np.cumsum(acc, axis=0) * dt * g
+            disp = np.cumsum(vel, axis=0) * dt
+
+        else:
+            vel = np.cumsum(acc, axis=0) * dt
+            disp = np.cumsum(vel, axis=0) * dt
+
+
+        # baseline correction for displacement
+        base =disp[:,-1]
+        disp = disp - base.reshape(-1,1)
+        X = np.vstack([time, np.ones_like(time)]).T   # Shape: 
+        coeffs, _, _, _ = np.linalg.lstsq(X, disp, rcond=None)
+        trend = X @ coeffs  # Shape: (n_time, n_signals)
+        disp = disp - trend
+
+        tmax = np.max(time_history.time)
+        print(f"tmax: {tmax}")
+        mask = time > tmax
+        ind = np.argmax(mask)
+        base_end  = base[ind]
+        print(f"base_end: {base_end}")
+        base[mask] = base_end
+
+        disp = disp + base.reshape(-1,1)  # add the base to the displacement
 
 
 
-
-
-
-
-        # # do integration to get the velocity and displacement
-        # vel  = np.cumsum(acc, axis=0) * dt
-        # # baseline correction on the velocity
-        # N = vel.shape[0]
-        # offset = np.matmul(np.arange(1, N + 1, 1).reshape(-1, 1) / (N + 1.0),
-        #     vel[-1, :].reshape(1, -1),
-        # )
-        # vel -= offset
-
-
-
-
-
-
-
-
-
-        # # baseline correction on the displacement
-        # disp = np.cumsum(vel, axis=0) * dt
-        # N = disp.shape[0]
-        # offset = np.matmul(np.arange(1, N + 1, 1).reshape  (-1, 1) / (N + 1.0),
-        # disp[-1, :].reshape(1, -1),
-        #     )
-        # disp -= offset
-        # dt = time[1] - time[0]  # Recalculate dt based on the time array
-        # vel = np.cumsum(acc, axis=0) * dt
-        # disp = np.cumsum(vel, axis=0) * dt
-
-        # velmean = np.mean(vel, axis=0)
-        # dispmean = np.mean(disp, axis=0)
-        # # baseline correction on the velocity
-        # vel -= velmean
-        # # baseline correction on the displacement
-        # disp -= dispmean
-        
-        
-
-    
+        print(f"coords: {coords}")
         return f, H, acc, h, time,vel, disp
             
 
@@ -659,9 +637,12 @@ class TransferFunction:
         print(len(surface_acc), len(time))
         mask = time >= delta_T
         surface_acc = surface_acc[mask]
-        surface_acc = surface_acc[:time_history.npts]  # match original time history length
+        # surface_acc = surface_acc[:time_history.npts]  # match original time history length
+        time = time[mask]
+        time = time - time[0]  # start time at 0
+        time = time + time_history.time[0]  # align with original time history
 
-        result = {"surface_acc": surface_acc}
+        result = {"surface_acc": (time,surface_acc)}
         if freqFlag:
             result["freq"] = freq
         if acc_fftFlag:
@@ -691,7 +672,6 @@ class TransferFunction:
         if not self.computed:
             self.compute()
         
-        time = time_history.time
         acc = time_history.acceleration
 
         res = self.compute_surface_motion(time_history,
