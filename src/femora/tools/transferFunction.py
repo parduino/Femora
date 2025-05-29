@@ -396,12 +396,14 @@ class TransferFunction:
             # print(clipped.bounds)
             # filter out points inside the bounds with a small tolerance
 
-            mask =  (Coords[:, 0] > xmin) & (Coords[:, 0] < xmax) & \
+            internal =  (Coords[:, 0] > xmin) & (Coords[:, 0] < xmax) & \
                     (Coords[:, 1] > ymin) & (Coords[:, 1] < ymax) & \
                     (Coords[:, 2] > zmin) 
+            
+            # clipped.point_data['inside'] = inside
+            # clipped.plot(show_edges=True, scalars='inside', cmap='coolwarm')
 
 
-            Coords = Coords[~mask]
 
             # Correct vlalues
             bin_size = 1e-3
@@ -411,7 +413,7 @@ class TransferFunction:
 
 
         # organize the coordinates by z
-        return Coords
+        return Coords, internal
     
 
     def _get_DRM_soil_profile(self, coords: np.ndarray):
@@ -490,7 +492,7 @@ class TransferFunction:
         if progress_bar is None:
             progress_bar = tqdm(total=100, desc="Computing DRM", unit="%", leave=False)
         progress_bar.update(0)
-        coords = self._get_DRM_points(mesh, props)
+        coords, internal = self._get_DRM_points(mesh, props)
         progress_bar.update(5)
         newProfile = self._get_DRM_soil_profile(coords)
         progress_bar.update(5)
@@ -567,9 +569,11 @@ class TransferFunction:
         disp = disp + base.reshape(-1,1)  # add the base to the displacement
 
 
+        depth = -np.cumsum(np.append([0],h)) # negative because z is descending
 
-        print(f"coords: {coords}")
-        return f, H, acc, h, time,vel, disp
+        
+
+        return f, H, acc, h, time,vel, disp,coords,internal
             
 
 
