@@ -655,6 +655,100 @@ class TransferFunction:
             result["surface_fft"] = surface_fft
 
         return result
+    
+
+    def _deconvolve(self,time_history: TimeHistory,
+                        soilProfile: List[Dict] = None,
+                        padFactor=0.05) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Deconvolve the time history from the surface motion to get the incident wave.
+        Args:
+            time_history (TimeHistory): Input time history.
+        Returns:
+            TimeHistory: Deconvolved time history object containing the incident wave.
+        """
+
+        acc = time_history.acceleration
+        dt = time_history.dt
+        padwidth = int(padFactor * len(acc))
+        if padwidth > 0:
+            tmax = len(acc) * dt
+            acc = np.pad(acc, (padwidth, padwidth), mode='constant')
+        
+        
+        time = np.arange(0, len(acc) * dt, dt)
+
+        if soilProfile is None:
+            soilProfile = self.soil_profile.copy()
+
+
+        freq = np.fft.rfftfreq(len(acc), d=time_history.dt)
+        acc_fft = np.fft.rfft(acc)
+        # self.compute()   
+        f,TF,_ = self.compute(soilProfile=soilProfile, frequency=freq)
+
+        if len(TF) != len(freq):
+            raise ValueError("Transfer function length does not match frequency length")
+        
+        acc_fft /= TF  # complex division to apply inverse transfer function
+        # Inverse FFT to get incident wave
+        incident_acc = np.fft.irfft(acc_fft)
+
+        mask = time <= tmax
+        time = time[mask]
+        incident_acc = incident_acc[mask]
+        if len(incident_acc) != len(time):
+            # make them equal length
+            min_length = min(len(incident_acc), len(time))
+            incident_acc = incident_acc[:min_length]
+            time = time[:min_length]
+        
+        record = TimeHistory(time,incident_acc)
+        return record
+
+
+
+
+    def plot_deconvolved_motion(self, time_history: TimeHistory) -> 'matplotlib.figure.Figure':
+        """
+        Plot the deconvolved motion from the surface motion to the incident wave.
+
+        Args:
+            time_history (TimeHistory): Input time history.
+
+        Returns:
+            matplotlib.figure.Figure: The figure object containing the plot.
+        """
+        import matplotlib.pyplot as plt
+
+        # Deconvolve the motion
+        deconvolved_time_history = self._deconvolve(time_history)
+
+        # Extract time and acceleration
+        time = time_history.time
+        surface_acc = time_history.acceleration
+        deconvolved_time = np.arange(0, len(deconvolved_time_history.acceleration) * time_history.dt, time_history.dt)
+        deconvolved_acc = deconvolved_time_history.acceleration
+
+        # Create a new figure
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+        # Plot surface motion
+        ax.plot(time, surface_acc, label="Surface Motion", color="blue", alpha=0.7)
+
+        # Plot deconvolved motion
+        ax.plot(deconvolved_time, deconvolved_acc, label="Deconvolved Motion", color="red", linestyle="--")
+
+        # Add labels, legend, and grid
+        ax.set_title("Deconvolved Motion")
+        ax.set_xlabel("Time (s)")
+        ax.set_ylabel("Acceleration (g)")
+        ax.legend(loc="upper right")
+        ax.grid(True, linestyle="--", linewidth=0.5)
+
+        return fig
+
+               
 
 
     def plot_surface_motion(self, time_history: TimeHistory,
@@ -677,6 +771,7 @@ class TransferFunction:
             self.compute()
         
         acc = time_history.acceleration
+        time = time_history.time
 
         res = self.compute_surface_motion(time_history,
                                           freqFlag=True,
@@ -686,6 +781,8 @@ class TransferFunction:
         acc_fft = res['acc_fft']
         surface_fft = res['surface_fft']
         surface_acc = res['surface_acc']
+        time_acc = surface_acc[0]
+        surface_acc = surface_acc[1]
 
         # Use provided figure or create a new one
         if fig is None:
@@ -729,7 +826,7 @@ class TransferFunction:
         axs[3].set_xlim(0, self.f_max)
 
         # 5. Inverse FFT (surface motion)
-        axs[4].plot(time_history.time, surface_acc, color=blue,label='Surface Motion')
+        axs[4].plot(time_acc, surface_acc, color=blue,label='Surface Motion')
         axs[4].set_title("Surface Motion (Inverse FFT)", loc="right", y=0.9, bbox=box)
         axs[4].set_xlabel("Time (s)")
         axs[4].set_ylabel("Acceleration (g)")
