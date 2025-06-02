@@ -42,7 +42,7 @@ for layer in layers_properties:
     fm.material.create_material(material_category="nDMaterial", material_type="ElasticIsotropic", user_name=name, E=E, nu=nu, rho=rho)
 
     # Define the element
-    ele = fm.element.create_element(element_type="stdBrick", ndof=3, material=name, b1=0.0, b2=0.0, b3=-9.81 * rho)
+    ele = fm.element.create_element(element_type="stdBrick", ndof=3, material=name, b1=0.0, b2=0.0, b3=0.0)
 
     fm.meshPart.create_mesh_part(category="Volume mesh", mesh_part_type="Uniform Rectangular Grid", 
                                  user_name=name, element=ele, region=region,
@@ -55,22 +55,60 @@ for layer in layers_properties:
     Zmin += layer["thickness"]
 
 
-# #  Create assembly Sections
-fm.assembler.create_section(meshparts=[layer["user_name"] for layer in layers_properties], num_partitions=0)
+#  Create assembly Sections
+fm.assembler.create_section(meshparts=[layer["user_name"] for layer in layers_properties], num_partitions=4)
 
 
 # Assemble the mesh parts
 fm.assembler.Assemble()
 
-fm.assembler.Assemble()
-fm.drm.addAbsorbingLayer(numLayers=1,
-                        numPartitions=0,
-                        partitionAlgo="kd-tree",
-                        geometry="Rectangular",
-                        rayleighDamping=0.95,
-                        matchDamping=False,
-                        type="Rayleigh",
-                        )
+# ===================================================================
+# creating the DRM pattern
+# ===================================================================
+
+# the soil layers is equivalent to the mesh parts defined above
+# this is baisc format that the transfer function will use
+soil = [
+    {"h": 2,  "vs": 144.2535646321813, "rho": 19.8*1000/9.81, "damping": 0.03, "damping_type":"rayleigh", "f1": 2.76, "f2": 13.84},
+    {"h": 6,  "vs": 196.2675276462639, "rho": 19.1*1000/9.81, "damping": 0.03, "damping_type":"rayleigh", "f1": 2.76, "f2": 13.84},
+    {"h": 10, "vs": 262.5199305117452, "rho": 19.9*1000/9.81, "damping": 0.03, "damping_type":"rayleigh", "f1": 2.76, "f2": 13.84},
+]
+
+# the rock layer is defined as a single layer with the properties below
+# we just assume a hard rock layer with high shear wave velocity and density
+# to represent the rigid base condition to create a high impedance contrast
+rock = {"vs": 8000, "rho": 2000.0, "damping": 0.00}
+
+from femora.tools.transferFunction import TransferFunction, TimeHistory
+
+
+# Create TimeHistory instance
+# for the DRM pattern we need to provide a time history of the ground motion
+# in this case we use a Ricker wavelet based ground motion that we calculate using deconvolution of ricker wavelet
+# at the surface of the soil layers to compute the time history of the base motion
+record = TimeHistory.load(acc_file="ricker_base.acc",
+                            time_file="ricker_base.time",
+                            unit_in_g=True,
+                            gravity=9.81)
+
+
+# Create transfer function instance
+# initialize the transfer function with the soil layers and rock properties
+# the f_max is the maximum frequency of the transfer function
+tf = TransferFunction(soil, rock, f_max=50.0)
+
+
+# Create DRM pattern
+# for creating the DRM pattern we need to provide the mesh (pyvista mesh),
+# the properties of the DRM pattern (shape, time history, filename)
+# the mesh is the final that we assembled above lest extraxted mesh from the assembled model
+mesh = fm.assembler.get_mesh()
+
+# now we can create the DRM pattern using the transfer function and the mesh
+# since we our mesh is box shaped we can use the box shape for the DRM pattern
+# to the date of this writing the DRM pattern is only supported for box shaped meshes
+# the box shape mesh should be representation of the soil box should start at z=0 and extend to the depth  with negative z values
+tf.createDRM(mesh, props={"shape":"box"}, time_history=record, filename="drmload.h5drm")
 
 h5pattern = fm.pattern.create_pattern( 'h5drm',
                                         filepath='drmload.h5drm',
@@ -80,7 +118,21 @@ h5pattern = fm.pattern.create_pattern( 'h5drm',
                                         do_coordinate_transformation=1,
                                         transform_matrix=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
                                         origin=[0.0, 0.0, 0.0])
+# ===================================================================
+# ===================================================================
+fm.drm.addAbsorbingLayer(numLayers=2,
+                        numPartitions=1,
+                        partitionAlgo="kd-tree",
+                        geometry="Rectangular",
+                        rayleighDamping=0.95,
+                        matchDamping=False,
+                        type="Rayleigh",
+                        )
 fm.drm.set_pattern(h5pattern)
 fm.drm.createDefaultProcess(finalTime=30, dT=0.01)
+
+resultdirectoryname = "Results"
+fm.process.insert_step(index=0, component=fm.actions.tcl(f"file mkdir {resultdirectoryname}"), description="making result directory")
+
 fm.export_to_tcl(filename="model.tcl")
 
