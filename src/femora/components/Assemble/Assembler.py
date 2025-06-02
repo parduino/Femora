@@ -344,6 +344,19 @@ class Assembler:
             raise ValueError("No assembled mesh exists to plot")
         else:
             self.AssembeledMesh.plot(**kwargs)
+    
+
+    def get_mesh(self) -> Optional[pv.UnstructuredGrid]:
+        """
+        Get the assembled mesh.
+        
+        Returns the currently assembled mesh as a PyVista UnstructuredGrid.
+        If no mesh has been assembled yet, returns None.
+        
+        Returns:
+            Optional[pv.UnstructuredGrid]: The assembled mesh, or None if not yet created
+        """
+        return self.AssembeledMesh
         
             
 
