@@ -945,7 +945,7 @@ class TransferFunction:
             Returns:
                 matplotlib.figure.Figure: The figure object containing the plot.
             """
-            surface, tfs = self.convolve(time_history, soil_profile=soil_profile, return_all=True)
+            surface, tfs = self._convolve(time_history, soil_profile=soil_profile, return_all=True)
             time = surface.time
             surface_acc = surface.acceleration
             bedrock = time_history.acceleration
@@ -1014,7 +1014,7 @@ class TransferFunction:
 
         acc = time_history.acceleration
         dt = time_history.dt
-        tol = 1e-6
+        tol = 1e-8
         tmin1 =  np.argmax(np.abs(acc) > tol)
         tmax1 = time_history.time[-1] 
 
