@@ -34,6 +34,8 @@ from pyvista import UnstructuredGrid, Cube
 import os
 import re
 from tqdm import tqdm
+import h5py
+from pykdtree.kdtree import KDTree
 
 class TimeHistory:
     """
@@ -486,8 +488,40 @@ class TransferFunction:
                   mesh: UnstructuredGrid, 
                   props: Dict[str, Any], 
                   time_history: TimeHistory,
+                  filename: str = "drmload.h5drm",
                   padFactor: float = 0.05,
                   progress_bar: Optional[tqdm] = None) -> None:
+        """
+        Generates a Dynamic Response Modification (DRM) load file for use in OpenSees simulations.
+        This method computes the DRM loads by applying a transfer function to the input acceleration time history,
+        processes the resulting acceleration, velocity, and displacement histories, and writes the results to an HDF5 file.
+        Parameters
+
+        mesh : UnstructuredGrid
+            The finite element mesh representing the domain for which the DRM loads are to be computed.
+        props : Dict[str, Any]
+            Dictionary containing the shape and other properties of the mesh.
+        time_history : TimeHistory
+            Object containing the acceleration time history and related metadata (e.g., time step, units).
+        filename : str, optional
+            Name of the output HDF5 file to store the DRM loads (default is "drmload.h5drm").
+        padFactor : float, optional
+            Fraction of the time history length to use for zero-padding at the beginning and end (default is 0.05).
+        progress_bar : Optional[tqdm], optional
+            Progress bar object for tracking computation progress. If None, a new tqdm progress bar is created.
+        Returns
+        -------
+        None
+        Raises
+        ------
+        Notes
+        -----
+        - The method applies zero-padding to the acceleration time history to minimize edge effects in the frequency domain.
+        - The transfer function is computed for all soil layers and applied in the frequency domain.
+        - Baseline correction and trend removal are performed on the displacement history.
+        - The resulting acceleration, velocity, and displacement histories are written to an HDF5 file compatible with OpenSees DRM input.
+        """
+
 
         if progress_bar is None:
             progress_bar = tqdm(total=100, desc="Computing DRM", unit="%", leave=False)
@@ -498,7 +532,7 @@ class TransferFunction:
         progress_bar.update(5)
 
         # compute the transfer function for the 
-        # f, bh, ind = self.compute(soilProfile=newProfile, allLayers=True)
+        # f, bh, ind = self.compute(soil_profile=newProfile, allLayers=True)
         h = np.array([l['h'] for l in newProfile], dtype=float)
 
         dt = time_history.dt
@@ -515,7 +549,7 @@ class TransferFunction:
         acc_fft = np.fft.rfft(acc)
         
 
-        f, H = self.compute_all_layers(soilProfile=newProfile,
+        f, H = self.compute_all_layers(soil_profile=newProfile,
                                         frequency=freq,
                                         )
         
@@ -559,11 +593,11 @@ class TransferFunction:
         disp = disp - trend
 
         tmax = np.max(time_history.time)
-        print(f"tmax: {tmax}")
+        # print(f"tmax: {tmax}")
         mask = time > tmax
         ind = np.argmax(mask)
         base_end  = base[ind]
-        print(f"base_end: {base_end}")
+        # print(f"base_end: {base_end}")
         base[mask] = base_end
 
         disp = disp + base.reshape(-1,1)  # add the base to the displacement
@@ -571,11 +605,174 @@ class TransferFunction:
 
         depth = -np.cumsum(np.append([0],h)) # negative because z is descending
 
+        # return f, H, acc, h, time,vel, disp,coords,internal
+        # now creating the drm load file for opensees
+        self._write_h5drm(acc, h, time, vel, disp, coords, internal, filename=filename)
+    
+
+
+
+    # def _write_h5drm(self, f, bh, acc, h, time, vel, disp, coords, internal):
+    def _write_h5drm(self, acc, h, time, vel, disp, coords, internal , filename: str = "drmload.h5drm"):
+        """
+            Writes DRM (Domain Reduction Method) data to an H5DRM file in HDF5 format.
+            This method organizes and stores acceleration, velocity, displacement, and coordinate data,
+            along with relevant metadata, into a structured HDF5 file for use in DRM-based simulations.
+                acc (np.ndarray): Acceleration data array of shape (n_layers, n_timesteps).
+                h (np.ndarray): Layer thicknesses or heights, used to compute cumulative depth.
+                time (np.ndarray): 1D array of time steps.
+                vel (np.ndarray): Velocity data array of shape (n_layers, n_timesteps).
+                disp (np.ndarray): Displacement data array of shape (n_layers, n_timesteps).
+                coords (np.ndarray): Array of node coordinates, shape (n_nodes, 3).
+                internal (np.ndarray): Boolean array indicating internal nodes, shape (n_nodes,).
+            Raises:
+                ValueError: If any coordinate's depth does not match a DRM depth within a tolerance.
+            Notes:
+                - The output file is overwritten if it exists.
+                - Data is organized into two main groups: "DRM_Data" (containing the main arrays)
+                  and "DRM_Metadata" (containing simulation and box metadata).
+                - Only the x-component of input data is used; y and z components are set to zero.
+                - The function assumes that the input arrays are properly shaped and consistent.
+        Write the DRM data to an H5DRM file.
         
+        Args:
+            ...: Parameters for writing the DRM data.
+        
+        Returns:
+            None
+        """
+        # Implement the logic to write the DRM data to an H5DRM file
+        depth = -np.cumsum(np.append([0],h))  # Cumulative depth from the base
 
-        return f, H, acc, h, time,vel, disp,coords,internal
-            
+        accx = acc.T
+        accy = np.zeros_like(accx)
+        accz = np.zeros_like(accx)
+        acc  = np.stack([accx, accy, accz], axis=1)
+        acc  = acc.reshape(-1, accx.shape[1])
 
+        velx = vel.T
+        vely = np.zeros_like(velx)
+        velz = np.zeros_like(velx)
+        vel  = np.stack([velx, vely, velz], axis=1)
+        vel  = vel.reshape(-1, velx.shape[1])
+
+        disp_x = disp.T
+        disp_y = np.zeros_like(disp_x)
+        disp_z = np.zeros_like(disp_x)
+        disp  = np.stack([disp_x, disp_y, disp_z], axis=1)
+        disp  = disp.reshape(-1, disp_x.shape[1])
+
+        dt = time[1] - time[0]
+
+        # find which index of the depth is each coordinate row
+        kdtree = KDTree(depth.reshape(-1, 1))
+        # Find the index of the closest depth for each coordinate
+        dist, data_location = kdtree.query(coords[:, 2].reshape(-1, 1), k=1)
+
+        if np.any(dist > 1e-5):
+            raise ValueError(f"Some coordinates are not close to any depth in the DRM . Distances: {dist[dist > 1e-5]}")
+
+        data_location = data_location*3
+
+        zmin = np.min(coords[:, 2])
+        zmax = np.max(coords[:, 2])
+        xmin = np.min(coords[:, 0])
+        xmax = np.max(coords[:, 0])
+        ymin = np.min(coords[:, 1])
+        ymax = np.max(coords[:, 1])
+
+        dh = np.array([0,0,0])
+        drmbox_x0 = np.array([0,0,0])
+
+
+        file_name = "drmload.h5drm"
+        with h5py.File(file_name, "w") as f:
+            # DRM_Data group
+            drm_data = f.create_group("DRM_Data")
+            # Create a dataset for coordinates
+            # Path	/DRM_Data/xyz
+            # Name	xyz
+            # Type	Float, 64-bit, little-endian
+            # Shape	? x 3 = 25854
+            drm_data.create_dataset("xyz", data=coords, dtype='f8', shape=coords.shape)
+            # /DRM_Data/internal
+            # Name	internal
+            # Type	Boolean
+            # Shape	
+            # Raw	
+            # Inspect
+            drm_data.create_dataset("internal", data=internal, dtype='b', shape=internal.shape)
+            # Path	/DRM_Data/acceleration
+            # Name	acceleration
+            # Type	Float, 64-bit, little-endian
+            # Shape	acc.shape[0] x acc.shape[1] = ?
+            # Chunk shape	3 x acc.shape[1] = ?
+            drm_data.create_dataset("acceleration", data=acc, dtype='f8', shape=acc.shape, chunks=(3, acc.shape[1]))
+            # Path	/DRM_Data/velocity
+            # Name	velocity
+            # Type	Float, 64-bit, little-endian
+            # Shape	vel.shape[0] x vel.shape[1] = ?
+            # Chunk shape	3 x vel.shape[1] = ?
+            drm_data.create_dataset("velocity", data=vel, dtype='f8', shape=vel.shape, chunks=(3, vel.shape[1]))
+            # Path	/DRM_Data/displacement
+            # Name	displacement
+            # Type	Float, 64-bit, little-endian
+            # Shape	disp.shape[0] x disp.shape[1] = ?
+            # Chunk shape	3 x disp.shape[1] = ?
+            drm_data.create_dataset("displacement", data=disp, dtype='f8', shape=disp.shape, chunks=(3, disp.shape[1]))
+            # /DRM_Data/data_location
+            # Name	data_location
+            # Type	Integer (signed), 32-bit, little-endian
+            # Shape	
+            # Raw	
+            # Inspect
+            drm_data.create_dataset("data_location", data=data_location, dtype='i4', shape=data_location.shape)
+
+            # /DRM_Metadata group
+            drm_metadata = f.create_group("DRM_Metadata")
+            # /DRM_Metadata/dt
+            # Name	dt
+            # Type	Float, 64-bit, little-endian
+            # Shape	Scalar
+            drm_metadata.create_dataset("dt", data=dt)
+            # /DRM_Metadata/tend
+            # Name	tend
+            # Type	Float, 64-bit, little-endian
+            # Shape	Scalar
+            drm_metadata.create_dataset("tend", data=time[-1])
+
+            # /DRM_Metadata/tstart
+            # Name	tstart
+            # Type	Float, 64-bit, little-endian
+            # Shape	Scalar
+            drm_metadata.create_dataset("tstart", data=time[0]  )
+            # /DRM_Metadata/drmbox_zmin
+            drm_metadata.create_dataset("drmbox_zmin", data=zmin  )
+            # /DRM_Metadata/drmbox_zmax
+            drm_metadata.create_dataset("drmbox_zmax", data=zmax  )
+            # /DRM_Metadata/drmbox_xmin
+            drm_metadata.create_dataset("drmbox_xmin", data=xmin  )
+            # /DRM_Metadata/drmbox_xmax
+            drm_metadata.create_dataset("drmbox_xmax", data=xmax  )
+            # /DRM_Metadata/drmbox_ymin
+            drm_metadata.create_dataset("drmbox_ymin", data=ymin  )
+            # /DRM_Metadata/drmbox_ymax
+            drm_metadata.create_dataset("drmbox_ymax", data=ymax  )
+
+            # /DRM_Metadata/h
+            # Name	h
+            # Type	Float, 64-bit, little-endian
+            # Shape	3
+            # Raw	
+            # Inspect
+            drm_metadata.create_dataset("h", data=dh, dtype='f8', shape=(3,))
+
+            # /DRM_Metadata/drmbox_x0
+            # Name	drmbox_x0
+            # Type	Float, 64-bit, little-endian
+            # Shape	3
+            # Raw	
+            drm_metadata.create_dataset("drmbox_x0", data=drmbox_x0, dtype='f8', shape=(3,))
 
             
 
@@ -638,7 +835,7 @@ class TransferFunction:
             acc = acc[:min_length]
             time = time[:min_length]
 
-        print(len(surface_acc), len(time))
+        # print(len(surface_acc), len(time))
         mask = time >= delta_T
         surface_acc = surface_acc[mask]
         # surface_acc = surface_acc[:time_history.npts]  # match original time history length
@@ -657,9 +854,156 @@ class TransferFunction:
         return result
     
 
+    def _convolve(self,
+                 time_history: TimeHistory,
+                 soil_profile: List[Dict] = None,
+                 return_all:bool = False
+                 ) -> TimeHistory:
+        """
+        Convolve the time history with the transfer function to get the surface motion.
+
+        Args:
+            time_history (TimeHistory): Input time history.
+            soil_profile (List[Dict], optional): Soil profile to use for convolution. If None, uses the default soil profile.
+        Returns:
+            TimeHistory: Convolved time history object containing the surface motion.
+        """
+        acc = time_history.acceleration
+        dt = time_history.dt
+        tol = 1e-6
+        tmin1 =  time_history.time[0]
+        tmax1 = time_history.time[-1]
+
+        # pad factor should be between determine in a wat that
+        # dw is going to at least 0.01
+        padFactor = int(1 / (0.1 * dt)) / len(acc)
+        padFactor = max(padFactor, 0.1)
+
+        padwidth = int(padFactor * len(acc))
+        if padwidth > 0:
+            tmax = len(acc) * dt
+            acc = np.pad(acc, (padwidth, padwidth), mode='constant')
+
+        time = np.arange(0, len(acc) * dt, dt)
+        if soil_profile is None:
+            soil_profile = self.soil_profile.copy()
+
+        freq = np.fft.rfftfreq(len(acc), d=dt)
+        acc_fft = np.fft.rfft(acc)
+        f, TF_uu, _ = self.compute(soil_profile=soil_profile, frequency=freq)
+        if len(TF_uu) != len(freq):
+            raise ValueError("Transfer function length does not match frequency length")
+        # complex multiplication to apply transfer function
+        surface_acc_fft = TF_uu * acc_fft  # complex multiplication
+        surface_acc_fft[f > self.f_max] = 0  # zero out frequencies above f_max
+        surface_acc = np.fft.irfft(surface_acc_fft)
+        # find the first time point where the surface motion is non-zero
+        if len(surface_acc) != len(time):
+            # make them equal length
+            min_length = min(len(surface_acc), len(time))
+            surface_acc = surface_acc[:min_length]
+            time = time[:min_length]
+
+
+        # remove the zero padding from the beginning 
+        if padwidth > 0:
+            surface_acc = surface_acc[padwidth:]
+            time = time[padwidth:]
+
+        lastindex = -np.argmax(np.abs(surface_acc[::-1]) > tol) - 1
+        tmax2 = time[lastindex]
+        tmin2 = time[np.argmax(np.abs(surface_acc) > tol)]
+        tmin = min(tmin1, tmin2)
+        tmax = max(tmax1, tmax2)
+        mask = (time >= tmin) & (time <= tmax)
+        time = time[mask]
+        surface_acc = surface_acc[mask]
+        time = time - time[0]  # start time at 0
+        # print(f"tmin: {tmin}, tmax: {tmax}, time: {time[0]} to {time[-1]}")
+        record = TimeHistory(time, surface_acc)
+        tfs = {"TF":TF_uu,
+               "ouputFFt":surface_acc_fft,
+               "inputFFT":acc_fft,
+               "freq":freq}
+        
+        if return_all:
+            return record, tfs
+        else:
+            return record
+        
+
+
+
+    def plot_convolved_motion(self,
+                                time_history: TimeHistory,
+                                soil_profile: List[Dict] = None) -> 'matplotlib.figure.Figure':
+            """
+            Plot the convolved motion from the incident wave to the surface motion.
+            Args:
+                time_history (TimeHistory): Input time history.
+                soil_profile (List[Dict], optional): Soil profile to use for convolution. If None, uses the default soil profile.
+            Returns:
+                matplotlib.figure.Figure: The figure object containing the plot.
+            """
+            surface, tfs = self.convolve(time_history, soil_profile=soil_profile, return_all=True)
+            time = surface.time
+            surface_acc = surface.acceleration
+            bedrock = time_history.acceleration
+            bedtime = time_history.time
+            freq = tfs['freq']
+            acc_fft = tfs['inputFFT']
+            surface_acc_fft = tfs['ouputFFt']
+            TF = tfs['TF']
+            fig, ax = plt.subplots(5, 1, figsize=(8, 11))
+            blue = '#3182bd'
+            box = dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3')
+            ax[4].plot(bedtime, bedrock, label='Incident Wave', color=blue)
+            ax[4].set_title('Incident Wave', loc='right', y=0.9, bbox=box)
+            ax[4].set_xlabel('Time (s)')
+            ax[4].set_ylabel('Acceleration')
+            ax[3].plot(freq, 
+                    np.abs(acc_fft), 
+                    label='Input FFT', 
+                    color=blue)
+            ax[3].set_xlim(0, self.f_max)
+            ax[3].set_title('Input FFT', loc='right', y=0.9, bbox=box)
+            ax[3].set_xlabel('Frequency (Hz)')
+            ax[3].set_ylabel('|FFT|')
+
+            ax[2].plot(freq, 
+                    np.abs(TF), 
+                    label='Transfer Function', 
+                    color=blue)
+            ax[2].set_title('Transfer Function', loc='right', y=0.9, bbox=box)
+            ax[2].set_xlabel('Frequency (Hz)')
+            ax[2].set_ylabel('|TF|')
+            ax[2].set_xlim(0, self.f_max)
+            ax[1].plot(freq,
+                    np.abs(surface_acc_fft), 
+                    label='Output FFT', 
+                    color=blue)
+            ax[1].set_xlim(0, self.f_max)
+            ax[1].set_title('Output FFT', loc='right', y=0.9, bbox=box)
+            ax[1].set_xlabel('Frequency (Hz)')
+            ax[1].set_ylabel('|FFT|')
+            ax[0].plot(time, surface_acc, label='Surface Motion', color=blue)
+            ax[0].plot(bedtime, bedrock, label='Incident Wave', color='orange', linestyle='--')
+            ax[0].set_title('Surface Motion', loc='right', y=0.9, bbox=box)
+            ax[0].set_xlabel('Time (s)')
+            ax[0].set_ylabel('Acceleration')
+
+            for a in ax:
+                a.grid(True, which='both', linestyle='--', linewidth=0.5)
+            
+            fig.suptitle('Convolved Motion', fontsize=16, fontweight='bold')
+            fig.subplots_adjust(top=0.95)  # Adjust top to make room for the title
+            fig.tight_layout()
+            return fig
+
+
     def _deconvolve(self,time_history: TimeHistory,
-                        soilProfile: List[Dict] = None,
-                        padFactor=0.05) -> Tuple[np.ndarray, np.ndarray]:
+                        soil_profile: List[Dict] = None,
+                        return_all: bool = False) -> TimeHistory:
         """
         Deconvolve the time history from the surface motion to get the incident wave.
         Args:
@@ -670,6 +1014,16 @@ class TransferFunction:
 
         acc = time_history.acceleration
         dt = time_history.dt
+        tol = 1e-6
+        tmin1 =  np.argmax(np.abs(acc) > tol)
+        tmax1 = time_history.time[-1] 
+
+        # pad factor should be between determine in a wat that 
+        # dw is going to at least 0.01
+        padFactor = int(1 / (0.1 * dt))/ len(acc)
+        padFactor = max(padFactor, 0.1)
+
+
         padwidth = int(padFactor * len(acc))
         if padwidth > 0:
             tmax = len(acc) * dt
@@ -678,81 +1032,141 @@ class TransferFunction:
         
         time = np.arange(0, len(acc) * dt, dt)
 
-        if soilProfile is None:
-            soilProfile = self.soil_profile.copy()
+        if soil_profile is None:
+            soil_profile = self.soil_profile.copy()
 
 
-        freq = np.fft.rfftfreq(len(acc), d=time_history.dt)
+        freq = np.fft.rfftfreq(len(acc), d=dt)
         acc_fft = np.fft.rfft(acc)
-        # self.compute()   
-        f,TF,_ = self.compute(soilProfile=soilProfile, frequency=freq)
+        f,TF,_ = self.compute(soil_profile=soil_profile, frequency=freq)
 
         if len(TF) != len(freq):
             raise ValueError("Transfer function length does not match frequency length")
         
-        acc_fft /= TF  # complex division to apply inverse transfer function
+          # complex division to apply inverse transfer function
         # Inverse FFT to get incident wave
-        incident_acc = np.fft.irfft(acc_fft)
+        incident_acc_fft = acc_fft / TF  # complex division
+        incident_acc_fft[f> self.f_max] = 0  # zero out frequencies above f_max
+        incident_acc = np.fft.irfft(incident_acc_fft)
 
-        mask = time <= tmax
-        time = time[mask]
-        incident_acc = incident_acc[mask]
+
+        # find the first time point where the surface motion is non-zero
         if len(incident_acc) != len(time):
             # make them equal length
             min_length = min(len(incident_acc), len(time))
             incident_acc = incident_acc[:min_length]
             time = time[:min_length]
+
+
+        lastindex   = -np.argmax(np.abs(incident_acc[::-1]) > tol) -1
         
-        record = TimeHistory(time,incident_acc)
-        return record
+        tmax2 = time[lastindex]
+        tmin2 = time[np.argmax(np.abs(incident_acc) > tol)]
+
+        tmin = min(tmin1, tmin2)
+        tmax = max(tmax1, tmax2)
+
+        
+        mask = (time >= tmin) & (time <= tmax)
+        time = time[mask]
+        incident_acc = incident_acc[mask]
+        acc = acc[mask]
+        time = time - time[0]  # start time at 0
 
 
+        
+        incident = TimeHistory(time,incident_acc)
+        surface  = TimeHistory(time, acc)
+        if return_all:
+            tfs = { "TF": TF,
+                    "outputFFT": incident_acc_fft,
+                    "inputFFT": acc_fft,
+                    "freq": freq}
+            return incident, surface, tfs
+        else:
+            return incident
+        
 
-
-    def plot_deconvolved_motion(self, time_history: TimeHistory) -> 'matplotlib.figure.Figure':
+    def plot_deconvolved_motion(self, 
+                                time_history: TimeHistory,
+                                soil_profile: List[Dict] = None) -> 'matplotlib.figure.Figure':
         """
         Plot the deconvolved motion from the surface motion to the incident wave.
-
         Args:
             time_history (TimeHistory): Input time history.
-
+            soil_profile (List[Dict], optional): Soil profile to use for deconvolution. If None, uses the default soil profile.
         Returns:
             matplotlib.figure.Figure: The figure object containing the plot.
         """
-        import matplotlib.pyplot as plt
 
-        # Deconvolve the motion
-        deconvolved_time_history = self._deconvolve(time_history)
+        bedrock, surface, tfs = self._deconvolve(time_history, soil_profile=soil_profile, return_all=True)
 
-        # Extract time and acceleration
-        time = time_history.time
-        surface_acc = time_history.acceleration
-        deconvolved_time = np.arange(0, len(deconvolved_time_history.acceleration) * time_history.dt, time_history.dt)
-        deconvolved_acc = deconvolved_time_history.acceleration
+        time = bedrock.time
+        incident_acc = bedrock.acceleration
+        acc = surface.acceleration
+        freq = tfs['freq']
+        acc_fft = tfs['inputFFT']
+        incident_acc_fft = tfs['outputFFT']
+        TF = tfs['TF']
+        
 
-        # Create a new figure
-        fig, ax = plt.subplots(figsize=(10, 6))
+        fig, ax = plt.subplots(5,1, figsize=(8, 11))
+        blue = '#3182bd'
+        box = dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3')
+        ax[4].plot(time, acc, label='Surface Motion', color= blue)
+        ax[4].set_title('Surface Motion', loc='right', y=0.9, bbox=box)
+        ax[4].set_xlabel('Time (s)')
+        ax[4].set_ylabel('Acceleration (g)')
 
-        # Plot surface motion
-        ax.plot(time, surface_acc, label="Surface Motion", color="blue", alpha=0.7)
+        ax[3].plot(freq, 
+                np.abs(acc_fft), 
+                label='Input FFT', 
+                color= blue)
+        
+        ax[3].set_xlim(0, self.f_max)
+        ax[3].set_title('Input FFT', loc='right', y=0.9, bbox=box)
+        ax[3].set_xlabel('Frequency (Hz)')
+        ax[3].set_ylabel('|FFT|')
 
-        # Plot deconvolved motion
-        ax.plot(deconvolved_time, deconvolved_acc, label="Deconvolved Motion", color="red", linestyle="--")
+        ax[2].plot(freq, 
+                np.abs(TF), 
+                label='Transfer Function', 
+                color= blue)
+        
+        ax[2].set_title('Transfer Function', loc='right', y=0.9, bbox=box)
+        ax[2].set_xlabel('Frequency (Hz)')
+        ax[2].set_ylabel('|TF|')
 
-        # Add labels, legend, and grid
-        ax.set_title("Deconvolved Motion")
-        ax.set_xlabel("Time (s)")
-        ax.set_ylabel("Acceleration (g)")
-        ax.legend(loc="upper right")
-        ax.grid(True, linestyle="--", linewidth=0.5)
+        ax[2].set_xlim(0, self.f_max)
+        ax[1].plot(freq, 
+                np.abs(incident_acc_fft),
+                label='Output FFT',
+                color= blue)
+        ax[1].set_xlim(0, self.f_max)
+        
+        ax[1].set_title('Output FFT', loc='right', y=0.9, bbox=box)
+        ax[1].set_xlabel('Frequency (Hz)')
+        ax[1].set_ylabel('|Output FFT|')
 
+        ax[0].plot(time, incident_acc, label='Deconvolved Motion', color= blue)
+        # ax[0].plot(time, acc, label='Surface Motion', color='red', alpha=0.5)
+
+        ax[0].set_title('Deconvolved Motion', loc='right', y=0.9, bbox=box)
+        ax[0].set_xlabel('Time (s)')
+        ax[0].set_ylabel('Acceleration (g)')
+
+        for a in ax:
+            a.grid(True, which='both', linestyle='--', linewidth=0.5)
+        fig.suptitle('Deconvolved Motion', fontsize=16, fontweight='bold')
+        fig.subplots_adjust(top=0.95)  # Adjust top to make room for the title
+        fig.tight_layout()
         return fig
-
-               
+    
 
 
     def plot_surface_motion(self, time_history: TimeHistory,
-                          fig=None, **kwargs) -> 'matplotlib.figure.Figure':
+                            soil_profile: List[Dict] = None,
+                            fig=None, **kwargs) -> 'matplotlib.figure.Figure':
         """
         Plot the surface motion.
 
@@ -767,8 +1181,8 @@ class TransferFunction:
         """
         import matplotlib.pyplot as plt
 
-        if not self.computed:
-            self.compute()
+        if soil_profile is None:
+            soil_profile = self.soil_profile.copy()
         
         acc = time_history.acceleration
         time = time_history.time
@@ -841,7 +1255,7 @@ class TransferFunction:
         
 
     def compute(self, frequency: np.ndarray = None, 
-                soilProfile:List[Dict] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+                soil_profile:List[Dict] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Compute the transfer functions for the soil profile using the transfer matrix method.
 
@@ -852,13 +1266,13 @@ class TransferFunction:
                 - TF_inc: u_top/u_incident
         """
         # Add bedrock layer
-        if soilProfile is not None:
-            self._check_soil_profile(soilProfile)
+        if soil_profile is not None:
+            self._check_soil_profile(soil_profile)
         else:
-            soilProfile = self.soil_profile.copy()
+            soil_profile = self.soil_profile.copy()
 
         bedrock_layer = {**self.rock, 'h': 0.0}
-        all_layers = soilProfile + [bedrock_layer]
+        all_layers = soil_profile + [bedrock_layer]
         num_layers = len(all_layers)
 
         # Extract properties
@@ -945,7 +1359,7 @@ class TransferFunction:
 
     def compute_all_layers(self, 
                            frequency: np.ndarray = None,
-                           soilProfile: List[Dict] = None
+                           soil_profile: List[Dict] = None
                            ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         
         """
@@ -956,7 +1370,7 @@ class TransferFunction:
         Args:
             frequency (np.ndarray, optional): Array of frequencies in Hz.
                 If None, uses default frequency range.
-            soilProfile (List[Dict], optional): List of dictionaries containing soil layer properties.
+            soil_profile (List[Dict], optional): List of dictionaries containing soil layer properties.
                 If None, uses the current soil profile.
 
         Returns:
@@ -965,14 +1379,14 @@ class TransferFunction:
                 - TF_uu: Transfer function for u_top/u_base
                 - TF_inc: Transfer function for u_top/u_incident
         """
-        if soilProfile is not None:
-            self._check_soil_profile(soilProfile)
+        if soil_profile is not None:
+            self._check_soil_profile(soil_profile)
         else:
-            soilProfile = self.soil_profile.copy()
+            soil_profile = self.soil_profile.copy()
 
         # Add bedrock layer
         bedrock_layer = {**self.rock, 'h': 0.0}
-        all_layers = soilProfile + [bedrock_layer]
+        all_layers = soil_profile + [bedrock_layer]
         num_layers = len(all_layers)
         # Extract properties
         h = np.array([l['h'] for l in all_layers], dtype=float)
@@ -1040,64 +1454,9 @@ class TransferFunction:
         H = (A + B) / (A[:, [-1]] + B[:, [-1]])  # (n_freq, num_layers)
         H[0] = np.real(H[0]) 
 
-
-
         return freq_array, H
-
-        
-
-
-
-        
-
-    def plot(self, plot_type: str = 'uu', ax=None, **kwargs) -> 'matplotlib.figure.Figure':
-        """
-        Plot the transfer function.
-
-        This method creates a plot of either the u_top/u_base transfer function
-        or the u_top/u_incident transfer function.
-
-        Args:
-            plot_type (str, optional): Type of transfer function to plot:
-                - 'uu': Plot u_top/u_base transfer function (default)
-                - 'inc': Plot u_top/u_incident transfer function
-            ax (matplotlib.axes.Axes, optional): Existing axes to plot into.
-                If None, a new figure and axes will be created
-            **kwargs: Additional plotting parameters passed to matplotlib.pyplot.plot
-
-        Returns:
-            matplotlib.figure.Figure: The figure object containing the plot
-
-        Raises:
-            ValueError: If plot_type is not 'uu' or 'inc'
-
-        Example:
-            >>> tf.plot(plot_type='uu', color='blue', linewidth=2)
-            >>> plt.show()
-        """
-        if not self.computed:
-            raise ValueError("Transfer function not computed yet")
-        
-        # Use provided axes if available, otherwise create a new figure and axes
-        fig = None
-        if ax is None:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-        else:
-            fig = ax.figure
-            
-        if plot_type == 'uu':
-            ax.plot(self.f, np.abs(self.TF_uu), **kwargs)
-            ax.set_ylabel("|TF(uu)|")
-        elif plot_type == 'inc':
-            ax.plot(self.f, np.abs(self.TF_inc), **kwargs)
-            ax.set_ylabel("|TF(inc)|")
-        else:
-            raise ValueError("plot_type must be either 'uu' or 'inc'")
-            
-        ax.set_xlabel("Frequency [Hz]")
-        ax.grid(True)
-        return fig
+    
+    
 
     def plot_soil_profile(self, ax=None, **kwargs) -> 'matplotlib.figure.Figure':
         """
@@ -1450,7 +1809,7 @@ if __name__ == "__main__":
     rock = {"vs": 8000, "rho": 2000.0, "damping": 0.00}
 
     # Create transfer function instance
-    tf = TransferFunction(soil, rock, f_max=50.0)
+    tf = TransferFunction(soil, rock, f_max=30.0)
 
 
 
@@ -1460,54 +1819,19 @@ if __name__ == "__main__":
 
 
 
-    # # Example: load a PEER file
-    record = TimeHistory.load(acc_file="../../../examples/SiteResponse/Example1/FrequencySweep.acc",
-                              time_file="../../../examples/SiteResponse/Example1/FrequencySweep.time")
+    # # # Example: load a PEER file
+    record = TimeHistory.load(acc_file="../../../examples/DRM/Example4/ricker.acc",
+                              time_file="../../../examples/DRM/Example4/ricker.time")
     
-    record = TimeHistory.load(acc_file="../../../examples/SiteResponse/Example1/kobe.acc",
-                            time_file="../../../examples/SiteResponse/Example1/kobe.time")
+    # record = TimeHistory.load(acc_file="C:\Users\aminp\OneDrive\Desktop\DRMGUI\examples\DRM\Example4\ricker.acc",
+                            # time_file="C:/Users/aminp/OneDrive/Desktop/DRMGUI\examples\DRM\Example4\ricker.time")
 
     tf.compute()
     tf.plot_soil_profile()
-
-    # Plot the transfer function
-    tf.plot()
-    tf.plot_surface_motion(record)
+    tf.plot_convolved_motion(record, soil_profile=soil)
 
     plt.show()
 
-    # import pyvista as pv
-    # import numpy as np
-
-    # x = np.linspace(-10, 10, 100)
-    # y = np.linspace(-15, 15, 50)
-    # z = np.linspace(-18, 0, 30)
-
-    # x, y, z = np.meshgrid(x, y, z, indexing='ij')
-
-    # mesh = pv.StructuredGrid(x, y, z)
-    # mesh = pv.UnstructuredGrid(mesh)
-
-
-    # accelrations, Z, dt, n = tf._compute_DRM(mesh, {"shape": "box", "normal": "z"}, base_time_history=record)
-    # import matplotlib.pyplot as plt
-    # # Plot the results
-    # index = 0
-    # time = np.arange(0, n*dt, dt)
-    # acc = accelrations[index]
-
-    # plt.figure(figsize=(10, 5))
-    # plt.plot(time, acc)
-    # plt.title(f"Surface Motion for Layer {index+1}")
-    # plt.xlabel("Time (s)")  
-    # plt.ylabel("Acceleration (g)")
-    # plt.grid()
-    # plt.show()
-
-    # pl = pv.Plotter()
-    # pl.add_mesh(mesh, show_edges=True)
-    # pl.add_mesh(pv.PolyData(coords), color='red', point_size=5, render_points_as_spheres=True)
-    # pl.show()
 
 
 
