@@ -489,7 +489,7 @@ class TransferFunction:
                   props: Dict[str, Any], 
                   time_history: TimeHistory,
                   filename: str = "drmload.h5drm",
-                  padFactor: float = 0.05,
+                  pad_factor: float = 0.05,
                   progress_bar: Optional[tqdm] = None) -> None:
         """
         Generates a Dynamic Response Modification (DRM) load file for use in OpenSees simulations.
@@ -505,7 +505,7 @@ class TransferFunction:
             Object containing the acceleration time history and related metadata (e.g., time step, units).
         filename : str, optional
             Name of the output HDF5 file to store the DRM loads (default is "drmload.h5drm").
-        padFactor : float, optional
+        pad_factor : float, optional
             Fraction of the time history length to use for zero-padding at the beginning and end (default is 0.05).
         progress_bar : Optional[tqdm], optional
             Progress bar object for tracking computation progress. If None, a new tqdm progress bar is created.
@@ -536,7 +536,7 @@ class TransferFunction:
         h = np.array([l['h'] for l in newProfile], dtype=float)
 
         dt = time_history.dt
-        n_pad = int(time_history.npts * padFactor)
+        n_pad = int(time_history.npts * pad_factor)
         acc = time_history.acceleration
         delta_T = n_pad * dt
 
@@ -785,7 +785,7 @@ class TransferFunction:
                                freqFlag: bool = False,
                                acc_fftFlag: bool = False,
                                surface_fftFlag: bool = False,
-                               padFactor: float = 0.1
+                               pad_factor: float = 0.1
                                ) -> Dict[str, np.ndarray]:
         """
         Compute surface motion using the transfer function.
@@ -795,18 +795,18 @@ class TransferFunction:
             freqFlag (bool): If True, include frequency array in result.
             acc_fftFlag (bool): If True, include input FFT in result.
             surface_fftFlag (bool): If True, include output FFT in result.
-            padFactor (float): Zero-padding factor (0 to 1, default 0.02).
+            pad_factor (float): Zero-padding factor (0 to 1, default 0.02).
 
         Returns:
             Dict[str, np.ndarray]: Dictionary with results.
         """
         if time_history is None:
             raise ValueError("No time history available")
-        if not (0 <= padFactor < 1):
-            raise ValueError("padFactor must be between 0 (inclusive) and 1 (exclusive)")
+        if not (0 <= pad_factor < 1):
+            raise ValueError("pad_factor must be between 0 (inclusive) and 1 (exclusive)")
 
         dt = time_history.dt
-        n_pad = int(time_history.npts * padFactor)
+        n_pad = int(time_history.npts * pad_factor)
         acc = time_history.acceleration
         delta_T = n_pad * dt
 
@@ -876,10 +876,10 @@ class TransferFunction:
 
         # pad factor should be between determine in a wat that
         # dw is going to at least 0.01
-        padFactor = int(1 / (0.1 * dt)) / len(acc)
-        padFactor = max(padFactor, 0.1)
+        pad_factor = int(1 / (0.1 * dt)) / len(acc)
+        pad_factor = max(pad_factor, 0.1)
 
-        padwidth = int(padFactor * len(acc))
+        padwidth = int(pad_factor * len(acc))
         if padwidth > 0:
             tmax = len(acc) * dt
             acc = np.pad(acc, (padwidth, padwidth), mode='constant')
@@ -1020,11 +1020,11 @@ class TransferFunction:
 
         # pad factor should be between determine in a wat that 
         # dw is going to at least 0.01
-        padFactor = int(1 / (0.1 * dt))/ len(acc)
-        padFactor = max(padFactor, 0.1)
+        pad_factor = int(1 / (0.1 * dt))/ len(acc)
+        pad_factor = max(pad_factor, 0.1)
 
 
-        padwidth = int(padFactor * len(acc))
+        padwidth = int(pad_factor * len(acc))
         if padwidth > 0:
             tmax = len(acc) * dt
             acc = np.pad(acc, (padwidth, padwidth), mode='constant')
