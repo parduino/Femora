@@ -819,6 +819,123 @@ class StraightLayer(LayerBase):
         return f"Straight Layer: {self.num_fibers} fibers, length={length:.3f}, material '{self.material.user_name}'"
 
 
+class CircularLayer(LayerBase):
+    """
+    Circular layer of fibers along a circular arc
+    
+    Args:
+        material (Material): Material for all fibers in this layer
+        num_fibers (int): Number of fibers along the arc
+        area_per_fiber (float): Area of each fiber
+        y_center, z_center (float): Coordinates of arc center
+        radius (float): Radius of the circular arc
+        start_ang, end_ang (float, optional): Start and end angles in degrees
+    """
+    
+    def __init__(self, material: Material, num_fibers: int, area_per_fiber: float,
+                 y_center: float, z_center: float, radius: float,
+                 start_ang: Optional[float] = 0.0, end_ang: Optional[float] = None):
+        try:
+            self.num_fibers = int(num_fibers)
+            self.area_per_fiber = float(area_per_fiber)
+            self.y_center = float(y_center)
+            self.z_center = float(z_center)
+            self.radius = float(radius)
+            
+            # Handle default end angle according to OpenSees specification
+            if end_ang is None:
+                self.end_ang = 360.0 - 360.0/self.num_fibers
+            else:
+                self.end_ang = float(end_ang)
+            
+            self.start_ang = float(start_ang)
+            
+        except (ValueError, TypeError):
+            raise ValueError("Invalid numeric parameters for circular layer")
+        
+        super().__init__(material)
+
+    def plot(self, ax: plt.Axes, material_colors: Dict[str, str], 
+             show_layer_line: bool = True, show_fibers: bool = True) -> None:
+        """Plot circular layer"""
+        color = material_colors.get(self.material.user_name, 'blue')
+        
+        if show_layer_line:
+            # Plot the arc path
+            angles = np.linspace(np.radians(self.start_ang), np.radians(self.end_ang), 100)
+            y_arc = self.y_center + self.radius * np.cos(angles)
+            z_arc = self.z_center + self.radius * np.sin(angles)
+            ax.plot(y_arc, z_arc, color=color, linestyle='--', alpha=0.7, linewidth=2)
+        
+        if show_fibers:
+            # Plot individual fiber positions
+            if self.num_fibers == 1:
+                # Single fiber at start angle
+                angle = np.radians(self.start_ang)
+            else:
+                # Multiple fibers distributed along arc
+                angles = np.linspace(np.radians(self.start_ang), np.radians(self.end_ang), self.num_fibers)
+            
+            if self.num_fibers == 1:
+                angles = [np.radians(self.start_ang)]
+            
+            for angle in angles:
+                y_fiber = self.y_center + self.radius * np.cos(angle)
+                z_fiber = self.z_center + self.radius * np.sin(angle)
+                
+                # Plot fiber as a circle scaled by area
+                fiber_radius = np.sqrt(self.area_per_fiber / np.pi) * 2  # Scale for visibility
+                circle = plt.Circle((y_fiber, z_fiber), fiber_radius, color=color, alpha=0.7)
+                ax.add_patch(circle)
+    
+    def validate(self) -> None:
+        """Validate circular layer parameters"""
+        if self.num_fibers <= 0:
+            raise ValueError("Number of fibers must be positive")
+        if self.area_per_fiber <= 0:
+            raise ValueError("Area per fiber must be positive")
+        if self.radius <= 0:
+            raise ValueError("Radius must be positive")
+        
+        # Normalize angles to 0-360 range
+        self.start_ang = self.start_ang % 360.0
+        self.end_ang = self.end_ang % 360.0
+        
+        # Check that arc is valid
+        if abs(self.start_ang - self.end_ang) < 1e-12:
+            raise ValueError("Start and end angles cannot be the same")
+    
+    def to_tcl(self) -> str:
+        """Generate OpenSees TCL command for circular layer"""
+        # Check if we need to include optional angles
+        if abs(self.start_ang) < 1e-12 and abs(self.end_ang - (360.0 - 360.0/self.num_fibers)) < 1e-12:
+            # Use default angles - don't include them in command
+            return f"    layer circ {self.material.tag} {self.num_fibers} {self.area_per_fiber} {self.y_center} {self.z_center} {self.radius}"
+        else:
+            # Include explicit angles
+            return f"    layer circ {self.material.tag} {self.num_fibers} {self.area_per_fiber} {self.y_center} {self.z_center} {self.radius} {self.start_ang} {self.end_ang}"
+    
+    def get_layer_type(self) -> str:
+        return "Circular"
+    
+    def get_arc_length(self) -> float:
+        """Calculate arc length of the layer"""
+        angle_diff = abs(self.end_ang - self.start_ang)
+        if angle_diff > 180:  # Handle wrap-around case
+            angle_diff = 360 - angle_diff
+        return self.radius * np.radians(angle_diff)
+    
+    def is_full_circle(self) -> bool:
+        """Check if this layer forms a complete circle"""
+        angle_span = abs(self.end_ang - self.start_ang)
+        return abs(angle_span - 360.0) < 1e-6 or abs(angle_span) < 1e-6
+    
+    def __str__(self) -> str:
+        arc_length = self.get_arc_length()
+        shape_desc = "Full Circle" if self.is_full_circle() else f"Arc ({self.start_ang:.1f}° to {self.end_ang:.1f}°)"
+        return f"Circular Layer: {shape_desc}, R={self.radius}, {self.num_fibers} fibers, arc length={arc_length:.3f}, material '{self.material.user_name}'"
+
+
 class FiberSection(Section):
     """
     Complete Fiber Section implementation with support for:
@@ -1170,6 +1287,23 @@ class FiberSection(Section):
             y1, z1, y2, z2 (float): Start and end coordinates
         """
         layer = StraightLayer(material, num_fibers, area_per_fiber, y1, z1, y2, z2)
+        self.layers.append(layer)
+    
+    def add_circular_layer(self, material: Material, num_fibers: int, area_per_fiber: float,
+                         y_center: float, z_center: float, radius: float,
+                         start_ang: Optional[float] = None, end_ang: Optional[float] = None) -> None:
+        """
+        Add a circular layer of fibers to the section
+        
+        Args:
+            material (Material): Material for all fibers in the layer
+            num_fibers (int): Number of fibers along the arc
+            area_per_fiber (float): Area of each fiber
+            y_center, z_center (float): Coordinates of arc center
+            radius (float): Radius of the circular arc
+            start_ang, end_ang (float, optional): Start and end angles in degrees
+        """
+        layer = CircularLayer(material, num_fibers, area_per_fiber, y_center, z_center, radius, start_ang, end_ang)
         self.layers.append(layer)
     
     def clear_fibers(self) -> None:
