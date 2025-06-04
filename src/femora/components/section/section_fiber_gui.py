@@ -1,223 +1,4 @@
 """
-Comprehensive GUI components for Fiber Section creation and editing
-Supports all fiber section features: individual fibers, patches, layers, and GJ parameter
-"""
-
-from qtpy.QtCore import Qt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
-from qtpy.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, 
-    QComboBox, QPushButton, QTableWidget, QTableWidgetItem, 
-    QDialog, QFormLayout, QMessageBox, QHeaderView, QGridLayout,
-    QTabWidget, QGroupBox, QSpinBox, QDoubleSpinBox, QTextEdit,
-    QFrame, QSplitter, QListWidget, QListWidgetItem, QCheckBox,QFileDialog
-)
-
-
-from femora.components.section.section_opensees import (
-    FiberSection, FiberElement, RectangularPatch, QuadrilateralPatch, 
-    CircularPatch, StraightLayer
-)
-from femora.components.Material.materialBase import Material
-
-
-class FiberSectionPlotWidget(QWidget):
-    """
-    Widget for plotting fiber sections with interactive controls
-    """
-    
-    def __init__(self, fiber_section, parent=None):
-        super().__init__(parent)
-        self.fiber_section = fiber_section
-        
-        self.setWindowTitle(f"Fiber Section Plot: {fiber_section.user_name}")
-        self.setGeometry(300, 300, 1000, 700)
-        
-        # Main layout
-        main_layout = QHBoxLayout(self)
-        
-        # Plot area
-        self.setup_plot_area(main_layout)
-        
-        # Control panel
-        self.setup_control_panel(main_layout)
-        
-        # Initial plot
-        self.update_plot()
-    
-    def setup_plot_area(self, main_layout):
-        """Setup the matplotlib plot area"""
-        plot_widget = QWidget()
-        plot_layout = QVBoxLayout(plot_widget)
-        
-        # Create matplotlib figure and canvas
-        self.figure = Figure(figsize=(8, 6))
-        self.canvas = FigureCanvas(self.figure)
-        self.ax = self.figure.add_subplot(111)
-        
-        plot_layout.addWidget(self.canvas)
-        
-        # Plot control buttons
-        plot_buttons = QHBoxLayout()
-        
-        refresh_btn = QPushButton("Refresh Plot")
-        refresh_btn.clicked.connect(self.update_plot)
-        plot_buttons.addWidget(refresh_btn)
-        
-        save_btn = QPushButton("Save Plot")
-        save_btn.clicked.connect(self.save_plot)
-        plot_buttons.addWidget(save_btn)
-        
-        plot_buttons.addStretch()
-        plot_layout.addLayout(plot_buttons)
-        
-        main_layout.addWidget(plot_widget, stretch=3)
-    
-    def setup_control_panel(self, main_layout):
-        """Setup the control panel for plot options"""
-        control_panel = QWidget()
-        control_layout = QVBoxLayout(control_panel)
-        
-        # Visibility controls
-        visibility_group = QGroupBox("Visibility Options")
-        visibility_layout = QVBoxLayout(visibility_group)
-        
-        self.show_fibers_check = QCheckBox("Show Individual Fibers")
-        self.show_fibers_check.setChecked(True)
-        self.show_fibers_check.toggled.connect(self.update_plot)
-        visibility_layout.addWidget(self.show_fibers_check)
-        
-        self.show_patches_check = QCheckBox("Show Patches")
-        self.show_patches_check.setChecked(True)
-        self.show_patches_check.toggled.connect(self.update_plot)
-        visibility_layout.addWidget(self.show_patches_check)
-        
-        self.show_layers_check = QCheckBox("Show Layers")
-        self.show_layers_check.setChecked(True)
-        self.show_layers_check.toggled.connect(self.update_plot)
-        visibility_layout.addWidget(self.show_layers_check)
-        
-        self.show_patch_outline_check = QCheckBox("Show Patch Outlines")
-        self.show_patch_outline_check.setChecked(True)
-        self.show_patch_outline_check.toggled.connect(self.update_plot)
-        visibility_layout.addWidget(self.show_patch_outline_check)
-        
-        self.show_fiber_grid_check = QCheckBox("Show Fiber Grid in Patches")
-        self.show_fiber_grid_check.setChecked(False)
-        self.show_fiber_grid_check.toggled.connect(self.update_plot)
-        visibility_layout.addWidget(self.show_fiber_grid_check)
-        
-        self.show_layer_line_check = QCheckBox("Show Layer Lines")
-        self.show_layer_line_check.setChecked(True)
-        self.show_layer_line_check.toggled.connect(self.update_plot)
-        visibility_layout.addWidget(self.show_layer_line_check)
-        
-        control_layout.addWidget(visibility_group)
-        
-        # Plot customization
-        custom_group = QGroupBox("Plot Customization")
-        custom_layout = QFormLayout(custom_group)
-        
-        self.title_input = QLineEdit(f"Fiber Section: {self.fiber_section.user_name}")
-        custom_layout.addRow("Title:", self.title_input)
-        
-        control_layout.addWidget(custom_group)
-        
-        # Section information
-        info_group = QGroupBox("Section Information")
-        info_layout = QVBoxLayout(info_group)
-        
-        self.info_text = QTextEdit()
-        self.info_text.setReadOnly(True)
-        self.info_text.setMaximumHeight(200)
-        self.update_section_info()
-        info_layout.addWidget(self.info_text)
-        
-        control_layout.addWidget(info_group)
-        
-        control_layout.addStretch()
-        
-        main_layout.addWidget(control_panel, stretch=1)
-    
-    def update_plot(self):
-        """Update the plot with current settings"""
-        try:
-            # Clear the current plot
-            self.ax.clear()
-            
-            # Get plot options
-            show_fibers = self.show_fibers_check.isChecked()
-            show_patches = self.show_patches_check.isChecked()
-            show_layers = self.show_layers_check.isChecked()
-            show_patch_outline = self.show_patch_outline_check.isChecked()
-            show_fiber_grid = self.show_fiber_grid_check.isChecked()
-            show_layer_line = self.show_layer_line_check.isChecked()
-            title = self.title_input.text()
-            
-            # Plot the fiber section
-            self.fiber_section.plot(
-                ax=self.ax,
-                show_fibers=show_fibers,
-                show_patches=show_patches,
-                show_layers=show_layers,
-                show_patch_outline=show_patch_outline,
-                show_fiber_grid=show_fiber_grid,
-                show_layer_line=show_layer_line,
-                title=title
-            )
-            
-            # Refresh the canvas
-            self.canvas.draw()
-            
-        except Exception as e:
-            QMessageBox.critical(self, "Plot Error", f"Failed to update plot: {str(e)}")
-    
-    def save_plot(self):
-        """Save the current plot to file"""
-        try:
-            file_path, _ = QFileDialog.getSaveFileName(
-                self, "Save Plot", 
-                f"fiber_section_{self.fiber_section.user_name}.png",
-                "PNG Files (*.png);;PDF Files (*.pdf);;SVG Files (*.svg);;All Files (*)"
-            )
-            
-            if file_path:
-                self.figure.savefig(file_path, dpi=300, bbox_inches='tight')
-                QMessageBox.information(self, "Success", f"Plot saved to: {file_path}")
-                
-        except Exception as e:
-            QMessageBox.critical(self, "Save Error", f"Failed to save plot: {str(e)}")
-    
-    def update_section_info(self):
-        """Update the section information display"""
-        summary = self.fiber_section.get_section_summary()
-        
-        info_text = f"""
-        Section Summary:
-            Name: {self.fiber_section.user_name}
-            Tag: {self.fiber_section.tag}
-
-            Components:
-            • Individual Fibers: {summary['individual_fibers']}
-            • Patches: {summary['patches']}
-            • Layers: {summary['layers']}
-
-            Estimated Total Fibers: {summary['estimated_total_fibers']}
-
-            Materials Used:
-            {chr(10).join('• ' + mat for mat in summary['materials_used']) if summary['materials_used'] else '• None'}
-
-            Torsional Stiffness: {'Yes' if summary['has_torsional_stiffness'] else 'No'}
-
-            Patch Types: {', '.join(summary['patch_types']) if summary['patch_types'] else 'None'}
-            Layer Types: {', '.join(summary['layer_types']) if summary['layer_types'] else 'None'}
-        """
-        
-        self.info_text.setPlainText(info_text)
-
-
-"""
 Improved Fiber Section GUI that collects all data before creating the section
 No temporary instances - everything is stored in data structures until confirmation
 """
@@ -465,8 +246,118 @@ class FiberSectionDialog(QDialog):
         
         self.patch_forms_layout.addWidget(self.rect_patch_form)
         
-        # Add other patch forms (quadrilateral, circular) here...
-        # For brevity, I'll just show the rectangular one
+        # Quadrilateral patch form
+        self.quad_patch_form = QGroupBox("Quadrilateral Patch")
+        quad_layout = QFormLayout(self.quad_patch_form)
+        
+        self.quad_material_combo = QComboBox()
+        quad_layout.addRow("Material:", self.quad_material_combo)
+        
+        self.quad_subdiv_ij = QSpinBox()
+        self.quad_subdiv_ij.setRange(1, 1000)
+        self.quad_subdiv_ij.setValue(10)
+        quad_layout.addRow("I-J Subdivisions:", self.quad_subdiv_ij)
+        
+        self.quad_subdiv_jk = QSpinBox()
+        self.quad_subdiv_jk.setRange(1, 1000)
+        self.quad_subdiv_jk.setValue(10)
+        quad_layout.addRow("J-K Subdivisions:", self.quad_subdiv_jk)
+        
+        # Vertices (I, J, K, L) in a grid layout
+        vertices_group = QGroupBox("Vertices (Counter-clockwise: I → J → K → L)")
+        vertices_layout = QGridLayout(vertices_group)
+        
+        self.quad_vertices = {}
+        for i, vertex in enumerate(['I', 'J', 'K', 'L']):
+            vertices_layout.addWidget(QLabel(f"Vertex {vertex}:"), i, 0)
+            
+            y_spin = QDoubleSpinBox()
+            y_spin.setRange(-1e6, 1e6)
+            y_spin.setDecimals(6)
+            vertices_layout.addWidget(QLabel("Y:"), i, 1)
+            vertices_layout.addWidget(y_spin, i, 2)
+            
+            z_spin = QDoubleSpinBox()
+            z_spin.setRange(-1e6, 1e6)
+            z_spin.setDecimals(6)
+            vertices_layout.addWidget(QLabel("Z:"), i, 3)
+            vertices_layout.addWidget(z_spin, i, 4)
+            
+            self.quad_vertices[vertex] = {'y': y_spin, 'z': z_spin}
+        
+        quad_layout.addRow(vertices_group)
+        
+        add_quad_btn = QPushButton("Add Quadrilateral Patch")
+        add_quad_btn.clicked.connect(self.add_quadrilateral_patch_data)
+        quad_layout.addRow(add_quad_btn)
+        
+        self.quad_patch_form.setVisible(False)
+        self.patch_forms_layout.addWidget(self.quad_patch_form)
+        
+        # Circular patch form
+        self.circ_patch_form = QGroupBox("Circular Patch")
+        circ_layout = QFormLayout(self.circ_patch_form)
+        
+        self.circ_material_combo = QComboBox()
+        circ_layout.addRow("Material:", self.circ_material_combo)
+        
+        self.circ_subdiv_circ = QSpinBox()
+        self.circ_subdiv_circ.setRange(1, 1000)
+        self.circ_subdiv_circ.setValue(16)
+        circ_layout.addRow("Circumferential Subdivisions:", self.circ_subdiv_circ)
+        
+        self.circ_subdiv_rad = QSpinBox()
+        self.circ_subdiv_rad.setRange(1, 1000)
+        self.circ_subdiv_rad.setValue(4)
+        circ_layout.addRow("Radial Subdivisions:", self.circ_subdiv_rad)
+        
+        self.circ_y_center = QDoubleSpinBox()
+        self.circ_y_center.setRange(-1e6, 1e6)
+        self.circ_y_center.setDecimals(6)
+        circ_layout.addRow("Y Center:", self.circ_y_center)
+        
+        self.circ_z_center = QDoubleSpinBox()
+        self.circ_z_center.setRange(-1e6, 1e6)
+        self.circ_z_center.setDecimals(6)
+        circ_layout.addRow("Z Center:", self.circ_z_center)
+        
+        self.circ_int_rad = QDoubleSpinBox()
+        self.circ_int_rad.setRange(0.0, 1e6)
+        self.circ_int_rad.setDecimals(6)
+        circ_layout.addRow("Inner Radius:", self.circ_int_rad)
+        
+        self.circ_ext_rad = QDoubleSpinBox()
+        self.circ_ext_rad.setRange(0.001, 1e6)
+        self.circ_ext_rad.setDecimals(6)
+        circ_layout.addRow("Outer Radius:", self.circ_ext_rad)
+        
+        # Optional angle parameters
+        self.circ_use_angles = QCheckBox("Specify Custom Angles")
+        circ_layout.addRow(self.circ_use_angles)
+        
+        self.circ_start_ang = QDoubleSpinBox()
+        self.circ_start_ang.setRange(0, 360)
+        self.circ_start_ang.setDecimals(1)
+        self.circ_start_ang.setValue(0)
+        self.circ_start_ang.setEnabled(False)
+        circ_layout.addRow("Start Angle (deg):", self.circ_start_ang)
+        
+        self.circ_end_ang = QDoubleSpinBox()
+        self.circ_end_ang.setRange(0, 360)
+        self.circ_end_ang.setDecimals(1)
+        self.circ_end_ang.setValue(360)
+        self.circ_end_ang.setEnabled(False)
+        circ_layout.addRow("End Angle (deg):", self.circ_end_ang)
+        
+        self.circ_use_angles.toggled.connect(self.circ_start_ang.setEnabled)
+        self.circ_use_angles.toggled.connect(self.circ_end_ang.setEnabled)
+        
+        add_circ_btn = QPushButton("Add Circular Patch")
+        add_circ_btn.clicked.connect(self.add_circular_patch_data)
+        circ_layout.addRow(add_circ_btn)
+        
+        self.circ_patch_form.setVisible(False)
+        self.patch_forms_layout.addWidget(self.circ_patch_form)
         
         patch_content.addWidget(self.patch_forms_widget)
 
@@ -583,7 +474,8 @@ class FiberSectionDialog(QDialog):
         """Refresh all material combo boxes"""
         materials = list(Material.get_all_materials().values())
         
-        for combo in [self.fiber_material_combo, self.rect_material_combo, self.layer_material_combo]:
+        for combo in [self.fiber_material_combo, self.rect_material_combo, 
+                     self.quad_material_combo, self.circ_material_combo, self.layer_material_combo]:
             combo.clear()
             combo.addItem("Select Material", None)
             for material in materials:
@@ -592,14 +484,17 @@ class FiberSectionDialog(QDialog):
     def patch_type_changed(self, patch_type):
         """Handle patch type selection change"""
         # Hide all patch forms
-        for i in range(self.patch_forms_layout.count()):
-            widget = self.patch_forms_layout.itemAt(i).widget()
-            if widget:
-                widget.setVisible(False)
+        self.rect_patch_form.setVisible(False)
+        self.quad_patch_form.setVisible(False)
+        self.circ_patch_form.setVisible(False)
         
         # Show selected patch form
         if patch_type == "Rectangular":
             self.rect_patch_form.setVisible(True)
+        elif patch_type == "Quadrilateral":
+            self.quad_patch_form.setVisible(True)
+        elif patch_type == "Circular":
+            self.circ_patch_form.setVisible(True)
 
     def add_fiber_data(self):
         """Add fiber data to storage"""
@@ -657,7 +552,90 @@ class FiberSectionDialog(QDialog):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to add patch: {str(e)}")
 
+    def add_quadrilateral_patch_data(self):
+        """Add quadrilateral patch data to storage"""
+        try:
+            material = self.quad_material_combo.currentData()
+            if material is None:
+                QMessageBox.warning(self, "Error", "Please select a material")
+                return
+            
+            # Collect vertices
+            vertices = []
+            for vertex in ['I', 'J', 'K', 'L']:
+                y = self.quad_vertices[vertex]['y'].value()
+                z = self.quad_vertices[vertex]['z'].value()
+                vertices.append((y, z))
+            
+            # Store patch data
+            patch_data = {
+                'type': 'Quadrilateral',
+                'material': material,
+                'num_subdiv_ij': self.quad_subdiv_ij.value(),
+                'num_subdiv_jk': self.quad_subdiv_jk.value(),
+                'vertices': vertices
+            }
+            self.patches_data.append(patch_data)
+            self.update_patches_table()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to add quadrilateral patch: {str(e)}")
+
+    def add_circular_patch_data(self):
+        """Add circular patch data to storage"""
+        try:
+            material = self.circ_material_combo.currentData()
+            if material is None:
+                QMessageBox.warning(self, "Error", "Please select a material")
+                return
+            
+            # Get angle parameters
+            start_ang = self.circ_start_ang.value() if self.circ_use_angles.isChecked() else None
+            end_ang = self.circ_end_ang.value() if self.circ_use_angles.isChecked() else None
+            
+            # Store patch data
+            patch_data = {
+                'type': 'Circular',
+                'material': material,
+                'num_subdiv_circ': self.circ_subdiv_circ.value(),
+                'num_subdiv_rad': self.circ_subdiv_rad.value(),
+                'y_center': self.circ_y_center.value(),
+                'z_center': self.circ_z_center.value(),
+                'int_rad': self.circ_int_rad.value(),
+                'ext_rad': self.circ_ext_rad.value(),
+                'start_ang': start_ang,
+                'end_ang': end_ang
+            }
+            self.patches_data.append(patch_data)
+            self.update_patches_table()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to add circular patch: {str(e)}")
+
     def add_layer_data(self):
+        """Add layer data to storage"""
+        try:
+            material = self.layer_material_combo.currentData()
+            if material is None:
+                QMessageBox.warning(self, "Error", "Please select a material")
+                return
+            
+            # Store layer data
+            layer_data = {
+                'type': 'Straight',
+                'material': material,
+                'num_fibers': self.layer_num_fibers.value(),
+                'area_per_fiber': self.layer_area_per_fiber.value(),
+                'y1': self.layer_y1.value(),
+                'z1': self.layer_z1.value(),
+                'y2': self.layer_y2.value(),
+                'z2': self.layer_z2.value()
+            }
+            self.layers_data.append(layer_data)
+            self.update_layers_table()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to add layer: {str(e)}")
         """Add layer data to storage"""
         try:
             material = self.layer_material_combo.currentData()
@@ -707,6 +685,10 @@ class FiberSectionDialog(QDialog):
             # Calculate estimated fibers
             if patch_data['type'] == 'Rectangular':
                 est_fibers = patch_data['num_subdiv_y'] * patch_data['num_subdiv_z']
+            elif patch_data['type'] == 'Quadrilateral':
+                est_fibers = patch_data['num_subdiv_ij'] * patch_data['num_subdiv_jk']
+            elif patch_data['type'] == 'Circular':
+                est_fibers = patch_data['num_subdiv_circ'] * patch_data['num_subdiv_rad']
             else:
                 est_fibers = "Unknown"
             
@@ -776,6 +758,27 @@ class FiberSectionDialog(QDialog):
                         patch_data['z1'],
                         patch_data['y2'],
                         patch_data['z2']
+                    )
+                    patches.append(patch)
+                elif patch_data['type'] == 'Quadrilateral':
+                    patch = QuadrilateralPatch(
+                        patch_data['material'],
+                        patch_data['num_subdiv_ij'],
+                        patch_data['num_subdiv_jk'],
+                        patch_data['vertices']
+                    )
+                    patches.append(patch)
+                elif patch_data['type'] == 'Circular':
+                    patch = CircularPatch(
+                        patch_data['material'],
+                        patch_data['num_subdiv_circ'],
+                        patch_data['num_subdiv_rad'],
+                        patch_data['y_center'],
+                        patch_data['z_center'],
+                        patch_data['int_rad'],
+                        patch_data['ext_rad'],
+                        patch_data['start_ang'],
+                        patch_data['end_ang']
                     )
                     patches.append(patch)
             
@@ -897,6 +900,27 @@ Materials Used: {len(set([f.material.user_name for f in fibers] +
                         patch_data['z1'],
                         patch_data['y2'],
                         patch_data['z2']
+                    )
+                    components.append(patch)
+                elif patch_data['type'] == 'Quadrilateral':
+                    patch = QuadrilateralPatch(
+                        patch_data['material'],
+                        patch_data['num_subdiv_ij'],
+                        patch_data['num_subdiv_jk'],
+                        patch_data['vertices']
+                    )
+                    components.append(patch)
+                elif patch_data['type'] == 'Circular':
+                    patch = CircularPatch(
+                        patch_data['material'],
+                        patch_data['num_subdiv_circ'],
+                        patch_data['num_subdiv_rad'],
+                        patch_data['y_center'],
+                        patch_data['z_center'],
+                        patch_data['int_rad'],
+                        patch_data['ext_rad'],
+                        patch_data['start_ang'],
+                        patch_data['end_ang']
                     )
                     components.append(patch)
             
