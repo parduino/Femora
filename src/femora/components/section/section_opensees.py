@@ -893,32 +893,86 @@ class FiberSection(Section):
         Returns:
             matplotlib Figure object
         """
+        # Set default title if none provided
+        if title is None:
+            title = f"Fiber Section: {self.user_name} (Tag: {self.tag})"
+        
+        # Call the static plotting method
+        return self.plot_components(
+            fibers=self.fibers,
+            patches=self.patches,
+            layers=self.layers,
+            ax=ax,
+            figsize=figsize,
+            show_fibers=show_fibers,
+            show_patches=show_patches,
+            show_layers=show_layers,
+            show_patch_outline=show_patch_outline,
+            show_fiber_grid=show_fiber_grid,
+            show_layer_line=show_layer_line,
+            title=title,
+            material_colors=material_colors,
+            save_path=save_path,
+            dpi=dpi
+        )
+
+    @staticmethod
+    def plot_components(fibers: List[FiberElement], patches: List[PatchBase], layers: List[LayerBase],
+                       ax: Optional[plt.Axes] = None, figsize: Tuple[float, float] = (10, 8),
+                       show_fibers: bool = True, show_patches: bool = True, show_layers: bool = True,
+                       show_patch_outline: bool = True, show_fiber_grid: bool = True,
+                       show_layer_line: bool = True, title: Optional[str] = None,
+                       material_colors: Optional[Dict[str, str]] = None,
+                       save_path: Optional[str] = None, dpi: int = 300) -> plt.Figure:
+        """
+        Static method to plot fiber section components
+        
+        Args:
+            fibers: List of FiberElement objects
+            patches: List of PatchBase objects  
+            layers: List of LayerBase objects
+            ax: Matplotlib axes to plot on (if None, creates new figure)
+            figsize: Figure size if creating new figure
+            show_fibers: Whether to show individual fibers
+            show_patches: Whether to show patches
+            show_layers: Whether to show layers
+            show_patch_outline: Whether to show patch outlines
+            show_fiber_grid: Whether to show fiber grid in patches
+            show_layer_line: Whether to show layer lines
+            title: Custom title for the plot
+            material_colors: Custom color mapping for materials
+            save_path: Path to save the figure (optional)
+            dpi: DPI for saved figure
+            
+        Returns:
+            matplotlib Figure object
+        """
         # Create figure and axes if not provided
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize)
         else:
             fig = ax.get_figure()
         
-        # Generate material color mapping
+        # Generate material color mapping if not provided
         if material_colors is None:
-            material_colors = self._generate_material_colors()
+            material_colors = FiberSection.generate_material_colors(fibers, patches, layers)
         
         # Calculate scale factor for fiber visualization
-        scale_factor = self._calculate_scale_factor()
+        scale_factor = FiberSection.calculate_scale_factor(fibers)
         
         # Plot individual fibers
         if show_fibers:
-            for fiber in self.fibers:
+            for fiber in fibers:
                 fiber.plot(ax, material_colors, scale_factor, show_fibers=True)
         
         # Plot patches
         if show_patches:
-            for patch in self.patches:
+            for patch in patches:
                 patch.plot(ax, material_colors, show_patch_outline, show_fiber_grid)
         
         # Plot layers
         if show_layers:
-            for layer in self.layers:
+            for layer in layers:
                 layer.plot(ax, material_colors, show_layer_line, show_fibers)
         
         # Customize plot appearance
@@ -928,15 +982,14 @@ class FiberSection(Section):
         ax.grid(True, alpha=0.3)
         
         # Set title
-        if title is None:
-            title = f"Fiber Section: {self.user_name} (Tag: {self.tag})"
-        ax.set_title(title)
+        if title is not None:
+            ax.set_title(title)
         
         # Add legend
-        self._add_legend(ax, material_colors)
+        FiberSection._add_legend_to_axes(ax, material_colors)
         
         # Add section info text
-        self._add_section_info(ax)
+        FiberSection._add_section_info_to_axes(ax, fibers, patches, layers)
         
         # Tight layout
         fig.tight_layout()
@@ -947,9 +1000,29 @@ class FiberSection(Section):
         
         return fig
 
+
     def _generate_material_colors(self) -> Dict[str, str]:
         """Generate color mapping for materials"""
-        materials = self.get_materials()
+        return self.generate_material_colors(self.fibers, self.patches, self.layers)
+
+    @staticmethod
+    def generate_material_colors(fibers: List[FiberElement], patches: List[PatchBase], 
+                                layers: List[LayerBase]) -> Dict[str, str]:
+        """Static method to generate color mapping for materials"""
+        materials = []
+        
+        # Collect materials from all components
+        for fiber in fibers:
+            if fiber.material not in materials:
+                materials.append(fiber.material)
+        
+        for patch in patches:
+            if patch.material not in materials:
+                materials.append(patch.material)
+        
+        for layer in layers:
+            if layer.material not in materials:
+                materials.append(layer.material)
         
         # Use a color cycle
         colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple',
@@ -961,15 +1034,19 @@ class FiberSection(Section):
         
         return material_colors
 
-
     def _calculate_scale_factor(self) -> float:
         """Calculate appropriate scale factor for fiber visualization"""
-        if not self.fibers:
+        return self.calculate_scale_factor(self.fibers)
+
+    @staticmethod
+    def calculate_scale_factor(fibers: List[FiberElement]) -> float:
+        """Static method to calculate appropriate scale factor for fiber visualization"""
+        if not fibers:
             return 1.0
         
         # Get the range of coordinates
-        y_coords = [fiber.y_loc for fiber in self.fibers]
-        z_coords = [fiber.z_loc for fiber in self.fibers]
+        y_coords = [fiber.y_loc for fiber in fibers]
+        z_coords = [fiber.z_loc for fiber in fibers]
         
         if not y_coords or not z_coords:
             return 1.0
@@ -986,6 +1063,11 @@ class FiberSection(Section):
     
     def _add_legend(self, ax: plt.Axes, material_colors: Dict[str, str]) -> None:
         """Add legend showing materials"""
+        self._add_legend_to_axes(ax, material_colors)
+    
+    @staticmethod
+    def _add_legend_to_axes(ax: plt.Axes, material_colors: Dict[str, str]) -> None:
+        """Static helper method to add legend showing materials"""
         if not material_colors:
             return
         
@@ -996,22 +1078,31 @@ class FiberSection(Section):
         if legend_elements:
             ax.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(1.02, 1), borderaxespad=0.)
 
-    
     def _add_section_info(self, ax: plt.Axes) -> None:
         """Add section information text"""
-        summary = self.get_section_summary()
+        self._add_section_info_to_axes(ax, self.fibers, self.patches, self.layers)
+    
+    @staticmethod
+    def _add_section_info_to_axes(ax: plt.Axes, fibers: List[FiberElement], patches: List[PatchBase], 
+                                 layers: List[LayerBase]) -> None:
+        """Static helper method to add section information text"""
+        # Calculate estimated total fibers
+        total_fibers = len(fibers)
+        for patch in patches:
+            total_fibers += patch.estimate_fiber_count()
+        for layer in layers:
+            if hasattr(layer, 'num_fibers'):
+                total_fibers += layer.num_fibers
         
-        info_text = (f"Fibers: {summary['individual_fibers']}\n"
-                    f"Patches: {summary['patches']}\n"
-                    f"Layers: {summary['layers']}\n"
-                    f"Est. Total Fibers: {summary['estimated_total_fibers']}")
+        info_text = (f"Fibers: {len(fibers)}\n"
+                    f"Patches: {len(patches)}\n"
+                    f"Layers: {len(layers)}\n"
+                    f"Est. Total Fibers: {total_fibers}")
         
         # Add text box
         ax.text(1.03, 0.02, info_text, transform=ax.transAxes, 
                 horizontalalignment='left',
                verticalalignment='bottom', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-    
-
     def add_fiber(self, y_loc: float, z_loc: float, area: float, material: Material) -> None:
         """
         Add an individual fiber to the section
