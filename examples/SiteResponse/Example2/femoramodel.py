@@ -9,8 +9,8 @@ uniformDamp = fm.damping.frequencyRayleigh(f1 = 2.76, f2 = 13.84, dampingFactor=
 region = fm.region.elementRegion(damping=uniformDamp)
 
 # defining the mesh parts
-Xmin = -5.0 ;Xmax = 5.0
-Ymin = -5.0 ;Ymax = 5.0
+Xmin = 0.0 ;Xmax = 1.0
+Ymin = 0.0 ;Ymax = 1.0
 Zmin = -18.;Zmax = 0.0
 dx   = 1.0; dy   = 1.0
 Nx = int((Xmax - Xmin)/dx)
@@ -56,7 +56,7 @@ for layer in layers_properties:
 
 
 # #  Create assembly Sections
-fm.assembler.create_section(meshparts=[layer["user_name"] for layer in layers_properties], num_partitions=8)
+fm.assembler.create_section(meshparts=[layer["user_name"] for layer in layers_properties], num_partitions=0)
 
 
 # Assemble the mesh parts
@@ -95,7 +95,7 @@ gravity = fm.analysis.create_default_transient_analysis(username="gravity",
 
 # dynamic analysis
 dynamic = fm.analysis.create_default_transient_analysis(username="dynamic", 
-                                                        final_time=40.0, dt=0.001,
+                                                        final_time=50.0, dt=0.001,
                                                         options={"system": system,
                                                                  "numberer": numberer})
 
