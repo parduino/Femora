@@ -4,19 +4,217 @@ Supports all fiber section features: individual fibers, patches, layers, and GJ 
 """
 
 from qtpy.QtCore import Qt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 from qtpy.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, 
     QComboBox, QPushButton, QTableWidget, QTableWidgetItem, 
     QDialog, QFormLayout, QMessageBox, QHeaderView, QGridLayout,
     QTabWidget, QGroupBox, QSpinBox, QDoubleSpinBox, QTextEdit,
-    QFrame, QSplitter, QListWidget, QListWidgetItem, QCheckBox
+    QFrame, QSplitter, QListWidget, QListWidgetItem, QCheckBox,QFileDialog
 )
+
 
 from femora.components.section.section_opensees import (
     FiberSection, FiberElement, RectangularPatch, QuadrilateralPatch, 
     CircularPatch, StraightLayer
 )
 from femora.components.Material.materialBase import Material
+
+
+class FiberSectionPlotWidget(QWidget):
+    """
+    Widget for plotting fiber sections with interactive controls
+    """
+    
+    def __init__(self, fiber_section, parent=None):
+        super().__init__(parent)
+        self.fiber_section = fiber_section
+        
+        self.setWindowTitle(f"Fiber Section Plot: {fiber_section.user_name}")
+        self.setGeometry(300, 300, 1000, 700)
+        
+        # Main layout
+        main_layout = QHBoxLayout(self)
+        
+        # Plot area
+        self.setup_plot_area(main_layout)
+        
+        # Control panel
+        self.setup_control_panel(main_layout)
+        
+        # Initial plot
+        self.update_plot()
+    
+    def setup_plot_area(self, main_layout):
+        """Setup the matplotlib plot area"""
+        plot_widget = QWidget()
+        plot_layout = QVBoxLayout(plot_widget)
+        
+        # Create matplotlib figure and canvas
+        self.figure = Figure(figsize=(8, 6))
+        self.canvas = FigureCanvas(self.figure)
+        self.ax = self.figure.add_subplot(111)
+        
+        plot_layout.addWidget(self.canvas)
+        
+        # Plot control buttons
+        plot_buttons = QHBoxLayout()
+        
+        refresh_btn = QPushButton("Refresh Plot")
+        refresh_btn.clicked.connect(self.update_plot)
+        plot_buttons.addWidget(refresh_btn)
+        
+        save_btn = QPushButton("Save Plot")
+        save_btn.clicked.connect(self.save_plot)
+        plot_buttons.addWidget(save_btn)
+        
+        plot_buttons.addStretch()
+        plot_layout.addLayout(plot_buttons)
+        
+        main_layout.addWidget(plot_widget, stretch=3)
+    
+    def setup_control_panel(self, main_layout):
+        """Setup the control panel for plot options"""
+        control_panel = QWidget()
+        control_layout = QVBoxLayout(control_panel)
+        
+        # Visibility controls
+        visibility_group = QGroupBox("Visibility Options")
+        visibility_layout = QVBoxLayout(visibility_group)
+        
+        self.show_fibers_check = QCheckBox("Show Individual Fibers")
+        self.show_fibers_check.setChecked(True)
+        self.show_fibers_check.toggled.connect(self.update_plot)
+        visibility_layout.addWidget(self.show_fibers_check)
+        
+        self.show_patches_check = QCheckBox("Show Patches")
+        self.show_patches_check.setChecked(True)
+        self.show_patches_check.toggled.connect(self.update_plot)
+        visibility_layout.addWidget(self.show_patches_check)
+        
+        self.show_layers_check = QCheckBox("Show Layers")
+        self.show_layers_check.setChecked(True)
+        self.show_layers_check.toggled.connect(self.update_plot)
+        visibility_layout.addWidget(self.show_layers_check)
+        
+        self.show_patch_outline_check = QCheckBox("Show Patch Outlines")
+        self.show_patch_outline_check.setChecked(True)
+        self.show_patch_outline_check.toggled.connect(self.update_plot)
+        visibility_layout.addWidget(self.show_patch_outline_check)
+        
+        self.show_fiber_grid_check = QCheckBox("Show Fiber Grid in Patches")
+        self.show_fiber_grid_check.setChecked(False)
+        self.show_fiber_grid_check.toggled.connect(self.update_plot)
+        visibility_layout.addWidget(self.show_fiber_grid_check)
+        
+        self.show_layer_line_check = QCheckBox("Show Layer Lines")
+        self.show_layer_line_check.setChecked(True)
+        self.show_layer_line_check.toggled.connect(self.update_plot)
+        visibility_layout.addWidget(self.show_layer_line_check)
+        
+        control_layout.addWidget(visibility_group)
+        
+        # Plot customization
+        custom_group = QGroupBox("Plot Customization")
+        custom_layout = QFormLayout(custom_group)
+        
+        self.title_input = QLineEdit(f"Fiber Section: {self.fiber_section.user_name}")
+        custom_layout.addRow("Title:", self.title_input)
+        
+        control_layout.addWidget(custom_group)
+        
+        # Section information
+        info_group = QGroupBox("Section Information")
+        info_layout = QVBoxLayout(info_group)
+        
+        self.info_text = QTextEdit()
+        self.info_text.setReadOnly(True)
+        self.info_text.setMaximumHeight(200)
+        self.update_section_info()
+        info_layout.addWidget(self.info_text)
+        
+        control_layout.addWidget(info_group)
+        
+        control_layout.addStretch()
+        
+        main_layout.addWidget(control_panel, stretch=1)
+    
+    def update_plot(self):
+        """Update the plot with current settings"""
+        try:
+            # Clear the current plot
+            self.ax.clear()
+            
+            # Get plot options
+            show_fibers = self.show_fibers_check.isChecked()
+            show_patches = self.show_patches_check.isChecked()
+            show_layers = self.show_layers_check.isChecked()
+            show_patch_outline = self.show_patch_outline_check.isChecked()
+            show_fiber_grid = self.show_fiber_grid_check.isChecked()
+            show_layer_line = self.show_layer_line_check.isChecked()
+            title = self.title_input.text()
+            
+            # Plot the fiber section
+            self.fiber_section.plot(
+                ax=self.ax,
+                show_fibers=show_fibers,
+                show_patches=show_patches,
+                show_layers=show_layers,
+                show_patch_outline=show_patch_outline,
+                show_fiber_grid=show_fiber_grid,
+                show_layer_line=show_layer_line,
+                title=title
+            )
+            
+            # Refresh the canvas
+            self.canvas.draw()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Plot Error", f"Failed to update plot: {str(e)}")
+    
+    def save_plot(self):
+        """Save the current plot to file"""
+        try:
+            file_path, _ = QFileDialog.getSaveFileName(
+                self, "Save Plot", 
+                f"fiber_section_{self.fiber_section.user_name}.png",
+                "PNG Files (*.png);;PDF Files (*.pdf);;SVG Files (*.svg);;All Files (*)"
+            )
+            
+            if file_path:
+                self.figure.savefig(file_path, dpi=300, bbox_inches='tight')
+                QMessageBox.information(self, "Success", f"Plot saved to: {file_path}")
+                
+        except Exception as e:
+            QMessageBox.critical(self, "Save Error", f"Failed to save plot: {str(e)}")
+    
+    def update_section_info(self):
+        """Update the section information display"""
+        summary = self.fiber_section.get_section_summary()
+        
+        info_text = f"""
+        Section Summary:
+            Name: {self.fiber_section.user_name}
+            Tag: {self.fiber_section.tag}
+
+            Components:
+            • Individual Fibers: {summary['individual_fibers']}
+            • Patches: {summary['patches']}
+            • Layers: {summary['layers']}
+
+            Estimated Total Fibers: {summary['estimated_total_fibers']}
+
+            Materials Used:
+            {chr(10).join('• ' + mat for mat in summary['materials_used']) if summary['materials_used'] else '• None'}
+
+            Torsional Stiffness: {'Yes' if summary['has_torsional_stiffness'] else 'No'}
+
+            Patch Types: {', '.join(summary['patch_types']) if summary['patch_types'] else 'None'}
+            Layer Types: {', '.join(summary['layer_types']) if summary['layer_types'] else 'None'}
+        """
+        
+        self.info_text.setPlainText(info_text)
 
 
 class FiberSectionDialog(QDialog):
@@ -30,7 +228,7 @@ class FiberSectionDialog(QDialog):
         self.is_editing = fiber_section is not None
         
         self.setWindowTitle("Edit Fiber Section" if self.is_editing else "Create Fiber Section")
-        self.setGeometry(200, 200, 1200, 800)
+        self.setGeometry(200, 200, 600, 400)
         
         # Main layout
         main_layout = QVBoxLayout(self)
@@ -82,7 +280,7 @@ class FiberSectionDialog(QDialog):
         main_layout.addWidget(info_group)
 
     def setup_content_tabs(self, main_layout):
-        """Setup main content area with tabs"""
+        """Setup main content area with tabs including plot tab"""
         self.tab_widget = QTabWidget()
         
         # Individual Fibers tab
@@ -97,7 +295,139 @@ class FiberSectionDialog(QDialog):
         # Summary tab
         self.setup_summary_tab()
         
+        # Plot tab (new)
+        self.setup_plot_tab()
+        
         main_layout.addWidget(self.tab_widget)
+
+    def setup_plot_tab(self):
+        """Setup plot tab for visualization"""
+        plot_widget = QWidget()
+        layout = QVBoxLayout(plot_widget)
+        
+        # Plot button and controls
+        plot_controls = QHBoxLayout()
+        
+        self.plot_section_btn = QPushButton("Plot Section")
+        self.plot_section_btn.clicked.connect(self.plot_section)
+        plot_controls.addWidget(self.plot_section_btn)
+        
+        self.open_plot_window_btn = QPushButton("Open Plot Window")
+        self.open_plot_window_btn.clicked.connect(self.open_plot_window)
+        plot_controls.addWidget(self.open_plot_window_btn)
+        
+        plot_controls.addStretch()
+        layout.addLayout(plot_controls)
+        
+        # Embedded plot area
+        self.plot_frame = QFrame()
+        self.plot_frame.setFrameStyle(QFrame.StyledPanel)
+        self.plot_frame.setMinimumHeight(400)
+        
+        # Create matplotlib figure for embedded plot
+        self.embedded_figure = Figure(figsize=(8, 6))
+        self.embedded_canvas = FigureCanvas(self.embedded_figure)
+        
+        plot_frame_layout = QVBoxLayout(self.plot_frame)
+        plot_frame_layout.addWidget(self.embedded_canvas)
+        
+        layout.addWidget(self.plot_frame)
+        
+        # Plot status
+        self.plot_status_label = QLabel("No plot generated yet. Click 'Plot Section' to visualize.")
+        layout.addWidget(self.plot_status_label)
+        
+        self.tab_widget.addTab(plot_widget, "Plot")
+
+    def plot_section(self):
+        """Plot the section in the embedded canvas"""
+        try:
+            if not self.fiber_section:
+                # Create temporary section for plotting
+                self.create_temp_section()
+            
+            if not self.fiber_section:
+                QMessageBox.warning(self, "No Section", "Please create section components before plotting.")
+                return
+            
+            # Clear the embedded plot
+            self.embedded_figure.clear()
+            ax = self.embedded_figure.add_subplot(111)
+            
+            # Plot the section
+            self.fiber_section.plot(ax=ax)
+            
+            # Refresh the canvas
+            self.embedded_canvas.draw()
+            
+            self.plot_status_label.setText("Section plotted successfully.")
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Plot Error", f"Failed to plot section: {str(e)}")
+            self.plot_status_label.setText(f"Plot error: {str(e)}")
+
+    def open_plot_window(self):
+        """Open dedicated plot window"""
+        try:
+            if not self.fiber_section:
+                self.create_temp_section()
+            
+            if not self.fiber_section:
+                QMessageBox.warning(self, "No Section", "Please create section components before plotting.")
+                return
+            
+            # Open plot widget in separate window
+            self.plot_window = FiberSectionPlotWidget(self.fiber_section, self)
+            self.plot_window.show()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Plot Error", f"Failed to open plot window: {str(e)}")
+
+
+    def create_temp_section(self):
+        """Create temporary section for plotting if one doesn't exist"""
+        if not self.fiber_section:
+            section_name = self.name_input.text().strip() or "Temp_Section"
+            
+            # Create section with GJ if specified
+            gj = self.gj_input.value() if self.gj_checkbox.isChecked() else None
+            self.fiber_section = FiberSection(section_name, GJ=gj)
+
+
+
+    # Include all the original methods from FiberSectionDialog
+    def setup_basic_info(self, main_layout):
+        """Setup basic section information inputs"""
+        info_group = QGroupBox("Section Information")
+        info_layout = QGridLayout(info_group)
+        
+        # Section name
+        self.name_input = QLineEdit()
+        if self.is_editing:
+            self.name_input.setText(self.fiber_section.user_name)
+        info_layout.addWidget(QLabel("Section Name:"), 0, 0)
+        info_layout.addWidget(self.name_input, 0, 1)
+        
+        # Optional GJ parameter
+        self.gj_checkbox = QCheckBox("Include Torsional Stiffness (GJ)")
+        self.gj_input = QDoubleSpinBox()
+        self.gj_input.setRange(0.001, 1e12)
+        self.gj_input.setDecimals(3)
+        self.gj_input.setEnabled(False)
+        
+        self.gj_checkbox.toggled.connect(self.gj_input.setEnabled)
+        
+        if self.is_editing and self.fiber_section.GJ is not None:
+            self.gj_checkbox.setChecked(True)
+            self.gj_input.setValue(self.fiber_section.GJ)
+        
+        info_layout.addWidget(self.gj_checkbox, 1, 0)
+        info_layout.addWidget(self.gj_input, 1, 1)
+        
+        main_layout.addWidget(info_group)
+
+
+
 
     def setup_fibers_tab(self):
         """Setup tab for individual fiber management"""
