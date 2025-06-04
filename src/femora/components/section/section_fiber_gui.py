@@ -633,30 +633,6 @@ class FiberSectionDialog(QDialog):
             }
             self.layers_data.append(layer_data)
             self.update_layers_table()
-            
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to add layer: {str(e)}")
-        """Add layer data to storage"""
-        try:
-            material = self.layer_material_combo.currentData()
-            if material is None:
-                QMessageBox.warning(self, "Error", "Please select a material")
-                return
-            
-            # Store layer data
-            layer_data = {
-                'type': 'Straight',
-                'material': material,
-                'num_fibers': self.layer_num_fibers.value(),
-                'area_per_fiber': self.layer_area_per_fiber.value(),
-                'y1': self.layer_y1.value(),
-                'z1': self.layer_z1.value(),
-                'y2': self.layer_y2.value(),
-                'z2': self.layer_z2.value()
-            }
-            self.layers_data.append(layer_data)
-            self.update_layers_table()
-            
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to add layer: {str(e)}")
 
