@@ -620,9 +620,55 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     
     # Create some test materials
-    ElasticIsotropicMaterial(user_name="Steel", E=200e3, nu=0.3, rho=7.85e-9)
-    ElasticUniaxialMaterial(user_name="Steel_Uniaxial", E=200e3)
+    mat1 = ElasticIsotropicMaterial(user_name="Steel0", E=200e3, nu=0.3, rho=7.85e-9)
+    mat2 = ElasticUniaxialMaterial(user_name="Steel_Uniaxial0", E=200e3)
     
+    # Add some initial sections for testing
+    from femora.components.section.section_base import SectionRegistry
+
+    # Elastic section
+    SectionRegistry.create_section(
+        section_type="Elastic",
+        user_name="ElasticSection1",
+        E=200e3,
+        A=1000,
+        Iz=5000
+    )
+
+    # Uniaxial section
+    SectionRegistry.create_section(
+        section_type="Uniaxial",
+        user_name="UniaxialSection1",
+        material=mat2,
+        response_code="P"
+    )
+
+    # Aggregator section
+    SectionRegistry.create_section(
+        section_type="Aggregator",
+        user_name="AggregatorSection1",
+        materials={"P": mat2, "Mz": mat2}
+    )
+
+
+    steel = ElasticUniaxialMaterial(user_name="Steel1", E=200000, eta=0.0)
+    concrete = ElasticUniaxialMaterial(user_name="Concrete1", E=30000, eta=0.0)
+    
+    # Create fiber section
+    section = FiberSection("Example_Section", GJ=1000000)
+    
+    # Add rectangular concrete patch
+    section.add_rectangular_patch(concrete, 10, 10, -0.15, -0.25, 0.15, 0.25)
+    
+    # Add steel reinforcement layers
+    section.add_straight_layer(steel, 4, 0.0005, -0.12, -0.22, 0.12, -0.22)  # Bottom
+    section.add_straight_layer(steel, 4, 0.0005, -0.12, 0.22, 0.12, 0.22)    # Top
+    section.add_straight_layer(steel, 3, 0.0005, -0.12, -0.1, -0.12, 0.1)    # Left
+    section.add_straight_layer(steel, 3, 0.0005, 0.12, -0.1, 0.12, 0.1)      # Right
+    
+
+    section.add_fiber(0.0, 0.0, 0.0001, steel)  # Central fiber
+
     # Create and show the SectionManagerTab
     section_manager = SectionManagerTab()
     section_manager.show()
