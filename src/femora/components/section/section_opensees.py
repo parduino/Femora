@@ -832,13 +832,26 @@ class FiberSection(Section):
         GJ (float, optional): Linear-elastic torsional stiffness
     """
     
-    def __init__(self, user_name: str = "Unnamed", GJ: Optional[float] = None, **kwargs):
+    def __init__(self, user_name: str = "Unnamed", GJ: Optional[float] = None, 
+                 components: Optional[List[Union[FiberElement, PatchBase, LayerBase]]] = None, **kwargs):
         super().__init__('section', 'Fiber', user_name)
         
         # Initialize collections
         self.fibers: List[FiberElement] = []
         self.patches: List[PatchBase] = []
         self.layers: List[LayerBase] = []
+        
+        # Process components list and sort into appropriate collections
+        if components is not None:
+            for i, component in enumerate(components):
+                if isinstance(component, FiberElement):
+                    self.fibers.append(component)
+                elif isinstance(component, PatchBase):
+                    self.patches.append(component)
+                elif isinstance(component, LayerBase):
+                    self.layers.append(component)
+                else:
+                    raise ValueError(f"Item {i} in components list is not a valid fiber section component (FiberElement, PatchBase, or LayerBase)")
         
         # Handle optional torsional stiffness
         self.GJ = None
