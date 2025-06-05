@@ -5,15 +5,46 @@ Following the established patterns from material and element GUIs
 
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, 
-    QComboBox, QPushButton, QTableWidget, QTableWidgetItem, 
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
+    QComboBox, QPushButton, QTableWidget, QTableWidgetItem,
     QDialog, QFormLayout, QMessageBox, QHeaderView, QGridLayout,
     QMenu, QTextEdit, QTabWidget, QGroupBox, QFrame
 )
+from typing import Callable, Dict
 
 from femora.components.section.section_base import Section, SectionRegistry
 from femora.components.section.section_opensees import *
 from femora.components.Material.materialBase import Material
+from femora.components.section.section_fiber_gui import create_fiber_section_dialog
+
+# Mapping of section types to custom dialog creators
+_SECTION_DIALOG_CREATORS: Dict[str, Callable[[QWidget], QDialog]] = {}
+
+
+def register_section_dialog(section_type: str, creator: Callable[[QWidget], QDialog]) -> None:
+    """Register a custom dialog creator for a section type."""
+    _SECTION_DIALOG_CREATORS[section_type] = creator
+
+
+def create_section_dialog(section_type: str, parent: Optional[QWidget] = None):
+    """Create and execute the dialog for the given section type."""
+    if section_type in _SECTION_DIALOG_CREATORS:
+        dialog_or_section = _SECTION_DIALOG_CREATORS[section_type](parent)
+        if isinstance(dialog_or_section, QDialog):
+            if dialog_or_section.exec() == QDialog.Accepted and hasattr(dialog_or_section, "created_section"):
+                return dialog_or_section.created_section
+            return None
+        return dialog_or_section
+
+    dialog = GenericSectionDialog(section_type, parent)
+    if dialog.exec() == QDialog.Accepted and hasattr(dialog, "created_section"):
+        return dialog.created_section
+    return None
+
+# Register built-in dialogs for specialized section types
+register_section_dialog("Aggregator", lambda parent: AggregatorSectionDialog("Aggregator", parent))
+register_section_dialog("Uniaxial", lambda parent: UniaxialSectionDialog("Uniaxial", parent))
+register_section_dialog("Fiber", lambda parent: create_fiber_section_dialog(parent))
 
 
 class SectionManagerTab(QWidget):
@@ -79,10 +110,10 @@ class SectionManagerTab(QWidget):
         """Open dialog to create a new section of selected type"""
         section_type = self.section_type_combo.currentText()
         
-        dialog = SectionCreationDialog(section_type, self)
-        
+        section = create_section_dialog(section_type, self)
+
         # Only refresh if a section was actually created
-        if dialog.exec() == QDialog.Accepted and hasattr(dialog, 'created_section'):
+        if section is not None:
             self.refresh_sections_list()
 
     def refresh_sections_list(self):
@@ -204,8 +235,10 @@ class SectionManagerTab(QWidget):
             self.refresh_sections_list()
 
 
-class SectionCreationDialog(QDialog):
-    def __init__(self, section_type, parent=None):
+class GenericSectionDialog(QDialog):
+    """Default dialog used for creating simple section types."""
+
+    def __init__(self, section_type: str, parent=None):
         super().__init__(parent)
         self.setWindowTitle(f"Create {section_type} Section")
         self.section_type = section_type
@@ -236,18 +269,8 @@ class SectionCreationDialog(QDialog):
         parameters = self.section_class.get_parameters()
         descriptions = self.section_class.get_description()
 
-        # Handle different section types
-        if section_type == "Elastic":
-            self._create_elastic_section_inputs(params_layout, parameters, descriptions)
-        elif section_type == "Aggregator":
-            self._create_aggregator_section_inputs(params_layout)
-        elif section_type == "Uniaxial":
-            self._create_uniaxial_section_inputs(params_layout)
-        elif section_type == "Fiber":
-            self._create_fiber_section_inputs(params_layout)
-        else:
-            # Generic parameter creation
-            self._create_generic_inputs(params_layout, parameters, descriptions)
+        # Allow subclasses to customize parameter widgets
+        self.create_parameter_inputs(params_layout, parameters, descriptions)
 
         left_layout.addWidget(params_group)
 
@@ -287,20 +310,9 @@ class SectionCreationDialog(QDialog):
         main_layout.setStretch(0, 3)
         main_layout.setStretch(2, 2)
 
-    def _create_elastic_section_inputs(self, layout, parameters, descriptions):
-        """Create inputs specific to Elastic sections"""
-        row = 0
-        for param, desc in zip(parameters, descriptions):
-            label = QLabel(param)
-            input_field = QLineEdit()
-            desc_label = QLabel(f"({desc})")
-            
-            layout.addWidget(label, row, 0)
-            layout.addWidget(input_field, row, 1)
-            layout.addWidget(desc_label, row, 2)
-            
-            self.param_inputs[param] = input_field
-            row += 1
+    def create_parameter_inputs(self, layout, parameters, descriptions):
+        """Create parameter input widgets (override in subclasses)."""
+        self._create_generic_inputs(layout, parameters, descriptions)
 
     def _create_aggregator_section_inputs(self, layout):
         """Create inputs specific to Aggregator sections"""
@@ -455,70 +467,98 @@ class SectionCreationDialog(QDialog):
 
     def create_section(self):
         try:
-            # Validate user name
             user_name = self.user_name_input.text().strip()
             if not user_name:
                 QMessageBox.warning(self, "Input Error", "Please enter a section name.")
                 return
-            
+
             if user_name in Section._names:
                 QMessageBox.warning(self, "Input Error", f"Section with name {user_name} already exists.")
                 return
 
-            # Collect parameters based on section type
-            if self.section_type == "Elastic":
-                params = {}
-                for param, input_field in self.param_inputs.items():
-                    value = input_field.text().strip()
-                    if value:
-                        params[param] = value
-                
-                if not params:
-                    QMessageBox.warning(self, "Input Error", "Please enter at least the required parameters (E, A, Iz).")
-                    return
+            params = {}
+            for param, input_field in self.param_inputs.items():
+                value = input_field.text().strip()
+                if value:
+                    params[param] = value
 
-                # Create section
-                self.created_section = SectionRegistry.create_section(
-                    section_type=self.section_type,
-                    user_name=user_name,
-                    **params
-                )
-                
-            elif self.section_type == "Aggregator":
-                if not self.aggregator_materials:
-                    QMessageBox.warning(self, "Input Error", "Please add at least one material to the aggregator.")
-                    return
-                
-                self.created_section = SectionRegistry.create_section(
-                    section_type=self.section_type,
-                    user_name=user_name,
-                    materials=self.aggregator_materials
-                )
-                
-            elif self.section_type == "Uniaxial":
-                material = self.material_combo.currentData()
-                response_code = self.response_code_combo.currentText()
-                
-                if material is None:
-                    QMessageBox.warning(self, "Input Error", "Please select a material.")
-                    return
-                
-                self.created_section = SectionRegistry.create_section(
-                    section_type=self.section_type,
-                    user_name=user_name,
-                    material=material,
-                    response_code=response_code
-                )
-                
-            elif self.section_type == "Fiber":
-                if not self.created_fiber_section:
-                    QMessageBox.warning(self, "Input Error", "Please create a fiber section using the Fiber Dialog.")
-                    return
-                
-                # Update the fiber section name to match user input
-                self.created_fiber_section.user_name = user_name
-                self.created_section = self.created_fiber_section
-            
+            self.created_section = SectionRegistry.create_section(
+                section_type=self.section_type,
+                user_name=user_name,
+                **params,
+            )
+
+            self.accept()
+
+        except ValueError as e:
+            QMessageBox.warning(self, "Input Error", f"Invalid input: {str(e)}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+
+
+class AggregatorSectionDialog(GenericSectionDialog):
+    """Dialog for creating Aggregator sections."""
+
+    def create_parameter_inputs(self, layout, parameters, descriptions):
+        self._create_aggregator_section_inputs(layout)
+
+    def create_section(self):
+        try:
+            user_name = self.user_name_input.text().strip()
+            if not user_name:
+                QMessageBox.warning(self, "Input Error", "Please enter a section name.")
+                return
+
+            if user_name in Section._names:
+                QMessageBox.warning(self, "Input Error", f"Section with name {user_name} already exists.")
+                return
+
+            if not self.aggregator_materials:
+                QMessageBox.warning(self, "Input Error", "Please add at least one material to the aggregator.")
+                return
+
+            self.created_section = SectionRegistry.create_section(
+                section_type=self.section_type,
+                user_name=user_name,
+                materials=self.aggregator_materials,
+            )
+            self.accept()
+
+        except ValueError as e:
+            QMessageBox.warning(self, "Input Error", f"Invalid input: {str(e)}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+
+
+class UniaxialSectionDialog(GenericSectionDialog):
+    """Dialog for creating Uniaxial sections."""
+
+    def create_parameter_inputs(self, layout, parameters, descriptions):
+        self._create_uniaxial_section_inputs(layout)
+
+    def create_section(self):
+        try:
+            user_name = self.user_name_input.text().strip()
+            if not user_name:
+                QMessageBox.warning(self, "Input Error", "Please enter a section name.")
+                return
+
+            if user_name in Section._names:
+                QMessageBox.warning(self, "Input Error", f"Section with name {user_name} already exists.")
+                return
+
+            material = self.material_combo.currentData()
+            response_code = self.response_code_combo.currentText()
+            if material is None:
+                QMessageBox.warning(self, "Input Error", "Please select a material.")
+                return
+
+            self.created_section = SectionRegistry.create_section(
+                section_type=self.section_type,
+                user_name=user_name,
+                material=material,
+                response_code=response_code,
+            )
             self.accept()
 
         except ValueError as e:
