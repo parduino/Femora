@@ -847,7 +847,9 @@ class CircularLayer(LayerBase):
                 self.end_ang = 360.0 - 360.0/self.num_fibers
             else:
                 self.end_ang = float(end_ang)
-            
+
+            if start_ang is None:
+                start_ang = 0.0
             self.start_ang = float(start_ang)
             
         except (ValueError, TypeError):
@@ -1494,6 +1496,7 @@ def create_example_fiber_section():
     # Create materials
     steel = ElasticUniaxialMaterial(user_name="Steel", E=200000, eta=0.0)
     concrete = ElasticUniaxialMaterial(user_name="Concrete", E=30000, eta=0.0)
+    bar = ElasticUniaxialMaterial(user_name="Reinforcement_Bar", E=200000, eta=0.0)
     
     # Create fiber section
     section = FiberSection("Example_Section", GJ=1000000)
@@ -1509,6 +1512,7 @@ def create_example_fiber_section():
     
 
     section.add_fiber(0.0, 0.0, 0.0001, steel)  # Central fiber
+    section.add_circular_layer(bar, 8, 0.0001, 0.0, 0.0, 0.15, start_ang=0)  
     return section
 
 

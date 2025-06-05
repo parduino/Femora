@@ -15,8 +15,8 @@ from qtpy.QtWidgets import (
 )
 
 from femora.components.section.section_opensees import (
-    FiberSection, FiberElement, RectangularPatch, QuadrilateralPatch, 
-    CircularPatch, StraightLayer
+    FiberSection, FiberElement, RectangularPatch, QuadrilateralPatch,
+    CircularPatch, StraightLayer, CircularLayer
 )
 from femora.components.Material.materialBase import Material
 
@@ -381,47 +381,128 @@ class FiberSectionDialog(QDialog):
         
         layout.addWidget(left_panel)
         
-        # Right side - layer creation form
-        right_panel = QGroupBox("Add Straight Layer")
-        right_layout = QFormLayout(right_panel)
-        
+        # Right side - layer creation
+        right_panel = QWidget()
+        right_layout = QVBoxLayout(right_panel)
+
+        # Layer type selection
+        type_layout = QHBoxLayout()
+        type_layout.addWidget(QLabel("Layer Type:"))
+        self.layer_type_combo = QComboBox()
+        self.layer_type_combo.addItems(["Straight", "Circular"])
+        self.layer_type_combo.currentTextChanged.connect(self.layer_type_changed)
+        type_layout.addWidget(self.layer_type_combo)
+        type_layout.addStretch()
+        right_layout.addLayout(type_layout)
+
+        # Forms container
+        self.layer_forms_widget = QWidget()
+        self.layer_forms_layout = QVBoxLayout(self.layer_forms_widget)
+
+        # Straight layer form
+        self.straight_layer_form = QGroupBox("Straight Layer")
+        sl_layout = QFormLayout(self.straight_layer_form)
+
         self.layer_material_combo = QComboBox()
-        right_layout.addRow("Material:", self.layer_material_combo)
-        
+        sl_layout.addRow("Material:", self.layer_material_combo)
+
         self.layer_num_fibers = QSpinBox()
         self.layer_num_fibers.setRange(1, 1000)
         self.layer_num_fibers.setValue(5)
-        right_layout.addRow("Number of Fibers:", self.layer_num_fibers)
-        
+        sl_layout.addRow("Number of Fibers:", self.layer_num_fibers)
+
         self.layer_area_per_fiber = QDoubleSpinBox()
         self.layer_area_per_fiber.setRange(0.001, 1e6)
         self.layer_area_per_fiber.setDecimals(6)
-        right_layout.addRow("Area per Fiber:", self.layer_area_per_fiber)
-        
+        sl_layout.addRow("Area per Fiber:", self.layer_area_per_fiber)
+
         self.layer_y1 = QDoubleSpinBox()
         self.layer_y1.setRange(-1e6, 1e6)
         self.layer_y1.setDecimals(6)
-        right_layout.addRow("Start Y:", self.layer_y1)
-        
+        sl_layout.addRow("Start Y:", self.layer_y1)
+
         self.layer_z1 = QDoubleSpinBox()
         self.layer_z1.setRange(-1e6, 1e6)
         self.layer_z1.setDecimals(6)
-        right_layout.addRow("Start Z:", self.layer_z1)
-        
+        sl_layout.addRow("Start Z:", self.layer_z1)
+
         self.layer_y2 = QDoubleSpinBox()
         self.layer_y2.setRange(-1e6, 1e6)
         self.layer_y2.setDecimals(6)
-        right_layout.addRow("End Y:", self.layer_y2)
-        
+        sl_layout.addRow("End Y:", self.layer_y2)
+
         self.layer_z2 = QDoubleSpinBox()
         self.layer_z2.setRange(-1e6, 1e6)
         self.layer_z2.setDecimals(6)
-        right_layout.addRow("End Z:", self.layer_z2)
-        
-        add_layer_btn = QPushButton("Add Layer")
-        add_layer_btn.clicked.connect(self.add_layer_data)
-        right_layout.addRow(add_layer_btn)
-        
+        sl_layout.addRow("End Z:", self.layer_z2)
+
+        add_layer_btn = QPushButton("Add Straight Layer")
+        add_layer_btn.clicked.connect(self.add_straight_layer_data)
+        sl_layout.addRow(add_layer_btn)
+
+        self.layer_forms_layout.addWidget(self.straight_layer_form)
+
+        # Circular layer form
+        self.circ_layer_form = QGroupBox("Circular Layer")
+        cl_layout = QFormLayout(self.circ_layer_form)
+
+        self.circ_layer_material_combo = QComboBox()
+        cl_layout.addRow("Material:", self.circ_layer_material_combo)
+
+        self.circ_layer_num_fibers = QSpinBox()
+        self.circ_layer_num_fibers.setRange(1, 1000)
+        self.circ_layer_num_fibers.setValue(5)
+        cl_layout.addRow("Number of Fibers:", self.circ_layer_num_fibers)
+
+        self.circ_layer_area_per_fiber = QDoubleSpinBox()
+        self.circ_layer_area_per_fiber.setRange(0.001, 1e6)
+        self.circ_layer_area_per_fiber.setDecimals(6)
+        cl_layout.addRow("Area per Fiber:", self.circ_layer_area_per_fiber)
+
+        self.circ_layer_y_center = QDoubleSpinBox()
+        self.circ_layer_y_center.setRange(-1e6, 1e6)
+        self.circ_layer_y_center.setDecimals(6)
+        cl_layout.addRow("Y Center:", self.circ_layer_y_center)
+
+        self.circ_layer_z_center = QDoubleSpinBox()
+        self.circ_layer_z_center.setRange(-1e6, 1e6)
+        self.circ_layer_z_center.setDecimals(6)
+        cl_layout.addRow("Z Center:", self.circ_layer_z_center)
+
+        self.circ_layer_radius = QDoubleSpinBox()
+        self.circ_layer_radius.setRange(0.001, 1e6)
+        self.circ_layer_radius.setDecimals(6)
+        cl_layout.addRow("Radius:", self.circ_layer_radius)
+
+        self.circ_layer_use_angles = QCheckBox("Specify Custom Angles")
+        cl_layout.addRow(self.circ_layer_use_angles)
+
+        self.circ_layer_start_ang = QDoubleSpinBox()
+        self.circ_layer_start_ang.setRange(0, 360)
+        self.circ_layer_start_ang.setDecimals(1)
+        self.circ_layer_start_ang.setValue(0)
+        self.circ_layer_start_ang.setEnabled(False)
+        cl_layout.addRow("Start Angle (deg):", self.circ_layer_start_ang)
+
+        self.circ_layer_end_ang = QDoubleSpinBox()
+        self.circ_layer_end_ang.setRange(0, 360)
+        self.circ_layer_end_ang.setDecimals(1)
+        self.circ_layer_end_ang.setValue(360)
+        self.circ_layer_end_ang.setEnabled(False)
+        cl_layout.addRow("End Angle (deg):", self.circ_layer_end_ang)
+
+        self.circ_layer_use_angles.toggled.connect(self.circ_layer_start_ang.setEnabled)
+        self.circ_layer_use_angles.toggled.connect(self.circ_layer_end_ang.setEnabled)
+
+        add_circ_layer_btn = QPushButton("Add Circular Layer")
+        add_circ_layer_btn.clicked.connect(self.add_circular_layer_data)
+        cl_layout.addRow(add_circ_layer_btn)
+
+        self.circ_layer_form.setVisible(False)
+        self.layer_forms_layout.addWidget(self.circ_layer_form)
+
+        right_layout.addWidget(self.layer_forms_widget)
+        self.layer_type_changed(self.layer_type_combo.currentText())
         layout.addWidget(right_panel)
         
         self.tab_widget.addTab(layers_widget, "Layers")
@@ -474,8 +555,9 @@ class FiberSectionDialog(QDialog):
         """Refresh all material combo boxes"""
         materials = list(Material.get_all_materials().values())
         
-        for combo in [self.fiber_material_combo, self.rect_material_combo, 
-                     self.quad_material_combo, self.circ_material_combo, self.layer_material_combo]:
+        for combo in [self.fiber_material_combo, self.rect_material_combo,
+                     self.quad_material_combo, self.circ_material_combo,
+                     self.layer_material_combo, self.circ_layer_material_combo]:
             combo.clear()
             combo.addItem("Select Material", None)
             for material in materials:
@@ -495,6 +577,16 @@ class FiberSectionDialog(QDialog):
             self.quad_patch_form.setVisible(True)
         elif patch_type == "Circular":
             self.circ_patch_form.setVisible(True)
+
+    def layer_type_changed(self, layer_type):
+        """Handle layer type selection change"""
+        self.straight_layer_form.setVisible(False)
+        self.circ_layer_form.setVisible(False)
+
+        if layer_type == "Straight":
+            self.straight_layer_form.setVisible(True)
+        elif layer_type == "Circular":
+            self.circ_layer_form.setVisible(True)
 
     def add_fiber_data(self):
         """Add fiber data to storage"""
@@ -612,15 +704,14 @@ class FiberSectionDialog(QDialog):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to add circular patch: {str(e)}")
 
-    def add_layer_data(self):
-        """Add layer data to storage"""
+    def add_straight_layer_data(self):
+        """Add straight layer data to storage"""
         try:
             material = self.layer_material_combo.currentData()
             if material is None:
                 QMessageBox.warning(self, "Error", "Please select a material")
                 return
-            
-            # Store layer data
+
             layer_data = {
                 'type': 'Straight',
                 'material': material,
@@ -630,6 +721,35 @@ class FiberSectionDialog(QDialog):
                 'z1': self.layer_z1.value(),
                 'y2': self.layer_y2.value(),
                 'z2': self.layer_z2.value()
+            }
+            self.layers_data.append(layer_data)
+            self.update_layers_table()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to add layer: {str(e)}")
+
+    def add_circular_layer_data(self):
+        """Add circular layer data to storage"""
+        try:
+            material = self.circ_layer_material_combo.currentData()
+            if material is None:
+                QMessageBox.warning(self, "Error", "Please select a material")
+                return
+
+            start_ang = (self.circ_layer_start_ang.value()
+                         if self.circ_layer_use_angles.isChecked() else None)
+            end_ang = (self.circ_layer_end_ang.value()
+                       if self.circ_layer_use_angles.isChecked() else None)
+
+            layer_data = {
+                'type': 'Circular',
+                'material': material,
+                'num_fibers': self.circ_layer_num_fibers.value(),
+                'area_per_fiber': self.circ_layer_area_per_fiber.value(),
+                'y_center': self.circ_layer_y_center.value(),
+                'z_center': self.circ_layer_z_center.value(),
+                'radius': self.circ_layer_radius.value(),
+                'start_ang': start_ang,
+                'end_ang': end_ang
             }
             self.layers_data.append(layer_data)
             self.update_layers_table()
@@ -769,6 +889,18 @@ class FiberSectionDialog(QDialog):
                         layer_data['z1'],
                         layer_data['y2'],
                         layer_data['z2']
+                    )
+                    layers.append(layer)
+                elif layer_data['type'] == 'Circular':
+                    layer = CircularLayer(
+                        layer_data['material'],
+                        layer_data['num_fibers'],
+                        layer_data['area_per_fiber'],
+                        layer_data['y_center'],
+                        layer_data['z_center'],
+                        layer_data['radius'],
+                        layer_data['start_ang'],
+                        layer_data['end_ang']
                     )
                     layers.append(layer)
             
@@ -911,6 +1043,18 @@ Materials Used: {len(set([f.material.user_name for f in fibers] +
                         layer_data['z1'],
                         layer_data['y2'],
                         layer_data['z2']
+                    )
+                    components.append(layer)
+                elif layer_data['type'] == 'Circular':
+                    layer = CircularLayer(
+                        layer_data['material'],
+                        layer_data['num_fibers'],
+                        layer_data['area_per_fiber'],
+                        layer_data['y_center'],
+                        layer_data['z_center'],
+                        layer_data['radius'],
+                        layer_data['start_ang'],
+                        layer_data['end_ang']
                     )
                     components.append(layer)
             
