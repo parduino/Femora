@@ -10,20 +10,30 @@ from qtpy.QtWidgets import (
     QDialog, QFormLayout, QMessageBox, QHeaderView, QGridLayout,
     QMenu, QTextEdit, QTabWidget, QGroupBox, QFrame
 )
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 from femora.components.section.section_base import Section, SectionRegistry
 from femora.components.section.section_opensees import *
 from femora.components.Material.materialBase import Material
-from femora.components.section.section_fiber_gui import create_fiber_section_dialog
+from femora.components.section.section_fiber_gui import (
+    create_fiber_section_dialog,
+    FiberSectionDialog,
+)
 
 # Mapping of section types to custom dialog creators
 _SECTION_DIALOG_CREATORS: Dict[str, Callable[[QWidget], QDialog]] = {}
+# Mapping of section types to custom edit dialog creators
+_SECTION_EDIT_DIALOG_CREATORS: Dict[str, Callable[[Section, QWidget], QDialog]] = {}
 
 
 def register_section_dialog(section_type: str, creator: Callable[[QWidget], QDialog]) -> None:
     """Register a custom dialog creator for a section type."""
     _SECTION_DIALOG_CREATORS[section_type] = creator
+
+
+def register_section_edit_dialog(section_type: str, creator: Callable[[Section, QWidget], QDialog]) -> None:
+    """Register a custom edit dialog creator for a section type."""
+    _SECTION_EDIT_DIALOG_CREATORS[section_type] = creator
 
 
 def create_section_dialog(section_type: str, parent: Optional[QWidget] = None):
@@ -41,10 +51,38 @@ def create_section_dialog(section_type: str, parent: Optional[QWidget] = None):
         return dialog.created_section
     return None
 
+
+def edit_section_dialog(section: Section, parent: Optional[QWidget] = None):
+    """Open an edit dialog for the given section."""
+    section_type = section.section_name
+    if section_type in _SECTION_EDIT_DIALOG_CREATORS:
+        dialog = _SECTION_EDIT_DIALOG_CREATORS[section_type](section, parent)
+        if isinstance(dialog, QDialog):
+            if dialog.exec() == QDialog.Accepted:
+                return section
+            return None
+        return dialog
+
+    dialog = GenericSectionDialog(section_type, parent, existing_section=section)
+    if dialog.exec() == QDialog.Accepted:
+        return section
+    return None
+
 # Register built-in dialogs for specialized section types
 register_section_dialog("Aggregator", lambda parent: AggregatorSectionDialog("Aggregator", parent))
 register_section_dialog("Uniaxial", lambda parent: UniaxialSectionDialog("Uniaxial", parent))
 register_section_dialog("Fiber", lambda parent: create_fiber_section_dialog(parent))
+
+# Register built-in edit dialogs for specialized section types
+register_section_edit_dialog(
+    "Aggregator", lambda section, parent: AggregatorSectionDialog("Aggregator", parent, existing_section=section)
+)
+register_section_edit_dialog(
+    "Uniaxial", lambda section, parent: UniaxialSectionDialog("Uniaxial", parent, existing_section=section)
+)
+register_section_edit_dialog(
+    "Fiber", lambda section, parent: FiberSectionDialog(fiber_section=section, parent=parent)
+)
 
 
 class SectionManagerTab(QWidget):
@@ -209,8 +247,7 @@ class SectionManagerTab(QWidget):
 
     def open_section_edit_dialog(self, section):
         """Open dialog to edit an existing section"""
-        dialog = SectionEditDialog(section, self)
-        if dialog.exec() == QDialog.Accepted:
+        if edit_section_dialog(section, self):
             self.refresh_sections_list()
 
     def delete_section(self, tag):
@@ -236,12 +273,17 @@ class SectionManagerTab(QWidget):
 
 
 class GenericSectionDialog(QDialog):
-    """Default dialog used for creating simple section types."""
+    """Dialog used for creating or editing simple section types."""
 
-    def __init__(self, section_type: str, parent=None):
+    def __init__(self, section_type: str, parent=None, existing_section: Optional[Section] = None):
         super().__init__(parent)
-        self.setWindowTitle(f"Create {section_type} Section")
         self.section_type = section_type
+        self.section_class = SectionRegistry._section_types[section_type]
+        self.existing_section = existing_section
+        self.is_editing = existing_section is not None
+        self.setWindowTitle(
+            ("Edit" if self.is_editing else "Create") + f" {section_type} Section"
+        )
 
         # Main horizontal layout
         main_layout = QHBoxLayout(self)
@@ -250,13 +292,12 @@ class GenericSectionDialog(QDialog):
         left_widget = QWidget()
         left_layout = QVBoxLayout(left_widget)
 
-        # Get the section class
-        self.section_class = SectionRegistry._section_types[section_type]
-
         # User-specified Name
         name_group = QGroupBox("Section Information")
         name_layout = QFormLayout(name_group)
         self.user_name_input = QLineEdit()
+        if self.is_editing:
+            self.user_name_input.setText(self.existing_section.user_name)
         name_layout.addRow("Section Name:", self.user_name_input)
         left_layout.addWidget(name_group)
 
@@ -272,11 +313,17 @@ class GenericSectionDialog(QDialog):
         # Allow subclasses to customize parameter widgets
         self.create_parameter_inputs(params_layout, parameters, descriptions)
 
+        if self.is_editing and hasattr(self.existing_section, 'params'):
+            for param, input_field in self.param_inputs.items():
+                value = self.existing_section.params.get(param)
+                if value is not None:
+                    input_field.setText(str(value))
+
         left_layout.addWidget(params_group)
 
         # Buttons
         btn_layout = QHBoxLayout()
-        create_btn = QPushButton("Create Section")
+        create_btn = QPushButton("Save Section" if self.is_editing else "Create Section")
         create_btn.clicked.connect(self.create_section)
         cancel_btn = QPushButton("Cancel")
         cancel_btn.clicked.connect(self.reject)
@@ -472,7 +519,9 @@ class GenericSectionDialog(QDialog):
                 QMessageBox.warning(self, "Input Error", "Please enter a section name.")
                 return
 
-            if user_name in Section._names:
+            if (not self.is_editing and user_name in Section._names) or (
+                self.is_editing and user_name != self.existing_section.user_name and user_name in Section._names
+            ):
                 QMessageBox.warning(self, "Input Error", f"Section with name {user_name} already exists.")
                 return
 
@@ -482,11 +531,20 @@ class GenericSectionDialog(QDialog):
                 if value:
                     params[param] = value
 
-            self.created_section = SectionRegistry.create_section(
-                section_type=self.section_type,
-                user_name=user_name,
-                **params,
-            )
+            if self.is_editing:
+                if user_name != self.existing_section.user_name:
+                    Section._names.pop(self.existing_section.user_name)
+                    Section._names[user_name] = self.existing_section
+                    self.existing_section.user_name = user_name
+                if params:
+                    self.existing_section.update_values(params)
+                self.created_section = self.existing_section
+            else:
+                self.created_section = SectionRegistry.create_section(
+                    section_type=self.section_type,
+                    user_name=user_name,
+                    **params,
+                )
 
             self.accept()
 
@@ -497,7 +555,13 @@ class GenericSectionDialog(QDialog):
 
 
 class AggregatorSectionDialog(GenericSectionDialog):
-    """Dialog for creating Aggregator sections."""
+    """Dialog for creating or editing Aggregator sections."""
+
+    def __init__(self, section_type: str, parent=None, existing_section: Optional[Section] = None):
+        super().__init__(section_type, parent, existing_section=existing_section)
+        if self.is_editing:
+            self.aggregator_materials = dict(existing_section.materials)
+            self._update_materials_list()
 
     def create_parameter_inputs(self, layout, parameters, descriptions):
         self._create_aggregator_section_inputs(layout)
@@ -509,7 +573,9 @@ class AggregatorSectionDialog(GenericSectionDialog):
                 QMessageBox.warning(self, "Input Error", "Please enter a section name.")
                 return
 
-            if user_name in Section._names:
+            if (not self.is_editing and user_name in Section._names) or (
+                self.is_editing and user_name != self.existing_section.user_name and user_name in Section._names
+            ):
                 QMessageBox.warning(self, "Input Error", f"Section with name {user_name} already exists.")
                 return
 
@@ -517,11 +583,19 @@ class AggregatorSectionDialog(GenericSectionDialog):
                 QMessageBox.warning(self, "Input Error", "Please add at least one material to the aggregator.")
                 return
 
-            self.created_section = SectionRegistry.create_section(
-                section_type=self.section_type,
-                user_name=user_name,
-                materials=self.aggregator_materials,
-            )
+            if self.is_editing:
+                if user_name != self.existing_section.user_name:
+                    Section._names.pop(self.existing_section.user_name)
+                    Section._names[user_name] = self.existing_section
+                    self.existing_section.user_name = user_name
+                self.existing_section.update_values({"materials": self.aggregator_materials})
+                self.created_section = self.existing_section
+            else:
+                self.created_section = SectionRegistry.create_section(
+                    section_type=self.section_type,
+                    user_name=user_name,
+                    materials=self.aggregator_materials,
+                )
             self.accept()
 
         except ValueError as e:
@@ -531,7 +605,18 @@ class AggregatorSectionDialog(GenericSectionDialog):
 
 
 class UniaxialSectionDialog(GenericSectionDialog):
-    """Dialog for creating Uniaxial sections."""
+    """Dialog for creating or editing Uniaxial sections."""
+
+    def __init__(self, section_type: str, parent=None, existing_section: Optional[Section] = None):
+        super().__init__(section_type, parent, existing_section=existing_section)
+        if self.is_editing:
+            material = self.existing_section.params["material"]
+            response = self.existing_section.params["response_code"]
+            # Set selections after materials list is populated
+            index = self.material_combo.findData(material)
+            if index != -1:
+                self.material_combo.setCurrentIndex(index)
+            self.response_code_combo.setCurrentText(response)
 
     def create_parameter_inputs(self, layout, parameters, descriptions):
         self._create_uniaxial_section_inputs(layout)
@@ -543,7 +628,9 @@ class UniaxialSectionDialog(GenericSectionDialog):
                 QMessageBox.warning(self, "Input Error", "Please enter a section name.")
                 return
 
-            if user_name in Section._names:
+            if (not self.is_editing and user_name in Section._names) or (
+                self.is_editing and user_name != self.existing_section.user_name and user_name in Section._names
+            ):
                 QMessageBox.warning(self, "Input Error", f"Section with name {user_name} already exists.")
                 return
 
@@ -553,12 +640,20 @@ class UniaxialSectionDialog(GenericSectionDialog):
                 QMessageBox.warning(self, "Input Error", "Please select a material.")
                 return
 
-            self.created_section = SectionRegistry.create_section(
-                section_type=self.section_type,
-                user_name=user_name,
-                material=material,
-                response_code=response_code,
-            )
+            if self.is_editing:
+                if user_name != self.existing_section.user_name:
+                    Section._names.pop(self.existing_section.user_name)
+                    Section._names[user_name] = self.existing_section
+                    self.existing_section.user_name = user_name
+                self.existing_section.update_values({"material": material, "response_code": response_code})
+                self.created_section = self.existing_section
+            else:
+                self.created_section = SectionRegistry.create_section(
+                    section_type=self.section_type,
+                    user_name=user_name,
+                    material=material,
+                    response_code=response_code,
+                )
             self.accept()
 
         except ValueError as e:
@@ -707,7 +802,7 @@ if __name__ == "__main__":
     section.add_straight_layer(steel, 3, 0.0005, 0.12, -0.1, 0.12, 0.1)      # Right
     
 
-    section.add_fiber(0.0, 0.0, 0.0001, steel)  # Central fiber
+    section.add_fiber(0.0, 0.0, 0.0002, steel)  # Central fiber
 
     # Create and show the SectionManagerTab
     section_manager = SectionManagerTab()
