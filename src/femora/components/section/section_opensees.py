@@ -418,28 +418,28 @@ class RectangularPatch(PatchBase):
 
     def plot(self, ax: plt.Axes, material_colors: Dict[str, str], 
              show_patch_outline: bool = True, show_fiber_grid: bool = False) -> None:
-        """Plot rectangular patch"""
+        """Plot rectangular patch as tiles; show grid lines if requested"""
         color = material_colors.get(self.material.user_name, 'blue')
-        
+        # Draw patch outline if requested
         if show_patch_outline:
-            # Draw patch outline
             rect = Rectangle((self.y1, self.z1), self.y2 - self.y1, self.z2 - self.z1,
-                           linewidth=2, edgecolor=color, facecolor='none', alpha=0.8)
+                     linewidth=2, edgecolor=color, facecolor='none', alpha=0.8)
             ax.add_patch(rect)
-        
+
+        # Draw a single filled rectangle for the patch area (grouped fill)
+        ax.add_patch(Rectangle((self.y1, self.z1), self.y2 - self.y1, self.z2 - self.z1,
+                       facecolor=color, edgecolor='none', alpha=0.3))
+
+        # Draw grid lines if requested
         if show_fiber_grid:
-            # Show fiber locations
-            y_coords = np.linspace(self.y1, self.y2, self.num_subdiv_y + 1)
-            z_coords = np.linspace(self.z1, self.z2, self.num_subdiv_z + 1)
-            
-            # Calculate fiber centers
-            y_centers = (y_coords[:-1] + y_coords[1:]) / 2
-            z_centers = (z_coords[:-1] + z_coords[1:]) / 2
-            
-            # Plot fiber centers
-            for y_center in y_centers:
-                for z_center in z_centers:
-                    ax.plot(y_center, z_center, 'o', color=color, markersize=3, alpha=0.6)
+            y_edges = np.linspace(self.y1, self.y2, self.num_subdiv_y + 1)
+            z_edges = np.linspace(self.z1, self.z2, self.num_subdiv_z + 1)
+            # Vertical lines
+            for y in y_edges:
+                ax.plot([y, y], [self.z1, self.z2], color="white", linewidth=0.8, alpha=0.7)
+            # Horizontal lines
+            for z in z_edges:
+                ax.plot([self.y1, self.y2], [z, z], color="white", linewidth=0.8, alpha=0.7)
     
     def validate(self) -> None:
         """Validate rectangular patch parameters"""
@@ -510,30 +510,35 @@ class QuadrilateralPatch(PatchBase):
         if show_patch_outline:
             # Draw patch outline
             quad = Polygon(self.vertices, linewidth=2, edgecolor=color, 
-                          facecolor='none', alpha=0.8, closed=True)
+                          facecolor=color , alpha=0.8, closed=True)
             ax.add_patch(quad)
         
         if show_fiber_grid:
-            # Approximate fiber locations using bilinear interpolation
-            xi = np.linspace(0, 1, self.num_subdiv_ij + 1)
-            eta = np.linspace(0, 1, self.num_subdiv_jk + 1)
+            # Draw fiber grid
+            y_s = np.array([v[0] for v in self.vertices])
+            z_s = np.array([v[1] for v in self.vertices])
+
+            # find the for edges 
+            edge1y = np.linspace(y_s[0], y_s[1], self.num_subdiv_ij + 1)[1:-1:]
+            edge2y = np.linspace(y_s[1], y_s[2], self.num_subdiv_jk + 1)[1:-1:]
+            edge3y = np.linspace(y_s[2], y_s[3], self.num_subdiv_ij + 1)[1:-1:][::-1]  # reverse for correct order
+            edge4y = np.linspace(y_s[3], y_s[0], self.num_subdiv_jk + 1)[1:-1:][::-1]  # reverse for correct order
+
+            edge1z = np.linspace(z_s[0], z_s[1], self.num_subdiv_ij + 1)[1:-1:]
+            edge2z = np.linspace(z_s[1], z_s[2], self.num_subdiv_jk + 1)[1:-1:]
+            edge3z = np.linspace(z_s[2], z_s[3], self.num_subdiv_ij + 1)[1:-1:][::-1]  # reverse for correct order
+            edge4z = np.linspace(z_s[3], z_s[0], self.num_subdiv_jk + 1)[1:-1:][::-1]  # reverse for correct order
+
+            # now connect the points to form a grid which are infront of each other
+            for i in range(self.num_subdiv_ij -1):
+                ax.plot([edge1y[i], edge3y[i]], [edge1z[i], edge3z[i]], color="white", linewidth=0.8, alpha=0.7)
+            for i in range(self.num_subdiv_jk -1):
+                ax.plot([edge2y[i], edge4y[i]], [edge2z[i], edge4z[i]], color="white", linewidth=0.8, alpha=0.7)
+
             
-            # Calculate fiber centers
-            xi_centers = (xi[:-1] + xi[1:]) / 2
-            eta_centers = (eta[:-1] + eta[1:]) / 2
             
-            for xi_c in xi_centers:
-                for eta_c in eta_centers:
-                    # Bilinear interpolation
-                    y = ((1-xi_c)*(1-eta_c)*self.vertices[0][0] + 
-                         xi_c*(1-eta_c)*self.vertices[1][0] +
-                         xi_c*eta_c*self.vertices[2][0] + 
-                         (1-xi_c)*eta_c*self.vertices[3][0])
-                    z = ((1-xi_c)*(1-eta_c)*self.vertices[0][1] + 
-                         xi_c*(1-eta_c)*self.vertices[1][1] +
-                         xi_c*eta_c*self.vertices[2][1] + 
-                         (1-xi_c)*eta_c*self.vertices[3][1])
-                    ax.plot(y, z, 'o', color=color, markersize=3, alpha=0.6)
+
+
     
     def validate(self) -> None:
         """Validate quadrilateral patch parameters"""
@@ -612,42 +617,57 @@ class CircularPatch(PatchBase):
             # Draw patch outline
             if self.is_full_circle():
                 # Full circles
-                outer_circle = Circle((self.y_center, self.z_center), self.ext_rad,
-                                    linewidth=2, edgecolor=color, facecolor='none', alpha=0.8)
-                ax.add_patch(outer_circle)
-                
-                if not self.is_solid():
-                    inner_circle = Circle((self.y_center, self.z_center), self.int_rad,
-                                        linewidth=2, edgecolor=color, facecolor='none', alpha=0.8)
-                    ax.add_patch(inner_circle)
+                outer_wedge = Wedge((self.y_center, self.z_center), self.ext_rad,
+                                  self.start_ang, self.end_ang, width= self.ext_rad - self.int_rad,
+                                  linewidth=2, edgecolor=color, facecolor=color, alpha=0.8)
+                ax.add_patch(outer_wedge)
             else:
                 # Arc segments
                 outer_wedge = Wedge((self.y_center, self.z_center), self.ext_rad,
-                                  self.start_ang, self.end_ang,
-                                  linewidth=2, edgecolor=color, facecolor='none', alpha=0.8)
+                                  self.start_ang, self.end_ang, width= self.ext_rad - self.int_rad,
+                                  linewidth=2, edgecolor=color, facecolor=color, alpha=0.8)
                 ax.add_patch(outer_wedge)
-                
-                if not self.is_solid():
-                    inner_wedge = Wedge((self.y_center, self.z_center), self.int_rad,
-                                      self.start_ang, self.end_ang,
-                                      linewidth=2, edgecolor=color, facecolor='none', alpha=0.8)
-                    ax.add_patch(inner_wedge)
         
         if show_fiber_grid:
             # Show fiber locations in polar coordinates
             angles = np.linspace(np.radians(self.start_ang), np.radians(self.end_ang), 
                                self.num_subdiv_circ + 1)
-            radii = np.linspace(self.int_rad, self.ext_rad, self.num_subdiv_rad + 1)
             
-            # Calculate fiber centers
-            angle_centers = (angles[:-1] + angles[1:]) / 2
-            radii_centers = (radii[:-1] + radii[1:]) / 2
-            
-            for angle in angle_centers:
-                for radius in radii_centers:
-                    y = self.y_center + radius * np.cos(angle)
-                    z = self.z_center + radius * np.sin(angle)
-                    ax.plot(y, z, 'o', color=color, markersize=3, alpha=0.6)
+            yinner = self.int_rad * np.cos(angles) + self.y_center
+            zinner = self.int_rad * np.sin(angles) + self.z_center
+            youter = self.ext_rad * np.cos(angles) + self.y_center
+            zouter = self.ext_rad * np.sin(angles) + self.z_center
+
+
+            # now conncet the inner and outer points
+            if self.is_solid():
+                # Solid circle, connect all points
+                yinner = self.y_center
+                zinner = self.z_center
+                for i in range(len(angles) - 1):
+                    ax.plot([yinner, youter[i]], [zinner, zouter[i]], 
+                            color="white", linewidth=0.5, alpha=0.5)
+                    ax.plot([yinner, youter[i+1]], [zinner, zouter[i+1]], 
+                            color="white", linewidth=0.5, alpha=0.5)
+
+            else:
+                # Annular patch, connect inner and outer points
+                for i in range(len(yinner) - 1):
+                    ax.plot([yinner[i], youter[i]], [zinner[i], zouter[i]], 
+                            color="white", linewidth=0.5, alpha=0.5)
+                    ax.plot([yinner[i+1], youter[i+1]], [zinner[i+1], zouter[i+1]], 
+                            color="white", linewidth=0.5, alpha=0.5) 
+
+
+                # add white circles with diferent raduis
+            for r in np.linspace(self.int_rad, self.ext_rad, self.num_subdiv_rad):
+                if r < 1e-12:
+                    continue  # Skip if radius is effectively zero
+                wedge = Wedge((self.y_center, self.z_center), r,
+                                    self.start_ang, self.end_ang, width=0.00,
+                                    linewidth=0.5, edgecolor="white", facecolor='none', alpha=1.0)
+                ax.add_patch(wedge)
+        
 
     
     def validate(self) -> None:
@@ -1502,17 +1522,19 @@ def create_example_fiber_section():
     section = FiberSection("Example_Section", GJ=1000000)
     
     # Add rectangular concrete patch
-    section.add_rectangular_patch(concrete, 10, 10, -0.15, -0.25, 0.15, 0.25)
+    # section.add_rectangular_patch(concrete, 20, 20, -0.15, -0.25, 0.15, 0.25)
+    # section.add_quadrilateral_patch(concrete, 10, 10, [(0,0), (0, 1), (-2, 2), (-2, 0)])
+    section.add_circular_patch(concrete, 20, 10, 0.0, 0.0, 0.1 ,0.25, start_ang=0, end_ang=270)
     
     # Add steel reinforcement layers
-    section.add_straight_layer(steel, 4, 0.0005, -0.12, -0.22, 0.12, -0.22)  # Bottom
-    section.add_straight_layer(steel, 4, 0.0005, -0.12, 0.22, 0.12, 0.22)    # Top
-    section.add_straight_layer(steel, 3, 0.0005, -0.12, -0.1, -0.12, 0.1)    # Left
-    section.add_straight_layer(steel, 3, 0.0005, 0.12, -0.1, 0.12, 0.1)      # Right
+    # section.add_straight_layer(steel, 4, 0.0005, -0.12, -0.22, 0.12, -0.22)  # Bottom
+    # section.add_straight_layer(steel, 4, 0.0005, -0.12, 0.22, 0.12, 0.22)    # Top
+    # section.add_straight_layer(steel, 3, 0.0005, -0.12, -0.1, -0.12, 0.1)    # Left
+    # section.add_straight_layer(steel, 3, 0.0005, 0.12, -0.1, 0.12, 0.1)      # Right
     
 
-    section.add_fiber(0.0, 0.0, 0.0001, steel)  # Central fiber
-    section.add_circular_layer(bar, 8, 0.0001, 0.0, 0.0, 0.15, start_ang=0)  
+    # section.add_fiber(0.0, 0.0, 0.0001, steel)  # Central fiber
+    # section.add_circular_layer(bar, 8, 0.0001, 0.0, 0.0, 0.15, start_ang=0)  
     return section
 
 
