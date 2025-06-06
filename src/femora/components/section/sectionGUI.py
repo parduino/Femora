@@ -16,8 +16,10 @@ from femora.components.section.section_opensees import *
 # Import separate dialog files for each section type
 try:
     from .elastic_section_gui import ElasticSectionCreationDialog, ElasticSectionEditDialog
+    from .wfsection2d_gui import WFSection2dCreationDialog, WFSection2dEditDialog
 except ImportError:
     from femora.components.section.elastic_section_gui import ElasticSectionCreationDialog, ElasticSectionEditDialog
+    from femora.components.section.wfsection2d_gui import WFSection2dCreationDialog, WFSection2dEditDialog
 
 
 class SectionManagerTab(QWidget):
@@ -85,16 +87,20 @@ class SectionManagerTab(QWidget):
         button_layout.addWidget(clear_all_btn)
         
         layout.addLayout(button_layout)
-        
-        # Initial refresh
+          # Initial refresh
         self.refresh_sections_list()
 
     def open_section_creation_dialog(self):
-        """Open the appropriate creation dialog based on section type"""
+        """
+        Open the appropriate creation dialog based on section type
+
+        """
         section_type = self.section_type_combo.currentText()
         
         if section_type == "Elastic":
             dialog = ElasticSectionCreationDialog(self)
+        elif section_type == "WFSection2d":
+            dialog = WFSection2dCreationDialog(self)
         elif section_type == "Fiber":
             QMessageBox.information(self, "Not Available", "Fiber section GUI will be implemented in the future.")
             return
@@ -113,11 +119,15 @@ class SectionManagerTab(QWidget):
             self.refresh_sections_list()
 
     def open_section_edit_dialog(self, section):
-        """Open the appropriate edit dialog based on section type"""
+        """
+        Open the appropriate edit dialog based on section type
+        """
         section_type = section.section_name
         
         if section_type == "Elastic":
             dialog = ElasticSectionEditDialog(section, self)
+        elif section_type == "WFSection2d":
+            dialog = WFSection2dEditDialog(section, self)
         elif section_type == "Fiber":
             QMessageBox.information(self, "Not Available", "Fiber section editing will be implemented in the future.")
             return
@@ -292,7 +302,7 @@ class SectionManagerTab(QWidget):
 if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
     import sys
-    from femora.components.Material.materialsOpenSees import ElasticUniaxialMaterial
+    from femora.components.Material.materialsOpenSees import ElasticUniaxialMaterial, ElasticIsotropicMaterial
     
     # Create the Qt Application
     app = QApplication(sys.argv)
@@ -300,6 +310,8 @@ if __name__ == "__main__":
     # Create some test materials (if needed for future section types)
     steel = ElasticUniaxialMaterial(user_name="Steel", E=200000, eta=0.0)
     concrete = ElasticUniaxialMaterial(user_name="Concrete", E=30000, eta=0.0)
+
+    steelND = ElasticIsotropicMaterial(user_name="SteelND Isotropic", E=200000, nu=0.3)
     
     # Create and show the SectionManagerTab
     section_manager_tab = SectionManagerTab()
