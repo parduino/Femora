@@ -1,17 +1,16 @@
 """
-Proposed Section Base Architecture for FEMORA
-Following the established patterns in the codebase
+Enhanced Section Base Architecture for FEMORA with Material Resolution
+Following the established patterns in the codebase with improved material handling
 """
 
 from abc import ABC, abstractmethod
 from typing import List, Dict, Type, Optional, Union, Any
-from femora.components.Material.materialBase import Material
+from femora.components.Material.materialBase import Material, MaterialManager
 
 
 class Section(ABC):
     """
-    Base abstract class for all sections with sequential tagging
-    Similar to Material and Element base classes
+    Base abstract class for all sections with sequential tagging and material handling
     """
     _sections = {}      # Class-level dictionary to track all sections
     _sec_tags = {}      # Class-level dictionary to track section tags  
@@ -38,10 +37,89 @@ class Section(ABC):
         self.section_name = section_name
         self.user_name = user_name
         
+        # Initialize material as None by default (sections without materials)
+        self.material = None
+        
         # Register this section
         self._sections[self.tag] = self
         self._sec_tags[self] = self.tag
         self._names[user_name] = self
+
+    @staticmethod
+    def resolve_material(material_input: Union[int, str, Material, None]) -> Optional[Material]:
+        """
+        Resolve material from different input types
+        
+        Args:
+            material_input: Can be:
+                - int: material tag
+                - str: material name
+                - Material: material object
+                - None: no material required
+                
+        Returns:
+            Material object or None
+            
+        Raises:
+            ValueError: If material cannot be found or is invalid type
+        """
+        if material_input is None:
+            return None
+            
+        if isinstance(material_input, Material):
+            return material_input
+            
+        if isinstance(material_input, (int, str)):
+            try:
+                return MaterialManager.get_material(material_input)
+            except (KeyError, TypeError) as e:
+                raise ValueError(f"Material not found: {material_input}. Error: {str(e)}")
+                
+        raise ValueError(f"Invalid material input type: {type(material_input)}. "
+                        f"Expected Material object, int (tag), str (name), or None")
+
+    @staticmethod
+    def resolve_materials_dict(materials_input: Dict[str, Union[int, str, Material]]) -> Dict[str, Material]:
+        """
+        Resolve a dictionary of materials from different input types
+        
+        Args:
+            materials_input: Dictionary mapping keys to material inputs
+            
+        Returns:
+            Dictionary mapping keys to Material objects
+        """
+        resolved_materials = {}
+        for key, material_input in materials_input.items():
+            resolved_materials[key] = Section.resolve_material(material_input)
+        return resolved_materials
+
+    def assign_material(self, material_input: Union[int, str, Material, None]) -> None:
+        """
+        Assign a material to this section
+        
+        Args:
+            material_input: Material to assign (tag, name, object, or None)
+        """
+        self.material = self.resolve_material(material_input)
+
+    def get_material(self) -> Optional[Material]:
+        """
+        Get the material assigned to this section
+        
+        Returns:
+            Material object or None if no material assigned
+        """
+        return self.material
+
+    def has_material(self) -> bool:
+        """
+        Check if this section has a material assigned
+        
+        Returns:
+            True if material is assigned, False otherwise
+        """
+        return self.material is not None
 
     @classmethod
     def delete_section(cls, tag: int) -> None:
@@ -139,7 +217,15 @@ class Section(ABC):
 
     def get_materials(self) -> List[Material]:
         """Get all materials used by this section (for dependency tracking)"""
+        if self.material is not None:
+            return [self.material]
         return []
+
+    def __str__(self) -> str:
+        """String representation of the section"""
+        material_info = f", Material: {self.material.user_name}" if self.material else ", No Material"
+        return (f"Section '{self.user_name}' (Tag: {self.tag}, Type: {self.section_name}"
+                f"{material_info})")
 
 
 class SectionRegistry:
