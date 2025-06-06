@@ -112,6 +112,12 @@ class Section(ABC):
 
     @classmethod
     @abstractmethod
+    def get_help_text(cls) -> str:
+        """Get the formatted help text for this section type for GUI display"""
+        pass
+
+    @classmethod
+    @abstractmethod
     def validate_section_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
         """Validate section input parameters"""
         pass
