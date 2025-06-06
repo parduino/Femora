@@ -1546,53 +1546,177 @@ class FiberSection(Section):
                 f"  Torsional stiffness: {'Yes' if summary['has_torsional_stiffness'] else 'No'}")
 
 
-# Update the section registry
-SectionRegistry.register_section_type('Fiber', FiberSection)
 
-# Register section types
+
+
+
+"""
+Wide Flange Section implementation for OpenSees
+Creates a fiber section representation of a wide flange shape
+Based on WFSection2d OpenSees command
+"""
+
+class WideFlangeFiberSection(Section):
+    """
+    Wide Flange Section implementation for OpenSees
+    Creates a fiber section representation of a wide flange shape
+    Based on WFSection2d OpenSees command
+    """
+    
+    def __init__(self, user_name: str = "Unnamed", **kwargs):
+        kwargs = self.validate_section_parameters(**kwargs)
+        super().__init__('section', 'WFSection2d', user_name)
+        self.params = kwargs if kwargs else {}
+
+    def to_tcl(self) -> str:
+        """Generate the OpenSees TCL command for WFSection2d"""
+        param_order = self.get_parameters()
+        params_str = " ".join(str(self.params[param]) for param in param_order if param in self.params)
+        return f"section WFSection2d {self.tag} {params_str}; # {self.user_name}"
+
+    @classmethod
+    def get_parameters(cls) -> List[str]:
+        """Parameters for WFSection2d section"""
+        return ["matTag", "d", "tw", "bf", "tf", "Nflweb", "Nflflange"]
+
+    @classmethod
+    def get_description(cls) -> List[str]:
+        """Parameter descriptions for WFSection2d section"""
+        return [
+            "Material tag",
+            "Section depth",
+            "Web thickness",
+            "Flange width",
+            "Flange thickness",
+            "Number of fibers in the web",
+            "Number of fibers in the flange"
+        ]
+
+    @classmethod
+    def get_help_text(cls) -> str:
+        """Get the formatted help text for WFSection2d section"""
+        return """
+        <b>Wide Flange Section (WFSection2d)</b><br>
+        Creates a fiber section representation of a wide flange shape.<br><br>
+        
+        <b>Parameters:</b><br>
+        • <b>Material Tag:</b> Material identifier for the section<br>
+        • <b>Section Depth (d):</b> Overall depth of the section<br>
+        • <b>Web Thickness (tw):</b> Thickness of the web<br>
+        • <b>Flange Width (bf):</b> Width of the flanges<br>
+        • <b>Flange Thickness (tf):</b> Thickness of the flanges<br>
+        • <b>Web Fibers (Nflweb):</b> Number of fibers through web thickness<br>
+        • <b>Flange Fibers (Nflflange):</b> Number of fibers through flange thickness<br><br>
+        
+        This section automatically creates a fiber discretization of a wide flange shape
+        using the specified material and fiber counts.
+        """
+
+    @classmethod
+    def validate_section_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
+        """Validate parameters for WFSection2d section"""
+        validated_params = {}
+        
+        # Material tag (required)
+        if 'matTag' not in kwargs:
+            raise ValueError("matTag is required for WFSection2d")
+        try:
+            validated_params['matTag'] = int(kwargs['matTag'])
+            if validated_params['matTag'] <= 0:
+                raise ValueError("matTag must be positive")
+        except (ValueError, TypeError):
+            raise ValueError("matTag must be a positive integer")
+        
+        # Section depth (required)
+        if 'd' not in kwargs:
+            raise ValueError("d (section depth) is required for WFSection2d")
+        try:
+            validated_params['d'] = float(kwargs['d'])
+            if validated_params['d'] <= 0:
+                raise ValueError("Section depth must be positive")
+        except (ValueError, TypeError):
+            raise ValueError("Section depth must be a positive number")
+        
+        # Web thickness (required)
+        if 'tw' not in kwargs:
+            raise ValueError("tw (web thickness) is required for WFSection2d")
+        try:
+            validated_params['tw'] = float(kwargs['tw'])
+            if validated_params['tw'] <= 0:
+                raise ValueError("Web thickness must be positive")
+        except (ValueError, TypeError):
+            raise ValueError("Web thickness must be a positive number")
+        
+        # Flange width (required)
+        if 'bf' not in kwargs:
+            raise ValueError("bf (flange width) is required for WFSection2d")
+        try:
+            validated_params['bf'] = float(kwargs['bf'])
+            if validated_params['bf'] <= 0:
+                raise ValueError("Flange width must be positive")
+        except (ValueError, TypeError):
+            raise ValueError("Flange width must be a positive number")
+        
+        # Flange thickness (required)
+        if 'tf' not in kwargs:
+            raise ValueError("tf (flange thickness) is required for WFSection2d")
+        try:
+            validated_params['tf'] = float(kwargs['tf'])
+            if validated_params['tf'] <= 0:
+                raise ValueError("Flange thickness must be positive")
+        except (ValueError, TypeError):
+            raise ValueError("Flange thickness must be a positive number")
+        
+        # Number of fibers in web (required)
+        if 'Nflweb' not in kwargs:
+            raise ValueError("Nflweb (number of fibers in web) is required for WFSection2d")
+        try:
+            validated_params['Nflweb'] = int(kwargs['Nflweb'])
+            if validated_params['Nflweb'] <= 0:
+                raise ValueError("Number of fibers in web must be positive")
+        except (ValueError, TypeError):
+            raise ValueError("Number of fibers in web must be a positive integer")
+        
+        # Number of fibers in flange (required)
+        if 'Nflflange' not in kwargs:
+            raise ValueError("Nflflange (number of fibers in flange) is required for WFSection2d")
+        try:
+            validated_params['Nflflange'] = int(kwargs['Nflflange'])
+            if validated_params['Nflflange'] <= 0:
+                raise ValueError("Number of fibers in flange must be positive")
+        except (ValueError, TypeError):
+            raise ValueError("Number of fibers in flange must be a positive integer")
+        
+        # Additional validation - geometric constraints
+        if validated_params['tf'] >= validated_params['d'] / 2:
+            raise ValueError("Flange thickness must be less than half the section depth")
+        
+        if validated_params['tw'] >= validated_params['bf']:
+            raise ValueError("Web thickness should be less than flange width")
+        
+        return validated_params
+
+    def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
+        """Retrieve values for specific parameters"""
+        return {key: self.params.get(key) for key in keys}
+
+    def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
+        """Update section parameters"""
+        self.params.clear()
+        validated_params = self.validate_section_parameters(**values)
+        self.params.update(validated_params)
+
+    def get_materials(self) -> List[Material]:
+        """Get all materials used by this section (for dependency tracking)"""
+        # This section references a material by tag, but we don't have the actual Material object
+        # Return empty list since we only have the tag reference
+        return []
+    
+
+    
+# Register all section types
 SectionRegistry.register_section_type('Elastic', ElasticSection)
 SectionRegistry.register_section_type('Fiber', FiberSection) 
 SectionRegistry.register_section_type('Aggregator', AggregatorSection)
 SectionRegistry.register_section_type('Uniaxial', UniaxialSection)
-
-
-def create_example_fiber_section():
-    """
-    Create an example fiber section for demonstration
-    """
-    # This would typically use actual Material objects from your system
-    # For demonstration, assuming materials exist
-    from femora.components.Material.materialsOpenSees import ElasticUniaxialMaterial
-    
-    # Create materials
-    steel = ElasticUniaxialMaterial(user_name="Steel", E=200000, eta=0.0)
-    concrete = ElasticUniaxialMaterial(user_name="Concrete", E=30000, eta=0.0)
-    bar = ElasticUniaxialMaterial(user_name="Reinforcement_Bar", E=200000, eta=0.0)
-    
-    # Create fiber section
-    section = FiberSection("Example_Section", GJ=1000000)
-    
-    # Add rectangular concrete patch
-    # section.add_rectangular_patch(concrete, 20, 20, -0.15, -0.25, 0.15, 0.25)
-    # section.add_quadrilateral_patch(concrete, 10, 10, [(0,0), (0, 1), (-2, 2), (-2, 0)])
-    section.add_circular_patch(concrete, 20, 10, 0.0, 0.0, 0.1 ,0.25, start_ang=0, end_ang=270)
-    
-    # Add steel reinforcement layers
-    # section.add_straight_layer(steel, 4, 0.0005, -0.12, -0.22, 0.12, -0.22)  # Bottom
-    # section.add_straight_layer(steel, 4, 0.0005, -0.12, 0.22, 0.12, 0.22)    # Top
-    # section.add_straight_layer(steel, 3, 0.0005, -0.12, -0.1, -0.12, 0.1)    # Left
-    # section.add_straight_layer(steel, 3, 0.0005, 0.12, -0.1, 0.12, 0.1)      # Right
-    
-
-    # section.add_fiber(0.0, 0.0, 0.0001, steel)  # Central fiber
-    # section.add_circular_layer(bar, 8, 0.0001, 0.0, 0.0, 0.15, start_ang=0)  
-    return section
-
-
-if __name__ == "__main__":
-    # Example usage
-    section = create_example_fiber_section()
-    
-    # Plot the section
-    fig = section.plot(title="Example Reinforced Concrete Section")
-    plt.show()
+SectionRegistry.register_section_type('WFSection2d', WideFlangeFiberSection)
