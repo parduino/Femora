@@ -597,6 +597,712 @@ class StraightLayer(LayerBase):
         return "Straight"
 
 
+class WFSection2d(Section):
+    """
+    Wide-flange section for 2D problems using fiber discretization
+    Uses a single uniaxial material for the entire section
+    """
+    
+    def __init__(self, user_name: str = "Unnamed", 
+                 material: Union[int, str, Material] = None, **kwargs):
+        kwargs = self.validate_section_parameters(**kwargs)
+        super().__init__('section', 'WFSection2d', user_name)
+        
+        # Resolve and store material
+        if material is None:
+            raise ValueError("WFSection2d requires a material")
+        self.material = self.resolve_material(material)
+        
+        self.params = kwargs if kwargs else {}
+
+    def to_tcl(self) -> str:
+        """Generate the OpenSees TCL command for WFSection2d"""
+        param_order = self.get_parameters()[:-1]  # Exclude 'material' from params
+        params_str = " ".join(str(self.params[param]) for param in param_order if param in self.params)
+        return f"section WFSection2d {self.tag} {params_str} {self.material.tag}; # {self.user_name}"
+
+    @classmethod
+    def get_parameters(cls) -> List[str]:
+        """Parameters for WFSection2d"""
+        return ["d", "tw", "bf", "tf", "Nflweb", "Nflflange", "material"]
+
+    @classmethod
+    def get_description(cls) -> List[str]:
+        """Parameter descriptions for WFSection2d"""
+        return [
+            "Depth of the section",
+            "Web thickness",
+            "Flange width", 
+            "Flange thickness",
+            "Number of fibers in the web",
+            "Number of fibers in each flange",
+            "Uniaxial material (tag, name, or object)"
+        ]
+
+    @classmethod
+    def get_help_text(cls) -> str:
+        """Get the formatted help text for WFSection2d"""
+        return """
+        <b>WF Section 2D</b><br>
+        Wide-flange section for 2D problems using fiber discretization.<br><br>
+        <b>Required Parameters:</b><br>
+        • d: Depth of the section<br>
+        • tw: Web thickness<br>
+        • bf: Flange width<br>
+        • tf: Flange thickness<br>
+        • Nflweb: Number of fibers in web<br>
+        • Nflflange: Number of fibers in each flange<br>
+        • material: UniaxialMaterial for all fibers<br><br>
+        <b>Materials:</b> Accepts UniaxialMaterial objects, tags, or names
+        """
+
+    @classmethod
+    def validate_section_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
+        """Validate parameters for WFSection2d"""
+        required_params = ['d', 'tw', 'bf', 'tf', 'Nflweb', 'Nflflange']
+        validated_params = {}
+        
+        # Check required parameters
+        for param in required_params:
+            if param not in kwargs:
+                raise ValueError(f"WFSection2d requires the '{param}' parameter")
+            
+            if param in ['Nflweb', 'Nflflange']:
+                # Integer parameters
+                try:
+                    value = int(kwargs[param])
+                    if value <= 0:
+                        raise ValueError(f"'{param}' must be a positive integer")
+                    validated_params[param] = value
+                except (ValueError, TypeError):
+                    raise ValueError(f"Invalid value for '{param}'. Must be a positive integer")
+            else:
+                # Float parameters
+                try:
+                    value = float(kwargs[param])
+                    if value <= 0:
+                        raise ValueError(f"'{param}' must be positive")
+                    validated_params[param] = value
+                except (ValueError, TypeError):
+                    raise ValueError(f"Invalid value for '{param}'. Must be a positive number")
+        
+        return validated_params
+
+    def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
+        """Retrieve values for specific parameters"""
+        values = {}
+        for key in keys:
+            if key == 'material':
+                values[key] = self.material.user_name if self.material else "None"
+            else:
+                values[key] = self.params.get(key)
+        return values
+
+    def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
+        """Update section parameters"""
+        if 'material' in values:
+            self.material = self.resolve_material(values['material'])
+            del values['material']
+        
+        self.params.clear()
+        validated_params = self.validate_section_parameters(**values)
+        self.params.update(validated_params)
+
+    def get_materials(self) -> List[Material]:
+        """Get all materials used by this section"""
+        return [self.material] if self.material else []
+
+
+class PlateFiberSection(Section):
+    """
+    Plate fiber section for shell elements with plane-stress material models
+    Uses NDMaterial for fiber-discretized behavior through plate thickness
+    """
+    
+    def __init__(self, user_name: str = "Unnamed", 
+                 material: Union[int, str, Material] = None, **kwargs):
+        super().__init__('section', 'PlateFiber', user_name)
+        
+        # Resolve and store material
+        if material is None:
+            raise ValueError("PlateFiberSection requires a material")
+        self.material = self.resolve_material(material)
+        
+        # Validate that material is NDMaterial (plane stress compatible)
+        if self.material and hasattr(self.material, 'material_type'):
+            if self.material.material_type != 'nDMaterial':
+                raise ValueError("PlateFiberSection requires an nDMaterial for plane stress behavior")
+        
+        self.params = kwargs if kwargs else {}
+
+    def to_tcl(self) -> str:
+        """Generate the OpenSees TCL command for PlateFiber section"""
+        return f"section PlateFiber {self.tag} {self.material.tag}; # {self.user_name}"
+
+    @classmethod
+    def get_parameters(cls) -> List[str]:
+        """Parameters for PlateFiber section"""
+        return ["material"]
+
+    @classmethod
+    def get_description(cls) -> List[str]:
+        """Parameter descriptions for PlateFiber section"""
+        return ["NDMaterial for plane stress behavior (tag, name, or object)"]
+
+    @classmethod
+    def get_help_text(cls) -> str:
+        """Get the formatted help text for PlateFiber section"""
+        return """
+        <b>Plate Fiber Section</b><br>
+        Used with shell elements for fiber-discretized behavior through plate thickness.<br><br>
+        <b>Required Parameters:</b><br>
+        • material: NDMaterial compatible with plane stress<br><br>
+        <b>Materials:</b> Accepts NDMaterial objects, tags, or names<br>
+        <b>Note:</b> Material must be compatible with plane stress conditions
+        """
+
+    @classmethod
+    def validate_section_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
+        """Validate parameters for PlateFiber section"""
+        # No additional parameters to validate beyond material
+        return {}
+
+    def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
+        """Retrieve values for specific parameters"""
+        values = {}
+        if 'material' in keys:
+            values['material'] = self.material.user_name if self.material else "None"
+        return values
+
+    def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
+        """Update section parameters"""
+        if 'material' in values:
+            self.material = self.resolve_material(values['material'])
+
+    def get_materials(self) -> List[Material]:
+        """Get all materials used by this section"""
+        return [self.material] if self.material else []
+
+
+class ElasticMembranePlateSection(Section):
+    """
+    Elastic section for membrane-plate behavior in shell elements
+    Uses built-in linear elastic properties - no external materials required
+    """
+    
+    def __init__(self, user_name: str = "Unnamed", **kwargs):
+        kwargs = self.validate_section_parameters(**kwargs)
+        super().__init__('section', 'ElasticMembranePlateSection', user_name)
+        self.params = kwargs if kwargs else {}
+        # No external materials required
+        self.material = None
+
+    def to_tcl(self) -> str:
+        """Generate the OpenSees TCL command for ElasticMembranePlateSection"""
+        param_order = self.get_parameters()
+        params_str = " ".join(str(self.params[param]) for param in param_order if param in self.params)
+        return f"section ElasticMembranePlateSection {self.tag} {params_str}; # {self.user_name}"
+
+    @classmethod
+    def get_parameters(cls) -> List[str]:
+        """Parameters for ElasticMembranePlateSection"""
+        return ["E", "nu", "h", "rho"]
+
+    @classmethod
+    def get_description(cls) -> List[str]:
+        """Parameter descriptions for ElasticMembranePlateSection"""
+        return [
+            "Young's modulus",
+            "Poisson's ratio",
+            "Plate thickness", 
+            "Mass density"
+        ]
+
+    @classmethod
+    def get_help_text(cls) -> str:
+        """Get the formatted help text for ElasticMembranePlateSection"""
+        return """
+        <b>Elastic Membrane Plate Section</b><br>
+        Elastic section for membrane-plate behavior in shell elements.<br><br>
+        <b>Required Parameters:</b><br>
+        • E: Young's modulus<br>
+        • nu: Poisson's ratio<br>
+        • h: Plate thickness<br>
+        • rho: Mass density<br><br>
+        <b>Note:</b> This section type does not require external materials.
+        """
+
+    @classmethod
+    def validate_section_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
+        """Validate parameters for ElasticMembranePlateSection"""
+        required_params = ['E', 'nu', 'h', 'rho']
+        validated_params = {}
+        
+        for param in required_params:
+            if param not in kwargs:
+                raise ValueError(f"ElasticMembranePlateSection requires the '{param}' parameter")
+            
+            try:
+                value = float(kwargs[param])
+                
+                # Parameter-specific validations
+                if param == 'E' and value <= 0:
+                    raise ValueError("Young's modulus 'E' must be positive")
+                elif param == 'nu' and not (0 <= value < 0.5):
+                    raise ValueError("Poisson's ratio 'nu' must be in range [0, 0.5)")
+                elif param == 'h' and value <= 0:
+                    raise ValueError("Plate thickness 'h' must be positive")
+                elif param == 'rho' and value < 0:
+                    raise ValueError("Mass density 'rho' must be non-negative")
+                    
+                validated_params[param] = value
+            except (ValueError, TypeError):
+                raise ValueError(f"Invalid value for '{param}'. Must be a number")
+        
+        return validated_params
+
+    def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
+        """Retrieve values for specific parameters"""
+        return {key: self.params.get(key) for key in keys}
+
+    def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
+        """Update section parameters"""
+        self.params.clear()
+        validated_params = self.validate_section_parameters(**values)
+        self.params.update(validated_params)
+
+    def get_materials(self) -> List[Material]:
+        """Elastic membrane plate sections don't use external materials"""
+        return []
+
+
+class RCSection(Section):
+    """
+    Specialized reinforced concrete section with individual material definitions
+    for core concrete, cover concrete, and steel reinforcement
+    """
+    
+    def __init__(self, user_name: str = "Unnamed",
+                 core_material: Union[int, str, Material] = None,
+                 cover_material: Union[int, str, Material] = None,
+                 steel_material: Union[int, str, Material] = None,
+                 **kwargs):
+        kwargs = self.validate_section_parameters(**kwargs)
+        super().__init__('section', 'RC', user_name)
+        
+        # Resolve materials
+        if core_material is None:
+            raise ValueError("RCSection requires a core_material")
+        if cover_material is None:
+            raise ValueError("RCSection requires a cover_material")
+        if steel_material is None:
+            raise ValueError("RCSection requires a steel_material")
+            
+        self.core_material = self.resolve_material(core_material)
+        self.cover_material = self.resolve_material(cover_material)
+        self.steel_material = self.resolve_material(steel_material)
+        
+        # Set primary material to core material
+        self.material = self.core_material
+        
+        self.params = kwargs if kwargs else {}
+
+    def to_tcl(self) -> str:
+        """Generate the OpenSees TCL command for RC section"""
+        param_order = self.get_parameters()[3:]  # Skip material parameters
+        params_str = " ".join(str(self.params[param]) for param in param_order if param in self.params)
+        return (f"section RC {self.tag} {self.core_material.tag} {self.cover_material.tag} "
+                f"{self.steel_material.tag} {params_str}; # {self.user_name}")
+
+    @classmethod
+    def get_parameters(cls) -> List[str]:
+        """Parameters for RC section"""
+        return ["core_material", "cover_material", "steel_material", "d", "b", "cover_to_center_of_bar"]
+
+    @classmethod
+    def get_description(cls) -> List[str]:
+        """Parameter descriptions for RC section"""
+        return [
+            "Core concrete material (tag, name, or object)",
+            "Cover concrete material (tag, name, or object)",
+            "Steel reinforcement material (tag, name, or object)",
+            "Section depth",
+            "Section width",
+            "Cover distance to reinforcement centroid"
+        ]
+
+    @classmethod
+    def get_help_text(cls) -> str:
+        """Get the formatted help text for RC section"""
+        return """
+        <b>RC Section</b><br>
+        Specialized reinforced concrete section with separate materials.<br><br>
+        <b>Required Parameters:</b><br>
+        • core_material: UniaxialMaterial for core concrete<br>
+        • cover_material: UniaxialMaterial for cover concrete<br>
+        • steel_material: UniaxialMaterial for steel reinforcement<br>
+        • d: Section depth<br>
+        • b: Section width<br>
+        • cover_to_center_of_bar: Cover distance to reinforcement centroid<br><br>
+        <b>Materials:</b> Accepts UniaxialMaterial objects, tags, or names
+        """
+
+    @classmethod
+    def validate_section_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
+        """Validate parameters for RC section"""
+        required_params = ['d', 'b', 'cover_to_center_of_bar']
+        validated_params = {}
+        
+        for param in required_params:
+            if param not in kwargs:
+                raise ValueError(f"RCSection requires the '{param}' parameter")
+            
+            try:
+                value = float(kwargs[param])
+                if value <= 0:
+                    raise ValueError(f"'{param}' must be positive")
+                validated_params[param] = value
+            except (ValueError, TypeError):
+                raise ValueError(f"Invalid value for '{param}'. Must be a positive number")
+        
+        return validated_params
+
+    def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
+        """Retrieve values for specific parameters"""
+        values = {}
+        for key in keys:
+            if key == 'core_material':
+                values[key] = self.core_material.user_name if self.core_material else "None"
+            elif key == 'cover_material':
+                values[key] = self.cover_material.user_name if self.cover_material else "None"
+            elif key == 'steel_material':
+                values[key] = self.steel_material.user_name if self.steel_material else "None"
+            else:
+                values[key] = self.params.get(key)
+        return values
+
+    def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
+        """Update section parameters"""
+        material_updates = {}
+        param_updates = {}
+        
+        for key, value in values.items():
+            if key in ['core_material', 'cover_material', 'steel_material']:
+                material_updates[key] = value
+            else:
+                param_updates[key] = value
+        
+        # Update materials
+        if 'core_material' in material_updates:
+            self.core_material = self.resolve_material(material_updates['core_material'])
+            self.material = self.core_material
+        if 'cover_material' in material_updates:
+            self.cover_material = self.resolve_material(material_updates['cover_material'])
+        if 'steel_material' in material_updates:
+            self.steel_material = self.resolve_material(material_updates['steel_material'])
+        
+        # Update other parameters
+        if param_updates:
+            validated_params = self.validate_section_parameters(**param_updates)
+            self.params.update(validated_params)
+
+    def get_materials(self) -> List[Material]:
+        """Get all materials used by this section"""
+        materials = []
+        if self.core_material:
+            materials.append(self.core_material)
+        if self.cover_material and self.cover_material not in materials:
+            materials.append(self.cover_material)
+        if self.steel_material and self.steel_material not in materials:
+            materials.append(self.steel_material)
+        return materials
+
+
+class ParallelSection(Section):
+    """
+    Combines several existing sections in parallel to sum their force-deformation behaviors
+    """
+    
+    def __init__(self, user_name: str = "Unnamed",
+                 sections: Optional[List[Union[int, str, 'Section']]] = None, **kwargs):
+        super().__init__('section', 'Parallel', user_name)
+        
+        # Resolve sections
+        self.sections = []
+        if sections:
+            for section_input in sections:
+                resolved_section = self.resolve_section(section_input)
+                self.sections.append(resolved_section)
+        
+        # Set primary material to first section's material if available
+        all_materials = self.get_materials()
+        self.material = all_materials[0] if all_materials else None
+        
+        self.params = kwargs if kwargs else {}
+
+    @staticmethod
+    def resolve_section(section_input: Union[int, str, 'Section']) -> 'Section':
+        """Resolve section from different input types"""
+        if isinstance(section_input, Section):
+            return section_input
+        
+        if isinstance(section_input, (int, str)):
+            from femora.components.section.section_base import SectionManager
+            return SectionManager.get_section(section_input)
+        
+        raise ValueError(f"Invalid section input type: {type(section_input)}")
+
+    def add_section(self, section_input: Union[int, str, 'Section']) -> None:
+        """Add a section to the parallel combination"""
+        resolved_section = self.resolve_section(section_input)
+        self.sections.append(resolved_section)
+        
+        # Update primary material if none exists
+        if self.material is None:
+            section_materials = resolved_section.get_materials()
+            if section_materials:
+                self.material = section_materials[0]
+
+    def to_tcl(self) -> str:
+        """Generate the OpenSees TCL command for Parallel section"""
+        section_tags = " ".join(str(sec.tag) for sec in self.sections)
+        return f"section Parallel {self.tag} {section_tags}; # {self.user_name}"
+
+    @classmethod
+    def get_parameters(cls) -> List[str]:
+        """Parameters for Parallel section"""
+        return ["sections"]
+
+    @classmethod
+    def get_description(cls) -> List[str]:
+        """Parameter descriptions for Parallel section"""
+        return ["List of existing sections to combine in parallel (tags, names, or objects)"]
+
+    @classmethod
+    def get_help_text(cls) -> str:
+        """Get the formatted help text for Parallel section"""
+        return """
+        <b>Parallel Section</b><br>
+        Combines several existing sections in parallel to sum their behaviors.<br><br>
+        <b>Required Parameters:</b><br>
+        • sections: List of existing sections to combine<br><br>
+        <b>Note:</b> Sections can be specified as objects, tags, or names
+        """
+
+    @classmethod
+    def validate_section_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
+        """Validate parameters for Parallel section"""
+        # No additional parameters to validate
+        return {}
+
+    def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
+        """Retrieve values for specific parameters"""
+        values = {}
+        if 'sections' in keys:
+            values['sections'] = ", ".join(sec.user_name for sec in self.sections)
+        return values
+
+    def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
+        """Update section parameters"""
+        if 'sections' in values:
+            # This would need custom parsing logic for section names/tags
+            pass
+
+    def get_materials(self) -> List[Material]:
+        """Get all materials used by the combined sections"""
+        materials = []
+        for section in self.sections:
+            for material in section.get_materials():
+                if material not in materials:
+                    materials.append(material)
+        return materials
+
+
+class BidirectionalSection(Section):
+    """
+    Combines biaxial moment interaction with axial force using built-in yield surface
+    No external materials required - uses built-in bidirectional plasticity
+    """
+    
+    def __init__(self, user_name: str = "Unnamed", **kwargs):
+        kwargs = self.validate_section_parameters(**kwargs)
+        super().__init__('section', 'Bidirectional', user_name)
+        self.params = kwargs if kwargs else {}
+        # No external materials required
+        self.material = None
+
+    def to_tcl(self) -> str:
+        """Generate the OpenSees TCL command for Bidirectional section"""
+        param_order = self.get_parameters()
+        params_str = " ".join(str(self.params[param]) for param in param_order if param in self.params)
+        return f"section Bidirectional {self.tag} {params_str}; # {self.user_name}"
+
+    @classmethod
+    def get_parameters(cls) -> List[str]:
+        """Parameters for Bidirectional section"""
+        return ["E", "Fy", "Hiso", "Hkin"]
+
+    @classmethod
+    def get_description(cls) -> List[str]:
+        """Parameter descriptions for Bidirectional section"""
+        return [
+            "Elastic modulus",
+            "Yield strength",
+            "Isotropic hardening parameter",
+            "Kinematic hardening parameter"
+        ]
+
+    @classmethod
+    def get_help_text(cls) -> str:
+        """Get the formatted help text for Bidirectional section"""
+        return """
+        <b>Bidirectional Section</b><br>
+        Combines biaxial moment interaction with axial force using built-in yield surface.<br><br>
+        <b>Required Parameters:</b><br>
+        • E: Elastic modulus<br>
+        • Fy: Yield strength<br>
+        • Hiso: Isotropic hardening parameter<br>
+        • Hkin: Kinematic hardening parameter<br><br>
+        <b>Note:</b> This section type uses built-in plasticity models.
+        """
+
+    @classmethod
+    def validate_section_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
+        """Validate parameters for Bidirectional section"""
+        required_params = ['E', 'Fy', 'Hiso', 'Hkin']
+        validated_params = {}
+        
+        for param in required_params:
+            if param not in kwargs:
+                raise ValueError(f"BidirectionalSection requires the '{param}' parameter")
+            
+            try:
+                value = float(kwargs[param])
+                if param in ['E', 'Fy'] and value <= 0:
+                    raise ValueError(f"'{param}' must be positive")
+                elif param in ['Hiso', 'Hkin'] and value < 0:
+                    raise ValueError(f"'{param}' must be non-negative")
+                validated_params[param] = value
+            except (ValueError, TypeError):
+                raise ValueError(f"Invalid value for '{param}'. Must be a number")
+        
+        return validated_params
+
+    def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
+        """Retrieve values for specific parameters"""
+        return {key: self.params.get(key) for key in keys}
+
+    def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
+        """Update section parameters"""
+        self.params.clear()
+        validated_params = self.validate_section_parameters(**values)
+        self.params.update(validated_params)
+
+    def get_materials(self) -> List[Material]:
+        """Bidirectional sections don't use external materials"""
+        return []
+
+
+class Isolator2SpringSection(Section):
+    """
+    Used for modeling base isolation systems with bidirectional behavior and vertical coupling
+    No external materials required - uses built-in isolator behavior
+    """
+    
+    def __init__(self, user_name: str = "Unnamed", **kwargs):
+        kwargs = self.validate_section_parameters(**kwargs)
+        super().__init__('section', 'Isolator2spring', user_name)
+        self.params = kwargs if kwargs else {}
+        # No external materials required
+        self.material = None
+
+    def to_tcl(self) -> str:
+        """Generate the OpenSees TCL command for Isolator2spring section"""
+        param_order = self.get_parameters()
+        params_str = " ".join(str(self.params[param]) for param in param_order if param in self.params)
+        return f"section Isolator2spring {self.tag} {params_str}; # {self.user_name}"
+
+    @classmethod
+    def get_parameters(cls) -> List[str]:
+        """Parameters for Isolator2spring section"""
+        return ["tol", "k1", "Fy", "k2", "kv", "hb", "Pe", "Po"]
+
+    @classmethod
+    def get_description(cls) -> List[str]:
+        """Parameter descriptions for Isolator2spring section"""
+        return [
+            "Tolerance for convergence",
+            "Initial stiffness",
+            "Yield force",
+            "Post-yield stiffness",
+            "Vertical stiffness",
+            "Isolation height",
+            "Buckling load",
+            "Vertical load"
+        ]
+
+    @classmethod
+    def get_help_text(cls) -> str:
+        """Get the formatted help text for Isolator2spring section"""
+        return """
+        <b>Isolator 2Spring Section</b><br>
+        Used for modeling base isolation systems with bidirectional behavior.<br><br>
+        <b>Required Parameters:</b><br>
+        • tol: Tolerance for convergence<br>
+        • k1: Initial stiffness<br>
+        • Fy: Yield force<br>
+        • k2: Post-yield stiffness<br>
+        • kv: Vertical stiffness<br>
+        • hb: Isolation height<br>
+        • Pe: Buckling load<br>
+        • Po: Vertical load<br><br>
+        <b>Note:</b> This section type uses built-in isolator behavior.
+        """
+
+    @classmethod
+    def validate_section_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
+        """Validate parameters for Isolator2spring section"""
+        required_params = ['tol', 'k1', 'Fy', 'k2', 'kv', 'hb', 'Pe', 'Po']
+        validated_params = {}
+        
+        for param in required_params:
+            if param not in kwargs:
+                raise ValueError(f"Isolator2SpringSection requires the '{param}' parameter")
+            
+            try:
+                value = float(kwargs[param])
+                
+                # Parameter-specific validations
+                if param == 'tol' and value <= 0:
+                    raise ValueError("Tolerance 'tol' must be positive")
+                elif param in ['k1', 'k2', 'kv'] and value <= 0:
+                    raise ValueError(f"Stiffness '{param}' must be positive")
+                elif param in ['Fy', 'hb'] and value <= 0:
+                    raise ValueError(f"'{param}' must be positive")
+                elif param in ['Pe', 'Po'] and value < 0:
+                    raise ValueError(f"'{param}' must be non-negative")
+                    
+                validated_params[param] = value
+            except (ValueError, TypeError):
+                raise ValueError(f"Invalid value for '{param}'. Must be a number")
+        
+        return validated_params
+
+    def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
+        """Retrieve values for specific parameters"""
+        return {key: self.params.get(key) for key in keys}
+
+    def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
+        """Update section parameters"""
+        self.params.clear()
+        validated_params = self.validate_section_parameters(**values)
+        self.params.update(validated_params)
+
+    def get_materials(self) -> List[Material]:
+        """Isolator2spring sections don't use external materials"""
+        return []
+
+
 class FiberSection(Section):
     """
     Complete Fiber Section implementation with enhanced material handling
@@ -787,70 +1493,197 @@ class FiberSection(Section):
                     raise ValueError("GJ must be a positive number")
 
 
-# Register section types
+# Register all section types
 SectionRegistry.register_section_type('Elastic', ElasticSection)
 SectionRegistry.register_section_type('Fiber', FiberSection) 
 SectionRegistry.register_section_type('Aggregator', AggregatorSection)
 SectionRegistry.register_section_type('Uniaxial', UniaxialSection)
+SectionRegistry.register_section_type('WFSection2d', WFSection2d)
+SectionRegistry.register_section_type('PlateFiber', PlateFiberSection)
+SectionRegistry.register_section_type('ElasticMembranePlateSection', ElasticMembranePlateSection)
+SectionRegistry.register_section_type('RC', RCSection)
+SectionRegistry.register_section_type('Parallel', ParallelSection)
+SectionRegistry.register_section_type('Bidirectional', BidirectionalSection)
+SectionRegistry.register_section_type('Isolator2spring', Isolator2SpringSection)
 
 
-if __name__ == "__main__":
-    # Example usage demonstrating enhanced material handling
+def create_example_sections():
     """
-    Create example sections demonstrating enhanced material handling
+    Create example sections demonstrating enhanced material handling across all section types
     """
-    from femora.components.Material.materialsOpenSees import ElasticUniaxialMaterial
+    from femora.components.Material.materialsOpenSees import ElasticUniaxialMaterial, ElasticIsotropicMaterial
     
     # Create materials
-    steel = ElasticUniaxialMaterial(user_name="Steel", E=200000, eta=0.0)
-    concrete = ElasticUniaxialMaterial(user_name="Concrete", E=30000, eta=0.0)
+    steel = ElasticUniaxialMaterial(user_name="Steel_A992", E=200000, eta=0.0)
+    concrete = ElasticUniaxialMaterial(user_name="Concrete_4000psi", E=30000, eta=0.0)
+    cover_concrete = ElasticUniaxialMaterial(user_name="Cover_Concrete", E=25000, eta=0.0)
+    rebar = ElasticUniaxialMaterial(user_name="Rebar_Grade60", E=200000, eta=0.0)
+    
+    # Create NDMaterial for plate sections
+    try:
+        plate_material = ElasticIsotropicMaterial(user_name="Plate_Steel", E=200000, nu=0.3, rho=7.85e-9)
+    except:
+        plate_material = None
     
     print("Created materials:")
     print(f"  Steel: tag={steel.tag}, name='{steel.user_name}'")
     print(f"  Concrete: tag={concrete.tag}, name='{concrete.user_name}'")
+    print(f"  Cover Concrete: tag={cover_concrete.tag}, name='{cover_concrete.user_name}'")
+    print(f"  Rebar: tag={rebar.tag}, name='{rebar.user_name}'")
+    if plate_material:
+        print(f"  Plate Material: tag={plate_material.tag}, name='{plate_material.user_name}'")
+    
+    sections = []
     
     # Example 1: Elastic section (no materials required)
-    elastic_sec = ElasticSection("Beam_Section", E=200000, A=0.01, Iz=8.33e-5)
-    print(f"\nElastic Section: {elastic_sec}")
-    print(f"  Has material: {elastic_sec.has_material()}")
+    elastic_sec = ElasticSection("W12x40_Beam", E=200000, A=7613, Iz=55.5e6)
+    sections.append(elastic_sec)
+    print(f"\n1. Elastic Section: {elastic_sec}")
+    print(f"   Has material: {elastic_sec.has_material()}")
     
     # Example 2: Uniaxial section with material object
-    uniaxial_sec1 = UniaxialSection("Steel_Axial", material=steel, response_code="P")
-    print(f"\nUniaxial Section (material object): {uniaxial_sec1}")
-    print(f"  Material: {uniaxial_sec1.material.user_name}")
+    uniaxial_sec = UniaxialSection("Steel_Axial", material=steel, response_code="P")
+    sections.append(uniaxial_sec)
+    print(f"\n2. Uniaxial Section: {uniaxial_sec}")
+    print(f"   Material: {uniaxial_sec.material.user_name}")
     
-    # Example 3: Uniaxial section with material tag
-    uniaxial_sec2 = UniaxialSection("Concrete_Moment", material=concrete.tag, response_code="Mz")
-    print(f"\nUniaxial Section (material tag): {uniaxial_sec2}")
-    print(f"  Material: {uniaxial_sec2.material.user_name}")
+    # Example 3: WFSection2d with material tag
+    wf_sec = WFSection2d("W14x68_Section", material=steel.tag, 
+                         d=355.6, tw=10.5, bf=254.0, tf=17.3, Nflweb=8, Nflflange=4)
+    sections.append(wf_sec)
+    print(f"\n3. WF Section 2D: {wf_sec}")
+    print(f"   Material: {wf_sec.material.user_name}")
     
-    # Example 4: Uniaxial section with material name
-    uniaxial_sec3 = UniaxialSection("Steel_Moment", material="Steel", response_code="Mz")
-    print(f"\nUniaxial Section (material name): {uniaxial_sec3}")
-    print(f"  Material: {uniaxial_sec3.material.user_name}")
+    # Example 4: PlateFiber section with NDMaterial
+    if plate_material:
+        try:
+            plate_sec = PlateFiberSection("Shell_Section", material=plate_material)
+            sections.append(plate_sec)
+            print(f"\n4. Plate Fiber Section: {plate_sec}")
+            print(f"   Material: {plate_sec.material.user_name}")
+        except Exception as e:
+            print(f"\n4. Plate Fiber Section: Skipped ({e})")
+    else:
+        print(f"\n4. Plate Fiber Section: Skipped (no NDMaterial available)")
     
-    # Example 5: Fiber section with mixed material inputs
-    fiber_sec = FiberSection("RC_Section", GJ=1000000)
+    # Example 5: ElasticMembranePlateSection (no materials required)
+    membrane_sec = ElasticMembranePlateSection("Membrane_Section", 
+                                             E=200000, nu=0.3, h=0.02, rho=7.85e-9)
+    sections.append(membrane_sec)
+    print(f"\n5. Elastic Membrane Plate Section: {membrane_sec}")
+    print(f"   Has material: {membrane_sec.has_material()}")
     
-    # Add fiber with material object
-    fiber_sec.add_fiber(0.0, 0.0, 0.0001, steel)
+    # Example 6: RC section with multiple materials
+    rc_sec = RCSection("RC_Column", 
+                       core_material=concrete, 
+                       cover_material=cover_concrete,
+                       steel_material="Rebar_Grade60",  # Using name
+                       d=0.4, b=0.4, cover_to_center_of_bar=0.05)
+    sections.append(rc_sec)
+    print(f"\n6. RC Section: {rc_sec}")
+    print(f"   Core material: {rc_sec.core_material.user_name}")
+    print(f"   Cover material: {rc_sec.cover_material.user_name}")
+    print(f"   Steel material: {rc_sec.steel_material.user_name}")
     
-    # Add patch with material name
-    fiber_sec.add_rectangular_patch("Concrete", 10, 10, -0.1, -0.1, 0.1, 0.1)
+    # Example 7: Bidirectional section (no materials required)
+    bidirectional_sec = BidirectionalSection("Biaxial_Section", 
+                                            E=200000, Fy=350, Hiso=1000, Hkin=500)
+    sections.append(bidirectional_sec)
+    print(f"\n7. Bidirectional Section: {bidirectional_sec}")
+    print(f"   Has material: {bidirectional_sec.has_material()}")
     
-    # Add layer with material tag
-    fiber_sec.add_straight_layer(steel.tag, 4, 0.0005, -0.08, -0.08, 0.08, -0.08)
+    # Example 8: Isolator2Spring section (no materials required)
+    isolator_sec = Isolator2SpringSection("Base_Isolator",
+                                        tol=1e-6, k1=2000, Fy=100, k2=200, 
+                                        kv=20000, hb=0.15, Pe=1000, Po=50)
+    sections.append(isolator_sec)
+    print(f"\n8. Isolator 2Spring Section: {isolator_sec}")
+    print(f"   Has material: {isolator_sec.has_material()}")
     
-    print(f"\nFiber Section: {fiber_sec}")
-    print(f"  Materials used: {[mat.user_name for mat in fiber_sec.get_materials()]}")
-    print(f"  Primary material: {fiber_sec.material.user_name if fiber_sec.material else 'None'}")
+    # Example 9: Fiber section with mixed material inputs
+    fiber_sec = FiberSection("RC_Beam_Section", GJ=1.5e6)
     
-    sections =  [elastic_sec, uniaxial_sec1, uniaxial_sec2, uniaxial_sec3, fiber_sec]
+    # Add concrete patch using material name
+    fiber_sec.add_rectangular_patch("Concrete_4000psi", 12, 8, -0.15, -0.25, 0.15, 0.25)
     
-    print("\n" + "="*50)
-    print("TCL OUTPUT:")
-    print("="*50)
+    # Add steel layers using material objects and tags
+    fiber_sec.add_straight_layer(rebar, 4, 0.0005, -0.12, -0.22, 0.12, -0.22)  # Bottom
+    fiber_sec.add_straight_layer(rebar.tag, 4, 0.0005, -0.12, 0.22, 0.12, 0.22)  # Top
     
-    for section in sections:
+    sections.append(fiber_sec)
+    print(f"\n9. Fiber Section: {fiber_sec}")
+    print(f"   Materials used: {[mat.user_name for mat in fiber_sec.get_materials()]}")
+    print(f"   Primary material: {fiber_sec.material.user_name if fiber_sec.material else 'None'}")
+    
+    # Example 10: Parallel section combining existing sections
+    try:
+        parallel_sec = ParallelSection("Combined_Section", 
+                                     sections=[elastic_sec, uniaxial_sec])
+        sections.append(parallel_sec)
+        print(f"\n10. Parallel Section: {parallel_sec}")
+        print(f"    Combined sections: {[sec.user_name for sec in parallel_sec.sections]}")
+        print(f"    Total materials: {len(parallel_sec.get_materials())}")
+    except Exception as e:
+        print(f"\n10. Parallel Section: Skipped ({e})")
+    
+    # Example 11: Aggregator section with multiple materials
+    try:
+        materials_dict = {
+            'P': steel,           # Material object
+            'Mz': concrete.tag,   # Material tag
+            'Vy': "Rebar_Grade60" # Material name
+        }
+        
+        aggregator_sec = AggregatorSection("Multi_Response_Section", materials=materials_dict)
+        sections.append(aggregator_sec)
+        print(f"\n11. Aggregator Section: {aggregator_sec}")
+        print(f"    Response materials: {[(code, mat.user_name) for code, mat in aggregator_sec.materials.items()]}")
+    except Exception as e:
+        print(f"\n11. Aggregator Section: Skipped ({e})")
+    
+    return sections
+
+
+def demonstrate_all_section_types():
+    """
+    Comprehensive demonstration of all implemented section types
+    """
+    print("="*80)
+    print("COMPREHENSIVE SECTION TYPES DEMONSTRATION")
+    print("="*80)
+    
+    sections = create_example_sections()
+    
+    print(f"\n{'='*80}")
+    print("SECTION SUMMARY")
+    print("="*80)
+    
+    for i, section in enumerate(sections, 1):
+        materials_count = len(section.get_materials())
+        materials_info = f"{materials_count} material(s)" if materials_count > 0 else "No materials"
+        print(f"{i:2d}. {section.user_name:25s} ({section.section_name:20s}) - {materials_info}")
+    
+    print(f"\n{'='*80}")
+    print("TCL OUTPUT SAMPLES")
+    print("="*80)
+    
+    for section in sections[:5]:  # Show first 5 sections
         print(f"\n# {section.user_name}")
         print(section.to_tcl())
+    
+    print(f"\n{'='*80}")
+    print("AVAILABLE SECTION TYPES")
+    print("="*80)
+    
+    section_types = SectionRegistry.get_section_types()
+    for i, section_type in enumerate(section_types, 1):
+        print(f"{i:2d}. {section_type}")
+    
+    print(f"\nTotal section types implemented: {len(section_types)}")
+    
+    return sections
+
+
+if __name__ == "__main__":
+    # Example usage demonstrating enhanced material handling across all section types
+    sections = demonstrate_all_section_types()
