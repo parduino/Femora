@@ -466,43 +466,20 @@ class GenericSectionDialog(QDialog):
 
     def _get_section_help(self, section_type):
         """Get help text for the section type"""
-        help_texts = {
-            "Elastic": """
-            <b>Elastic Section</b><br>
-            Creates a linear elastic section with constant properties.<br><br>
-            <b>Required Parameters:</b><br>
-            • E: Young's modulus<br>
-            • A: Cross-sectional area<br>
-            • Iz: Moment of inertia about z-axis<br><br>
-            <b>Optional Parameters:</b><br>
-            • Iy: Moment of inertia about y-axis (3D)<br>
-            • G: Shear modulus<br>
-            • J: Torsional constant
-            """,
-            "Fiber": """
-            <b>Fiber Section</b><br>
-            Creates a section using fiber discretization for nonlinear analysis.<br><br>
-            Fibers are added programmatically using the add_fiber() method.<br>
-            Each fiber has coordinates, area, and a material.
-            """,
-            "Aggregator": """
-            <b>Aggregator Section</b><br>
-            Combines different uniaxial materials for different response quantities.<br><br>
-            <b>Response Codes:</b><br>
-            • P: Axial force<br>
-            • Mz: Moment about z-axis<br>
-            • My: Moment about y-axis<br>
-            • Vy: Shear force in y-direction<br>
-            • Vz: Shear force in z-direction<br>
-            • T: Torsion
-            """,
-            "Uniaxial": """
-            <b>Uniaxial Section</b><br>
-            Uses a single uniaxial material for one response quantity.<br><br>
-            Specify the material and the response code it represents.
-            """
+        # Map section types to their corresponding classes
+        section_class_map = {
+            "Elastic": ElasticSection,
+            "Fiber": FiberSection,
+            "Aggregator": AggregatorSection,
+            "Uniaxial": UniaxialSection
         }
-        return help_texts.get(section_type, "<b>Section Help</b><br>No specific help available.")
+        
+        # Get the section class and return its help text
+        section_class = section_class_map.get(section_type)
+        if section_class and hasattr(section_class, 'get_help_text'):
+            return section_class.get_help_text()
+        else:
+            return "<b>Section Help</b><br>No specific help available."
 
     def open_fiber_dialog(self):
         """Open the specialized fiber section dialog"""

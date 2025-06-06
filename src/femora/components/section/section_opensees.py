@@ -49,6 +49,22 @@ class ElasticSection(Section):
         ]
 
     @classmethod
+    def get_help_text(cls) -> str:
+        """Get the formatted help text for Elastic section"""
+        return """
+        <b>Elastic Section</b><br>
+        Creates a linear elastic section with constant properties.<br><br>
+        <b>Required Parameters:</b><br>
+        • E: Young's modulus<br>
+        • A: Cross-sectional area<br>
+        • Iz: Moment of inertia about z-axis<br><br>
+        <b>Optional Parameters:</b><br>
+        • Iy: Moment of inertia about y-axis (3D)<br>
+        • G: Shear modulus<br>
+        • J: Torsional constant
+        """
+
+    @classmethod
     def validate_section_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
         """Validate parameters for Elastic section"""
         required_params = ['E', 'A', 'Iz']
@@ -149,6 +165,21 @@ class AggregatorSection(Section):
         ]
 
     @classmethod
+    def get_help_text(cls) -> str:
+        """Get the formatted help text for Aggregator section"""
+        return """
+        <b>Aggregator Section</b><br>
+        Combines different uniaxial materials for different response quantities.<br><br>
+        <b>Response Codes:</b><br>
+        • P: Axial force<br>
+        • Mz: Moment about z-axis<br>
+        • My: Moment about y-axis<br>
+        • Vy: Shear force in y-direction<br>
+        • Vz: Shear force in z-direction<br>
+        • T: Torsion
+        """
+
+    @classmethod
     def validate_section_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
         """Validate parameters for Aggregator section"""
         validated_params = {}
@@ -226,6 +257,15 @@ class UniaxialSection(Section):
             "Uniaxial material to use",
             "Response code (P, Mz, My, Vy, Vz, T)"
         ]
+
+    @classmethod
+    def get_help_text(cls) -> str:
+        """Get the formatted help text for Uniaxial section"""
+        return """
+        <b>Uniaxial Section</b><br>
+        Uses a single uniaxial material for one response quantity.<br><br>
+        Specify the material and the response code it represents.
+        """
 
     @classmethod
     def validate_section_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
@@ -669,6 +709,7 @@ class CircularPatch(PatchBase):
                 ax.add_patch(wedge)
         
 
+
     
     def validate(self) -> None:
         """Validate circular patch parameters"""
@@ -932,10 +973,10 @@ class CircularLayer(LayerBase):
         # Check if we need to include optional angles
         if abs(self.start_ang) < 1e-12 and abs(self.end_ang - (360.0 - 360.0/self.num_fibers)) < 1e-12:
             # Use default angles - don't include them in command
-            return f"    layer circ {self.material.tag} {self.num_fibers} {self.area_per_fiber} {self.y_center} {self.z_center} {self.radius}"
+            return f"    layer circ {self.material.tag} {self.num_fibers} {self.area_per_fiber} {self.y_center} {self.z_center} {self.radius} "
         else:
             # Include explicit angles
-            return f"    layer circ {self.material.tag} {self.num_fibers} {self.area_per_fiber} {self.y_center} {self.z_center} {self.radius} {self.start_ang} {self.end_ang}"
+            return f"    layer circ {self.material.tag} {self.num_fibers} {self.area_per_fiber} {self.y_center} {self.z_center} {self.radius} {self.start_ang} {self.end_ang} "
     
     def get_layer_type(self) -> str:
         return "Circular"
@@ -1437,6 +1478,16 @@ class FiberSection(Section):
             "Layer definitions (straight lines, arcs)"
         ]
     
+    @classmethod
+    def get_help_text(cls) -> str:
+        """Get the formatted help text for Fiber section"""
+        return """
+        <b>Fiber Section</b><br>
+        Creates a section using fiber discretization for nonlinear analysis.<br><br>
+        Fibers are added programmatically using the add_fiber() method.<br>
+        Each fiber has coordinates, area, and a material.
+        """
+
     @classmethod
     def validate_section_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
         """Validate parameters for Fiber section"""
