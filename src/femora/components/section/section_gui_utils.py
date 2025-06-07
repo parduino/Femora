@@ -176,6 +176,15 @@ def setup_filtered_material_dropdown(combo_box: QComboBox, filter_type: str):
     setup_material_dropdown(combo_box, filter_func, placeholder)
 
 
+def setup_uniaxial_material_dropdown(combo_box: QComboBox, placeholder_text="Select Uniaxial Material"):
+    """
+    Set up dropdown for uniaxial materials only (for RCSection materials)
+    """
+    def is_uniaxial(mat):
+        return mat.material_type == 'uniaxialMaterial'
+    setup_material_dropdown(combo_box, is_uniaxial, placeholder_text)
+
+
 if __name__ == "__main__":
     print("Section GUI Utilities - for use in section dialog files")
     print("Available functions:")
