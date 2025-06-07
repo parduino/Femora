@@ -20,6 +20,7 @@ from femora.components.section.wf2d_section_gui import WFSection2dCreationDialog
 from femora.components.section.rc_section_gui import RCSectionCreationDialog, RCSectionEditDialog
 from femora.components.section.wf2d_section_gui import WFSection2dCreationDialog, WFSection2dEditDialog
 from femora.components.section.elastic_membrane_section_gui import ElasticMembranePlateSectionCreationDialog, ElasticMembranePlateSectionEditDialog
+from femora.components.section.platefiber_section_gui import PlateFiberSectionCreationDialog, PlateFiberSectionEditDialog
 
 
 class SectionManagerTab(QWidget):
@@ -103,6 +104,8 @@ class SectionManagerTab(QWidget):
             dialog = RCSectionCreationDialog(self)
         elif section_type == "ElasticMembranePlateSection":
             dialog = ElasticMembranePlateSectionCreationDialog(self)
+        elif section_type == "PlateFiber":
+            dialog = PlateFiberSectionCreationDialog(self)
         elif section_type == "Fiber":
             QMessageBox.information(self, "Not Available", "Fiber section GUI will be implemented in the future.")
             return
@@ -134,6 +137,8 @@ class SectionManagerTab(QWidget):
             dialog = RCSectionEditDialog(section, self)
         elif section_type == "ElasticMembranePlateSection":
             dialog = ElasticMembranePlateSectionEditDialog(section, self)
+        elif section_type == "PlateFiber":
+            dialog = PlateFiberSectionEditDialog(section, self)
         elif section_type == "Fiber":
             QMessageBox.information(self, "Not Available", "Fiber section editing will be implemented in the future.")
             return
