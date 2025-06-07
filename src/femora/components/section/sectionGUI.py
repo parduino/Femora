@@ -14,12 +14,12 @@ from femora.components.section.section_base import Section, SectionRegistry, Sec
 from femora.components.section.section_opensees import *
 
 # Import separate dialog files for each section type
-try:
-    from .elastic_section_gui import ElasticSectionCreationDialog, ElasticSectionEditDialog
-    from .wfsection2d_gui import WFSection2dCreationDialog, WFSection2dEditDialog
-except ImportError:
-    from femora.components.section.elastic_section_gui import ElasticSectionCreationDialog, ElasticSectionEditDialog
-    from femora.components.section.wfsection2d_gui import WFSection2dCreationDialog, WFSection2dEditDialog
+
+from femora.components.section.elastic_section_gui import ElasticSectionCreationDialog, ElasticSectionEditDialog
+from femora.components.section.wf2d_section_gui import WFSection2dCreationDialog, WFSection2dEditDialog
+from femora.components.section.rc_section_gui import RCSectionCreationDialog, RCSectionEditDialog
+from femora.components.section.wf2d_section_gui import WFSection2dCreationDialog, WFSection2dEditDialog
+from femora.components.section.elastic_membrane_section_gui import ElasticMembranePlateSectionCreationDialog, ElasticMembranePlateSectionEditDialog
 
 
 class SectionManagerTab(QWidget):
@@ -88,12 +88,10 @@ class SectionManagerTab(QWidget):
         
         layout.addLayout(button_layout)
           # Initial refresh
-        self.refresh_sections_list()
-
+        self.refresh_sections_list()    
     def open_section_creation_dialog(self):
         """
         Open the appropriate creation dialog based on section type
-
         """
         section_type = self.section_type_combo.currentText()
         
@@ -101,6 +99,10 @@ class SectionManagerTab(QWidget):
             dialog = ElasticSectionCreationDialog(self)
         elif section_type == "WFSection2d":
             dialog = WFSection2dCreationDialog(self)
+        elif section_type == "RC":
+            dialog = RCSectionCreationDialog(self)
+        elif section_type == "ElasticMembranePlateSection":
+            dialog = ElasticMembranePlateSectionCreationDialog(self)
         elif section_type == "Fiber":
             QMessageBox.information(self, "Not Available", "Fiber section GUI will be implemented in the future.")
             return
@@ -128,6 +130,10 @@ class SectionManagerTab(QWidget):
             dialog = ElasticSectionEditDialog(section, self)
         elif section_type == "WFSection2d":
             dialog = WFSection2dEditDialog(section, self)
+        elif section_type == "RC":
+            dialog = RCSectionEditDialog(section, self)
+        elif section_type == "ElasticMembranePlateSection":
+            dialog = ElasticMembranePlateSectionEditDialog(section, self)
         elif section_type == "Fiber":
             QMessageBox.information(self, "Not Available", "Fiber section editing will be implemented in the future.")
             return
@@ -303,6 +309,8 @@ if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
     import sys
     from femora.components.Material.materialsOpenSees import ElasticUniaxialMaterial, ElasticIsotropicMaterial
+    from femora.components.section.section_opensees import ElasticSection
+    from femora.components.section.section_opensees import WFSection2d
     
     # Create the Qt Application
     app = QApplication(sys.argv)
@@ -312,6 +320,27 @@ if __name__ == "__main__":
     concrete = ElasticUniaxialMaterial(user_name="Concrete", E=30000, eta=0.0)
 
     steelND = ElasticIsotropicMaterial(user_name="SteelND Isotropic", E=200000, nu=0.3)
+
+    # Add an Elastic section
+    elastic_section = ElasticSection(
+        user_name="Elastic Beam",
+        E=200000,
+        A=0.02,
+        Iz=8.1e-6
+    )
+
+    # Add a WFSection2d section
+    wf_section = WFSection2d(
+        user_name="W-Shape",
+        material="Steel",
+        d=0.3,
+        tw=0.01,
+        bf=0.15,
+        tf=0.02,
+        E=200000,
+        Nflweb=10,
+        Nflflange=10,
+    )
     
     # Create and show the SectionManagerTab
     section_manager_tab = SectionManagerTab()
