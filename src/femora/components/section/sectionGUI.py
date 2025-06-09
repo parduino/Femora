@@ -24,6 +24,7 @@ from femora.components.section.platefiber_section_gui import PlateFiberSectionCr
 from femora.components.section.aggregator_section_gui import AggregatorSectionCreationDialog, AggregatorSectionEditDialog
 from femora.components.section.uniaxial_section_gui import UniaxialSectionCreationDialog, UniaxialSectionEditDialog
 from femora.components.section.parallel_section_gui import ParallelSectionCreationDialog, ParallelSectionEditDialog
+from femora.components.section.bidirectional_section_gui import BidirectionalSectionCreationDialog, BidirectionalSectionEditDialog
 
 
 class SectionManagerTab(QWidget):
@@ -56,8 +57,8 @@ class SectionManagerTab(QWidget):
         
         # Sections table
         self.sections_table = QTableWidget()
-        self.sections_table.setColumnCount(6)  # Tag, Type, Name, Parameters, Edit, Delete
-        self.sections_table.setHorizontalHeaderLabels(["Tag", "Type", "Name", "Parameters", "Edit", "Delete"])
+        self.sections_table.setColumnCount(4)  # Type, Name, Edit, Delete
+        self.sections_table.setHorizontalHeaderLabels(["Type", "Name", "Edit", "Delete"])
         header = self.sections_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
@@ -80,18 +81,14 @@ class SectionManagerTab(QWidget):
         refresh_btn.clicked.connect(self.refresh_sections_list)
         button_layout.addWidget(refresh_btn)
         
-        # View TCL button
-        view_tcl_btn = QPushButton("View Selected TCL")
-        view_tcl_btn.clicked.connect(self.view_selected_tcl)
-        button_layout.addWidget(view_tcl_btn)
-        
         # Clear all sections button
         clear_all_btn = QPushButton("Clear All Sections")
         clear_all_btn.clicked.connect(self.clear_all_sections)
         button_layout.addWidget(clear_all_btn)
         
         layout.addLayout(button_layout)
-          # Initial refresh
+        
+        # Initial refresh
         self.refresh_sections_list()    
     def open_section_creation_dialog(self):
         """
@@ -118,6 +115,8 @@ class SectionManagerTab(QWidget):
             dialog = UniaxialSectionCreationDialog(self)
         elif section_type == "Parallel":
             dialog = ParallelSectionCreationDialog(self)
+        elif section_type == "Bidirectional":
+            dialog = BidirectionalSectionCreationDialog(self)
         else:
             QMessageBox.warning(self, "Error", f"No dialog available for section type: {section_type}")
             return
@@ -151,6 +150,8 @@ class SectionManagerTab(QWidget):
             dialog = UniaxialSectionEditDialog(section, self)
         elif section_type == "Parallel":
             dialog = ParallelSectionEditDialog(section, self)
+        elif section_type == "Bidirectional":
+            dialog = BidirectionalSectionEditDialog(section, self)
         else:
             QMessageBox.warning(self, "Error", f"No edit dialog available for section type: {section_type}")
             return
@@ -172,109 +173,49 @@ class SectionManagerTab(QWidget):
         
         # Populate table
         for row, (tag, section) in enumerate(sections.items()):
-            # Tag
-            tag_item = QTableWidgetItem(str(tag))
-            tag_item.setFlags(tag_item.flags() & ~Qt.ItemIsEditable)
-            self.sections_table.setItem(row, 0, tag_item)
-            
             # Section Type
             type_item = QTableWidgetItem(section.section_name)
             type_item.setFlags(type_item.flags() & ~Qt.ItemIsEditable)
-            self.sections_table.setItem(row, 1, type_item)
+            self.sections_table.setItem(row, 0, type_item)
             
             # User Name
             name_item = QTableWidgetItem(section.user_name)
             name_item.setFlags(name_item.flags() & ~Qt.ItemIsEditable)
-            self.sections_table.setItem(row, 2, name_item)
-            
-            # Parameters preview
-            try:
-                current_values = section.get_values(section.get_parameters())
-                # Create a brief summary of parameters
-                params_summary = []
-                if section.section_name == "Elastic":
-                    if 'E' in current_values and current_values['E'] is not None:
-                        params_summary.append(f"E={current_values['E']}")
-                    if 'A' in current_values and current_values['A'] is not None:
-                        params_summary.append(f"A={current_values['A']}")
-                    if 'Iz' in current_values and current_values['Iz'] is not None:
-                        params_summary.append(f"Iz={current_values['Iz']}")
-                else:
-                    # For other section types, show number of parameters
-                    non_none_params = sum(1 for v in current_values.values() if v is not None)
-                    params_summary.append(f"{non_none_params} parameters")
-                
-                params_str = ", ".join(params_summary) if params_summary else "No parameters"
-            except Exception:
-                params_str = "Error reading parameters"
-                
-            params_item = QTableWidgetItem(params_str)
-            params_item.setFlags(params_item.flags() & ~Qt.ItemIsEditable)
-            self.sections_table.setItem(row, 3, params_item)
+            self.sections_table.setItem(row, 1, name_item)
             
             # Edit button
             edit_btn = QPushButton("Edit")
             edit_btn.clicked.connect(lambda checked, sect=section: self.open_section_edit_dialog(sect))
-            self.sections_table.setCellWidget(row, 4, edit_btn)
+            self.sections_table.setCellWidget(row, 2, edit_btn)
 
             # Delete button
             delete_btn = QPushButton("Delete")
             delete_btn.clicked.connect(lambda checked, tag=tag: self.delete_section(tag))
-            self.sections_table.setCellWidget(row, 5, delete_btn)
+            self.sections_table.setCellWidget(row, 3, delete_btn)
 
     def show_context_menu(self, position):
         """Show context menu for sections table"""
         menu = QMenu()
-        view_tcl_action = menu.addAction("View TCL")
         edit_action = menu.addAction("Edit Section")
         delete_action = menu.addAction("Delete Section")
         
         action = menu.exec_(self.sections_table.viewport().mapToGlobal(position))
         
-        if action == view_tcl_action:
-            self.view_selected_tcl()
-        elif action == edit_action:
+        if action == edit_action:
             selected_row = self.sections_table.currentRow()
             if selected_row != -1:
-                tag = int(self.sections_table.item(selected_row, 0).text())
-                section = Section.get_section_by_tag(tag)
-                self.open_section_edit_dialog(section)
+                name = self.sections_table.item(selected_row, 1).text()
+                # Find section by user_name
+                section = next((s for s in Section.get_all_sections().values() if s.user_name == name), None)
+                if section:
+                    self.open_section_edit_dialog(section)
         elif action == delete_action:
             selected_row = self.sections_table.currentRow()
             if selected_row != -1:
-                tag = int(self.sections_table.item(selected_row, 0).text())
-                self.delete_section(tag)
-
-    def view_selected_tcl(self):
-        """View TCL command for selected section"""
-        selected_row = self.sections_table.currentRow()
-        if selected_row == -1:
-            QMessageBox.warning(self, "No Selection", "Please select a section to view its TCL command.")
-            return
-        
-        tag = int(self.sections_table.item(selected_row, 0).text())
-        section = Section.get_section_by_tag(tag)
-        
-        # Create a dialog to show the TCL command
-        tcl_dialog = QDialog(self)
-        tcl_dialog.setWindowTitle(f"TCL Command - {section.user_name}")
-        tcl_dialog.setMinimumSize(500, 200)
-        
-        layout = QVBoxLayout(tcl_dialog)
-        
-        # TCL text display
-        from qtpy.QtWidgets import QTextEdit
-        tcl_text = QTextEdit()
-        tcl_text.setPlainText(section.to_tcl())
-        tcl_text.setReadOnly(True)
-        layout.addWidget(tcl_text)
-        
-        # Close button
-        close_btn = QPushButton("Close")
-        close_btn.clicked.connect(tcl_dialog.accept)
-        layout.addWidget(close_btn)
-        
-        tcl_dialog.exec()
+                name = self.sections_table.item(selected_row, 1).text()
+                section = next((s for s in Section.get_all_sections().values() if s.user_name == name), None)
+                if section:
+                    self.delete_section(section.tag)
 
     def delete_section(self, tag):
         """Delete a section from the system"""
