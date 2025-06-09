@@ -23,6 +23,7 @@ from femora.components.section.elastic_membrane_section_gui import ElasticMembra
 from femora.components.section.platefiber_section_gui import PlateFiberSectionCreationDialog, PlateFiberSectionEditDialog
 from femora.components.section.aggregator_section_gui import AggregatorSectionCreationDialog, AggregatorSectionEditDialog
 from femora.components.section.uniaxial_section_gui import UniaxialSectionCreationDialog, UniaxialSectionEditDialog
+from femora.components.section.parallel_section_gui import ParallelSectionCreationDialog, ParallelSectionEditDialog
 
 
 class SectionManagerTab(QWidget):
@@ -115,6 +116,8 @@ class SectionManagerTab(QWidget):
             dialog = AggregatorSectionCreationDialog(self)
         elif section_type == "Uniaxial":
             dialog = UniaxialSectionCreationDialog(self)
+        elif section_type == "Parallel":
+            dialog = ParallelSectionCreationDialog(self)
         else:
             QMessageBox.warning(self, "Error", f"No dialog available for section type: {section_type}")
             return
@@ -146,6 +149,8 @@ class SectionManagerTab(QWidget):
             dialog = AggregatorSectionEditDialog(section, self)
         elif section_type == "Uniaxial":
             dialog = UniaxialSectionEditDialog(section, self)
+        elif section_type == "Parallel":
+            dialog = ParallelSectionEditDialog(section, self)
         else:
             QMessageBox.warning(self, "Error", f"No edit dialog available for section type: {section_type}")
             return
