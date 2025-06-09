@@ -8,10 +8,12 @@ from abc import ABC, abstractmethod
 import math
 from femora.components.section.section_base import Section, SectionRegistry
 from femora.components.Material.materialBase import Material
+from femora.components.section.section_patch import PatchBase
+from femora.components.section.section_layer import LayerBase
 import matplotlib.pyplot as plt
+from matplotlib.patches import Circle
 import matplotlib.patches as mpatches
-from matplotlib.patches import Rectangle, Polygon, Circle, Wedge
-import numpy as np
+
 
 
 class ElasticSection(Section):
@@ -400,201 +402,6 @@ class FiberElement:
     
     def __str__(self) -> str:
         return f"Fiber at ({self.y_loc}, {self.z_loc}) with area {self.area}, material '{self.material.user_name}'"
-
-
-class PatchBase(ABC):
-    """
-    Abstract base class for all patch types in fiber sections with enhanced material handling
-    """
-    
-    def __init__(self, material: Union[int, str, Material]):
-        self.material = Section.resolve_material(material)
-        if self.material is None:
-            raise ValueError("Patch requires a valid material")
-        self.validate()
-
-    @abstractmethod
-    def plot(self, ax: plt.Axes, material_colors: Dict[str, str], 
-             show_patch_outline: bool = True, show_fiber_grid: bool = False) -> None:
-        """Plot the patch on matplotlib axes"""
-        pass
-    
-    @abstractmethod
-    def to_tcl(self) -> str:
-        """Generate OpenSees TCL command for this patch"""
-        pass
-    
-    @abstractmethod
-    def validate(self) -> None:
-        """Validate patch parameters"""
-        pass
-    
-    @abstractmethod
-    def get_patch_type(self) -> str:
-        """Return the patch type name"""
-        pass
-    
-    @abstractmethod
-    def estimate_fiber_count(self) -> int:
-        """Estimate the number of fibers this patch will generate"""
-        pass
-
-
-class RectangularPatch(PatchBase):
-    """
-    Rectangular patch for fiber sections with enhanced material handling
-    """
-    
-    def __init__(self, material: Union[int, str, Material], num_subdiv_y: int, num_subdiv_z: int,
-                 y1: float, z1: float, y2: float, z2: float):
-        # Store parameters before calling parent (which calls validate)
-        try:
-            self.num_subdiv_y = int(num_subdiv_y)
-            self.num_subdiv_z = int(num_subdiv_z)
-            self.y1 = float(y1)
-            self.z1 = float(z1)
-            self.y2 = float(y2)
-            self.z2 = float(z2)
-        except (ValueError, TypeError):
-            raise ValueError("Invalid numeric values for rectangular patch parameters")
-        
-        super().__init__(material)
-
-    def plot(self, ax: plt.Axes, material_colors: Dict[str, str], 
-             show_patch_outline: bool = True, show_fiber_grid: bool = False) -> None:
-        """Plot rectangular patch"""
-        color = material_colors.get(self.material.user_name, 'blue')
-        
-        if show_patch_outline:
-            rect = Rectangle((self.y1, self.z1), self.y2 - self.y1, self.z2 - self.z1,
-                     linewidth=2, edgecolor=color, facecolor='none', alpha=0.8)
-            ax.add_patch(rect)
-
-        # Draw filled rectangle
-        ax.add_patch(Rectangle((self.y1, self.z1), self.y2 - self.y1, self.z2 - self.z1,
-                       facecolor=color, edgecolor='none', alpha=0.3))
-
-        # Draw grid lines if requested
-        if show_fiber_grid:
-            y_edges = np.linspace(self.y1, self.y2, self.num_subdiv_y + 1)
-            z_edges = np.linspace(self.z1, self.z2, self.num_subdiv_z + 1)
-            for y in y_edges:
-                ax.plot([y, y], [self.z1, self.z2], color="white", linewidth=0.8, alpha=0.7)
-            for z in z_edges:
-                ax.plot([self.y1, self.y2], [z, z], color="white", linewidth=0.8, alpha=0.7)
-    
-    def validate(self) -> None:
-        """Validate rectangular patch parameters"""
-        if self.num_subdiv_y <= 0:
-            raise ValueError("Number of subdivisions in y-direction must be positive")
-        if self.num_subdiv_z <= 0:
-            raise ValueError("Number of subdivisions in z-direction must be positive")
-        if self.y1 >= self.y2:
-            raise ValueError("y1 must be less than y2 for rectangular patch")
-        if self.z1 >= self.z2:
-            raise ValueError("z1 must be less than z2 for rectangular patch")
-    
-    def to_tcl(self) -> str:
-        """Generate OpenSees TCL command for rectangular patch"""
-        return f"    patch rect {self.material.tag} {self.num_subdiv_y} {self.num_subdiv_z} {self.y1} {self.z1} {self.y2} {self.z2}"
-    
-    def get_patch_type(self) -> str:
-        return "Rectangular"
-    
-    def estimate_fiber_count(self) -> int:
-        return self.num_subdiv_y * self.num_subdiv_z
-
-
-class LayerBase(ABC):
-    """
-    Abstract base class for layer definitions in fiber sections with enhanced material handling
-    """
-    
-    def __init__(self, material: Union[int, str, Material]):
-        self.material = Section.resolve_material(material)
-        if self.material is None:
-            raise ValueError("Layer requires a valid material")
-        self.validate()
-
-    @abstractmethod
-    def plot(self, ax: plt.Axes, material_colors: Dict[str, str], 
-             show_layer_line: bool = True, show_fibers: bool = True) -> None:
-        """Plot the layer on matplotlib axes"""
-        pass
-    
-    @abstractmethod
-    def to_tcl(self) -> str:
-        """Generate OpenSees TCL command for this layer"""
-        pass
-    
-    @abstractmethod
-    def validate(self) -> None:
-        """Validate layer parameters"""
-        pass
-    
-    @abstractmethod
-    def get_layer_type(self) -> str:
-        """Return the layer type name"""
-        pass
-
-
-class StraightLayer(LayerBase):
-    """
-    Straight layer of fibers between two points with enhanced material handling
-    """
-    
-    def __init__(self, material: Union[int, str, Material], num_fibers: int, area_per_fiber: float,
-                 y1: float, z1: float, y2: float, z2: float):
-        try:
-            self.num_fibers = int(num_fibers)
-            self.area_per_fiber = float(area_per_fiber)
-            self.y1 = float(y1)
-            self.z1 = float(z1)
-            self.y2 = float(y2)
-            self.z2 = float(z2)
-        except (ValueError, TypeError):
-            raise ValueError("Invalid numeric values for straight layer parameters")
-        
-        super().__init__(material)
-
-    def plot(self, ax: plt.Axes, material_colors: Dict[str, str], 
-             show_layer_line: bool = True, show_fibers: bool = True) -> None:
-        """Plot straight layer"""
-        color = material_colors.get(self.material.user_name, 'blue')
-        
-        if show_layer_line:
-            ax.plot([self.y1, self.y2], [self.z1, self.z2], 
-                   color=color, linewidth=2, alpha=0.8, linestyle='--')
-        
-        if show_fibers:
-            if self.num_fibers == 1:
-                y_pos = (self.y1 + self.y2) / 2
-                z_pos = (self.z1 + self.z2) / 2
-                ax.plot(y_pos, z_pos, 's', color=color, markersize=6, alpha=0.8)
-            else:
-                y_positions = np.linspace(self.y1, self.y2, self.num_fibers)
-                z_positions = np.linspace(self.z1, self.z2, self.num_fibers)
-                
-                for y_pos, z_pos in zip(y_positions, z_positions):
-                    ax.plot(y_pos, z_pos, 's', color=color, markersize=6, alpha=0.8)
-    
-    def validate(self) -> None:
-        """Validate straight layer parameters"""
-        if self.num_fibers <= 0:
-            raise ValueError("Number of fibers must be positive")
-        if self.area_per_fiber <= 0:
-            raise ValueError("Area per fiber must be positive")
-        
-        # Check that start and end points are different
-        if abs(self.y1 - self.y2) < 1e-12 and abs(self.z1 - self.z2) < 1e-12:
-            raise ValueError("Start and end points must be different")
-    
-    def to_tcl(self) -> str:
-        """Generate OpenSees TCL command for straight layer"""
-        return f"    layer straight {self.material.tag} {self.num_fibers} {self.area_per_fiber} {self.y1} {self.z1} {self.y2} {self.z2}"
-    
-    def get_layer_type(self) -> str:
-        return "Straight"
 
 
 class WFSection2d(Section):
@@ -1361,8 +1168,27 @@ class FiberSection(Section):
         """Add a rectangular patch to the section"""
         patch = RectangularPatch(material, num_subdiv_y, num_subdiv_z, y1, z1, y2, z2)
         self.patches.append(patch)
-        
-        # Update primary material if none exists
+        if self.material is None:
+            self.material = patch.material
+
+    def add_quadrilateral_patch(self, material: Union[int, str, Material], 
+                             num_subdiv_ij: int, num_subdiv_jk: int,
+                             vertices: list) -> None:
+        """Add a quadrilateral patch to the section"""
+        from femora.components.section.section_patch import QuadrilateralPatch
+        patch = QuadrilateralPatch(material, num_subdiv_ij, num_subdiv_jk, vertices)
+        self.patches.append(patch)
+        if self.material is None:
+            self.material = patch.material
+
+    def add_circular_patch(self, material: Union[int, str, Material], 
+                         num_subdiv_circ: int, num_subdiv_rad: int,
+                         y_center: float, z_center: float, int_rad: float, ext_rad: float,
+                         start_ang: float = 0.0, end_ang: float = 360.0) -> None:
+        """Add a circular patch to the section"""
+        from femora.components.section.section_patch import CircularPatch
+        patch = CircularPatch(material, num_subdiv_circ, num_subdiv_rad, y_center, z_center, int_rad, ext_rad, start_ang, end_ang)
+        self.patches.append(patch)
         if self.material is None:
             self.material = patch.material
 
@@ -1370,10 +1196,20 @@ class FiberSection(Section):
                          num_fibers: int, area_per_fiber: float,
                          y1: float, z1: float, y2: float, z2: float) -> None:
         """Add a straight layer of fibers to the section"""
+        from femora.components.section.section_layer import StraightLayer
         layer = StraightLayer(material, num_fibers, area_per_fiber, y1, z1, y2, z2)
         self.layers.append(layer)
-        
-        # Update primary material if none exists
+        if self.material is None:
+            self.material = layer.material
+
+    def add_circular_layer(self, material: Union[int, str, Material], 
+                         num_fibers: int, area_per_fiber: float,
+                         y_center: float, z_center: float, radius: float,
+                         start_ang: float = 0.0, end_ang: float = None) -> None:
+        """Add a circular layer of fibers to the section"""
+        from femora.components.section.section_layer import CircularLayer
+        layer = CircularLayer(material, num_fibers, area_per_fiber, y_center, z_center, radius, start_ang, end_ang)
+        self.layers.append(layer)
         if self.material is None:
             self.material = layer.material
 
@@ -1491,6 +1327,248 @@ class FiberSection(Section):
                     self.GJ = gj
                 except (ValueError, TypeError):
                     raise ValueError("GJ must be a positive number")
+                
+    def clear_fibers(self) -> None:
+        """Remove all individual fibers"""
+        self.fibers.clear()
+    
+    def clear_patches(self) -> None:
+        """Remove all patches"""
+        self.patches.clear()
+
+    def clear_layers(self) -> None:
+        """Remove all layers"""
+        self.layers.clear()
+    
+    def clear_all(self) -> None:
+        """Remove all fibers, patches, and layers"""
+        self.clear_fibers()
+        self.clear_patches()
+        self.clear_layers()
+
+
+
+    def plot(
+        self,
+        ax: Optional[plt.Axes] = None,
+        figsize: 'Tuple[float, float]' = (10, 8),
+        show_fibers: bool = True,
+        show_patches: bool = True,
+        show_layers: bool = True,
+        show_patch_outline: bool = True,
+        show_fiber_grid: bool = True,
+        show_layer_line: bool = True,
+        title: Optional[str] = None,
+        material_colors: Optional[Dict[str, str]] = None,
+        save_path: Optional[str] = None,
+        dpi: int = 300
+    ) -> plt.Figure:
+        """
+        Plot the complete fiber section
+
+        Args:
+            ax: Matplotlib axes to plot on (if None, creates new figure)
+            figsize: Figure size if creating new figure
+            show_fibers: Whether to show individual fibers
+            show_patches: Whether to show patches
+            show_layers: Whether to show layers
+            show_patch_outline: Whether to show patch outlines
+            show_fiber_grid: Whether to show fiber grid in patches
+            show_layer_line: Whether to show layer lines
+            title: Custom title for the plot
+            material_colors: Custom color mapping for materials
+            save_path: Path to save the figure (optional)
+            dpi: DPI for saved figure
+
+        Returns:
+            matplotlib Figure object
+        """
+        # Set default title if none provided
+        if title is None:
+            title = f"Fiber Section: {self.user_name} (Tag: {self.tag})"
+        # Set primary material to first found material
+        all_materials = self.get_materials()
+        self.material = all_materials[0] if all_materials else None
+
+        # Call the static plotting method
+        return self.plot_components(
+            fibers=self.fibers,
+            patches=self.patches,
+            layers=self.layers,
+            ax=ax,
+            figsize=figsize,
+            show_fibers=show_fibers,
+            show_patches=show_patches,
+            show_layers=show_layers,
+            show_patch_outline=show_patch_outline,
+            show_fiber_grid=show_fiber_grid,
+            show_layer_line=show_layer_line,
+            title=title,
+            material_colors=material_colors,
+            save_path=save_path,
+            dpi=dpi
+        )
+
+
+    @staticmethod
+    def plot_components(
+        fibers: List[FiberElement],
+        patches: List[PatchBase],
+        layers: List[LayerBase],
+        ax: Optional[plt.Axes] = None,
+        figsize: Tuple[float, float] = (10, 8),
+        show_fibers: bool = True,
+        show_patches: bool = True,
+        show_layers: bool = True,
+        show_patch_outline: bool = True,
+        show_fiber_grid: bool = True,
+        show_layer_line: bool = True,
+        title: Optional[str] = None,
+        material_colors: Optional[Dict[str, str]] = None,
+        save_path: Optional[str] = None,
+        dpi: int = 300
+    ) -> plt.Figure:
+        """
+        Static method to plot fiber section components.
+        """
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize)
+        else:
+            fig = ax.get_figure()
+
+        if material_colors is None:
+            material_colors = FiberSection.generate_material_colors(fibers, patches, layers)
+
+        scale_factor = FiberSection.calculate_scale_factor(fibers)
+
+        if show_fibers:
+            for fiber in fibers:
+                fiber.plot(ax, material_colors, scale_factor, show_fibers=True)
+
+        if show_patches:
+            for patch in patches:
+                patch.plot(ax, material_colors, show_patch_outline, show_fiber_grid)
+
+        if show_layers:
+            for layer in layers:
+                layer.plot(ax, material_colors, show_layer_line, show_fibers)
+
+        ax.set_xlabel('Y Coordinate')
+        ax.set_ylabel('Z Coordinate')
+        ax.set_aspect('equal')
+        # ax.grid(True, alpha=0.3)
+
+        if title is not None:
+            ax.set_title(title)
+
+        FiberSection._add_legend_to_axes(ax, material_colors)
+        FiberSection._add_section_info_to_axes(ax, fibers, patches, layers)
+
+        fig.tight_layout()
+
+        if save_path:
+            fig.savefig(save_path, dpi=dpi, bbox_inches='tight')
+
+        return fig
+
+    def _generate_material_colors(self) -> Dict[str, str]:
+        """Generate color mapping for materials."""
+        return self.generate_material_colors(self.fibers, self.patches, self.layers)
+
+    @staticmethod
+    def generate_material_colors(
+        fibers: List[FiberElement],
+        patches: List[PatchBase],
+        layers: List[LayerBase]
+    ) -> Dict[str, str]:
+        """Static method to generate color mapping for materials."""
+        materials = []
+        for fiber in fibers:
+            if fiber.material not in materials:
+                materials.append(fiber.material)
+        for patch in patches:
+            if patch.material not in materials:
+                materials.append(patch.material)
+        for layer in layers:
+            if layer.material not in materials:
+                materials.append(layer.material)
+        colors = [
+            'tab:blue', 'tab:orange', 'tab:green', 'tab:red', 'tab:purple',
+            'tab:brown', 'tab:pink', 'tab:gray', 'tab:olive', 'tab:cyan'
+        ]
+        material_colors = {}
+        for i, material in enumerate(materials):
+            material_colors[material.user_name] = colors[i % len(colors)]
+        return material_colors
+
+    def _calculate_scale_factor(self) -> float:
+        """Calculate appropriate scale factor for fiber visualization."""
+        return self.calculate_scale_factor(self.fibers)
+
+    @staticmethod
+    def calculate_scale_factor(fibers: List[FiberElement]) -> float:
+        """Static method to calculate appropriate scale factor for fiber visualization."""
+        if not fibers:
+            return 1.0
+        y_coords = [fiber.y_loc for fiber in fibers]
+        z_coords = [fiber.z_loc for fiber in fibers]
+        if not y_coords or not z_coords:
+            return 1.0
+        y_range = max(y_coords) - min(y_coords)
+        z_range = max(z_coords) - min(z_coords)
+        coord_range = max(y_range, z_range)
+        if coord_range == 0:
+            return 1.0
+        return coord_range / 50.0
+
+    def _add_legend(self, ax: plt.Axes, material_colors: Dict[str, str]) -> None:
+        """Add legend showing materials."""
+        self._add_legend_to_axes(ax, material_colors)
+
+    @staticmethod
+    def _add_legend_to_axes(ax: plt.Axes, material_colors: Dict[str, str]) -> None:
+        """Static helper method to add legend showing materials."""
+        if not material_colors:
+            return
+        legend_elements = [
+            mpatches.Patch(color=color, label=material_name)
+            for material_name, color in material_colors.items()
+        ]
+        if legend_elements:
+            ax.legend(handles=legend_elements, loc='upper left', bbox_to_anchor=(1.02, 1), borderaxespad=0.)
+
+    def _add_section_info(self, ax: plt.Axes) -> None:
+        """Add section information text."""
+        self._add_section_info_to_axes(ax, self.fibers, self.patches, self.layers)
+
+    @staticmethod
+    def _add_section_info_to_axes(
+        ax: plt.Axes,
+        fibers: List[FiberElement],
+        patches: List[PatchBase],
+        layers: List[LayerBase]
+    ) -> None:
+        """Static helper method to add section information text."""
+        total_fibers = len(fibers)
+        for patch in patches:
+            total_fibers += patch.estimate_fiber_count()
+        for layer in layers:
+            if hasattr(layer, 'num_fibers'):
+                total_fibers += layer.num_fibers
+        info_text = (
+            f"Fibers: {len(fibers)}\n"
+            f"Patches: {len(patches)}\n"
+            f"Layers: {len(layers)}\n"
+            f"Est. Total Fibers: {total_fibers}"
+        )
+        ax.text(
+            1.03, 0.02, info_text, transform=ax.transAxes,
+            horizontalalignment='left', verticalalignment='bottom',
+            bbox=dict(boxstyle='round', facecolor='white', alpha=0.8)
+        )
+
+
+
 
 
 # Register all section types
@@ -1614,7 +1692,22 @@ def create_example_sections():
     print(f"\n9. Fiber Section: {fiber_sec}")
     print(f"   Materials used: {[mat.user_name for mat in fiber_sec.get_materials()]}")
     print(f"   Primary material: {fiber_sec.material.user_name if fiber_sec.material else 'None'}")
-    
+    print("************************************************")
+    fiber_sec.plot()
+    plt.show()
+
+
+    fiber_sec2 = FiberSection("Fiber_Section_2", GJ=1.5e6)
+    # Add fibers using material objects
+    fiber_sec2.add_fiber(0.0, 0.0, 0.001, steel)  # Center fiber
+    fiber_sec2.add_circular_patch(material=concrete, 
+                                  num_subdiv_circ=16, num_subdiv_rad=4,
+                                  y_center=0.0, z_center=0.0, int_rad=0.0, ext_rad=0.5)
+    fiber_sec2.add_circular_layer(material=rebar,
+                                  num_fibers=8, area_per_fiber=0.0001,
+                                  y_center=0.0, z_center=0.0, radius=0.4)
+    fiber_sec2.plot()
+    plt.show()    
     # Example 10: Parallel section combining existing sections
     try:
         parallel_sec = ParallelSection("Combined_Section", 
@@ -1685,5 +1778,7 @@ def demonstrate_all_section_types():
 
 
 if __name__ == "__main__":
+    from femora.components.section.section_patch import *
+    from femora.components.section.section_layer import *
     # Example usage demonstrating enhanced material handling across all section types
     sections = demonstrate_all_section_types()
