@@ -22,6 +22,7 @@ from femora.components.section.wf2d_section_gui import WFSection2dCreationDialog
 from femora.components.section.elastic_membrane_section_gui import ElasticMembranePlateSectionCreationDialog, ElasticMembranePlateSectionEditDialog
 from femora.components.section.platefiber_section_gui import PlateFiberSectionCreationDialog, PlateFiberSectionEditDialog
 from femora.components.section.aggregator_section_gui import AggregatorSectionCreationDialog, AggregatorSectionEditDialog
+from femora.components.section.uniaxial_section_gui import UniaxialSectionCreationDialog, UniaxialSectionEditDialog
 
 
 class SectionManagerTab(QWidget):
@@ -113,8 +114,7 @@ class SectionManagerTab(QWidget):
         elif section_type == "Aggregator":
             dialog = AggregatorSectionCreationDialog(self)
         elif section_type == "Uniaxial":
-            QMessageBox.information(self, "Not Available", "Uniaxial section GUI will be implemented in the future.")
-            return
+            dialog = UniaxialSectionCreationDialog(self)
         else:
             QMessageBox.warning(self, "Error", f"No dialog available for section type: {section_type}")
             return
@@ -145,8 +145,7 @@ class SectionManagerTab(QWidget):
         elif section_type == "Aggregator":
             dialog = AggregatorSectionEditDialog(section, self)
         elif section_type == "Uniaxial":
-            QMessageBox.information(self, "Not Available", "Uniaxial section editing will be implemented in the future.")
-            return
+            dialog = UniaxialSectionEditDialog(section, self)
         else:
             QMessageBox.warning(self, "Error", f"No edit dialog available for section type: {section_type}")
             return
