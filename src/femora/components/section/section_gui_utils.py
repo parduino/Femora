@@ -42,29 +42,6 @@ def setup_material_dropdown(combo_box: QComboBox, material_filter=None, placehol
         combo_box.addItem(display_name, material)
 
 
-def setup_concrete_material_dropdown(combo_box: QComboBox):
-    """
-    Set up dropdown for concrete materials (nDMaterial types)
-    """
-    def is_concrete_material(mat):
-        return (mat.material_type == 'nDMaterial' and 
-                ('concrete' in mat.user_name.lower() or 
-                 'elastic' in mat.material_name.lower()))
-    
-    setup_material_dropdown(combo_box, is_concrete_material, "Select Concrete Material")
-
-
-def setup_steel_material_dropdown(combo_box: QComboBox):
-    """
-    Set up dropdown for steel materials (typically uniaxialMaterial types)
-    """
-    def is_steel_material(mat):
-        return (mat.material_type == 'uniaxialMaterial' and 
-                ('steel' in mat.user_name.lower() or 
-                 'rebar' in mat.user_name.lower() or
-                 'elastic' in mat.material_name.lower()))
-    
-    setup_material_dropdown(combo_box, is_steel_material, "Select Steel Material")
 
 
 def setup_any_material_dropdown(combo_box: QComboBox):
