@@ -21,6 +21,7 @@ from femora.components.section.rc_section_gui import RCSectionCreationDialog, RC
 from femora.components.section.wf2d_section_gui import WFSection2dCreationDialog, WFSection2dEditDialog
 from femora.components.section.elastic_membrane_section_gui import ElasticMembranePlateSectionCreationDialog, ElasticMembranePlateSectionEditDialog
 from femora.components.section.platefiber_section_gui import PlateFiberSectionCreationDialog, PlateFiberSectionEditDialog
+from femora.components.section.aggregator_section_gui import AggregatorSectionCreationDialog, AggregatorSectionEditDialog
 
 
 class SectionManagerTab(QWidget):
@@ -110,8 +111,7 @@ class SectionManagerTab(QWidget):
             QMessageBox.information(self, "Not Available", "Fiber section GUI will be implemented in the future.")
             return
         elif section_type == "Aggregator":
-            QMessageBox.information(self, "Not Available", "Aggregator section GUI will be implemented in the future.")
-            return
+            dialog = AggregatorSectionCreationDialog(self)
         elif section_type == "Uniaxial":
             QMessageBox.information(self, "Not Available", "Uniaxial section GUI will be implemented in the future.")
             return
@@ -143,8 +143,7 @@ class SectionManagerTab(QWidget):
             QMessageBox.information(self, "Not Available", "Fiber section editing will be implemented in the future.")
             return
         elif section_type == "Aggregator":
-            QMessageBox.information(self, "Not Available", "Aggregator section editing will be implemented in the future.")
-            return
+            dialog = AggregatorSectionEditDialog(section, self)
         elif section_type == "Uniaxial":
             QMessageBox.information(self, "Not Available", "Uniaxial section editing will be implemented in the future.")
             return
