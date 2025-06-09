@@ -11,8 +11,8 @@ from femora.components.Material.materialBase import Material
 from femora.components.section.section_patch import PatchBase
 from femora.components.section.section_layer import LayerBase
 import matplotlib.pyplot as plt
-from matplotlib.patches import Circle
 import matplotlib.patches as mpatches
+from matplotlib.patches import Circle
 
 
 
