@@ -25,6 +25,7 @@ from femora.components.section.aggregator_section_gui import AggregatorSectionCr
 from femora.components.section.uniaxial_section_gui import UniaxialSectionCreationDialog, UniaxialSectionEditDialog
 from femora.components.section.parallel_section_gui import ParallelSectionCreationDialog, ParallelSectionEditDialog
 from femora.components.section.bidirectional_section_gui import BidirectionalSectionCreationDialog, BidirectionalSectionEditDialog
+from femora.components.section.isolator2spring_section_gui import Isolator2SpringSectionCreationDialog, Isolator2SpringSectionEditDialog
 
 
 class SectionManagerTab(QWidget):
@@ -117,6 +118,8 @@ class SectionManagerTab(QWidget):
             dialog = ParallelSectionCreationDialog(self)
         elif section_type == "Bidirectional":
             dialog = BidirectionalSectionCreationDialog(self)
+        elif section_type == "Isolator2spring":
+            dialog = Isolator2SpringSectionCreationDialog(self)
         else:
             QMessageBox.warning(self, "Error", f"No dialog available for section type: {section_type}")
             return
@@ -152,6 +155,8 @@ class SectionManagerTab(QWidget):
             dialog = ParallelSectionEditDialog(section, self)
         elif section_type == "Bidirectional":
             dialog = BidirectionalSectionEditDialog(section, self)
+        elif section_type == "Isolator2spring":
+            dialog = Isolator2SpringSectionEditDialog(section, self)
         else:
             QMessageBox.warning(self, "Error", f"No edit dialog available for section type: {section_type}")
             return
