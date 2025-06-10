@@ -26,6 +26,7 @@ from femora.components.section.uniaxial_section_gui import UniaxialSectionCreati
 from femora.components.section.parallel_section_gui import ParallelSectionCreationDialog, ParallelSectionEditDialog
 from femora.components.section.bidirectional_section_gui import BidirectionalSectionCreationDialog, BidirectionalSectionEditDialog
 from femora.components.section.isolator2spring_section_gui import Isolator2SpringSectionCreationDialog, Isolator2SpringSectionEditDialog
+from femora.components.section.fiber_section_gui import FiberSectionCreationDialog 
 
 
 class SectionManagerTab(QWidget):
@@ -108,8 +109,7 @@ class SectionManagerTab(QWidget):
         elif section_type == "PlateFiber":
             dialog = PlateFiberSectionCreationDialog(self)
         elif section_type == "Fiber":
-            QMessageBox.information(self, "Not Available", "Fiber section GUI will be implemented in the future.")
-            return
+            dialog = FiberSectionCreationDialog(parent=self)
         elif section_type == "Aggregator":
             dialog = AggregatorSectionCreationDialog(self)
         elif section_type == "Uniaxial":
