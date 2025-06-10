@@ -20,45 +20,9 @@ from femora.components.section.section_opensees import (
 from femora.components.section.section_layer import *
 from femora.components.section.section_patch import *
 from femora.components.Material.materialBase import Material
+from femora.components.section.section_gui_utils import(setup_uniaxial_material_dropdown,
+                                                        validate_material_selection)
 
-# Import GUI utilities
-try:
-    from .section_gui_utils import (
-        setup_material_dropdown, setup_uniaxial_material_dropdown,
-        validate_material_selection, get_material_by_combo_selection, 
-        set_combo_to_material
-    )
-except ImportError:
-    # Fallback implementations if utilities not available
-    def setup_material_dropdown(combo_box, material_filter=None, placeholder_text="Select Material"):
-        combo_box.clear()
-        combo_box.addItem(placeholder_text, None)
-        all_materials = Material.get_all_materials()
-        for tag, material in all_materials.items():
-            if material_filter and not material_filter(material):
-                continue
-            display_name = f"{material.user_name} (Tag: {tag}, Type: {material.material_name})"
-            combo_box.addItem(display_name, material)
-    
-    def setup_uniaxial_material_dropdown(combo_box, placeholder_text="Select Uniaxial Material"):
-        def is_uniaxial(mat):
-            return mat.material_type == 'uniaxialMaterial'
-        setup_material_dropdown(combo_box, is_uniaxial, placeholder_text)
-    
-    def validate_material_selection(combo_box, field_name="Material"):
-        material = combo_box.currentData()
-        if material is None:
-            return False, None, f"Please select a {field_name.lower()}."
-        return True, material, ""
-    
-    def get_material_by_combo_selection(combo_box):
-        return combo_box.currentData()
-    
-    def set_combo_to_material(combo_box, material):
-        for i in range(combo_box.count()):
-            if combo_box.itemData(i) == material:
-                combo_box.setCurrentIndex(i)
-                return
 
 
 class FiberSectionDialog(QDialog):
