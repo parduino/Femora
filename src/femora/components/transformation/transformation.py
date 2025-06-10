@@ -202,6 +202,20 @@ class GeometricTransformationManager:
         raise ValueError(f"Transformation with tag {transf_tag} not found.")
     
     @classmethod
+    def get_transformation(cls, identifier:Union[str, int]) -> GeometricTransformation:
+        """
+        Retrieves a geometric transformation by its tag or type.
+        Tag or name of the transformation can be provided.
+        """
+        if isinstance(identifier, int):
+            return cls.get_transformation_by_tag(identifier)
+        elif isinstance(identifier, str):
+            raise NotImplementedError("Retrieving by name is not implemented yet.")
+        else:
+            raise TypeError("Identifier must be an integer (tag) or string (name).")
+        
+    
+    @classmethod
     def filter_transformations(cls, transf_type=None, dimension=None):
         """
         Filters transformations by type and/or dimension.
