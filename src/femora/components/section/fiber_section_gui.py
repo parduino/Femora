@@ -25,7 +25,7 @@ from femora.components.section.section_gui_utils import(setup_uniaxial_material_
 
 
 
-class FiberSectionDialog(QDialog):
+class FiberSectionCreationDialog(QDialog):
     """
     Updated dialog for creating and editing fiber sections
     Compatible with the current FiberSection implementation
@@ -38,7 +38,7 @@ class FiberSectionDialog(QDialog):
         self.created_section = None
         
         self.setWindowTitle("Edit Fiber Section" if self.is_editing else "Create Fiber Section")
-        self.setGeometry(200, 200, 1400, 900)
+        self.setGeometry(200, 200, 1200, 800)
         
         # Data storage for components (collected before creating section)
         self.fibers_data = []
@@ -111,10 +111,10 @@ class FiberSectionDialog(QDialog):
         right_layout.addWidget(preview_group)
         right_layout.addWidget(info_group)
         
-        # Set splitter sizes (60% left, 40% right)
+        # Set splitter sizes (80% right, 20% left)
         splitter.addWidget(left_widget)
         splitter.addWidget(right_widget)
-        splitter.setSizes([840, 560])
+        splitter.setSizes([240, 960])
         
         # Buttons
         self.setup_buttons(main_layout)
@@ -1211,7 +1211,7 @@ GJ (Torsional Stiffness): {'Specified' if self.gj_checkbox.isChecked() else 'Not
 # Integration functions for the main application
 def create_fiber_section_dialog(parent=None):
     """Create a new fiber section using the dialog"""
-    dialog = FiberSectionDialog(parent=parent)
+    dialog = FiberSectionCreationDialog(parent=parent)
     if dialog.exec() == QDialog.Accepted:
         return dialog.created_section
     return None
@@ -1219,7 +1219,7 @@ def create_fiber_section_dialog(parent=None):
 
 def edit_fiber_section_dialog(fiber_section, parent=None):
     """Edit an existing fiber section"""
-    dialog = FiberSectionDialog(fiber_section=fiber_section, parent=parent)
+    dialog = FiberSectionCreationDialog(fiber_section=fiber_section, parent=parent)
     if dialog.exec() == QDialog.Accepted:
         return dialog.created_section
     return None
@@ -1239,7 +1239,7 @@ if __name__ == "__main__":
     # Create some test materials if needed
     # This would typically be done through the material manager
     
-    dialog = FiberSectionDialog()
+    dialog = FiberSectionCreationDialog()
     dialog.show()
     
     sys.exit(app.exec())
