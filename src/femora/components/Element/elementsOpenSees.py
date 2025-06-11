@@ -416,9 +416,15 @@ class PML3DElement(Element):
             if kwargs['meshTypeParameters'] is None:
                 raise ValueError("meshTypeParameters must be specified")
             else:
-                values = kwargs['meshTypeParameters'].split(",")
+                if isinstance(kwargs['meshTypeParameters'], str):
+                    # Split the string by commas
+                    values = kwargs['meshTypeParameters'].split(",")
+                elif isinstance(kwargs['meshTypeParameters'], list):
+                    values = kwargs['meshTypeParameters']
+                else:
+                    raise ValueError("meshTypeParameters must be a string or a list of comma separated float numbers")
                 # Remove whitespace from beginning and end of each string
-                values = [value.strip() for value in values]
+                values = [value.strip() if isinstance(value, str) else value for value in values]
                 
                 if kwargs['meshType'].lower() in ["box", "general"]:
                     if len(values) < 6:
