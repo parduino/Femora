@@ -77,6 +77,20 @@ class TransformationWidget3D(QWidget):
             self.d_yj.value(),
             self.d_zj.value()
         )
+    
+    def load_transformation(self, transformation):
+        if transformation is None:
+            return
+        self.type_combo.setCurrentText(getattr(transformation, 'transf_type', 'Linear'))
+        self.vecxz_x.setValue(getattr(transformation, 'vecxz_x', 0))
+        self.vecxz_y.setValue(getattr(transformation, 'vecxz_y', 0))
+        self.vecxz_z.setValue(getattr(transformation, 'vecxz_z', -1))
+        self.d_xi.setValue(getattr(transformation, 'd_xi', 0))
+        self.d_yi.setValue(getattr(transformation, 'd_yi', 0))
+        self.d_zi.setValue(getattr(transformation, 'd_zi', 0))
+        self.d_xj.setValue(getattr(transformation, 'd_xj', 0))
+        self.d_yj.setValue(getattr(transformation, 'd_yj', 0))
+        self.d_zj.setValue(getattr(transformation, 'd_zj', 0))
 
 # Optionally, you can keep the following demo for manual testing:
 if __name__ == "__main__":
