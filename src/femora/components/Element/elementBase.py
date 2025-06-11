@@ -583,3 +583,4 @@ class ElementRegistry:
 
 # Import existing element implementations
 from femora.components.Element.elementsOpenSees import *
+from femora.components.Element.elements_opensees_beam import *
