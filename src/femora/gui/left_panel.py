@@ -14,6 +14,7 @@ from femora.components.Recorder.recorderGUI import RecorderManagerTab
 from femora.components.Analysis.analysisGUI import AnalysisManagerTab
 from femora.components.Process.processGUI import ProcessGUI
 from femora.components.DRM.combinedDRMGUI import CombinedDRMGUI
+from femora.components.section.section_gui import SectionManagerTab
 
 class LeftPanel(QFrame):
     '''
@@ -60,7 +61,7 @@ class LeftPanel(QFrame):
         self.manage_tab = QWidget()
 
         # Add tabs to the tab widget
-        self.tabs.addTab(self.material_tab, "Material")
+        self.tabs.addTab(self.material_tab, "Material && Section")
         self.tabs.addTab(self.mesh_tab, "Mesh")
         self.tabs.addTab(self.Assemble_tab, "Assemble")
         self.tabs.addTab(self.drm_tab, "DRM Analysis")
@@ -71,9 +72,12 @@ class LeftPanel(QFrame):
     
 
     def setup_tab_contents(self):
-        # Material tab
+        # Material and  section tab
         self.material_tab.layout = QVBoxLayout()
         self.material_tab.layout.addWidget(MaterialManagerTab())
+        self.material_tab.setLayout(self.material_tab.layout)
+        # Section tab
+        self.material_tab.layout.addWidget(SectionManagerTab())
         self.material_tab.setLayout(self.material_tab.layout)
 
         # Mesh tab

@@ -3,9 +3,20 @@ from ..Material.materialBase import Material
 from .elementBase import Element, ElementRegistry
 
 
-
 class SSPQuadElement(Element):
     def __init__(self, ndof: int, material: Material, **kwargs):
+        # Validate material compatibility
+        if not self._is_material_compatible(material):
+            raise ValueError(f"Material {material.user_name} with type {material.material_type} is not compatible with SSPQuadElement")
+        
+        # Validate DOF requirement
+        if ndof != 2:
+            raise ValueError(f"SSPQuadElement requires 2 DOFs, but got {ndof}")
+        
+        # Validate element parameters if provided
+        if kwargs:
+            kwargs = self.validate_element_parameters(**kwargs)
+            
         super().__init__('SSPQuad', ndof, material)
         self.params = kwargs if kwargs else {}
 
@@ -20,7 +31,7 @@ class SSPQuadElement(Element):
 
         return f"{self._material.tag} {params_str}"
     
-    def to_tcl(self, tag :int ,nodes: List[int]) -> str:
+    def to_tcl(self, tag: int, nodes: List[int]) -> str:
         """
         Generate the OpenSees element string representation
         
@@ -34,7 +45,6 @@ class SSPQuadElement(Element):
         tag = str(tag)
         return f"element SSPquad {tag} {nodes_str} {self._material.tag} {params_str}"
     
-
     @classmethod 
     def get_parameters(cls) -> List[str]:
         """
@@ -44,7 +54,6 @@ class SSPQuadElement(Element):
             List[str]: Parameters for SSPQuad element
         """
         return ["Type", "Thickness", "b1", "b2"]
-
 
     def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
         """
@@ -67,10 +76,10 @@ class SSPQuadElement(Element):
         """
         self.params.clear()
         self.params.update(values)
-        print(f"Updated parameters: {self.params} \nmaterial:{self._material} \nndof:{self._ndof}  ")
+        # print(f"Updated parameters: {self.params} \nmaterial:{self._material} \nndof:{self._ndof}")
 
     @classmethod
-    def _is_material_compatible(self, material: Material) -> bool:
+    def _is_material_compatible(cls, material: Material) -> bool:
         """
         Check material compatibility for SSP Quad Element
         
@@ -103,12 +112,12 @@ class SSPQuadElement(Element):
                 'Constant body forces in global y direction'] 
     
     @classmethod
-    def validate_element_parameters(self, **kwargs) -> Dict[str, Union[int, float, str]]:
+    def validate_element_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
         """
         Check if the element input parameters are valid.
 
         Returns:
-            Dict[str, Union[int, float, str]]: Dictionary of parmaeters with valid values
+            Dict[str, Union[int, float, str]]: Dictionary of parameters with valid values
         """
         if 'Type' not in kwargs:
             raise ValueError("Type of element must be specified")
@@ -136,21 +145,30 @@ class SSPQuadElement(Element):
                 raise ValueError("b2 must be a float number")
             
         return kwargs
-        
-        
 
 
 class stdBrickElement(Element):
     def __init__(self, ndof: int, material: Material, **kwargs):
+        # Validate material compatibility
+        if not self._is_material_compatible(material):
+            raise ValueError(f"Material {material.user_name} with type {material.material_type} is not compatible with stdBrickElement")
+        
+        # Validate DOF requirement
+        if ndof != 3:
+            raise ValueError(f"stdBrickElement requires 3 DOFs, but got {ndof}")
+        
+        # Validate element parameters if provided
+        if kwargs:
+            kwargs = self.validate_element_parameters(**kwargs)
+            
         super().__init__('stdBrick', ndof, material)
         self.params = kwargs if kwargs else {}
         
-    def to_tcl(self, tag :int ,nodes: List[int]) -> str:
+    def to_tcl(self, tag: int, nodes: List[int]) -> str:
         """
         Generate the OpenSees element string representation
         
         Example: element stdBrick tag nodes matTag b1 b2 b3
-
         """
         if len(nodes) != 8:
             raise ValueError("stdBrick element requires 8 nodes")
@@ -160,8 +178,6 @@ class stdBrickElement(Element):
         tag = str(tag)
         return f"element stdBrick {tag} {nodes_str} {self._material.tag} {params_str}"
 
-
-    
     @classmethod
     def get_parameters(cls) -> List[str]:
         """
@@ -195,7 +211,7 @@ class stdBrickElement(Element):
         self.params.update(values)
 
     @classmethod
-    def _is_material_compatible(self, material: Material) -> bool:
+    def _is_material_compatible(cls, material: Material) -> bool:
         """
         Check material compatibility for stdBrick Element
         
@@ -227,12 +243,12 @@ class stdBrickElement(Element):
                 'Constant body forces in global z direction']
     
     @classmethod
-    def validate_element_parameters(self, **kwargs) -> Dict[str, Union[int, float, str]]:
+    def validate_element_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
         """
         Check if the element input parameters are valid.
 
         Returns:
-            Dict[str, Union[int, float, str]]: Dictionary of parmaeters with valid values
+            Dict[str, Union[int, float, str]]: Dictionary of parameters with valid values
         """
         if "b1" in kwargs:
             try:
@@ -253,14 +269,26 @@ class stdBrickElement(Element):
                 raise ValueError("b3 must be a float number")
             
         return kwargs
-    
+
 
 class PML3DElement(Element):
     def __init__(self, ndof: int, material: Material, **kwargs):
+        # Validate material compatibility
+        if not self._is_material_compatible(material):
+            raise ValueError(f"Material {material.user_name} with type {material.material_type} is not compatible with PML3DElement")
+        
+        # Validate DOF requirement
+        if ndof != 9:
+            raise ValueError(f"PML3DElement requires 9 DOFs, but got {ndof}")
+        
+        # Validate element parameters if provided
+        if kwargs:
+            kwargs = self.validate_element_parameters(**kwargs)
+            
         super().__init__('PML3D', ndof, material)
         self.params = kwargs if kwargs else {}
 
-    def to_tcl(self, tag :int ,nodes: List[int]) -> str:
+    def to_tcl(self, tag: int, nodes: List[int]) -> str:
         """
         Generate the OpenSees element string representation
         """
@@ -282,15 +310,13 @@ class PML3DElement(Element):
                 elestr += f" -Cp {self.params['Cp']}"
         return elestr
 
-
-
     @classmethod
     def get_parameters(cls) -> List[str]:
         """
         Specific parameters for PML3D
         
         Returns:
-            List[str]: Parameters for stdBrick element
+            List[str]: Parameters for PML3D element
         """
         return ["PML_Thickness", 
                 "meshType", "meshTypeParameters",
@@ -319,7 +345,6 @@ class PML3DElement(Element):
             "&alpha;<sub>0</sub> PML parameter (optional, default=Calculated from m, R, Cp)",
             "&beta;<sub>0</sub> PML parameter (optional, default=Calculated from m, R, Cp)"]
     
-    
     @classmethod
     def get_possible_dofs(cls) -> List[str]:
         """
@@ -340,7 +365,6 @@ class PML3DElement(Element):
         Returns:
             Dict[str, Union[int, float, str]]: Dictionary of parameter values
         """
-        
         vals = {key: self.params.get(key) for key in keys}
         vals['meshTypeParameters'] = ", ".join(str(val) for val in vals['meshTypeParameters'])
         return vals
@@ -356,25 +380,24 @@ class PML3DElement(Element):
         self.params.update(values)
 
     @classmethod
-    def _is_material_compatible(self, material: Material) -> bool:
+    def _is_material_compatible(cls, material: Material) -> bool:
         """
         Check material compatibility for PML3D Element
         
         Returns:
             bool: True if material is a 3D (nDMaterial) type and ElasticIsotropicMaterial
         """
-        check = (material.material_type == 'nDMaterial') and  (material.__class__.__name__ == 'ElasticIsotropicMaterial')
+        check = (material.material_type == 'nDMaterial') and (material.__class__.__name__ == 'ElasticIsotropicMaterial')
         return check
     
     @classmethod
-    def validate_element_parameters(self, **kwargs) -> Dict[str, Union[int, float, str]]:
+    def validate_element_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
         """
         Check if the element input parameters are valid.
 
         Returns:
-            Dict[str, Union[int, float, str]]: Dictionary of parmaeters with valid values
+            Dict[str, Union[int, float, str]]: Dictionary of parameters with valid values
         """
-
         if 'PML_Thickness' not in kwargs:
             raise ValueError("PML_Thickness must be specified")
         try:
@@ -388,15 +411,20 @@ class PML3DElement(Element):
         if kwargs['meshType'].lower() not in ["box", "general"]:    
             raise ValueError("meshType must be either 'box' or 'general'")
                    
-
         try:
             kwargs['meshTypeParameters'] = kwargs.get('meshTypeParameters', None)
             if kwargs['meshTypeParameters'] is None:
                 raise ValueError("meshTypeParameters must be specified")
             else:
-                values = kwargs['meshTypeParameters'].split(",")
-                # delete the space from the end of beginning and end of the string
-                values = [value.strip() for value in values]
+                if isinstance(kwargs['meshTypeParameters'], str):
+                    # Split the string by commas
+                    values = kwargs['meshTypeParameters'].split(",")
+                elif isinstance(kwargs['meshTypeParameters'], list):
+                    values = kwargs['meshTypeParameters']
+                else:
+                    raise ValueError("meshTypeParameters must be a string or a list of comma separated float numbers")
+                # Remove whitespace from beginning and end of each string
+                values = [value.strip() if isinstance(value, str) else value for value in values]
                 
                 if kwargs['meshType'].lower() in ["box", "general"]:
                     if len(values) < 6:
@@ -407,9 +435,8 @@ class PML3DElement(Element):
                 
                 kwargs['meshTypeParameters'] = values
         except ValueError:
-            raise ValueError("meshTypeParameters must be a list of  6 comma separated float numbers")
+            raise ValueError("meshTypeParameters must be a list of 6 comma separated float numbers")
         
-
         try:
             kwargs['gamma'] = float(kwargs.get('gamma', 1./2.))
         except ValueError:
@@ -440,15 +467,11 @@ class PML3DElement(Element):
         except ValueError:
             raise ValueError("R must be a float number")
         
-
         if "Cp" in kwargs:
             try:
                 kwargs['Cp'] = float(kwargs['Cp'])
             except ValueError:
                 raise ValueError("Cp must be a float number")
-        
-        
-        
         
         if "alpha0" in kwargs or "beta0" in kwargs:
             if "alpha0" not in kwargs or "beta0" not in kwargs:
@@ -458,20 +481,8 @@ class PML3DElement(Element):
                 kwargs["beta0"] = float(kwargs["beta0"])
             except ValueError:
                 raise ValueError("alpha0 and beta0 must be float numbers")
+        
         return kwargs
-    
-
-    
-        
-        
-    
-    
-
-    
-    
-
-
-        
 
 
 # =================================================================================================
