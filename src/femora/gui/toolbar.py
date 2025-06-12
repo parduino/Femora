@@ -147,8 +147,8 @@ class ToolbarManager:
         light_theme_action.triggered.connect(lambda: self.main_window.switch_theme("Light"))
         theme_menu.addAction(light_theme_action)
 
-        brown_theme_action = QAction("Brown Theme", self.main_window)
-        brown_theme_action.triggered.connect(lambda: self.main_window.switch_theme("Brown"))
+        brown_theme_action = QAction("SimCenter Theme", self.main_window)
+        brown_theme_action.triggered.connect(lambda: self.main_window.switch_theme("SimCenter"))
         theme_menu.addAction(brown_theme_action)
 
     def create_tools_menu(self):
