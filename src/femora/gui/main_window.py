@@ -59,7 +59,7 @@ class MainWindow(QMainWindow):
             app = QApplication([])
 
         self.font_size = 10
-        self.current_theme = "Dark"
+        self.current_theme = "SimCenter"
         self.drm_manager = DRMManager(self)
         self.create_palettes()
         self.meshMaker = MeshMaker.get_instance()
@@ -79,6 +79,20 @@ class MainWindow(QMainWindow):
         self.apply_theme()
         
         self.showMaximized()
+        # if self.current_theme == "SimCenter":
+        #     QApplication.instance().setStyleSheet("""
+        #             QPushButton {
+        #                 background-color: #64B5F6;
+        #                 color: white;
+        #                 border-radius: 6px;
+        #             }
+        #             QPushButton:hover {
+        #                 background-color: #42A5F5;
+        #             }
+        #             QPushButton:pressed {
+        #                 background-color: #1E88E5;
+        #             }
+        #         """)
 
     @classmethod
     def get_plotter(cls):
@@ -166,13 +180,40 @@ class MainWindow(QMainWindow):
         self.light_palette = QApplication.style().standardPalette()
         # change background color to white
         self.light_palette.setColor(QPalette.Window, QColor(237, 241, 247))
+        self.light_palette.setColor(QPalette.WindowText, Qt.black)
+        self.light_palette.setColor(QPalette.Base, QColor(255, 255, 255))
+        self.light_palette.setColor(QPalette.AlternateBase, QColor(240, 240, 240))
+        self.light_palette.setColor(QPalette.ToolTipBase, Qt.black)
+        self.light_palette.setColor(QPalette.ToolTipText, Qt.white)
+        self.light_palette.setColor(QPalette.Text, Qt.black)
         self.light_palette.setColor(QPalette.Button, QColor(214, 204, 227))
-
+        self.light_palette.setColor(QPalette.ButtonText, Qt.black)
+        self.light_palette.setColor(QPalette.BrightText, Qt.red)
+        self.light_palette.setColor(QPalette.Link, QColor(0, 122, 204))
+        self.light_palette.setColor(QPalette.Highlight, QColor(0, 122, 204))
+        self.light_palette.setColor(QPalette.HighlightedText, Qt.white)
+        self.light_palette.setColor(QPalette.PlaceholderText, QColor(128, 128, 128))
 
         self.brown_palette = QApplication.style().standardPalette()
         self.brown_palette.setColor(QPalette.Window, QColor(255, 244, 242))
-        # rose gold color
         self.brown_palette.setColor(QPalette.Button, QColor(237, 213, 217))
+
+        # SimCenter Palette (based on QSS colors)
+        self.simcenter_palette = QPalette()
+        self.simcenter_palette.setColor(QPalette.Window, QColor(240, 240, 240))  # #F0F0F0
+        self.simcenter_palette.setColor(QPalette.WindowText, QColor(66, 66, 66))  # #424242
+        self.simcenter_palette.setColor(QPalette.Base, QColor(255, 255, 255))  # white
+        self.simcenter_palette.setColor(QPalette.AlternateBase, QColor(250, 250, 250))  # #FAFAFA
+        self.simcenter_palette.setColor(QPalette.ToolTipBase, QColor(38, 50, 56))  # #263238
+        self.simcenter_palette.setColor(QPalette.ToolTipText, Qt.white)
+        self.simcenter_palette.setColor(QPalette.Text, QColor(66, 66, 66))  # #424242
+        self.simcenter_palette.setColor(QPalette.Button, QColor(176, 190, 197))  # #B0BEC5
+        self.simcenter_palette.setColor(QPalette.ButtonText, QColor(38, 50, 56))  # #263238
+        self.simcenter_palette.setColor(QPalette.BrightText, QColor(244, 67, 54))  # #F44336
+        self.simcenter_palette.setColor(QPalette.Link, QColor(25, 118, 210))  # #1976D2
+        self.simcenter_palette.setColor(QPalette.Highlight, QColor(100, 181, 246))  # #64B5F6
+        self.simcenter_palette.setColor(QPalette.HighlightedText, QColor(25, 118, 210))  # #1976D2
+        self.simcenter_palette.setColor(QPalette.PlaceholderText, QColor(158, 158, 158))  # #9E9E9E
 
         
 
@@ -184,6 +225,12 @@ class MainWindow(QMainWindow):
             self.console.syntax_style = 'monokai'
             self.plotter.set_background('#52576eff')
             self.current_theme = "Dark"
+        elif theme == "SimCenter":
+            QApplication.setPalette(self.simcenter_palette)
+            self.console.set_default_style(colors='lightbg')
+            self.console.syntax_style = 'default'
+            self.plotter.set_background('white')
+            self.current_theme = "SimCenter"
         else:
             if theme == "Brown":
                 QApplication.setPalette(self.brown_palette)
@@ -210,11 +257,32 @@ class MainWindow(QMainWindow):
             self.console.set_default_style(colors='linux')
             self.console.syntax_style = 'monokai'
             self.plotter.set_background('#52576eff')
-        else:
-            QApplication.setPalette(self.light_palette)
+        elif self.current_theme == "SimCenter":
+            QApplication.setPalette(self.simcenter_palette)
             self.console.set_default_style(colors='lightbg')
             self.console.syntax_style = 'default'
             self.plotter.set_background('white')
+            QApplication.instance().setStyleSheet("""
+                QPushButton {
+                    background-color: #64B5F6;
+                    color: white;
+                    border-radius: 6px;
+                    padding: 6px 12px;         /* vertical and horizontal padding */
+                    min-height: 28px;          /* prevent buttons from collapsing */
+                }
+                QPushButton:hover {
+                    background-color: #42A5F5;
+                }
+                QPushButton:pressed {
+                    background-color: #1E88E5;
+                }
+            """)
+        else:
+            QApplication.setPalette(self.light_palette)
+            self.plotter.set_background('#52576eff')
+            # self.console.set_default_style(colors='lightbg')
+            # self.console.syntax_style = 'default'
+            # self.plotter.set_background('white')
         
         # Update font
         console_font = QFont('Monospace', self.font_size)
