@@ -2,6 +2,9 @@
 *.egg*
 *env*/
 tmp/
+build
+dist
+main.spec
 *.h5drm
 *.tcl
 *.bash
