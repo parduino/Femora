@@ -67,7 +67,7 @@ class MainWindow(QMainWindow):
 
     def init_ui(self):
         """Initialize the user interface"""
-        self.setWindowTitle("DRM Analyzer")
+        self.setWindowTitle("Femora")
         self.resize(1400, 800)
         
         self.setup_main_layout()
