@@ -5,4 +5,4 @@ cd Femora
 pip install requirements.in
 pip install pyinstaller
 pip install -e .
-pyinstaller --onefile --icon=icon.ico --hidden-import femora --hidden-import ipykernel --hidden-import debugpy --collect-all femora --collect-all ipykernel --collect-all debugpy main.py
+pyinstaller --onefile --name Femora --icon=icon.ico --add-data "icon.ico;." --hidden-import femora --hidden-import ipykernel --hidden-import debugpy --collect-all femora --collect-all ipykernel --collect-all debugpy main.py
