@@ -478,6 +478,17 @@ class RecorderManager:
         if cls._instance is None:
             cls._instance = super(RecorderManager, cls).__new__(cls)
         return cls._instance
+        
+        
+    def __init__(self):
+        """
+        Initialize the RecorderManager and register recorder types.
+        """
+        # Register recorder types
+        self.node = NodeRecorder    
+        self.vtkhdf = VTKHDFRecorder
+
+
 
     def create_recorder(self, recorder_type: str, **kwargs) -> Recorder:
         """Create a new recorder"""
