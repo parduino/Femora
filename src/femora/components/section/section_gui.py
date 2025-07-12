@@ -59,8 +59,8 @@ class SectionManagerTab(QWidget):
         
         # Sections table
         self.sections_table = QTableWidget()
-        self.sections_table.setColumnCount(4)  # Type, Name, Edit, Delete
-        self.sections_table.setHorizontalHeaderLabels(["Type", "Name", "Edit", "Delete"])
+        self.sections_table.setColumnCount(2)  # Type, Name (removed Edit, Delete columns)
+        self.sections_table.setHorizontalHeaderLabels(["Type", "Name"])
         header = self.sections_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.Stretch)
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
@@ -187,16 +187,6 @@ class SectionManagerTab(QWidget):
             name_item = QTableWidgetItem(section.user_name)
             name_item.setFlags(name_item.flags() & ~Qt.ItemIsEditable)
             self.sections_table.setItem(row, 1, name_item)
-            
-            # Edit button
-            edit_btn = QPushButton("Edit")
-            edit_btn.clicked.connect(lambda checked, sect=section: self.open_section_edit_dialog(sect))
-            self.sections_table.setCellWidget(row, 2, edit_btn)
-
-            # Delete button
-            delete_btn = QPushButton("Delete")
-            delete_btn.clicked.connect(lambda checked, tag=tag: self.delete_section(tag))
-            self.sections_table.setCellWidget(row, 3, delete_btn)
 
     def show_context_menu(self, position):
         """Show context menu for sections table"""
