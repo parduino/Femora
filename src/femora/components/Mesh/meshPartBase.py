@@ -146,7 +146,7 @@ class MeshPart(ABC):
         Returns:
             bool: True if compatible, False otherwise
         """
-        return element in cls._compatible_elements
+        return element.lower() in [e.lower() for e in cls._compatible_elements]
 
     @abstractmethod
     def update_parameters(self, **kwargs) -> None:
