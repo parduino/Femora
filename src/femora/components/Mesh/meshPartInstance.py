@@ -886,6 +886,8 @@ class StructuredLineMesh(MeshPart):
         length = self.params.get('length', 1.0)
         offset_1 = self.params.get('offset_1', 0.0)
         offset_2 = self.params.get('offset_2', 0.0)
+        number_of_lines = self.params.get('number_of_lines', 1)
+        merge_points = self.params.get('merge_points', True)
         
         # Normalize vectors
         base_vector_1 = base_vector_1 / np.linalg.norm(base_vector_1)
@@ -904,22 +906,34 @@ class StructuredLineMesh(MeshPart):
                             (i * spacing_1 + offset_1) * base_vector_1 +
                             (j * spacing_2 + offset_2) * base_vector_2)
                 
-                # Start and end points of the line
-                start_point = grid_point
-                end_point = grid_point + length * normal
-                
-                # Add points
-                points.append(start_point)
-                points.append(end_point)
-                
-                # Add line (connect two points)
-                lines.extend([2, point_id, point_id + 1])
-                point_id += 2
+                # Create multiple line elements along the normal direction
+                for k in range(number_of_lines):
+                    # Calculate the start and end points for this line segment
+                    # Each line covers 1/number_of_lines of the total length
+                    t_start = k / number_of_lines
+                    t_end = (k + 1) / number_of_lines
+                    
+                    line_start = grid_point + t_start * length * normal
+                    line_end = grid_point + t_end * length * normal
+                    
+                    # Add points for this line
+                    points.append(line_start)
+                    points.append(line_end)
+                    
+                    # Add line (connect two points)
+                    lines.extend([2, point_id, point_id + 1])
+                    point_id += 2
         
         # Create PyVista PolyData
         if points:
             points_array = np.array(points)
             self.mesh = pv.PolyData(points_array, lines=lines)
+            
+            # Merge points if requested
+            if merge_points:
+                self.mesh = self.mesh.merge_points(tolerance=1e-4,
+                                                 inplace=False,
+                                                 progress_bar=False)
         else:
             # Create empty mesh if no points
             self.mesh = pv.PolyData()
@@ -953,7 +967,9 @@ class StructuredLineMesh(MeshPart):
             ('spacing_2', 'Spacing in direction 2'),
             ('length', 'Length of each line element along normal'),
             ('offset_1', 'Optional offset in direction 1'),
-            ('offset_2', 'Optional offset in direction 2')
+            ('offset_2', 'Optional offset in direction 2'),
+            ('number_of_lines', 'Number of line elements along normal direction per grid point'),
+            ('merge_points', 'Whether to merge duplicate points (True/False)')
         ]
 
     @classmethod
@@ -1050,11 +1066,42 @@ class StructuredLineMesh(MeshPart):
         for offset_param in ['offset_1', 'offset_2']:
             if offset_param in kwargs:
                 try:
-                    validated_params[offset_param] = float(kwargs[offset_param])
+                    offset = float(kwargs[offset_param])
+                    validated_params[offset_param] = offset
                 except (ValueError, TypeError):
                     raise ValueError(f"{offset_param} must be a valid number")
             else:
                 validated_params[offset_param] = 0.0
+        
+        # Validate number of lines
+        if 'number_of_lines' in kwargs:
+            try:
+                num_lines = int(kwargs['number_of_lines'])
+                if num_lines < 1:
+                    raise ValueError("number_of_lines must be at least 1")
+                validated_params['number_of_lines'] = num_lines
+            except (ValueError, TypeError):
+                raise ValueError("number_of_lines must be a positive integer")
+        else:
+            validated_params['number_of_lines'] = 1
+        
+        # Validate merge_points
+        if 'merge_points' in kwargs:
+            merge_val = kwargs['merge_points']
+            if isinstance(merge_val, str):
+                merge_val = merge_val.lower()
+                if merge_val in ['true', '1', 'yes', 'on']:
+                    validated_params['merge_points'] = True
+                elif merge_val in ['false', '0', 'no', 'off']:
+                    validated_params['merge_points'] = False
+                else:
+                    raise ValueError("merge_points must be True/False or a valid boolean string")
+            elif isinstance(merge_val, bool):
+                validated_params['merge_points'] = merge_val
+            else:
+                raise ValueError("merge_points must be a boolean value")
+        else:
+            validated_params['merge_points'] = True
         
         return validated_params
 
@@ -1177,19 +1224,51 @@ class SingleLineMesh(MeshPart):
         x1 = self.params.get('x1', 1.0)
         y1 = self.params.get('y1', 0.0)
         z1 = self.params.get('z1', 0.0)
+        number_of_lines = self.params.get('number_of_lines', 1)
+        merge_points = self.params.get('merge_points', True)
         
         # Create start and end points
         start_point = np.array([x0, y0, z0])
         end_point = np.array([x1, y1, z1])
         
-        # Create points array
-        points = np.array([start_point, end_point])
+        # Calculate the direction vector
+        direction = end_point - start_point
         
-        # Create line (connect two points)
-        lines = np.array([2, 0, 1])
+        # Create points array for multiple lines
+        points = []
+        lines = []
+        point_id = 0
+        
+        for i in range(number_of_lines):
+            # Calculate the start and end points for this line segment
+            # Each line covers 1/number_of_lines of the total distance
+            t_start = i / number_of_lines
+            t_end = (i + 1) / number_of_lines
+            
+            line_start = start_point + t_start * direction
+            line_end = start_point + t_end * direction
+            
+            # Add points for this line
+            points.append(line_start)
+            points.append(line_end)
+            
+            # Add line (connect two points)
+            lines.extend([2, point_id, point_id + 1])
+            point_id += 2
         
         # Create PyVista PolyData
-        self.mesh = pv.PolyData(points, lines=lines)
+        if points:
+            points_array = np.array(points)
+            self.mesh = pv.PolyData(points_array, lines=lines)
+            
+            # Merge points if requested
+            if merge_points:
+                self.mesh = self.mesh.merge_points(tolerance=1e-4,
+                                                 inplace=False,
+                                                 progress_bar=False)
+        else:
+            # Create empty mesh if no points
+            self.mesh = pv.PolyData()
         
         return self.mesh
 
@@ -1207,7 +1286,9 @@ class SingleLineMesh(MeshPart):
             ('z0', 'Start point Z coordinate'),
             ('x1', 'End point X coordinate'),
             ('y1', 'End point Y coordinate'),
-            ('z1', 'End point Z coordinate')
+            ('z1', 'End point Z coordinate'),
+            ('number_of_lines', 'Number of line elements to create along the path. default is 1'),
+            ('merge_points', 'Whether to merge duplicate points (True/False). default is True')
         ]
 
     @classmethod
@@ -1246,12 +1327,42 @@ class SingleLineMesh(MeshPart):
             else:
                 validated_params[coord] = 1.0 if coord == 'x1' else 0.0
         
+        # Validate number of lines
+        if 'number_of_lines' in kwargs:
+            try:
+                num_lines = int(kwargs['number_of_lines'])
+                if num_lines < 1:
+                    raise ValueError("Number of lines must be at least 1")
+                validated_params['number_of_lines'] = num_lines
+            except (ValueError, TypeError):
+                raise ValueError("number_of_lines must be a positive integer")
+        else:
+            validated_params['number_of_lines'] = 1
+        
         # Check that start and end points are different
         start_point = np.array([validated_params['x0'], validated_params['y0'], validated_params['z0']])
         end_point = np.array([validated_params['x1'], validated_params['y1'], validated_params['z1']])
         
         if np.allclose(start_point, end_point):
             raise ValueError("Start and end points cannot be the same")
+        
+        # Validate merge_points
+        if 'merge_points' in kwargs:
+            merge_val = kwargs['merge_points']
+            if isinstance(merge_val, str):
+                merge_val = merge_val.lower()
+                if merge_val in ['true', '1', 'yes', 'on']:
+                    validated_params['merge_points'] = True
+                elif merge_val in ['false', '0', 'no', 'off']:
+                    validated_params['merge_points'] = False
+                else:
+                    raise ValueError("merge_points must be True/False or a valid boolean string")
+            elif isinstance(merge_val, bool):
+                validated_params['merge_points'] = merge_val
+            else:
+                raise ValueError("merge_points must be a boolean value")
+        else:
+            validated_params['merge_points'] = True
         
         return validated_params
 
