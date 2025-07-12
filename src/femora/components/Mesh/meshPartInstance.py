@@ -1105,3 +1105,208 @@ class StructuredLineMesh(MeshPart):
 
 # Register the Structured Line mesh part type
 MeshPartRegistry.register_mesh_part_type('Line mesh', 'Structured Line Grid', StructuredLineMesh)
+
+
+class SingleLineMesh(MeshPart):
+    """
+    Single Line Mesh Part for beam/column elements
+    Creates a single line element between two points
+    """
+    _compatible_elements = ["DispBeamColumn", "ForceBeamColumn", "ElasticBeamColumn", "NonlinearBeamColumn"]
+    
+    def __init__(self, user_name: str, element: Element, region: Optional[RegionBase]=None, **kwargs):
+        """
+        Initialize a Single Line Mesh Part
+        
+        Args:
+            user_name (str): Unique user name for the mesh part
+            element (Element): Associated beam element (must have section and transformation)
+            region (Optional[RegionBase]): Associated region
+            **kwargs: Line mesh parameters
+        """
+        super().__init__(
+            category='line mesh',
+            mesh_type='Single Line',
+            user_name=user_name,
+            element=element,
+            region=region
+        )
+        
+        # Validate element compatibility
+        if not self.is_element_compatible(element):
+            raise ValueError(f"Element type '{element.element_type}' is not compatible with line mesh. "
+                           f"Must be a beam element with section and transformation.")
+        
+        kwargs = self.validate_parameters(**kwargs)
+        self.params = kwargs if kwargs else {}
+        self.generate_mesh()
+
+    def is_element_compatible(self, element: Element) -> bool:
+        """
+        Check if element is compatible with line mesh
+        
+        Args:
+            element (Element): Element to check
+            
+        Returns:
+            bool: True if compatible, False otherwise
+        """
+        # Check element type compatibility using base class method
+        if not self.is_elemnt_compatible(element.element_type):
+            return False
+        
+        # Must have section and transformation
+        if not element.get_section() or not element.get_transformation():
+            return False
+        
+        return True
+
+    def generate_mesh(self) -> pv.PolyData:
+        """
+        Generate a single line mesh
+        
+        Returns:
+            pv.PolyData: Generated line mesh
+        """
+        import numpy as np
+        
+        # Extract parameters
+        x0 = self.params.get('x0', 0.0)
+        y0 = self.params.get('y0', 0.0)
+        z0 = self.params.get('z0', 0.0)
+        x1 = self.params.get('x1', 1.0)
+        y1 = self.params.get('y1', 0.0)
+        z1 = self.params.get('z1', 0.0)
+        
+        # Create start and end points
+        start_point = np.array([x0, y0, z0])
+        end_point = np.array([x1, y1, z1])
+        
+        # Create points array
+        points = np.array([start_point, end_point])
+        
+        # Create line (connect two points)
+        lines = np.array([2, 0, 1])
+        
+        # Create PyVista PolyData
+        self.mesh = pv.PolyData(points, lines=lines)
+        
+        return self.mesh
+
+    @classmethod
+    def get_parameters(cls) -> List[Tuple[str, str]]:
+        """
+        Get the list of parameters for this mesh part type.
+        
+        Returns:
+            List[Tuple[str, str]]: List of (parameter_name, description) tuples
+        """
+        return [
+            ('x0', 'Start point X coordinate'),
+            ('y0', 'Start point Y coordinate'),
+            ('z0', 'Start point Z coordinate'),
+            ('x1', 'End point X coordinate'),
+            ('y1', 'End point Y coordinate'),
+            ('z1', 'End point Z coordinate')
+        ]
+
+    @classmethod
+    def validate_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
+        """
+        Validate the input parameters for the single line mesh part.
+        
+        Args:
+            **kwargs: Input parameters
+            
+        Returns:
+            Dict[str, Union[int, float, str]]: Validated parameters
+            
+        Raises:
+            ValueError: If parameters are invalid
+        """
+        validated_params = {}
+        
+        # Validate start point coordinates
+        for coord in ['x0', 'y0', 'z0']:
+            if coord in kwargs:
+                try:
+                    validated_params[coord] = float(kwargs[coord])
+                except (ValueError, TypeError):
+                    raise ValueError(f"{coord} must be a valid number")
+            else:
+                validated_params[coord] = 0.0
+        
+        # Validate end point coordinates
+        for coord in ['x1', 'y1', 'z1']:
+            if coord in kwargs:
+                try:
+                    validated_params[coord] = float(kwargs[coord])
+                except (ValueError, TypeError):
+                    raise ValueError(f"{coord} must be a valid number")
+            else:
+                validated_params[coord] = 1.0 if coord == 'x1' else 0.0
+        
+        # Check that start and end points are different
+        start_point = np.array([validated_params['x0'], validated_params['y0'], validated_params['z0']])
+        end_point = np.array([validated_params['x1'], validated_params['y1'], validated_params['z1']])
+        
+        if np.allclose(start_point, end_point):
+            raise ValueError("Start and end points cannot be the same")
+        
+        return validated_params
+
+    @classmethod
+    def is_elemnt_compatible(cls, element: str) -> bool:
+        """
+        Check if element type is compatible with this mesh part
+        
+        Args:
+            element (str): Element type name
+            
+        Returns:
+            bool: True if compatible, False otherwise
+        """
+        return element.lower() in [elem.lower() for elem in cls._compatible_elements]
+
+    def update_parameters(self, **kwargs) -> None:
+        """
+        Update mesh part parameters
+        
+        Args:
+            **kwargs: Keyword arguments to update
+        """
+        validated_params = self.validate_parameters(**kwargs)
+        self.params.update(validated_params)
+        self.generate_mesh()
+
+    @classmethod
+    def get_Notes(cls) -> Dict[str, Union[str, List[str]]]:
+        """
+        Get notes for the mesh part type
+        
+        Returns:
+            Dict[str, Union[str, List[str]]]: Dictionary containing notes about the mesh part
+        """
+        return {
+            "description": "Creates a single line element between two specified points. Ideal for individual beam or column elements.",
+            "usage": [
+                "Use for creating individual beam or column elements",
+                "Specify start and end points to define the line direction and length",
+                "Compatible with beam elements that have section and transformation properties",
+                "Suitable for structural analysis requiring individual line elements"
+            ],
+            "limitations": [
+                "Creates only one line element per mesh part",
+                "Requires beam element with section and transformation",
+                "Cannot create multiple lines or complex geometries"
+            ],
+            "tips": [
+                "Ensure start and end points are different",
+                "Use appropriate beam element type for your analysis",
+                "Consider the coordinate system when specifying points",
+                "Check that the element has proper section and transformation properties"
+            ]
+        }
+
+# Register the Single Line mesh part type
+MeshPartRegistry.register_mesh_part_type('Line mesh', 'Single Line', SingleLineMesh)
