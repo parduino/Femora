@@ -89,22 +89,32 @@ class MeshPartManagerTab(QWidget):
         layout.addWidget(self.mesh_parts_table)
         
         # Button layout for actions
-        button_layout = QHBoxLayout()
+        button_layout = QVBoxLayout()  # Changed from QHBoxLayout to QVBoxLayout
+        
+        # First row: Refresh and Clear buttons
+        first_row_layout = QHBoxLayout()
         
         # Refresh mesh parts button
         refresh_btn = QPushButton("Refresh Mesh Parts List")
         refresh_btn.clicked.connect(self.refresh_mesh_parts_list)
-        button_layout.addWidget(refresh_btn)
-        
-        # Plot all mesh parts button
-        plot_all_btn = QPushButton("Plot All Mesh Parts")
-        plot_all_btn.clicked.connect(self.plot_all_mesh_parts)
-        button_layout.addWidget(plot_all_btn)
+        first_row_layout.addWidget(refresh_btn)
         
         # Clear all mesh parts button
         clear_all_btn = QPushButton("Clear All Mesh Parts")
         clear_all_btn.clicked.connect(self.clear_all_mesh_parts)
-        button_layout.addWidget(clear_all_btn)
+        first_row_layout.addWidget(clear_all_btn)
+        
+        button_layout.addLayout(first_row_layout)
+        
+        # Second row: Plot all mesh parts button
+        second_row_layout = QHBoxLayout()
+        
+        # Plot all mesh parts button
+        plot_all_btn = QPushButton("Plot All Mesh Parts")
+        plot_all_btn.clicked.connect(self.plot_all_mesh_parts)
+        second_row_layout.addWidget(plot_all_btn)
+        
+        button_layout.addLayout(second_row_layout)
         
         layout.addLayout(button_layout)
         
