@@ -845,12 +845,12 @@ class StructuredLineMesh(MeshPart):
         
         return True
 
-    def generate_mesh(self) -> pv.PolyData:
+    def generate_mesh(self) -> pv.UnstructuredGrid:
         """
         Generate a structured line mesh
         
         Returns:
-            pv.PolyData: Generated line mesh
+            pv.UnstructuredGrid: Generated line mesh
         """
         import numpy as np
         
@@ -927,16 +927,19 @@ class StructuredLineMesh(MeshPart):
         # Create PyVista PolyData
         if points:
             points_array = np.array(points)
-            self.mesh = pv.PolyData(points_array, lines=lines)
+            poly_mesh = pv.PolyData(points_array, lines=lines)
             
             # Merge points if requested
             if merge_points:
-                self.mesh = self.mesh.merge_points(tolerance=1e-4,
+                poly_mesh = poly_mesh.merge_points(tolerance=1e-4,
                                                  inplace=False,
                                                  progress_bar=False)
+            
+            # Cast to UnstructuredGrid
+            self.mesh = poly_mesh.cast_to_unstructured_grid()
         else:
             # Create empty mesh if no points
-            self.mesh = pv.PolyData()
+            self.mesh = pv.PolyData().cast_to_unstructured_grid()
         
         return self.mesh
 
@@ -1259,16 +1262,19 @@ class SingleLineMesh(MeshPart):
         # Create PyVista PolyData
         if points:
             points_array = np.array(points)
-            self.mesh = pv.PolyData(points_array, lines=lines)
+            poly_mesh = pv.PolyData(points_array, lines=lines)
             
             # Merge points if requested
             if merge_points:
-                self.mesh = self.mesh.merge_points(tolerance=1e-4,
+                poly_mesh = poly_mesh.merge_points(tolerance=1e-4,
                                                  inplace=False,
                                                  progress_bar=False)
+            
+            # Cast to UnstructuredGrid
+            self.mesh = poly_mesh.cast_to_unstructured_grid()
         else:
             # Create empty mesh if no points
-            self.mesh = pv.PolyData()
+            self.mesh = pv.PolyData().cast_to_unstructured_grid()
         
         return self.mesh
 
