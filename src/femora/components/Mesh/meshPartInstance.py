@@ -24,7 +24,7 @@ Usage:
     This module is intended to be used as part of the MeshMaker lib for 
     defining and manipulating 3D structured rectangular mesh parts.
 """
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union, Optional
 from abc import ABC, abstractmethod
 import numpy as np
 import pyvista as pv
@@ -789,3 +789,319 @@ class ExternalMesh(MeshPart):
 
 # Register the Custom Mesh part type under the General mesh category
 MeshPartRegistry.register_mesh_part_type('General mesh', 'External mesh', ExternalMesh)
+
+
+class StructuredLineMesh(MeshPart):
+    """
+    Structured Line Mesh Part for beam/column elements
+    Creates a grid of line elements with arbitrary normal direction
+    """
+    _compatible_elements = ["DispBeamColumn", "ForceBeamColumn", "ElasticBeamColumn", "NonlinearBeamColumn"]
+    
+    def __init__(self, user_name: str, element: Element, region: Optional[RegionBase]=None, **kwargs):
+        """
+        Initialize a Structured Line Mesh Part
+        
+        Args:
+            user_name (str): Unique user name for the mesh part
+            element (Element): Associated beam element (must have section and transformation)
+            region (Optional[RegionBase]): Associated region
+            **kwargs: Line mesh parameters
+        """
+        super().__init__(
+            category='line mesh',
+            mesh_type='Structured Line Grid',
+            user_name=user_name,
+            element=element,
+            region=region
+        )
+        
+        # Validate element compatibility
+        if not self.is_element_compatible(element):
+            raise ValueError(f"Element type '{element.element_type}' is not compatible with line mesh. "
+                           f"Must be a beam element with section and transformation.")
+        
+        kwargs = self.validate_parameters(**kwargs)
+        self.params = kwargs if kwargs else {}
+        self.generate_mesh()
+
+    def is_element_compatible(self, element: Element) -> bool:
+        """
+        Check if element is compatible with line mesh
+        
+        Args:
+            element (Element): Element to check
+            
+        Returns:
+            bool: True if compatible, False otherwise
+        """
+        # Check element type compatibility using base class method
+        if not self.is_elemnt_compatible(element.element_type):
+            return False
+        
+        # Must have section and transformation
+        if not element.get_section() or not element.get_transformation():
+            return False
+        
+        return True
+
+    def generate_mesh(self) -> pv.PolyData:
+        """
+        Generate a structured line mesh
+        
+        Returns:
+            pv.PolyData: Generated line mesh
+        """
+        import numpy as np
+        
+        # Extract parameters
+        base_point = np.array([
+            self.params.get('base_point_x', 0),
+            self.params.get('base_point_y', 0),
+            self.params.get('base_point_z', 0)
+        ])
+        
+        base_vector_1 = np.array([
+            self.params.get('base_vector_1_x', 1),
+            self.params.get('base_vector_1_y', 0),
+            self.params.get('base_vector_1_z', 0)
+        ])
+        
+        base_vector_2 = np.array([
+            self.params.get('base_vector_2_x', 0),
+            self.params.get('base_vector_2_y', 1),
+            self.params.get('base_vector_2_z', 0)
+        ])
+        
+        normal = np.array([
+            self.params.get('normal_x', 0),
+            self.params.get('normal_y', 0),
+            self.params.get('normal_z', 1)
+        ])
+        
+        grid_size_1 = self.params.get('grid_size_1', 10)
+        grid_size_2 = self.params.get('grid_size_2', 10)
+        spacing_1 = self.params.get('spacing_1', 1.0)
+        spacing_2 = self.params.get('spacing_2', 1.0)
+        length = self.params.get('length', 1.0)
+        offset_1 = self.params.get('offset_1', 0.0)
+        offset_2 = self.params.get('offset_2', 0.0)
+        
+        # Normalize vectors
+        base_vector_1 = base_vector_1 / np.linalg.norm(base_vector_1)
+        base_vector_2 = base_vector_2 / np.linalg.norm(base_vector_2)
+        normal = normal / np.linalg.norm(normal)
+        
+        # Generate grid points
+        points = []
+        lines = []
+        point_id = 0
+        
+        for i in range(grid_size_1 + 1):
+            for j in range(grid_size_2 + 1):
+                # Calculate grid point
+                grid_point = (base_point + 
+                            (i * spacing_1 + offset_1) * base_vector_1 +
+                            (j * spacing_2 + offset_2) * base_vector_2)
+                
+                # Start and end points of the line
+                start_point = grid_point
+                end_point = grid_point + length * normal
+                
+                # Add points
+                points.append(start_point)
+                points.append(end_point)
+                
+                # Add line (connect two points)
+                lines.extend([2, point_id, point_id + 1])
+                point_id += 2
+        
+        # Create PyVista PolyData
+        if points:
+            points_array = np.array(points)
+            self.mesh = pv.PolyData(points_array, lines=lines)
+        else:
+            # Create empty mesh if no points
+            self.mesh = pv.PolyData()
+        
+        return self.mesh
+
+    @classmethod
+    def get_parameters(cls) -> List[Tuple[str, str]]:
+        """
+        Get the list of parameters for this mesh part type.
+        
+        Returns:
+            List[Tuple[str, str]]: List of (parameter_name, description) tuples
+        """
+        return [
+            ('base_point_x', 'Base point X coordinate'),
+            ('base_point_y', 'Base point Y coordinate'),
+            ('base_point_z', 'Base point Z coordinate'),
+            ('base_vector_1_x', 'First base vector X component'),
+            ('base_vector_1_y', 'First base vector Y component'),
+            ('base_vector_1_z', 'First base vector Z component'),
+            ('base_vector_2_x', 'Second base vector X component'),
+            ('base_vector_2_y', 'Second base vector Y component'),
+            ('base_vector_2_z', 'Second base vector Z component'),
+            ('normal_x', 'Normal direction X component'),
+            ('normal_y', 'Normal direction Y component'),
+            ('normal_z', 'Normal direction Z component'),
+            ('grid_size_1', 'Number of elements in direction 1'),
+            ('grid_size_2', 'Number of elements in direction 2'),
+            ('spacing_1', 'Spacing in direction 1'),
+            ('spacing_2', 'Spacing in direction 2'),
+            ('length', 'Length of each line element along normal'),
+            ('offset_1', 'Optional offset in direction 1'),
+            ('offset_2', 'Optional offset in direction 2')
+        ]
+
+    @classmethod
+    def validate_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
+        """
+        Validate the input parameters for the line mesh part.
+        
+        Args:
+            **kwargs: Input parameters
+            
+        Returns:
+            Dict[str, Union[int, float, str]]: Validated parameters
+            
+        Raises:
+            ValueError: If parameters are invalid
+        """
+        validated_params = {}
+        
+        # Validate base point coordinates
+        for coord in ['base_point_x', 'base_point_y', 'base_point_z']:
+            if coord in kwargs:
+                try:
+                    validated_params[coord] = float(kwargs[coord])
+                except (ValueError, TypeError):
+                    raise ValueError(f"{coord} must be a valid number")
+            else:
+                validated_params[coord] = 0.0
+        
+        # Validate base vectors
+        for vec_num in [1, 2]:
+            for coord in ['x', 'y', 'z']:
+                param_name = f'base_vector_{vec_num}_{coord}'
+                if param_name in kwargs:
+                    try:
+                        validated_params[param_name] = float(kwargs[param_name])
+                    except (ValueError, TypeError):
+                        raise ValueError(f"{param_name} must be a valid number")
+                else:
+                    # Default values: base_vector_1 = [1,0,0], base_vector_2 = [0,1,0]
+                    if vec_num == 1:
+                        validated_params[param_name] = 1.0 if coord == 'x' else 0.0
+                    else:
+                        validated_params[param_name] = 1.0 if coord == 'y' else 0.0
+        
+        # Validate normal vector
+        for coord in ['normal_x', 'normal_y', 'normal_z']:
+            if coord in kwargs:
+                try:
+                    validated_params[coord] = float(kwargs[coord])
+                except (ValueError, TypeError):
+                    raise ValueError(f"{coord} must be a valid number")
+            else:
+                validated_params[coord] = 1.0 if coord == 'normal_z' else 0.0
+        
+        # Validate grid sizes
+        for size_param in ['grid_size_1', 'grid_size_2']:
+            if size_param in kwargs:
+                try:
+                    size = int(kwargs[size_param])
+                    if size < 0:
+                        raise ValueError(f"{size_param} must be non-negative")
+                    validated_params[size_param] = size
+                except (ValueError, TypeError):
+                    raise ValueError(f"{size_param} must be a non-negative integer")
+            else:
+                validated_params[size_param] = 10
+        
+        # Validate spacings
+        for spacing_param in ['spacing_1', 'spacing_2']:
+            if spacing_param in kwargs:
+                try:
+                    spacing = float(kwargs[spacing_param])
+                    if spacing <= 0:
+                        raise ValueError(f"{spacing_param} must be positive")
+                    validated_params[spacing_param] = spacing
+                except (ValueError, TypeError):
+                    raise ValueError(f"{spacing_param} must be a positive number")
+            else:
+                validated_params[spacing_param] = 1.0
+        
+        # Validate length
+        if 'length' in kwargs:
+            try:
+                length = float(kwargs['length'])
+                if length <= 0:
+                    raise ValueError("length must be positive")
+                validated_params['length'] = length
+            except (ValueError, TypeError):
+                raise ValueError("length must be a positive number")
+        else:
+            validated_params['length'] = 1.0
+        
+        # Validate offsets
+        for offset_param in ['offset_1', 'offset_2']:
+            if offset_param in kwargs:
+                try:
+                    validated_params[offset_param] = float(kwargs[offset_param])
+                except (ValueError, TypeError):
+                    raise ValueError(f"{offset_param} must be a valid number")
+            else:
+                validated_params[offset_param] = 0.0
+        
+        return validated_params
+
+    def update_parameters(self, **kwargs) -> None:
+        """
+        Update mesh part parameters
+        
+        Args:
+            **kwargs: Keyword arguments to update
+        """
+        validated_params = self.validate_parameters(**kwargs)
+        self.params.update(validated_params)
+        self.generate_mesh()
+
+    @classmethod
+    def get_Notes(cls) -> Dict[str, Union[str, List[str]]]:
+        """
+        Get notes for the line mesh part type.
+        
+        Returns:
+            Dict[str, Union[str, List[str]]]: Notes with description, usage, limitations, and tips
+        """
+        return {
+            "description": "Structured Line Grid creates a regular grid of line elements (beams/columns) with arbitrary normal direction. Each line element extends from a grid point along the specified normal direction.",
+            "usage": [
+                "Use for creating column grids in buildings",
+                "Use for creating beam grids in floor systems", 
+                "Use for creating inclined structural elements",
+                "Ensure the associated element is a beam type with section and transformation",
+                "Specify base vectors to define the grid orientation",
+                "Specify normal vector to define the direction of line elements"
+            ],
+            "limitations": [
+                "Only compatible with beam element types",
+                "Requires element to have both section and geometric transformation",
+                "Grid is limited to rectangular patterns",
+                "All lines have the same length"
+            ],
+            "tips": [
+                "Use base_vector_1 and base_vector_2 to define the grid plane orientation",
+                "Use normal vector to define the direction of the line elements",
+                "Set grid_size_1 and grid_size_2 to control the density of the grid",
+                "Use spacing_1 and spacing_2 to control the distance between lines",
+                "Use offset_1 and offset_2 to shift the entire grid",
+                "Ensure base vectors are perpendicular for best results"
+            ]
+        }
+
+# Register the Structured Line mesh part type
+MeshPartRegistry.register_mesh_part_type('Line mesh', 'Structured Line Grid', StructuredLineMesh)
