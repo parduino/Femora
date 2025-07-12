@@ -184,6 +184,7 @@ class MeshPartManagerTab(QWidget):
         
         view_action = menu.addAction("View")
         edit_action = menu.addAction("Edit")
+        info_action = menu.addAction("Info")
         delete_action = menu.addAction("Delete")
         
         action = menu.exec(self.mesh_parts_table.viewport().mapToGlobal(position))
@@ -192,6 +193,8 @@ class MeshPartManagerTab(QWidget):
             self.handle_view_action()
         elif action == edit_action:
             self.handle_edit_action()
+        elif action == info_action:
+            self.handle_info_action()
         elif action == delete_action:
             self.handle_delete_action()
 
@@ -226,6 +229,17 @@ class MeshPartManagerTab(QWidget):
             if mesh_part:
                 self.open_mesh_part_edit_dialog(mesh_part)
 
+    def handle_info_action(self):
+        """
+        Handle the info action from the context menu
+        """
+        selected_row = self.mesh_parts_table.currentRow()
+        if selected_row >= 0:
+            user_name = self.mesh_parts_table.item(selected_row, 0).text()
+            mesh_part = MeshPart.get_mesh_parts().get(user_name)
+            if mesh_part:
+                self.open_mesh_part_info_dialog(mesh_part)
+
     def handle_delete_action(self):
         """
         Handle the delete action from the context menu
@@ -242,6 +256,13 @@ class MeshPartManagerTab(QWidget):
         dialog = MeshPartEditDialog(mesh_part, self)
         if dialog.exec() == QDialog.Accepted:
             self.refresh_mesh_parts_list()
+
+    def open_mesh_part_info_dialog(self, mesh_part):
+        """
+        Open dialog to show mesh part information
+        """
+        dialog = MeshPartInfoDialog(mesh_part, self)
+        dialog.exec()
 
     def delete_mesh_part(self, user_name):
         """
@@ -588,7 +609,13 @@ class MeshPartCreationDialog(QDialog):
 
         except Exception as e:
             if self.created_element:
-                ElementRegistry.delete_element(self.created_element.user_name)
+                # Remove the element from the registry if it exists
+                try:
+                    from femora.components.Element.elementBase import ElementRegistry
+                    if hasattr(ElementRegistry, 'delete_element'):
+                        ElementRegistry.delete_element(self.created_element.user_name)
+                except:
+                    pass  # Ignore if delete_element doesn't exist
             QMessageBox.warning(self, "Error", str(e))
 
     def update_plotter(self):
@@ -807,7 +834,7 @@ class MeshPartNotesDialog(QDialog):
     def __init__(self, parent, mesh_part_class):
         super().__init__(parent)
         self.setWindowTitle(f"Notes - {mesh_part_class.__name__}")
-        self.setGeometry(600, 400)
+        self.setGeometry(100, 100, 600, 400)
         
         # Make dialog modal
         self.setWindowModality(Qt.ApplicationModal)
@@ -870,6 +897,98 @@ class MeshPartNotesDialog(QDialog):
         close_layout.addWidget(close_btn)
         close_layout.addStretch()
         tips_layout.addLayout(close_layout)
+
+
+class MeshPartInfoDialog(QDialog):
+    """Dialog to display mesh part information"""
+    def __init__(self, mesh_part, parent=None):
+        super().__init__(parent)
+        self.mesh_part = mesh_part
+        self.setWindowTitle(f"Mesh Part Info - {mesh_part.user_name}")
+        self.setGeometry(100, 100, 800, 600)
+        
+        # Make dialog modal
+        self.setWindowModality(Qt.ApplicationModal)
+        self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
+        
+        # Create main layout
+        layout = QVBoxLayout(self)
+        
+        # Create text area for mesh information
+        self.text_area = QTextEdit()
+        self.text_area.setReadOnly(True)
+        layout.addWidget(self.text_area)
+        
+        # Close button
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.accept)
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+        button_layout.addWidget(close_btn)
+        button_layout.addStretch()
+        layout.addLayout(button_layout)
+        
+        # Populate the text area with mesh information
+        self.populate_mesh_info()
+    
+    def populate_mesh_info(self):
+        """Populate the text area with mesh part information"""
+        info_text = f"Mesh Part Information\n"
+        info_text += f"=" * 50 + "\n\n"
+        
+        # Basic mesh part info
+        info_text += f"Name: {self.mesh_part.user_name}\n"
+        info_text += f"Category: {self.mesh_part.category}\n"
+        info_text += f"Type: {self.mesh_part.mesh_type}\n"
+        info_text += f"Element Type: {self.mesh_part.element.element_type}\n"
+        
+        if hasattr(self.mesh_part.element, '_material') and self.mesh_part.element._material:
+            info_text += f"Material: {self.mesh_part.element._material.user_name}\n"
+        
+        if hasattr(self.mesh_part.element, '_section') and self.mesh_part.element._section:
+            info_text += f"Section: {self.mesh_part.element._section.user_name}\n"
+        
+        if hasattr(self.mesh_part.element, '_transformation') and self.mesh_part.element._transformation:
+            transformation = self.mesh_part.element._transformation
+            if hasattr(transformation, 'user_name'):
+                info_text += f"Transformation: {transformation.user_name}\n"
+            elif hasattr(transformation, 'transf_tag'):
+                info_text += f"Transformation: {transformation.transf_tag}\n"
+            else:
+                info_text += f"Transformation: {transformation}\n"
+        
+        info_text += f"Region: {self.mesh_part.region.name if self.mesh_part.region else 'None'}\n"
+        info_text += f"Number of DOFs: {self.mesh_part.element._ndof}\n\n"
+        
+        # Parameters
+        info_text += f"Parameters:\n"
+        info_text += f"-" * 20 + "\n"
+        for param_name, param_value in self.mesh_part.params.items():
+            info_text += f"{param_name}: {param_value}\n"
+        
+        info_text += f"\nMesh Information:\n"
+        info_text += f"-" * 20 + "\n"
+        
+        # Print the mesh object
+        info_text += f"Mesh Object:\n"
+        info_text += f"{self.mesh_part.mesh}\n\n"
+        
+        # Additional mesh details
+        if hasattr(self.mesh_part.mesh, 'n_points'):
+            info_text += f"Number of Points: {self.mesh_part.mesh.n_points}\n"
+        
+        if hasattr(self.mesh_part.mesh, 'n_cells'):
+            info_text += f"Number of Cells: {self.mesh_part.mesh.n_cells}\n"
+        
+        if hasattr(self.mesh_part.mesh, 'bounds'):
+            bounds = self.mesh_part.mesh.bounds
+            info_text += f"Bounds: X[{bounds[0]:.3f}, {bounds[1]:.3f}], "
+            info_text += f"Y[{bounds[2]:.3f}, {bounds[3]:.3f}], "
+            info_text += f"Z[{bounds[4]:.3f}, {bounds[5]:.3f}]\n"
+        
+        # Set the text
+        self.text_area.setPlainText(info_text)
+
 
 if __name__ == "__main__":
     '''
