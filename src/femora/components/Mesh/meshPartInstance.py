@@ -1356,11 +1356,13 @@ class SingleLineMesh(MeshPart):
         if 'merge_points' in kwargs:
             merge_val = kwargs['merge_points']
             if isinstance(merge_val, str):
-                merge_val = merge_val.lower()
+                merge_val = merge_val.lower().strip()
                 if merge_val in ['true', '1', 'yes', 'on']:
                     validated_params['merge_points'] = True
                 elif merge_val in ['false', '0', 'no', 'off']:
                     validated_params['merge_points'] = False
+                elif merge_val == '':  # Handle empty string as default True
+                    validated_params['merge_points'] = True
                 else:
                     raise ValueError("merge_points must be True/False or a valid boolean string")
             elif isinstance(merge_val, bool):
