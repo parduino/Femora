@@ -35,6 +35,7 @@ from qtpy.QtCore import Qt
 from femora.components.Mesh.meshPartBase import MeshPart, MeshPartRegistry
 from femora.components.Element.elementBase import ElementRegistry
 from femora.components.Element.elementGUI import ElementCreationDialog
+from femora.components.Element.elements_beam_gui import BeamElementCreationDialog, is_beam_element
 from femora.gui.plotter import PlotterManager
 from femora.components.Mesh.meshPartInstance import *
 
@@ -515,7 +516,7 @@ class MeshPartCreationDialog(QDialog):
 
     def open_element_creation_dialog(self):
         """
-        Opens the ElementCreationDialog for creating a new element.
+        Opens the appropriate ElementCreationDialog for creating a new element.
         """
         element_type = self.element_combo.currentText()
     
@@ -523,12 +524,17 @@ class MeshPartCreationDialog(QDialog):
             QMessageBox.warning(self, "Error", "Please select an element type before creating.")
             return
         
-        comp_elements = self.mesh_part_class.is_elemnt_compatible(element_type)
-        if not self.mesh_part_class.is_elemnt_compatible(element_type):
+        # Use lowercase comparison for element compatibility
+        if not self.mesh_part_class.is_elemnt_compatible(element_type.lower()):
             QMessageBox.warning(self, "Error", f"Element type {element_type} is not compatible with this mesh part.\n Compatible elements are: {self.mesh_part_class._compatible_elements}")
             return
 
-        dialog = ElementCreationDialog(element_type, parent=self)
+        # Use appropriate dialog based on element type
+        if is_beam_element(element_type):
+            dialog = BeamElementCreationDialog(element_type, parent=self)
+        else:
+            dialog = ElementCreationDialog(element_type, parent=self)
+            
         if dialog.exec() == QDialog.Accepted:
             self.created_element = dialog.created_element
 
@@ -618,7 +624,11 @@ class MeshPartEditDialog(QDialog):
 
         # Material (read-only)
         info_layout.addWidget(QLabel("Material:"), 2, 0)
-        material_label = QLabel(f"{mesh_part.element._material.user_name} ({mesh_part.element._material.material_type}-{mesh_part.element._material.material_name})")
+        if mesh_part.element._material is not None:
+            material_label = QLabel(f"{mesh_part.element._material.user_name} ({mesh_part.element._material.material_type}-{mesh_part.element._material.material_name})")
+        else:
+            # For beam elements, show section info instead
+            material_label = QLabel(f"Section: {mesh_part.element._section.user_name} (Beam Element)")
         info_layout.addWidget(material_label, 2, 1)
 
         # ndof (read-only)
