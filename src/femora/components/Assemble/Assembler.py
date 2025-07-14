@@ -562,9 +562,10 @@ class AssemblySection:
         
         # Collect elements and materials
         ndf = first_meshpart.element._ndof
-        matTag = first_meshpart.element._material.tag
+        matTag = first_meshpart.element.get_material_tag()
         EleTag = first_meshpart.element.tag
         regionTag = first_meshpart.region.tag
+        sectionTag = first_meshpart.element.get_section_tag()
         
         # Add initial metadata to the first mesh
         n_cells = self.mesh.n_cells
@@ -573,6 +574,7 @@ class AssemblySection:
         # add cell and point data
         self.mesh.cell_data["ElementTag"]  = np.full(n_cells, EleTag, dtype=np.uint16)
         self.mesh.cell_data["MaterialTag"] = np.full(n_cells, matTag, dtype=np.uint16)
+        self.mesh.cell_data["SectionTag"]  = np.full(n_cells, sectionTag, dtype=np.uint16)
         self.mesh.point_data["ndf"]        = np.full(n_points, ndf, dtype=np.uint16)
         self.mesh.cell_data["Region"]      = np.full(n_cells, regionTag, dtype=np.uint16)
         
@@ -580,9 +582,10 @@ class AssemblySection:
         for meshpart in self.meshparts_list[1:]:
             second_mesh = meshpart.mesh.copy()
             ndf = meshpart.element._ndof
-            matTag = meshpart.element._material.tag
+            matTag = meshpart.element.get_material_tag()
             EleTag = meshpart.element.tag
             regionTag = meshpart.region.tag
+            sectionTag = meshpart.element.get_section_tag()
             
             n_cells_second  = second_mesh.n_cells
             n_points_second = second_mesh.n_points
@@ -592,6 +595,8 @@ class AssemblySection:
             second_mesh.cell_data["MaterialTag"] = np.full(n_cells_second, matTag, dtype=np.uint16)
             second_mesh.point_data["ndf"]        = np.full(n_points_second, ndf, dtype=np.uint16)
             second_mesh.cell_data["Region"]      = np.full(n_cells_second, regionTag, dtype=np.uint16)
+            second_mesh.cell_data["SectionTag"]  = np.full(n_cells_second, sectionTag, dtype=np.uint16)
+            
             # Merge with tolerance and optional point merging
             self.mesh = self.mesh.merge(
                 second_mesh, 
