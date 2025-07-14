@@ -59,6 +59,11 @@ class GeometricTransformation(ABC):
     def transf_tag(self):
         return self._transf_tag
 
+
+    @property
+    def tag(self):
+        return self._transf_tag
+
     @property
     def transformation_type(self):
         return self._transformation_type
@@ -155,6 +160,7 @@ class GeometricTransformationManager:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
+        return cls._instance
 
     def __init__(self):
         self.transformation2d = GeometricTransformation2D
