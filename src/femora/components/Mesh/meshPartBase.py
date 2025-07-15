@@ -34,6 +34,8 @@ class MeshPart(ABC):
     # Class-level tracking of mesh part names to ensure uniqueness
     _mesh_parts = {}
     _compatible_elements = []  # Base class empty list
+    _next_tag = 1
+    _tag_map = {}  # user_name -> tag
 
     def __init__(self, category: str, mesh_type: str, user_name: str, element: Element, region: RegionBase=None):
         """
@@ -66,8 +68,11 @@ class MeshPart(ABC):
         # Optional pyvista actor (initially None)
         self.actor = None
 
-        # Register the mesh part
-        self._mesh_parts[user_name] = self
+        # Assign tag and register
+        self.tag = MeshPart._next_tag
+        MeshPart._tag_map[user_name] = self.tag
+        MeshPart._mesh_parts[user_name] = self
+        MeshPart._next_tag += 1
 
     @abstractmethod
     def generate_mesh(self) -> None:
@@ -95,13 +100,18 @@ class MeshPart(ABC):
     @classmethod
     def delete_mesh_part(cls, user_name: str):
         """
-        Delete a mesh part by its user name
-        
+        Delete a mesh part by its user name and reassign tags to all mesh parts
         Args:
             user_name (str): User name of the mesh part to delete
         """
         if user_name in cls._mesh_parts:
             del cls._mesh_parts[user_name]
+            del cls._tag_map[user_name]
+            # Reassign tags to all mesh parts to keep them contiguous
+            for idx, (uname, part) in enumerate(sorted(cls._mesh_parts.items()), start=1):
+                part.tag = idx
+                cls._tag_map[uname] = idx
+            cls._next_tag = len(cls._mesh_parts) + 1
 
     @classmethod
     def clear_all_mesh_parts(cls) -> None:
