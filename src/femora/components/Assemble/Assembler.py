@@ -6,6 +6,7 @@ import warnings
 from femora.components.Mesh.meshPartBase import MeshPart
 from femora.components.Element.elementBase import Element
 from femora.components.Material.materialBase import Material
+from femora.components.event.event_bus import EventBus, FemoraEvent
   
 
 class Assembler:
@@ -292,6 +293,9 @@ class Assembler:
         if not self._assembly_sections:
             raise ValueError("No assembly sections have been created")
         
+        # Notify subscribers that assembly is starting
+        EventBus.emit(FemoraEvent.PRE_ASSEMBLE)
+        
         sorted_sections = sorted(self._assembly_sections.items(), key=lambda x: x[0])
         
         self.AssembeledMesh = sorted_sections[0][1].mesh.copy()
@@ -313,6 +317,10 @@ class Assembler:
                 del second_mesh
         except Exception as e:
             raise e
+        
+        # Notify any subscribers that the mesh has been assembled and partitioned
+        EventBus.emit(FemoraEvent.POST_ASSEMBLE, assembled_mesh=self.AssembeledMesh)
+        EventBus.emit(FemoraEvent.RESOLVE_CORE_CONFLICTS, assembled_mesh=self.AssembeledMesh)
         
     def delete_assembled_mesh(self) -> None:
         """
@@ -566,6 +574,7 @@ class AssemblySection:
         EleTag = first_meshpart.element.tag
         regionTag = first_meshpart.region.tag
         sectionTag = first_meshpart.element.get_section_tag()
+        meshTag  = first_meshpart.tag
         
         # Add initial metadata to the first mesh
         n_cells = self.mesh.n_cells
@@ -577,6 +586,8 @@ class AssemblySection:
         self.mesh.cell_data["SectionTag"]  = np.full(n_cells, sectionTag, dtype=np.uint16)
         self.mesh.point_data["ndf"]        = np.full(n_points, ndf, dtype=np.uint16)
         self.mesh.cell_data["Region"]      = np.full(n_cells, regionTag, dtype=np.uint16)
+        self.mesh.cell_data["MeshTag_cell"]   = np.full(n_cells, meshTag, dtype=np.uint16)
+        self.mesh.point_data["MeshTag_point"] = np.full(n_points, meshTag, dtype=np.uint16)
         
         # Merge subsequent meshes
         for meshpart in self.meshparts_list[1:]:
@@ -586,6 +597,7 @@ class AssemblySection:
             EleTag = meshpart.element.tag
             regionTag = meshpart.region.tag
             sectionTag = meshpart.element.get_section_tag()
+            meshTag  = meshpart.tag
             
             n_cells_second  = second_mesh.n_cells
             n_points_second = second_mesh.n_points
@@ -596,7 +608,8 @@ class AssemblySection:
             second_mesh.point_data["ndf"]        = np.full(n_points_second, ndf, dtype=np.uint16)
             second_mesh.cell_data["Region"]      = np.full(n_cells_second, regionTag, dtype=np.uint16)
             second_mesh.cell_data["SectionTag"]  = np.full(n_cells_second, sectionTag, dtype=np.uint16)
-            
+            second_mesh.cell_data["MeshTag_cell"]   = np.full(n_cells_second, meshTag, dtype=np.uint16)
+            second_mesh.point_data["MeshTag_point"] = np.full(n_points_second, meshTag, dtype=np.uint16)
             # Merge with tolerance and optional point merging
             self.mesh = self.mesh.merge(
                 second_mesh, 
