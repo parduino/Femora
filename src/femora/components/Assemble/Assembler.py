@@ -7,6 +7,7 @@ from femora.components.Mesh.meshPartBase import MeshPart
 from femora.components.Element.elementBase import Element
 from femora.components.Material.materialBase import Material
 from femora.components.event.event_bus import EventBus, FemoraEvent
+from femora.utils.progress import Progress
   
 
 class Assembler:
@@ -265,7 +266,7 @@ class Assembler:
         """
         return self._assembly_sections[tag]
     
-    def Assemble(self, merge_points: bool = True) -> None:
+    def Assemble(self, merge_points: bool = True, *, progress_callback=None) -> None:
         """
         Assemble all registered AssemblySections into a single unified mesh.
         
@@ -293,18 +294,29 @@ class Assembler:
         if not self._assembly_sections:
             raise ValueError("No assembly sections have been created")
         
+        # Progress setup
+        if progress_callback is None:
+            progress_callback = lambda v, msg="": Progress.callback(v, msg, desc="Assembling")
+
+        progress_callback(0, "initialising")
+
         # Notify subscribers that assembly is starting
         EventBus.emit(FemoraEvent.PRE_ASSEMBLE)
         
         sorted_sections = sorted(self._assembly_sections.items(), key=lambda x: x[0])
         
-        self.AssembeledMesh = sorted_sections[0][1].mesh.copy()
+        first_mesh = sorted_sections[0][1].mesh
+        # assert first_mesh is not None, "AssemblySection mesh is None"
+        if first_mesh is None:
+            raise ValueError("There is no mesh to assemble. Please create an AssemblySection first.")
+        
+        self.AssembeledMesh = first_mesh.copy()  # type: ignore[attr-defined]
+        progress_callback(1 / len(sorted_sections) * 70, f"merged section 1/{len(sorted_sections)}")
         num_partitions = sorted_sections[0][1].num_partitions
 
         try :
-            for tag, section in sorted_sections[1:]:
-
-                second_mesh = section.mesh.copy()
+            for idx, (tag, section) in enumerate(sorted_sections[1:], start=2):
+                second_mesh = section.mesh.copy()  # type: ignore[attr-defined]
                 second_mesh.cell_data["Core"] = second_mesh.cell_data["Core"] + num_partitions
                 num_partitions = num_partitions + section.num_partitions
                 self.AssembeledMesh = self.AssembeledMesh.merge(
@@ -312,15 +324,21 @@ class Assembler:
                     merge_points=merge_points, 
                     tolerance=1e-5,
                     inplace=False,
-                    progress_bar=True
+                    progress_bar=False
                 )
                 del second_mesh
+                perc = idx / len(sorted_sections) * 70
+                progress_callback(perc, f"merged section {idx}/{len(sorted_sections)}")
         except Exception as e:
             raise e
         
         # Notify any subscribers that the mesh has been assembled and partitioned
+        progress_callback(70, "post-assemble")
         EventBus.emit(FemoraEvent.POST_ASSEMBLE, assembled_mesh=self.AssembeledMesh)
+        progress_callback(90, "resolving core conflicts")
         EventBus.emit(FemoraEvent.RESOLVE_CORE_CONFLICTS, assembled_mesh=self.AssembeledMesh)
+
+        progress_callback(100, "done")
         
     def delete_assembled_mesh(self) -> None:
         """
@@ -400,7 +418,8 @@ class AssemblySection:
         meshparts: List[str], 
         num_partitions: int = 1, 
         partition_algorithm: str = "kd-tree", 
-        merging_points: bool = True
+        merging_points: bool = True,
+        progress_callback=None
     ):
         """
         Initialize an AssemblySection by combining multiple mesh parts.
@@ -457,8 +476,7 @@ class AssemblySection:
 
         # Assemble the mesh first
         try:
-            self._assemble_mesh()
-            
+            self._assemble_mesh(progress_callback=progress_callback)
             # Only add to Assembler if mesh assembly is successful
             self._tag = Assembler.get_instance()._add_assembly_section(self)
         except Exception as e:
@@ -542,7 +560,7 @@ class AssemblySection:
         
         return True
     
-    def _assemble_mesh(self):
+    def _assemble_mesh(self, progress_callback=None):
         """
         Assemble mesh parts into a single mesh.
         
@@ -561,6 +579,10 @@ class AssemblySection:
             ValueError: If mesh parts have different degrees of freedom and this causes
                       assembly to fail, or if any other error occurs during assembly
         """
+        if progress_callback is None:
+            def progress_callback(v, msg=""):
+                Progress.callback(v, msg, desc=f"Assembly Section: {len(Assembler._assembly_sections) + 1}")
+
         # Validate degrees of freedom
         self._validate_degrees_of_freedom()
             
@@ -588,9 +610,11 @@ class AssemblySection:
         self.mesh.cell_data["Region"]      = np.full(n_cells, regionTag, dtype=np.uint16)
         self.mesh.cell_data["MeshTag_cell"]   = np.full(n_cells, meshTag, dtype=np.uint16)
         self.mesh.point_data["MeshTag_point"] = np.full(n_points, meshTag, dtype=np.uint16)
-        
         # Merge subsequent meshes
-        for meshpart in self.meshparts_list[1:]:
+        n_sections = len(self.meshparts_list)
+        perc = 1 / n_sections * 100
+        progress_callback(perc, f"merged meshpart {1}/{n_sections}")
+        for idx, meshpart in enumerate(self.meshparts_list[1:], start=2):
             second_mesh = meshpart.mesh.copy()
             ndf = meshpart.element._ndof
             matTag = meshpart.element.get_material_tag()
@@ -598,10 +622,8 @@ class AssemblySection:
             regionTag = meshpart.region.tag
             sectionTag = meshpart.element.get_section_tag()
             meshTag  = meshpart.tag
-            
             n_cells_second  = second_mesh.n_cells
             n_points_second = second_mesh.n_points
-            
             # add cell and point data to the second mesh
             second_mesh.cell_data["ElementTag"]  = np.full(n_cells_second, EleTag, dtype=np.uint16)
             second_mesh.cell_data["MaterialTag"] = np.full(n_cells_second, matTag, dtype=np.uint16)
@@ -616,10 +638,11 @@ class AssemblySection:
                 merge_points=self.merging_points, 
                 tolerance=1e-5,
                 inplace=False,
-                progress_bar=True
+                progress_bar=False
             )
-
             del second_mesh
+            perc = idx / n_sections * 100
+            progress_callback(perc, f"merged meshpart {idx}/{n_sections}")
 
         # partition the mesh
         self.mesh.cell_data["Core"] = np.zeros(self.mesh.n_cells, dtype=int)
