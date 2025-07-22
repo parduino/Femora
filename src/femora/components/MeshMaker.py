@@ -257,7 +257,7 @@ class MeshMaker:
                         progress_callback((i / self.assembler.AssembeledMesh.n_cells) * 45 + 5, "writing nodes and elements")
 
                 # notify EmbbededBeamSolidInterface event
-                # EventBus.emit(FemoraEvent.EMBEDDED_BEAM_SOLID, file_handle=f)             
+                EventBus.emit(FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, file_handle=f)             
                 
                 
                 if progress_callback:
