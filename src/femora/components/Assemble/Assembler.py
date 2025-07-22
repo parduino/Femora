@@ -352,24 +352,258 @@ class Assembler:
             del self.AssembeledMesh
             self.AssembeledMesh = None
 
-    def plot(self, **kwargs) -> None:
+    def plot(
+        self,
+        color=None,
+        style=None,
+        scalars=None,
+        clim=None,
+        show_edges=None,
+        edge_color=None,
+        point_size=None,
+        line_width=None,
+        opacity=None,
+        flip_scalars=False,
+        lighting=None,
+        n_colors=256,
+        interpolate_before_map=None,
+        cmap=None,
+        label=None,
+        reset_camera=None,
+        scalar_bar_args=None,
+        show_scalar_bar=None,
+        multi_colors=False,
+        name=None,
+        texture=None,
+        render_points_as_spheres=None,
+        render_lines_as_tubes=None,
+        smooth_shading=None,
+        split_sharp_edges=None,
+        ambient=None,
+        diffuse=None,
+        specular=None,
+        specular_power=None,
+        nan_color=None,
+        nan_opacity=1.0,
+        culling=None,
+        rgb=None,
+        categories=False,
+        silhouette=None,
+        use_transparency=False,
+        below_color=None,
+        above_color=None,
+        annotations=None,
+        pickable=True,
+        preference='point',
+        log_scale=False,
+        pbr=None,
+        metallic=None,
+        roughness=None,
+        render=True,
+        user_matrix=None,
+        component=None,
+        emissive=None,
+        copy_mesh=False,
+        backface_params=None,
+        show_vertices=None,
+        edge_opacity=None,
+        add_axes=True,
+        add_bounding_box=False,
+        show_grid= False,
+        **kwargs
+    ) -> None:
         """
         Plot the assembled mesh using PyVista.
-        
+
         This method visualizes the assembled mesh for the Assembler instance.
         It uses the PyVista plotting capabilities to render the mesh with
-        optional parameters for customization.
+        all keyword arguments supported by `pyvista.Plotter.add_mesh` for customization.
 
-        Args:
-            **kwargs: Additional keyword arguments to customize the plot (e.g., color, opacity)
-        
-        Raises:
-            ValueError: If no assembled mesh exists to plot
+        Parameters
+        ----------
+        color : str, sequence, or ColorLike, optional
+            Solid color for the mesh. Accepts string, RGB list, or hex color string.
+        style : str, optional
+            Visualization style: 'surface', 'wireframe', 'points', or 'points_gaussian'.
+        scalars : str or numpy.ndarray, optional
+            Scalars used to color the mesh. String name or array.
+        clim : sequence of float, optional
+            Two-item color bar range for scalars. Example: [-1, 2].
+        show_edges : bool, optional
+            Show mesh edges. Not for wireframe style.
+        edge_color : str, sequence, or ColorLike, optional
+            Color for edges when show_edges=True.
+        point_size : float, optional
+            Size of points. Default is 5.0.
+        line_width : float, optional
+            Thickness of lines for wireframe/surface.
+        opacity : float, str, or array_like, optional
+            Opacity of the mesh. Float (0-1), string transfer function, or array.
+        flip_scalars : bool, optional
+            Flip direction of colormap.
+        lighting : bool, optional
+            Enable/disable view direction lighting.
+        n_colors : int, optional
+            Number of colors for scalars. Default is 256.
+        interpolate_before_map : bool, optional
+            Smoother scalars display. Default True.
+        cmap : str, list, or LookupTable, optional
+            Colormap for scalars. String name, list of colors, or LookupTable.
+        label : str, optional
+            Label for legend.
+        reset_camera : bool, optional
+            Reset camera after adding mesh.
+        scalar_bar_args : dict, optional
+            Arguments for scalar bar.
+        show_scalar_bar : bool, optional
+            Show/hide scalar bar.
+        multi_colors : bool, str, cycler, or sequence, optional
+            Color each block by a solid color for MultiBlock datasets.
+        name : str, optional
+            Name for the mesh/actor for updating.
+        texture : pyvista.Texture or np.ndarray, optional
+            Texture to apply if mesh has texture coordinates.
+        render_points_as_spheres : bool, optional
+            Render points as spheres.
+        render_lines_as_tubes : bool, optional
+            Show lines as tubes.
+        smooth_shading : bool, optional
+            Enable smooth shading (Phong algorithm).
+        split_sharp_edges : bool, optional
+            Split sharp edges >30 degrees for smooth shading.
+        ambient : float, optional
+            Ambient lighting coefficient (0-1).
+        diffuse : float, optional
+            Diffuse lighting coefficient. Default 1.0.
+        specular : float, optional
+            Specular lighting coefficient. Default 0.0.
+        specular_power : float, optional
+            Specular power (0.0-128.0).
+        nan_color : str, sequence, or ColorLike, optional
+            Color for NaN values in scalars.
+        nan_opacity : float, optional
+            Opacity for NaN values (0-1). Default 1.0.
+        culling : str, optional
+            Face culling: 'front' or 'back'.
+        rgb : bool, optional
+            Interpret scalars as RGB(A) colors.
+        categories : bool, optional
+            Use unique values in scalars as n_colors.
+        silhouette : dict or bool, optional
+            Plot silhouette highlight for mesh. Dict for properties.
+        use_transparency : bool, optional
+            Invert opacity mapping to transparency.
+        below_color : str, sequence, or ColorLike, optional
+            Color for values below scalars range.
+        above_color : str, sequence, or ColorLike, optional
+            Color for values above scalars range.
+        annotations : dict, optional
+            Annotations for scalar bar.
+        pickable : bool, optional
+            Set actor pickable.
+        preference : str, optional
+            Scalar mapping preference: 'point' or 'cell'.
+        log_scale : bool, optional
+            Use log scale for color mapping.
+        pbr : bool, optional
+            Enable physics-based rendering (PBR).
+        metallic : float, optional
+            Metallic value for PBR (0-1).
+        roughness : float, optional
+            Roughness for PBR (0-1).
+        render : bool, optional
+            Force render. Default True.
+        user_matrix : np.ndarray or vtkMatrix4x4, optional
+            Transformation matrix for actor.
+        component : int, optional
+            Component of vector-valued scalars to plot.
+        emissive : bool, optional
+            Treat points as emissive light sources (for 'points_gaussian').
+        copy_mesh : bool, optional
+            Copy mesh before adding. Default False.
+        backface_params : dict or pyvista.Property, optional
+            Backface rendering parameters.
+        show_vertices : bool, optional
+            Render external surface vertices. See vertex_* kwargs.
+        edge_opacity : float, optional
+            Edge opacity (0-1).
+        **kwargs : dict, optional
+            Additional keyword arguments for PyVista add_mesh.
+
+        Raises
+        ------
+        ValueError
+            If no assembled mesh exists to plot.
         """
         if self.AssembeledMesh is None:
             raise ValueError("No assembled mesh exists to plot")
         else:
-            self.AssembeledMesh.plot(**kwargs)
+            pl = pv.Plotter()
+            pl.add_mesh(
+                self.AssembeledMesh,
+                color=color,
+                style=style,
+                scalars=scalars,
+                clim=clim,
+                show_edges=show_edges,
+                edge_color=edge_color,
+                point_size=point_size,
+                line_width=line_width,
+                opacity=opacity,
+                flip_scalars=flip_scalars,
+                lighting=lighting,
+                n_colors=n_colors,
+                interpolate_before_map=interpolate_before_map,
+                cmap=cmap,
+                label=label,
+                reset_camera=reset_camera,
+                scalar_bar_args=scalar_bar_args,
+                show_scalar_bar=show_scalar_bar,
+                multi_colors=multi_colors,
+                name=name,
+                texture=texture,
+                render_points_as_spheres=render_points_as_spheres,
+                render_lines_as_tubes=render_lines_as_tubes,
+                smooth_shading=smooth_shading,
+                split_sharp_edges=split_sharp_edges,
+                ambient=ambient,
+                diffuse=diffuse,
+                specular=specular,
+                specular_power=specular_power,
+                nan_color=nan_color,
+                nan_opacity=nan_opacity,
+                culling=culling,
+                rgb=rgb,
+                categories=categories,
+                silhouette=silhouette,
+                use_transparency=use_transparency,
+                below_color=below_color,
+                above_color=above_color,
+                annotations=annotations,
+                pickable=pickable,
+                preference=preference,
+                log_scale=log_scale,
+                pbr=pbr,
+                metallic=metallic,
+                roughness=roughness,
+                render=render,
+                user_matrix=user_matrix,
+                component=component,
+                emissive=emissive,
+                copy_mesh=copy_mesh,
+                backface_params=backface_params,
+                show_vertices=show_vertices,
+                edge_opacity=edge_opacity,
+                **kwargs
+            )
+            if add_axes:
+                pl.add_axes()
+            if add_bounding_box:
+                pl.add_bounding_box()
+            if show_grid:
+                pl.show_grid()
+            pl.show()
+            pl.close()
     
 
     def get_mesh(self) -> Optional[pv.UnstructuredGrid]:
