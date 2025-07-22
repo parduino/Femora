@@ -54,6 +54,7 @@ pattern = _instance.pattern
 recorder = _instance.recorder
 process = _instance.process
 drm = _instance.drm
+mesh_part = _instance.meshPart
 
 # Add actions as a separate direct property
 actions = _action_manager
