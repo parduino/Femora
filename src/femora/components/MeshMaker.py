@@ -4,7 +4,7 @@ from femora.components.Assemble.Assembler import Assembler
 from femora.components.Damping.dampingBase import DampingManager
 from femora.components.Region.regionBase import RegionManager
 from femora.components.Constraint.constraint import Constraint
-from femora.components.Mesh.meshPartBase import MeshPartRegistry
+from femora.components.Mesh.meshPartBase import MeshPartManager
 from femora.components.Mesh.meshPartInstance import *
 from femora.components.TimeSeries.timeSeriesBase import TimeSeriesManager
 from femora.components.Analysis.analysis import AnalysisManager
@@ -12,11 +12,15 @@ from femora.components.Pattern.patternBase import PatternManager
 from femora.components.Recorder.recorderBase import RecorderManager
 from femora.components.Process.process import ProcessManager
 from femora.components.DRM.DRM import DRM
+from femora.components.transformation.transformation import GeometricTransformationManager
+from femora.components.interface.interface_base import InterfaceManager
+from femora.components.section.section_base import SectionManager
 import os
 from numpy import unique, zeros, arange, array, abs, concatenate, meshgrid, ones, full, uint16, repeat, where, isin
 from pyvista import Cube, MultiBlock, StructuredGrid
-import tqdm
 from pykdtree.kdtree import KDTree as pykdtree
+from femora.components.event.event_bus import EventBus, FemoraEvent
+from femora.utils.progress import get_progress_callback, Progress
 
 class MeshMaker:
     """
@@ -59,42 +63,34 @@ class MeshMaker:
         self.damping = DampingManager()
         self.region = RegionManager()
         self.constraint = Constraint()
-        self.meshPart = MeshPartRegistry()
+        self.meshPart = MeshPartManager()
         self.timeSeries = TimeSeriesManager()
         self.analysis = AnalysisManager()
         self.pattern = PatternManager()
         self.recorder = RecorderManager()
         self.process = ProcessManager()
+        self.interface = InterfaceManager()
+        self.transformation = GeometricTransformationManager()
+        self.section = SectionManager()
+        
+        @property
+        def mesh_part(self):
+            return self.meshPart
+        
+        
+
         
         # Initialize DRMHelper with a reference to this MeshMaker instance
         self.drm = DRM()
         self.drm.set_meshmaker(self)
         
-    def _progress_callback(self, value, message):
-        """
-        Default progress callback using tqdm when no callback is provided
-        
-        Args:
-            value (float): Progress value (0-100)
-            message (str): Progress message
-        """
-        if not hasattr(self, '_tqdm_progress'):
-            # Initialize tqdm progress bar on first call
-            self._tqdm_progress = tqdm.tqdm(total=100, desc="Exporting to TCL", bar_format="{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}] {postfix}")
-            self._tqdm_progress.set_postfix_str(message)
-            self._tqdm_progress.update(value)
-        else:
-            # Update existing progress bar
-            current = self._tqdm_progress.n
-            increment = int(value) - current
-            if increment > 0:
-                self._tqdm_progress.set_postfix_str(message)
-                self._tqdm_progress.update(increment)
-            
-        # Close the progress bar if we're finished
-        if value >= 100:
-            self._tqdm_progress.close()
-            delattr(self, '_tqdm_progress')
+    # ------------------------------------------------------------------
+    # Progress helpers
+    # ------------------------------------------------------------------
+
+    def _progress_callback(self, value: float, message: str):
+        """Default progress reporter that uses the shared Progress utility."""
+        Progress.callback(value, message, desc="Exporting to TCL")
 
     @classmethod
     def get_instance(cls, **kwargs):
@@ -186,6 +182,9 @@ class MeshMaker:
             # Write to file
             with open(filename, 'w') as f:
 
+                # Inform interfaces that we are about to export
+                EventBus.emit(FemoraEvent.PRE_EXPORT, file_handle=f, assembled_mesh=self.assembler.AssembeledMesh)
+
                 f.write("wipe\n")
                 f.write("model BasicBuilder -ndm 3\n")
                 f.write("set pid [getPID]\n")
@@ -209,6 +208,16 @@ class MeshMaker:
                 f.write("\n# Materials ======================================\n")
                 for tag,mat in self.material.get_all_materials().items():
                     f.write(f"{mat.to_tcl()}\n")
+
+                # write the transformations
+                f.write("\n# Transformations ======================================\n")
+                for transf in self.transformation.get_all_transformations():
+                    f.write(f"{transf.to_tcl()}\n")
+
+                # Write the sections
+                f.write("\n# Sections ======================================\n")
+                for tag,section in self.section.get_all_sections().items():
+                    f.write(f"{section.to_tcl()}\n")
 
                 if progress_callback:
                     progress_callback(5,"writing nodes and elements")
@@ -247,6 +256,10 @@ class MeshMaker:
                     if progress_callback:
                         progress_callback((i / self.assembler.AssembeledMesh.n_cells) * 45 + 5, "writing nodes and elements")
 
+                # notify EmbbededBeamSolidInterface event
+                # EventBus.emit(FemoraEvent.EMBEDDED_BEAM_SOLID, file_handle=f)             
+                
+                
                 if progress_callback:
                     progress_callback(50, "writing dampings")
                 # writ the dampings 
