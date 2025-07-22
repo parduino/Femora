@@ -97,7 +97,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         and edit the _core_elements dictionary to include the solid elements
         that are within the radius of the beam element.
         """
-        t_start_total = time.time()
+        # t_start_total = time.time()
         assembled_mesh = assembled_mesh.copy()
         beam_core_array = assembled_mesh.cell_data["Core"][beam_cells_idx]
         unique_cores = np.unique(beam_core_array)
@@ -534,7 +534,6 @@ if __name__ == "__main__":
     #     region=None,
     #     **{ 'x0': 0, 'y0': -1, 'z0': -10, 'x1': 0, 'y1': -1, 'z1': 3, "number_of_lines":30, }
     # )
-
 
     piles = fm.mesh_part.line.structured_lines(
         user_name="piles",
