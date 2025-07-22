@@ -13,6 +13,7 @@ from femora.components.Mesh.meshPartBase import MeshPart
 from femora.components.Mesh.meshPartInstance import SingleLineMesh, StructuredLineMesh
 from femora.components.event.event_bus import EventBus, FemoraEvent
 from femora.components.interface.embedded_info import EmbeddedInfo
+from femora.components.Region.regionBase import RegionBase
 
 
 
@@ -48,13 +49,14 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         self,
         name: str,
         beam_part: 'MeshPart | str | int',
-        radius: float,
+        soild_parts: 'List[MeshPart | str | int] | None' = None,
         shape: str = "circle",
+        radius: float = 0.5,
         n_peri: int = 8,
         n_long: int = 10,
-        crd_transf_tag: int | None = None,
         penalty_param: float = 1.0e12,
         g_penalty: bool = True,
+        region: 'RegionBase | None' = None
     ) -> None:
         # Helper to resolve MeshPart from str, int, or instance
         def resolve_meshpart(mp):
@@ -74,21 +76,37 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         # Enforce beam_part is SingleLineMesh
         if not isinstance(resolved_beam, (SingleLineMesh, StructuredLineMesh)):
             raise TypeError("beam_part must be a SingleLineMesh or StructuredLineMesh instance.")
+        
+        resolved_soild_parts = []
+        if soild_parts is not None:
+            if not isinstance(soild_parts, list):
+                raise TypeError("soild_parts must be a list of MeshPart instances or their user_names.")
+            for part in soild_parts:
+                resolved_part = resolve_meshpart(part)
+                if resolved_part is None:
+                    raise ValueError(f"Could not retrieve solid_part '{part}' to a MeshPart.")
+                resolved_soild_parts.append(resolved_part)
 
         super().__init__(name=name, owners=[resolved_beam.user_name])
 
         # store references
         self.beam_part = resolved_beam
+        self.solid_parts = resolved_soild_parts if len(resolved_soild_parts) > 0 else None
         self.radius = radius
         self.n_peri = n_peri
         self.n_long = n_long
-        self.crd_transf_tag = crd_transf_tag
         self.penalty_param = penalty_param
         self.g_penalty = g_penalty
         self._instance_embeddedinfo_list: List[EmbeddedInfo] = [] # Instance-level list to store per-instance EmbeddedInfo
         if shape.lower() not in ["circle"]:
             raise ValueError(f"Unsupported shape '{shape}'. Supported shapes: 'circle'.")
         self.shape = shape
+        if region is not None and not isinstance(region, RegionBase):
+            raise TypeError("region must be an instance of RegionBase or None.")
+        elif region is None:
+            self.region = region
+        else:
+            raise NotImplementedError("Region handling is not implemented yet. Please do not use region parameter for now.")
 
 
 
@@ -172,6 +190,13 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         solid_elements = inner.celltypes == pv.CellType.HEXAHEDRON
         beam_ind = inner.cell_data["vtkOriginalCellIds"][beam_elements]
         solid_ind = inner.cell_data["vtkOriginalCellIds"][solid_elements]
+
+        # TODO: Implement solid parts handling which will confine the interface to use only solid parts
+        # given in the solid_parts parameter and not all solid elements
+        if self.solid_parts is not None:
+            raise NotImplementedError(
+                "Solid parts handling is not implemented yet. Please do not use solid_parts parameter for now."
+            )
 
 
         # save the assembeled mesh indexes to the inner mesh
@@ -467,6 +492,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         It writes the necessary TCL commands to the provided file handle.
         """
         # print(f"[EmbeddedBeamSolidInterface:{self.name}] Exporting TCL commands.")
+        crd_transf_tag = self.beam_part.element.get_transformation().tag 
         for info in self._embeddedinfo_list:
             file_handle.write("if {$pid == %d} {\n" % info.core_number)
             for beams, solids in info.beams_solids:
@@ -474,8 +500,8 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
                 solids_str = " -solidEle ".join(map(str, solids))
                 file_handle.write(
                     f"\tgenerateInterfacePoints -beamEle {beams_str} -solidEle {solids_str} {'-gPenalty' if self.g_penalty else ''} " +
-                    f"-shape {self.shape}  -nP {self.n_peri} -nL {self.n_long} -crdTransf {self.crd_transf_tag} -radius {self.radius} " +
-                    f"-penaltyParam {self.penalty_param} {'-gPenalty' if self.g_penalty else ''}\n"
+                    f"-shape {self.shape}  -nP {self.n_peri} -nL {self.n_long} -crdTransf {crd_transf_tag} -radius {self.radius} " +
+                    f"-penaltyParam {self.penalty_param}\n"
                 )
             file_handle.write("}\n")
 
@@ -622,7 +648,6 @@ if __name__ == "__main__":
         radius=interface_radius,
         n_peri=8,
         n_long=5,
-        crd_transf_tag=transf.transf_tag,
         penalty_param=1.0e12,
         g_penalty=True,
     )
