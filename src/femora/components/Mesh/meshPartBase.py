@@ -26,7 +26,6 @@ from femora.components.Element.elementBase import Element
 from femora.components.Material.materialBase import Material
 from femora.components.Region.regionBase import RegionBase, GlobalRegion
 
-
 class MeshPart(ABC):
     """
     Abstract base class for mesh parts with various categories and types
@@ -263,6 +262,16 @@ class MeshPartManager:
             self._registry = MeshPartRegistry()
             self._last_operation_status = {"success": True, "message": ""}
             self._initialized = True
+
+    @property
+    def line(self):
+        from femora.components.Mesh.meshPartInstance import LineMeshManager
+        return LineMeshManager
+    
+    @property
+    def volume(self):
+        from femora.components.Mesh.meshPartInstance import VolumeMeshManager
+        return VolumeMeshManager
     
     def create_mesh_part(self, category: str, mesh_part_type: str, user_name: str, 
                         element: Element, region: RegionBase=None, **kwargs) -> MeshPart:
