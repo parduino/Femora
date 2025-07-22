@@ -806,7 +806,28 @@ class StructuredLineMesh(MeshPart):
             user_name (str): Unique user name for the mesh part
             element (Element): Associated beam element (must have section and transformation)
             region (Optional[RegionBase]): Associated region
-            **kwargs: Line mesh parameters
+            **kwargs: Line mesh parameters, including:
+                base_point_x (float, optional): Base point X coordinate. Default: 0.0
+                base_point_y (float, optional): Base point Y coordinate. Default: 0.0
+                base_point_z (float, optional): Base point Z coordinate. Default: 0.0
+                base_vector_1_x (float, optional): First base vector X component. Default: 1.0
+                base_vector_1_y (float, optional): First base vector Y component. Default: 0.0
+                base_vector_1_z (float, optional): First base vector Z component. Default: 0.0
+                base_vector_2_x (float, optional): Second base vector X component. Default: 0.0
+                base_vector_2_y (float, optional): Second base vector Y component. Default: 1.0
+                base_vector_2_z (float, optional): Second base vector Z component. Default: 0.0
+                normal_x (float, optional): Normal direction X component. Default: 0.0
+                normal_y (float, optional): Normal direction Y component. Default: 0.0
+                normal_z (float, optional): Normal direction Z component. Default: 1.0
+                grid_size_1 (int, optional): Number of elements in direction 1. Default: 10
+                grid_size_2 (int, optional): Number of elements in direction 2. Default: 10
+                spacing_1 (float, optional): Spacing in direction 1. Default: 1.0
+                spacing_2 (float, optional): Spacing in direction 2. Default: 1.0
+                length (float, optional): Length of each line element along normal. Default: 1.0
+                offset_1 (float, optional): Optional offset in direction 1. Default: 0.0
+                offset_2 (float, optional): Optional offset in direction 2. Default: 0.0
+                number_of_lines (int, optional): Number of line elements along normal direction per grid point. Default: 1
+                merge_points (bool, optional): Whether to merge duplicate points. Default: True
         """
         super().__init__(
             category='line mesh',
@@ -1429,3 +1450,18 @@ class SingleLineMesh(MeshPart):
 
 # Register the Single Line mesh part type
 MeshPartRegistry.register_mesh_part_type('Line mesh', 'Single Line', SingleLineMesh)
+
+
+
+# Manager classes for organizing mesh types
+class LineMeshManager:
+    """Manager class for line mesh types"""
+    single_line = SingleLineMesh
+    structured_lines = StructuredLineMesh
+
+
+class VolumeMeshManager:
+    """Manager class for volume mesh types"""
+    uniform_rectangular_grid = StructuredRectangular3D
+    geometric_rectangular_grid = GeometricStructuredRectangular3D
+    external_mesh = ExternalMesh
