@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import List
 from collections import defaultdict
+# import time
 
 import numpy as np
 import pyvista as pv
@@ -96,31 +97,35 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         and edit the _core_elements dictionary to include the solid elements
         that are within the radius of the beam element.
         """
+        t_start_total = time.time()
         assembled_mesh = assembled_mesh.copy()
         beam_core_array = assembled_mesh.cell_data["Core"][beam_cells_idx]
         unique_cores = np.unique(beam_core_array)
         if unique_cores.size > 1:
-            print(f"[EmbeddedBeamSolidInterface:{self.name}] Multiple cores found for beam cells: {unique_cores}.")
-            print("Moving all beam cells to the first core for consistency.")
-            print("all beam cells are going to be moved to core", unique_cores[0])
+            # print(f"[EmbeddedBeamSolidInterface:{self.name}] Multiple cores found for beam cells: {unique_cores}.")
+            # print("Moving all beam cells to the first core for consistency.")
+            # print("all beam cells are going to be moved to core", unique_cores[0])
             # Move all beam cells to same core (pick first) for safety
             target_core = int(unique_cores[0])
             for c in unique_cores[1:]:
                 assembled_mesh.cell_data["Core"][beam_cells_idx[beam_core_array == c]] = target_core
         else:
-            print(f"[EmbeddedBeamSolidInterface:{self.name}] Single core found for beam cells: {unique_cores[0]}.")
-            print("all beam cells are in the same core, core:", unique_cores[0])
+            # print(f"[EmbeddedBeamSolidInterface:{self.name}] Single core found for beam cells: {unique_cores[0]}.")
+            # print("all beam cells are in the same core, core:", unique_cores[0])
             target_core = int(unique_cores[0])
 
 
         # Beam cell centers
+        # t_start_section = time.time()
         beam_points = assembled_mesh.copy().extract_cells(beam_cells_idx).points
+        # print(f"--- Time for beam_points extraction: {time.time() - t_start_section:.4f}s")
 
 
         # TODO: need to modify the height since the the tail and head 
         # are not necessarily are the first and last points
         # FIXME: this is a hacky way to get the height of the beam
 
+        # t_start_section = time.time()
         beam_tail = beam_points[0]  # Take the first point as tail
         beam_head = beam_points[-1]  # Take the last point as head
         beam_vector = beam_head - beam_tail
@@ -131,28 +136,30 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
                               direction=beam_vector, 
                               radius=self.radius,
                               height=height,
-                              resolution=100,
+                              resolution=8,
                               capping=True)  
 
         # clinder.plot(show_edges=True, opacity=1.0, line_width=2)
         clinder = clinder.clean(inplace=False)  # Clean the cylinder mesh
+        # print(f"--- Time for cylinder creation: {time.time() - t_start_section:.4f}s")
 
-        assembled_mesh.compute_implicit_distance(
+        # t_start_section = time.time()
+        inner_ind = assembled_mesh.compute_implicit_distance(
             surface=clinder, 
-            inplace=True
-        )
-
-        
-        inner_ind = assembled_mesh.point_data["implicit_distance"] <= 0
+            inplace=False
+        ).point_data["implicit_distance"] <= 0
+        # print(f"--- Time for initial implicit_distance: {time.time() - t_start_section:.4f}s")
 
 
 
+        # t_start_section = time.time()
         inner = assembled_mesh.extract_points(
             ind=inner_ind,
             include_cells=True,
             adjacent_cells=True,
             progress_bar=False
         )
+        # print(f"--- Time for inner mesh extraction: {time.time() - t_start_section:.4f}s")
 
 
 
@@ -172,6 +179,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         solid_mesh = inner.extract_cells(solid_elements, progress_bar=False)
         beam_mesh  = inner.extract_cells(beam_elements, progress_bar=False)
         beams_solids = []
+        # t_start_loop = time.time()
         while solid_mesh.n_cells > 0:
             solid_mesh_largest = solid_mesh.extract_largest()
             surf = solid_mesh_largest.extract_surface()
@@ -198,11 +206,12 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
 
             # now remove the largset solid mesh from the solid_mesh
             solid_mesh = solid_mesh.extract_values(solid_mesh_largest.cell_data["mesh_ind"] , invert=True, scalars="mesh_ind")
+        # print(f"--- Time for while loop: {time.time() - t_start_loop:.4f}s")
       
         
         
-        print("num cells:", assembled_mesh.n_cells)
-        print("num points:", assembled_mesh.n_points)
+        # print("num cells:", assembled_mesh.n_cells)
+        # print("num points:", assembled_mesh.n_points)
 
 
         if len(beams_solids) == 0:
@@ -218,6 +227,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
 
         assembled_mesh.cell_data["Core"][inner.cell_data["mesh_ind"]] = target_core
 
+        # print(f"--- Total time for _fork_solid_for_single_beam: {time.time() - t_start_total:.4f}s")
 
 
 
@@ -226,7 +236,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         """Locate beam & solid element tags; enforce same core."""
 
         # shout  out that this is a post-assemble hook is called
-        print(f"[EmbeddedBeamSolidInterface:{self.name}] Post-assemble hook called.")
+        # print(f"[EmbeddedBeamSolidInterface:{self.name}] Post-assemble hook called.")
 
         # Collect beam cells indices & compute their mean location
         beam_cells_idx = np.where(assembled_mesh.cell_data["MeshTag_cell"] == self.beam_part.tag)[0]
@@ -235,10 +245,86 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         
         # if beam_part is SingleLineMesh or StructuredLineMesh do different handling
         if isinstance(self.beam_part, SingleLineMesh):
-            print(f"[EmbeddedBeamSolidInterface:{self.name}] SingleLineMesh detected, forking solid mesh around beam.")
+            # print(f"[EmbeddedBeamSolidInterface:{self.name}] SingleLineMesh detected, forking solid mesh around beam.")
             self._fork_solid_for_single_beam(assembled_mesh, beam_cells_idx)
         elif isinstance(self.beam_part, StructuredLineMesh):
-            print(f"[EmbeddedBeamSolidInterface:{self.name}] StructuredLineMesh not yet supported for solid forking.")
+            # Type hint for IDE auto-complete
+            beam_mesh: pv.UnstructuredGrid = self.beam_part.mesh.copy()
+            params = self.beam_part.params
+            norm_x = params.get("normal_x", None)
+            norm_y = params.get("normal_y", None)
+            norm_z = params.get("normal_z", None)
+            offset_1 = params.get("offset_1", 0.0)
+            offset_2 = params.get("offset_2", 0.0)
+            base_point_x = params.get("base_point_x", 0.0)
+            base_point_y = params.get("base_point_y", 0.0)
+            base_point_z = params.get("base_point_z", 0.0)
+            base_vector_1_x = params.get("base_vector_1_x", None)
+            base_vector_1_y = params.get("base_vector_1_y", None)
+            base_vector_1_z = params.get("base_vector_1_z", None)
+            base_vector_2_x = params.get("base_vector_2_x", None)
+            base_vector_2_y = params.get("base_vector_2_y", None)
+            base_vector_2_z = params.get("base_vector_2_z", None)
+            grid_size_1 = params.get("grid_size_1", None)
+            grid_size_2 = params.get("grid_size_2", None)
+            spacing_1 = params.get("spacing_1", None)
+            spacing_2 = params.get("spacing_2", None)
+            length = params.get("length", None)
+
+            if length is None:
+                raise ValueError("StructuredLineMesh must have length defined in params.")
+
+            
+
+            if grid_size_1 is None or grid_size_2 is None:
+                raise ValueError("StructuredLineMesh must have grid_size_1 and grid_size_2 defined in params.")
+            
+            if spacing_1 is None or spacing_2 is None:
+                raise ValueError("StructuredLineMesh must have spacing_1 and spacing_2 defined in params.")
+
+            if base_vector_1_x is None or base_vector_1_y is None or base_vector_1_z is None:
+                raise ValueError("StructuredLineMesh must have base_vector_1_x, base_vector_1_y, and base_vector_1_z defined in params.")
+            
+            if base_vector_2_x is None or base_vector_2_y is None or base_vector_2_z is None:
+                raise ValueError("StructuredLineMesh must have base_vector_2_x, base_vector_2_y, and base_vector_2_z defined in params.")
+
+            if base_point_x is None or base_point_y is None or base_point_z is None:
+                raise ValueError("StructuredLineMesh must have base_point_x, base_point_y, and base_point_z defined in params.")
+            
+            if offset_1 is None or offset_2 is None:
+                raise ValueError("StructuredLineMesh must have offset_1 and offset_2 defined in params.")
+
+            if norm_x is None or norm_y is None or norm_z is None:
+                raise ValueError("StructuredLineMesh must have normal_x, normal_y, and normal_z defined in params.")
+
+            i_size = int(grid_size_1 * spacing_1 + 2*offset_1) * 1.2 # 1.2 to make sure the plane is larger than the mesh
+            j_size = int(grid_size_2 * spacing_2 + 2*offset_2) * 1.2 # 1.2 to make sure the plane is larger than the mesh
+
+
+            project_beam = pv.PolyData(beam_mesh.points).project_points_to_plane(origin=beam_mesh.center_of_mass(),
+                                                                                 normal=(norm_x, norm_y, norm_z))
+            project_beam.merge_points(tolerance=1e-3, inplace=True)
+            normal = np.array([norm_x, norm_y, norm_z])
+            normal = normal / np.linalg.norm(normal)  # Normalize the normal vector
+            beamindxes = np.where(assembled_mesh.cell_data["MeshTag_cell"] == self.beam_part.tag)[0]
+            for projected_point in project_beam.points:
+                point_a = projected_point - 1.1 * normal * length / 2 # 1.1 to make sure the line is longer than the mesh
+                point_b = projected_point + 1.1 * normal * length / 2 # 1.1 to make sure the line is longer than the mesh
+                indxes = assembled_mesh.find_cells_along_line(point_a, point_b, tolerance=1e-3)
+                indxes = np.intersect1d(indxes, beamindxes, assume_unique=True)  # Only keep beam indices
+                if indxes.shape[0] == 0:
+                    raise ValueError(
+                        f"No beam elements found in assembled mesh for projected point {projected_point}."
+                    )
+                else:
+                    # add interface
+                    self._fork_solid_for_single_beam(assembled_mesh, indxes)
+                # pl = pv.Plotter()
+                # pl.add_mesh(assembled_mesh, color="blue", show_edges=True, opacity=0.5)
+                # pl.add_mesh(assembled_mesh.extract_cells(indxes), color="red", show_edges=True, opacity=1.0,
+                #             line_width=5)
+                # pl.show()
+            
         else:
             raise TypeError("beam_part must be a SingleLineMesh or StructuredLineMesh instance.")
 
@@ -278,7 +364,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
 
         if not cls._embeddedinfo_list:
             return  # nothing to do
-        print("resolving core conflicts")
+        # print("resolving core conflicts")
         # ----------------------------------------------------------
         # 1. Deduplicate identical EmbeddedInfo objects
         # ----------------------------------------------------------
@@ -343,10 +429,10 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         # Clear list so subsequent assemblies start fresh
         cls._embeddedinfo_list.clear()
 
-        print("end of resolve core conflicts")
-        pl = pv.Plotter()
-        pl.add_mesh(assembled_mesh, color='blue', scalars="Core", opacity=1.0, show_edges=True)
-        pl.show()
+        # print("end of resolve core conflicts")
+        # pl = pv.Plotter()
+        # pl.add_mesh(assembled_mesh, color='blue', scalars="Core", opacity=1.0, show_edges=True)
+        # pl.show()
 
 
 
@@ -395,80 +481,139 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # 2. Create mesh parts
     # ------------------------------------------------------------------
-    dx = 0.25
+    dx = 0.5
     Nx = int((10 - (-10)) / dx)
     Ny = Nx
     Nz = int((0 - (-20)) / dx)
 
-    soil_mp = fm.meshPart.create_mesh_part(
-        "Volume mesh", "Uniform Rectangular Grid", user_name="soil_vol", element=brick_ele,
+    fm.mesh_part.volume.uniform_rectangular_grid(
+        user_name="soil",
+        element=brick_ele,
         region=None,
         **{ 'X Min': -10, 'X Max': 10, 'Y Min': -10, 'Y Max': 10, 'Z Min': -20, 'Z Max': 0,
            'Nx Cells': Nx, 'Ny Cells': Ny, 'Nz Cells': Nz }
     )
-    soil_mp2 = fm.meshPart.create_mesh_part(
-        "Volume mesh", "Uniform Rectangular Grid", user_name="cap", element=brick_ele,
+
+    fm.mesh_part.volume.uniform_rectangular_grid(
+        user_name="cap",
+        element=brick_ele,
         region=None,
         **{ 'X Min': -5, 'X Max': 5, 'Y Min': -5, 'Y Max': 5, 'Z Min': 1, 'Z Max': 2,
            'Nx Cells': 10//0.25, 'Ny Cells': 10//0.25, 'Nz Cells': 1//0.25 }
     )
+    
+        
+
+    # pile1 = fm.mesh_part.line.single_line(
+    #     user_name="beam1",
+    #     element=beam_ele,
+    #     region=None,
+    #     **{ 'x0': 0, 'y0': 0, 'z0': -10, 'x1': 0, 'y1': 0, 'z1': 3, "number_of_lines":30, }
+    # )
+    # pile2 = fm.mesh_part.line.single_line(
+    #     user_name="beam2",
+    #     element=beam_ele,
+    #     region=None,
+    #     **{ 'x0': 1, 'y0': 0, 'z0': -10, 'x1': 1, 'y1': 0, 'z1': 3, "number_of_lines":30, }
+    # )
+    # pile3 = fm.mesh_part.line.single_line(
+    #     user_name="beam3",
+    #     element=beam_ele,
+    #     region=None,
+    #     **{ 'x0': -1, 'y0': 0, 'z0': -10, 'x1': -1, 'y1': 0, 'z1': 3, "number_of_lines":30, }
+    # )
+    # pile4 = fm.mesh_part.line.single_line(
+    #     user_name="beam4",
+    #     element=beam_ele,
+    #     region=None,
+    #     **{ 'x0': 0, 'y0': 1, 'z0': -10, 'x1': 0, 'y1': 1, 'z1': 3, "number_of_lines":30, }
+    # )
+    # pile5 = fm.mesh_part.line.single_line(
+    #     user_name="beam5",
+    #     element=beam_ele,
+    #     region=None,
+    #     **{ 'x0': 0, 'y0': -1, 'z0': -10, 'x1': 0, 'y1': -1, 'z1': 3, "number_of_lines":30, }
+    # )
 
 
-    pile1 = fm.meshPart.create_mesh_part(
-        "Line mesh", "Single Line", user_name="beam1", element=beam_ele,
-        region=None,
-        **{ 'x0': 0, 'y0': 0, 'z0': -10, 'x1': 0, 'y1': 0, 'z1': 3, "number_of_lines":30, }
-    )
-    pile2 = fm.meshPart.create_mesh_part(
-        "Line mesh", "Single Line", user_name="beam2", element=beam_ele,
-        region=None,
-        **{ 'x0': 1, 'y0': 0, 'z0': -10, 'x1': 1, 'y1': 0, 'z1': 3, "number_of_lines":30, }
-    )
-    pile3 = fm.meshPart.create_mesh_part(
-        "Line mesh", "Single Line", user_name="beam3", element=beam_ele,
-        region=None,
-        **{ 'x0': -1, 'y0': 0, 'z0': -10, 'x1': -1, 'y1': 0, 'z1': 3, "number_of_lines":30, }
-    )
-    pile4 = fm.meshPart.create_mesh_part(
-        "Line mesh", "Single Line", user_name="beam4", element=beam_ele,
-        region=None,
-        **{ 'x0': 0, 'y0': 1, 'z0': -10, 'x1': 0, 'y1': 1, 'z1': 3, "number_of_lines":30, }
-    )
-    pile5 = fm.meshPart.create_mesh_part(
-        "Line mesh", "Single Line", user_name="beam5", element=beam_ele,
-        region=None,
-        **{ 'x0': 0, 'y0': -1, 'z0': -10, 'x1': 0, 'y1': -1, 'z1': 3, "number_of_lines":30, }
+    piles = fm.mesh_part.line.structured_lines(
+        user_name="piles",
+        element=beam_ele,
+        base_point_x = -4,
+        base_point_y = -4,
+        base_point_z = -8,
+        base_vector_1_x = 1,
+        base_vector_1_y = 0,
+        base_vector_1_z = 0,
+        base_vector_2_x = 0,
+        base_vector_2_y = 1,
+        base_vector_2_z = 0,
+        normal_x = 0,
+        normal_y = 0,
+        normal_z = 1,
+        grid_size_1 = 8,
+        grid_size_2 = 8,
+        spacing_1 = 1.0,
+        spacing_2 = 1.0,
+        number_of_lines = 10,
+        length = 10, 
+        offset_1 = 0,
+        offset_2 = 0,
     )
 
     # ------------------------------------------------------------------
     # 3. Make assembly & interface
     # ------------------------------------------------------------------
-    fm.assembler.create_section(["soil_vol", "cap", "beam1", "beam2", "beam3", "beam4", "beam5"], num_partitions=8, merging_points=False)
+    fm.assembler.create_section(["soil"], num_partitions=8, merging_points=False)
+    # "cap", "beam1", "beam2", "beam3", "beam4", "beam5"
+    fm.assembler.create_section(["cap", "piles"], num_partitions=4, merging_points=False)
+    # fm.assembler.create_section(["piles"], num_partitions=1, merging_points=False)
+    # fm.assembler.create_section(["beam1", "beam2"], num_partitions=4, merging_points=False)
+    # fm.assembler.create_section(["beam3", "beam4", "beam5"], num_partitions=4, merging_points=False)
     # fm.assembler.create_section(["beam1", "beam2", "beam3", "beam4", "beam5"], num_partitions=8, merging_points=False)
-    interface_radius = 0.51  # Radius for the embedded beam-solid interface
+    interface_radius = 0.25  # Radius for the embedded beam-solid interface
     EmbeddedBeamSolidInterface(
-        name="EmbedTest", beam_part="beam1", radius=interface_radius,
-        n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
+        name="EmbedTest",
+        beam_part="piles",
+        radius=interface_radius,
+        n_peri=8,
+        n_long=5,
+        crd_transf_tag=transf.transf_tag,
+        penalty_param=1.0e12,
+        g_penalty=True,
     )
-    EmbeddedBeamSolidInterface(
-        name="EmbedTest2", beam_part="beam2", radius=interface_radius,
-        n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
-    )
-    EmbeddedBeamSolidInterface(
-        name="EmbedTest3", beam_part="beam3", radius=interface_radius,
-        n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
-    )
-    EmbeddedBeamSolidInterface(
-        name="EmbedTest4", beam_part="beam4", radius=interface_radius,
-        n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
-    )
-    EmbeddedBeamSolidInterface(
-        name="EmbedTest5", beam_part="beam5", radius=interface_radius,
-        n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
-    )
+    
+    # EmbeddedBeamSolidInterface(
+    #     name="EmbedTest", beam_part="beam1", radius=interface_radius,
+    #     n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
+    # )
+    # EmbeddedBeamSolidInterface(
+    #     name="EmbedTest2", beam_part="beam2", radius=interface_radius,
+    #     n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
+    # )
+    # EmbeddedBeamSolidInterface(
+    #     name="EmbedTest3", beam_part="beam3", radius=interface_radius,
+    #     n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
+    # )
+    # EmbeddedBeamSolidInterface(
+    #     name="EmbedTest4", beam_part="beam4", radius=interface_radius,
+    #     n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
+    # )
+    # EmbeddedBeamSolidInterface(
+    #     name="EmbedTest5", beam_part="beam5", radius=interface_radius,
+    #     n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
+    # )
     # open the gui to visualize the mesh
+    # fm.gui()
     fm.assembler.Assemble()
     # fm.gui()
+    fm.assembler.plot(show_edges=True, 
+                      scalars="Core",
+                      show_grid=True,
+                      )
+    
+
+    # fm.export_to_tcl("embedded_demo.tcl")
 
     # pl = pv.Plotter()
     # pl.add_mesh(fm.assembler.AssembeledMesh, color='blue', scalars="Core", opacity=1.0, show_edges=True)
@@ -487,4 +632,4 @@ if __name__ == "__main__":
     # # Export TCL (interface will inject its command)
     # fm.export_to_tcl("embedded_demo.tcl")
 
-    # print("Demo finished → embedded_demo.tcl generated.") 
+    # print("Demo finished → embedded_demo.tcl generated.")
