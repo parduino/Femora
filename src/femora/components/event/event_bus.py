@@ -15,6 +15,7 @@ class FemoraEvent(Enum):
     PRE_EXPORT = auto()             # Just before MeshMaker starts writing nodes/elements
     POST_EXPORT = auto()            # After all nodes/elements are written (reserved, not used yet)
     RESOLVE_CORE_CONFLICTS = auto()         # Core arrays are final
+    EMBEDDED_BEAM_SOLID_TCL = auto()       # Embedded beam solid interface (TCL export)
 
 
 class EventBus:
