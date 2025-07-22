@@ -49,6 +49,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         name: str,
         beam_part: 'MeshPart | str | int',
         radius: float,
+        shape: str = "circle",
         n_peri: int = 8,
         n_long: int = 10,
         crd_transf_tag: int | None = None,
@@ -84,6 +85,10 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         self.crd_transf_tag = crd_transf_tag
         self.penalty_param = penalty_param
         self.g_penalty = g_penalty
+        self._instance_embeddedinfo_list: List[EmbeddedInfo] = [] # Instance-level list to store per-instance EmbeddedInfo
+        if shape.lower() not in ["circle"]:
+            raise ValueError(f"Unsupported shape '{shape}'. Supported shapes: 'circle'.")
+        self.shape = shape
 
 
 
@@ -341,6 +346,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         EventBus.subscribe(FemoraEvent.PRE_ASSEMBLE, self._on_pre_assemble)
         EventBus.subscribe(FemoraEvent.POST_ASSEMBLE, self._on_post_assemble)
         EventBus.subscribe(FemoraEvent.POST_EXPORT, self._on_post_export)
+        EventBus.subscribe(FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, self._on_embedded_beam_solid_tcl_export)
 
         # Register the collective callback only the first time a pile is created
         if not self.__class__._class_subscribed:
@@ -349,6 +355,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
                 self.__class__._cls_resolve_core_conflicts,
             )
             self.__class__._class_subscribed = True
+
 
     @classmethod
     def _cls_resolve_core_conflicts(cls, assembled_mesh: pv.UnstructuredGrid, **kwargs):
@@ -414,7 +421,26 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
             min_core = min(infos[i].core_number for i in idx_list)
             for i in idx_list:
                 info = infos[i]
-                for _beams, solids in info.beams_solids:
+                # Create a new EmbeddedInfo with updated core_number
+                new_info = EmbeddedInfo(
+                    beams=info.beams,
+                    core_number=min_core,
+                    beams_solids=info.beams_solids
+                )
+                infos[i] = new_info
+                # Also update the class-level list if present
+                for idx, orig in enumerate(cls._embeddedinfo_list):
+                    if orig == info:
+                        cls._embeddedinfo_list[idx] = new_info
+                # Update all instance-level lists in all instances
+                for obj in cls.__subclasses__() + [cls]:
+                    for inst in getattr(obj, "__dict__", {}).values():
+                        if hasattr(inst, "_instance_embeddedinfo_list"):
+                            inst_list = inst._instance_embeddedinfo_list
+                            for idx2, orig2 in enumerate(inst_list):
+                                if orig2 == info:
+                                    inst_list[idx2] = new_info
+                for _beams, solids in new_info.beams_solids:
                     try:
                         assembled_mesh.cell_data["Core"][solids] = min_core
                     except Exception as exc:
@@ -422,18 +448,36 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
                             f"[EmbeddedBeamSolidInterface] Failed to set core for solids {solids}: {exc}"
                         )
                 try:
-                    assembled_mesh.cell_data["Core"][list(info.beams)] = min_core
+                    assembled_mesh.cell_data["Core"][list(new_info.beams)] = min_core
                 except Exception as exc:
-                    print(f"[EmbeddedBeamSolidInterface] Failed to set core for beams {info.beams}: {exc}")
+                    print(f"[EmbeddedBeamSolidInterface] Failed to set core for beams {new_info.beams}: {exc}")
 
-        # Clear list so subsequent assemblies start fresh
-        cls._embeddedinfo_list.clear()
 
         # print("end of resolve core conflicts")
         # pl = pv.Plotter()
         # pl.add_mesh(assembled_mesh, color='blue', scalars="Core", opacity=1.0, show_edges=True)
         # pl.show()
 
+
+
+    def _on_embedded_beam_solid_tcl_export(self, file_handle, **kwargs):
+        """Export TCL commands for the EmbeddedBeamSolidInterface.
+
+        This method is called when the FEMora event `EMBEDDED_BEAM_SOLID_TCL` is emitted.
+        It writes the necessary TCL commands to the provided file handle.
+        """
+        # print(f"[EmbeddedBeamSolidInterface:{self.name}] Exporting TCL commands.")
+        for info in self._embeddedinfo_list:
+            file_handle.write("if {$pid == %d} {\n" % info.core_number)
+            for beams, solids in info.beams_solids:
+                beams_str = " -beamEle ".join(map(str, beams))
+                solids_str = " -solidEle ".join(map(str, solids))
+                file_handle.write(
+                    f"\tgenerateInterfacePoints -beamEle {beams_str} -solidEle {solids_str} {'-gPenalty' if self.g_penalty else ''} " +
+                    f"-shape {self.shape}  -nP {self.n_peri} -nL {self.n_long} -crdTransf {self.crd_transf_tag} -radius {self.radius} " +
+                    f"-penaltyParam {self.penalty_param} {'-gPenalty' if self.g_penalty else ''}\n"
+                )
+            file_handle.write("}\n")
 
 
     # Keep an instance-level no-op to avoid accidental per-instance registration elsewhere
@@ -443,6 +487,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
     def _on_pre_assemble(self, **payload):
         # clear the class-level list
         self._embeddedinfo_list.clear()
+        self._instance_embeddedinfo_list.clear()  # Clear instance-level list for this instance
 
 
 
@@ -605,11 +650,9 @@ if __name__ == "__main__":
     # open the gui to visualize the mesh
     # fm.gui()
     fm.assembler.Assemble()
-    # fm.gui()
-    fm.assembler.plot(show_edges=True, 
-                      scalars="Core",
-                      show_grid=True,
-                      )
+    # fm.export_to_tcl("embedded_demo.tcl")
+    # # fm.gui()
+
     
 
     # fm.export_to_tcl("embedded_demo.tcl")
@@ -624,11 +667,15 @@ if __name__ == "__main__":
     # exit(0)  # Exit here to avoid exporting TCL if running interactively
 
  # Exit here to avoid exporting TCL if running interactively
-    # import os 
-    # # change the directory to the current directory
-    # os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    import os 
+    # change the directory to the current directory
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-    # # Export TCL (interface will inject its command)
-    # fm.export_to_tcl("embedded_demo.tcl")
+    # Export TCL (interface will inject its command)
+    fm.export_to_tcl("embedded_demo.tcl")
+    fm.assembler.plot(show_edges=True, 
+                      scalars="Core",
+                      show_grid=True,
+                      )
 
     # print("Demo finished → embedded_demo.tcl generated.")
