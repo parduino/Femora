@@ -55,6 +55,11 @@ recorder = _instance.recorder
 process = _instance.process
 drm = _instance.drm
 mesh_part = _instance.meshPart
+transformation = _instance.transformation
+section = _instance.section
+interface = _instance.interface
+
+
 
 # Add actions as a separate direct property
 actions = _action_manager
