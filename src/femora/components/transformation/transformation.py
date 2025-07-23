@@ -27,6 +27,28 @@ from typing import List, Union, Dict, Any
 
 
 class GeometricTransformation(ABC):
+    """
+    Abstract base class for geometric transformations in OpenSees.
+
+    This class manages tagging, instance tracking, and provides a common interface for 2D and 3D geometric transformations.
+
+    Attributes:
+        _instances (list): Class-level list of all transformation instances.
+        _start_tag (int): Starting tag for auto-tagging transformations.
+        eps (float): Tolerance for floating-point comparisons.
+
+    Args:
+        transf_type (str): The type of transformation (e.g., 'Linear', 'PDelta', 'Corotational').
+        dimension (int): The spatial dimension (2 or 3).
+
+    Methods:
+        set_start_tag: Set the starting tag for all transformations.
+        get_all_instances: Return a copy of all transformation instances.
+        clear_all_instances: Remove all transformation instances.
+        remove: Remove this instance and retag remaining instances.
+        has_joint_offsets: Abstract method to check for joint offsets.
+        to_tcl: Abstract method to generate TCL command.
+    """
     _instances = []
     _start_tag = 0
 
@@ -100,6 +122,20 @@ class GeometricTransformation(ABC):
         return f"{self.transformation_type} {self.dimension}D Transformation (Tag: {self.transf_tag})"
 
 class GeometricTransformation2D(GeometricTransformation):
+
+    """
+    2D geometric transformation for OpenSees elements.
+
+    Supports Linear, PDelta, and Corotational types, with optional joint offsets.
+
+    Args:
+        transf_type (str): The type of transformation (e.g., 'Linear', 'PDelta', 'Corotational').
+        d_xi, d_yi, d_xj, d_yj (float, optional): Joint offsets at i and j nodes (default 0.0).
+
+    Methods:
+        has_joint_offsets: Returns True if any joint offset is nonzero.
+        to_tcl: Returns the TCL command string for this transformation.
+    """
     def __init__(self, transf_type, d_xi=0.0, d_yi=0.0, d_xj=0.0, d_yj=0.0):
         super().__init__(transf_type, 2)
         self.d_xi = float(d_xi)
@@ -108,9 +144,11 @@ class GeometricTransformation2D(GeometricTransformation):
         self.d_yj = float(d_yj)
 
     def has_joint_offsets(self):
+        """Check if any joint offset is nonzero."""
         return any(abs(val) > self.eps for val in [self.d_xi, self.d_yi, self.d_xj, self.d_yj])
 
     def to_tcl(self):
+        """Generate the TCL command for this 2D transformation."""
         cmd = f"geomTransf {self.transformation_type} {self.transf_tag}"
         if self.has_joint_offsets():
             cmd += f" -jntOffset {self.d_xi} {self.d_yi} {self.d_xj} {self.d_yj}"
@@ -119,7 +157,22 @@ class GeometricTransformation2D(GeometricTransformation):
 
 
 class GeometricTransformation3D(GeometricTransformation):
-    def __init__(self, transf_type, vecxz_x, vecxz_y, vecxz_z, d_xi=0.0, d_yi=0.0, d_zi=0.0, d_xj=0.0, d_yj=0.0, d_zj=0.0):
+
+    """
+    3D geometric transformation for OpenSees elements.
+
+    Supports Linear, PDelta, and Corotational types, with orientation vector and optional joint offsets.
+
+    Args:
+        transf_type (str): The type of transformation (e.g., 'Linear', 'PDelta', 'Corotational').
+        vecxz_x, vecxz_y, vecxz_z (float): Components of the local xz-plane vector for orientation.
+        d_xi, d_yi, d_zi, d_xj, d_yj, d_zj (float, optional): Joint offsets at i and j nodes (default 0.0).
+
+    Methods:
+        has_joint_offsets: Returns True if any joint offset is nonzero.
+        to_tcl: Returns the TCL command string for this transformation.
+    """
+    def __init__(self, transf_type, vecxz_x:'float|str', vecxz_y:'float|str', vecxz_z:'float|str', d_xi='0.0', d_yi='0.0', d_zi='0.0', d_xj='0.0', d_yj='0.0', d_zj='0.0'):
         super().__init__(transf_type, 3)
         self.vecxz_x = float(vecxz_x)
         self.vecxz_y = float(vecxz_y)
@@ -133,14 +186,17 @@ class GeometricTransformation3D(GeometricTransformation):
         self._validate_vecxz()
 
     def _validate_vecxz(self):
+        """Validate that the orientation vector is not zero."""
         mag = math.sqrt(self.vecxz_x**2 + self.vecxz_y**2 + self.vecxz_z**2)
         if mag < self.eps:
             raise ValueError("vecxz vector cannot be zero")
 
     def has_joint_offsets(self):
+        """Check if any joint offset is nonzero."""
         return any(abs(val) > self.eps for val in [self.d_xi, self.d_yi, self.d_zi, self.d_xj, self.d_yj, self.d_zj])
 
     def to_tcl(self):
+        """Generate the TCL command for this 3D transformation."""
         cmd = f"geomTransf {self.transformation_type} {self.transf_tag} {self.vecxz_x} {self.vecxz_y} {self.vecxz_z}"
         if self.has_joint_offsets():
             cmd += f" -jntOffset {self.d_xi} {self.d_yi} {self.d_zi} {self.d_xj} {self.d_yj} {self.d_zj}"
