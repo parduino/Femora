@@ -618,20 +618,21 @@ class DRM:
                 if mat.material_name != "ElasticIsotropic" or mat.material_type != "nDMaterial":
                     raise ValueError(f"boundary elements should have an ElasticIsotropic material not {mat.material_name} {mat.material_type}")
 
-                PMLele = self.meshmaker.element.create_element("PML3D", ndof, mat, 
-                                            gamma = 0.5,
-                                            beta  = 0.25,
-                                            eta   = 1./12.0,
-                                            ksi   = 1.0/48.0,
-                                            PML_Thickness = numLayers*dx,
-                                            m = 2,
-                                            R = 1.0e-8,
-                                            meshType = "Box",
-                                            meshTypeParameters = [RD_center_x, RD_center_y, RD_center_z, RD_width_x, RD_width_y, RD_Depth],
-                                            alpha0 = None,
-                                            beta0 = None,
-                                            Cp = None,
-                                            )
+                PMLele = self.meshmaker.element.create_element(
+                    element_type="PML3D",
+                    ndof=ndof,
+                    material=mat,
+                    gamma=0.5,
+                    beta=0.25,
+                    eta=1./12.0,
+                    ksi=1.0/48.0,
+                    PML_Thickness=numLayers*dx,
+                    m=2,
+                    R=1.0e-8,
+                    meshType="Box",
+                    meshTypeParameters=[RD_center_x, RD_center_y, RD_center_z, RD_width_x, RD_width_y, RD_Depth],
+                )
+                
 
                 PMLeleTag = PMLele.tag
                 PMLTags[tag] = PMLeleTag
@@ -683,7 +684,7 @@ class DRM:
 
 
 
-        self.meshmaker.assembler.AssembeledMesh = mesh.merge(Absorbing, 
+        self.meshmaker.assembler.AssembeledMesh = Absorbing.merge(mesh, 
                                                   merge_points=mergeFlag, 
                                                   tolerance=1e-6, 
                                                   inplace=False, 
