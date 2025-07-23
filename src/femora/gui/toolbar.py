@@ -48,38 +48,24 @@ class ToolbarManager:
             )
             
             if filename:
-                # Create and show progress dialog
-                progress = QProgressDialog("Exporting...", "Cancel", 0, 100, self.main_window)
-                progress.setWindowModality(Qt.WindowModal)
-                progress.setAutoClose(True)
-                progress.setAutoReset(True)
-                progress.show()  # Explicitly show the dialog
-                def progress_callback(value, message):
-                    progress.setValue(int(value))
-                    progress.setLabelText(message)  # Update the message in the progress dialog
-                    # Process events to ensure UI updates
-                    QApplication.processEvents()
-                    if progress.wasCanceled():
-                        raise Exception("Export canceled by user")
+                from femora.gui.progress_gui import get_progress_callback_gui
 
-                try:
-                    success = self.main_window.meshMaker.export_to_tcl(filename, progress_callback)
-                    
-                    if success:
-                        QMessageBox.information(
-                            self.main_window,
-                            "Success",
-                            "File exported successfully!"
-                        )
-                    else:
-                        QMessageBox.warning(
-                            self.main_window,
-                            "Export Failed",
-                            "Failed to export the file. Please check the console for details."
-                        )
-                finally:
-                    # Ensure progress dialog is closed even if export fails
-                    progress.close()
+                progress_callback = get_progress_callback_gui("Exporting")
+
+                success = self.main_window.meshMaker.export_to_tcl(filename, progress_callback)
+
+                if success:
+                    QMessageBox.information(
+                        self.main_window,
+                        "Success",
+                        "File exported successfully!"
+                    )
+                else:
+                    QMessageBox.warning(
+                        self.main_window,
+                        "Export Failed",
+                        "Failed to export the file. Please check the console for details."
+                    )
                     
         except Exception as e:
             QMessageBox.critical(
