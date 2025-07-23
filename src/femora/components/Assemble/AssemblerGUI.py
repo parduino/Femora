@@ -152,8 +152,17 @@ class AssemblyManagerTab(QWidget):
         """
         try:
             self.refresh_assembly_sections_list()
+            from femora.gui.progress_gui import get_progress_callback_gui
+
             assembler = Assembler.get_instance()
-            assembler.Assemble(merge_points=self.merge_points_checkbox.isChecked())
+
+            # GUI progress bar callback (mirrors console-based Progress)
+            progress_cb = get_progress_callback_gui("Assembling")
+
+            assembler.Assemble(
+                merge_points=self.merge_points_checkbox.isChecked(),
+                progress_callback=progress_cb,
+            )
             
             if assembler.AssembeledMesh is not None:
                 self.plotter = PlotterManager.get_plotter()
