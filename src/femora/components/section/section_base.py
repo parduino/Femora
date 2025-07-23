@@ -265,7 +265,19 @@ class SectionManager:
 
     def _initialize(self):
         """Initialize the singleton instance"""
-        pass
+        # Direct access to section_opensees module
+        from femora.components.section.section_opensees import ElasticSection, FiberSection, AggregatorSection, UniaxialSection, WFSection2d, PlateFiberSection,ElasticMembranePlateSection , RCSection, ParallelSection,  BidirectionalSection, Isolator2SpringSection
+        self.elastic = ElasticSection
+        self.fiber = FiberSection
+        self.aggregator = AggregatorSection
+        self.uniaxial = UniaxialSection
+        self.wf2d = WFSection2d
+        self.plate_fiber = PlateFiberSection
+        self.elastic_membrane_plate = ElasticMembranePlateSection
+        self.rc = RCSection
+        self.parallel = ParallelSection
+        self.bidirectional = BidirectionalSection
+        self.isolator = Isolator2SpringSection
 
     def create_section(self, section_type: str, user_name: str, **section_params) -> Section:
         """Create a new section with the given parameters"""
