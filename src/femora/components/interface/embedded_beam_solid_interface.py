@@ -27,18 +27,20 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         Unique interface name.
     beam_part : str
         *user_name* of the **line** `MeshPart` containing beam elements.
-    solid_part : str
+    solid_parts : str
         *user_name* of the **volume** `MeshPart` containing hexahedral elements.
+        Not implemented yet, please do not use this parameter for now.
     radius : float
         Cylinder radius used to pick surrounding solid cells.
     n_peri, n_long : int
         Discretisation for `generateInterfacePoints` TCL command.
-    crd_transf_tag : int
-        Tag of an existing coordinate-transformation in the model.
     penalty_param : float | None
         Overrides default 1.0e12.
     g_penalty : bool
         Whether to add the "-gPenalty" flag.
+    region : RegionBase | None
+        Optional region to confine the interface to a specific region.
+        Not implemented yet, please do not use this parameter for now.
     """
 
     _embeddedinfo_list: List[EmbeddedInfo] = []  # Class-level list to store all instances
@@ -49,7 +51,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         self,
         name: str,
         beam_part: 'MeshPart | str | int',
-        soild_parts: 'List[MeshPart | str | int] | None' = None,
+        solid_parts: 'List[MeshPart | str | int] | None' = None,
         shape: str = "circle",
         radius: float = 0.5,
         n_peri: int = 8,
@@ -78,10 +80,10 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
             raise TypeError("beam_part must be a SingleLineMesh or StructuredLineMesh instance.")
         
         resolved_soild_parts = []
-        if soild_parts is not None:
-            if not isinstance(soild_parts, list):
+        if solid_parts is not None:
+            if not isinstance(solid_parts, list):
                 raise TypeError("soild_parts must be a list of MeshPart instances or their user_names.")
-            for part in soild_parts:
+            for part in solid_parts:
                 resolved_part = resolve_meshpart(part)
                 if resolved_part is None:
                     raise ValueError(f"Could not retrieve solid_part '{part}' to a MeshPart.")
@@ -673,7 +675,8 @@ if __name__ == "__main__":
     #     n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
     # )
     # open the gui to visualize the mesh
-    # fm.gui()
+    fm.gui()
+    exit(0)
     fm.assembler.Assemble()
     # fm.export_to_tcl("embedded_demo.tcl")
     # # fm.gui()
