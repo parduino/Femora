@@ -38,15 +38,65 @@ from femora.components.Region.regionBase import RegionBase
 class StructuredRectangular3D(MeshPart):
     """
     Structured Rectangular 3D Mesh Part
+
+    Parameters
+    ----------
+    user_name : str
+        Unique user name for the mesh part.
+    element : Element
+        Associated element.
+    region : RegionBase, optional
+        Associated region.
+    X Min : float
+        Minimum X coordinate.
+    X Max : float
+        Maximum X coordinate.
+    Y Min : float
+        Minimum Y coordinate.
+    Y Max : float
+        Maximum Y coordinate.
+    Z Min : float
+        Minimum Z coordinate.
+    Z Max : float
+        Maximum Z coordinate.
+    Nx Cells : int
+        Number of cells in X direction.
+    Ny Cells : int
+        Number of cells in Y direction.
+    Nz Cells : int
+        Number of cells in Z direction.
     """
     _compatible_elements = ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
     def __init__(self, user_name: str, element: Element, region: RegionBase=None,**kwargs):
         """
-        Initialize a 3D Structured Rectangular Mesh Part
-        
-        Args:
-            user_name (str): Unique user name for the mesh part
-            element (Optional[Element]): Associated element
+        Initialize a 3D Structured Rectangular Mesh Part.
+
+        Parameters
+        ----------
+        user_name : str
+            Unique user name for the mesh part.
+        element : Element
+            Associated element.
+        region : RegionBase, optional
+            Associated region.
+        X Min : float
+            Minimum X coordinate.
+        X Max : float
+            Maximum X coordinate.
+        Y Min : float
+            Minimum Y coordinate.
+        Y Max : float
+            Maximum Y coordinate.
+        Z Min : float
+            Minimum Z coordinate.
+        Z Max : float
+            Maximum Z coordinate.
+        Nx Cells : int
+            Number of cells in X direction.
+        Ny Cells : int
+            Number of cells in Y direction.
+        Nz Cells : int
+            Number of cells in Z direction.
         """
         super().__init__(
             category='volume mesh',
@@ -206,20 +256,41 @@ MeshPartRegistry.register_mesh_part_type('Volume mesh', 'Uniform Rectangular Gri
 class CustomRectangularGrid3D(MeshPart):
     """
     Custom Rectangular Grid 3D Mesh Part
+
+    Parameters
+    ----------
+    user_name : str
+        Unique user name for the mesh part.
+    element : Element
+        Associated element.
+    region : RegionBase, optional
+        Associated region.
+    x_coords : list of float (comma separated string)
+        List of X coordinates.
+    y_coords : list of float (comma separated string)
+        List of Y coordinates.
+    z_coords : list of float (comma separated string)
+        List of Z coordinates.
     """
     _compatible_elements = ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
     def __init__(self, user_name: str, element: Element, region: RegionBase=None,**kwargs):
         """
-        Initialize a 3D Custom Rectangular Grid Mesh Part
-        
-        Args:
-            user_name (str): Unique user name for the mesh part
-            element (Optional[Element]): Associated element
-            region (Optional[RegionBase]): Associated region
-            **kwargs: Additional keyword arguments
-                x_coords (List[float]): List of X coordinates
-                y_coords (List[float]): List of Y coordinates
-                z_coords (List[float]): List of Z coordinates
+        Initialize a 3D Custom Rectangular Grid Mesh Part.
+
+        Parameters
+        ----------
+        user_name : str
+            Unique user name for the mesh part.
+        element : Element
+            Associated element.
+        region : RegionBase, optional
+            Associated region.
+        x_coords : list of float (comma separated string)
+            List of X coordinates.
+        y_coords : list of float (comma separated string)
+            List of Y coordinates.
+        z_coords : list of float (comma separated string)
+            List of Z coordinates.
         """
         super().__init__(
             category='volume mesh',
@@ -344,29 +415,77 @@ MeshPartRegistry.register_mesh_part_type('Volume mesh', 'Custom Rectangular Grid
 class GeometricStructuredRectangular3D(MeshPart):
     """
     Geometric Structured Rectangular 3D Mesh Part
+
+    Parameters
+    ----------
+    user_name : str
+        Unique user name for the mesh part.
+    element : Element
+        Associated element.
+    region : RegionBase, optional
+        Associated region.
+    x_min : float
+        Minimum X coordinate.
+    x_max : float
+        Maximum X coordinate.
+    y_min : float
+        Minimum Y coordinate.
+    y_max : float
+        Maximum Y coordinate.
+    z_min : float
+        Minimum Z coordinate.
+    z_max : float
+        Maximum Z coordinate.
+    nx : int
+        Number of cells in X direction.
+    ny : int
+        Number of cells in Y direction.
+    nz : int
+        Number of cells in Z direction.
+    x_ratio : float, optional
+        Ratio of cell increment in X direction (default 1).
+    y_ratio : float, optional
+        Ratio of cell increment in Y direction (default 1).
+    z_ratio : float, optional
+        Ratio of cell increment in Z direction (default 1).
     """
     _compatible_elements = ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
     def __init__(self, user_name: str, element: Element, region: RegionBase=None,**kwargs):
         """
-        Initialize a 3D Geometric Structured Rectangular Mesh Part
-        
-        Args:
-            user_name (str): Unique user name for the mesh part
-            element (Optional[Element]): Associated element
-            region (Optional[RegionBase]): Associated region
-            **kwargs: Additional keyword arguments
-                x_min (float): Minimum X coordinate
-                x_max (float): Maximum X coordinate
-                y_min (float): Minimum Y coordinate
-                y_max (float): Maximum Y coordinate
-                z_min (float): Minimum Z coordinate
-                z_max (float): Maximum Z coordinate
-                nx (int): Number of cells in X direction
-                ny (int): Number of cells in Y direction
-                nz (int): Number of cells in Z direction
-                x_ratio (float): Ratio of cell increment in X direction
-                y_ratio (float): Ratio of cell increment in Y direction
-                z_ratio (float): Ratio of cell increment in Z direction
+        Initialize a 3D Geometric Structured Rectangular Mesh Part.
+
+        Parameters
+        ----------
+        user_name : str
+            Unique user name for the mesh part.
+        element : Element
+            Associated element.
+        region : RegionBase, optional
+            Associated region.
+        x_min : float
+            Minimum X coordinate.
+        x_max : float
+            Maximum X coordinate.
+        y_min : float
+            Minimum Y coordinate.
+        y_max : float
+            Maximum Y coordinate.
+        z_min : float
+            Minimum Z coordinate.
+        z_max : float
+            Maximum Z coordinate.
+        nx : int
+            Number of cells in X direction.
+        ny : int
+            Number of cells in Y direction.
+        nz : int
+            Number of cells in Z direction.
+        x_ratio : float, optional
+            Ratio of cell increment in X direction (default 1).
+        y_ratio : float, optional
+            Ratio of cell increment in Y direction (default 1).
+        z_ratio : float, optional
+            Ratio of cell increment in Z direction (default 1).
         """
         super().__init__(
             category='volume mesh',
@@ -570,30 +689,71 @@ MeshPartRegistry.register_mesh_part_type('Volume mesh', 'Geometric Rectangular G
 
 class ExternalMesh(MeshPart):
     """
-    Custom Mesh Part that can load from a file or accept an existing PyVista mesh
+    Custom Mesh Part that can load from a file or accept an existing PyVista mesh.
+
+    Parameters
+    ----------
+    user_name : str
+        Unique user name for the mesh part.
+    element : Element
+        Associated element.
+    region : RegionBase, optional
+        Associated region.
+    mesh : pv.UnstructuredGrid, optional
+        Existing PyVista mesh to use.
+    filepath : str, optional
+        Path to mesh file to load.
+    scale : float, optional
+        Scale factor for the mesh.
+    rotate_x : float, optional
+        Rotation angle around X-axis in degrees.
+    rotate_y : float, optional
+        Rotation angle around Y-axis in degrees.
+    rotate_z : float, optional
+        Rotation angle around Z-axis in degrees.
+    translate_x : float, optional
+        Translation along X-axis.
+    translate_y : float, optional
+        Translation along Y-axis.
+    translate_z : float, optional
+        Translation along Z-axis.
+    transform_args : dict, optional
+        Optional transformation arguments dictionary containing any of the above transformation parameters.
     """
     _compatible_elements = ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
     
     def __init__(self, user_name: str, element: Element, region: RegionBase=None, **kwargs):
         """
-        Initialize a Custom Mesh Part
-        
-        Args:
-            user_name (str): Unique user name for the mesh part
-            element (Element): Associated element
-            region (RegionBase, optional): Associated region
-            **kwargs: Additional keyword arguments
-                mesh (pv.UnstructuredGrid): Existing PyVista mesh to use
-                filepath (str): Path to mesh file to load
-                scale (float): Scale factor for the mesh
-                rotate_x (float): Rotation angle around X-axis in degrees
-                rotate_y (float): Rotation angle around Y-axis in degrees
-                rotate_z (float): Rotation angle around Z-axis in degrees
-                translate_x (float): Translation along X-axis
-                translate_y (float): Translation along Y-axis
-                translate_z (float): Translation along Z-axis
-                transform_args (Dict): Optional transformation arguments dictionary
-                    containing any of the above transformation parameters
+        Initialize a Custom Mesh Part.
+
+        Parameters
+        ----------
+        user_name : str
+            Unique user name for the mesh part.
+        element : Element
+            Associated element.
+        region : RegionBase, optional
+            Associated region.
+        mesh : pv.UnstructuredGrid, optional
+            Existing PyVista mesh to use.
+        filepath : str, optional
+            Path to mesh file to load.
+        scale : float, optional
+            Scale factor for the mesh.
+        rotate_x : float, optional
+            Rotation angle around X-axis in degrees.
+        rotate_y : float, optional
+            Rotation angle around Y-axis in degrees.
+        rotate_z : float, optional
+            Rotation angle around Z-axis in degrees.
+        translate_x : float, optional
+            Translation along X-axis.
+        translate_y : float, optional
+            Translation along Y-axis.
+        translate_z : float, optional
+            Translation along Z-axis.
+        transform_args : dict, optional
+            Optional transformation arguments dictionary containing any of the above transformation parameters.
         """
         super().__init__(
             category='volume mesh',
@@ -793,41 +953,116 @@ MeshPartRegistry.register_mesh_part_type('General mesh', 'External mesh', Extern
 
 class StructuredLineMesh(MeshPart):
     """
-    Structured Line Mesh Part for beam/column elements
-    Creates a grid of line elements with arbitrary normal direction
+    Structured Line Mesh Part for beam/column elements.
+    Creates a grid of line elements with arbitrary normal direction.
+
+    Parameters
+    ----------
+    user_name : str
+        Unique user name for the mesh part.
+    element : Element
+        Associated beam element (must have section and transformation).
+    region : RegionBase, optional
+        Associated region.
+    base_point_x : float, optional
+        Base point X coordinate. Default: 0.0
+    base_point_y : float, optional
+        Base point Y coordinate. Default: 0.0
+    base_point_z : float, optional
+        Base point Z coordinate. Default: 0.0
+    base_vector_1_x : float, optional
+        First base vector X component. Default: 1.0
+    base_vector_1_y : float, optional
+        First base vector Y component. Default: 0.0
+    base_vector_1_z : float, optional
+        First base vector Z component. Default: 0.0
+    base_vector_2_x : float, optional
+        Second base vector X component. Default: 0.0
+    base_vector_2_y : float, optional
+        Second base vector Y component. Default: 1.0
+    base_vector_2_z : float, optional
+        Second base vector Z component. Default: 0.0
+    normal_x : float, optional
+        Normal direction X component. Default: 0.0
+    normal_y : float, optional
+        Normal direction Y component. Default: 0.0
+    normal_z : float, optional
+        Normal direction Z component. Default: 1.0
+    grid_size_1 : int, optional
+        Number of elements in direction 1. Default: 10
+    grid_size_2 : int, optional
+        Number of elements in direction 2. Default: 10
+    spacing_1 : float, optional
+        Spacing in direction 1. Default: 1.0
+    spacing_2 : float, optional
+        Spacing in direction 2. Default: 1.0
+    length : float, optional
+        Length of each line element along normal. Default: 1.0
+    offset_1 : float, optional
+        Optional offset in direction 1. Default: 0.0
+    offset_2 : float, optional
+        Optional offset in direction 2. Default: 0.0
+    number_of_lines : int, optional
+        Number of line elements along normal direction per grid point. Default: 1
+    merge_points : bool, optional
+        Whether to merge duplicate points. Default: True
     """
     _compatible_elements = ["DispBeamColumn", "ForceBeamColumn", "ElasticBeamColumn", "NonlinearBeamColumn"]
     
     def __init__(self, user_name: str, element: Element, region: Optional[RegionBase]=None, **kwargs):
         """
-        Initialize a Structured Line Mesh Part
-        
-        Args:
-            user_name (str): Unique user name for the mesh part
-            element (Element): Associated beam element (must have section and transformation)
-            region (Optional[RegionBase]): Associated region
-            **kwargs: Line mesh parameters, including:
-                base_point_x (float, optional): Base point X coordinate. Default: 0.0
-                base_point_y (float, optional): Base point Y coordinate. Default: 0.0
-                base_point_z (float, optional): Base point Z coordinate. Default: 0.0
-                base_vector_1_x (float, optional): First base vector X component. Default: 1.0
-                base_vector_1_y (float, optional): First base vector Y component. Default: 0.0
-                base_vector_1_z (float, optional): First base vector Z component. Default: 0.0
-                base_vector_2_x (float, optional): Second base vector X component. Default: 0.0
-                base_vector_2_y (float, optional): Second base vector Y component. Default: 1.0
-                base_vector_2_z (float, optional): Second base vector Z component. Default: 0.0
-                normal_x (float, optional): Normal direction X component. Default: 0.0
-                normal_y (float, optional): Normal direction Y component. Default: 0.0
-                normal_z (float, optional): Normal direction Z component. Default: 1.0
-                grid_size_1 (int, optional): Number of elements in direction 1. Default: 10
-                grid_size_2 (int, optional): Number of elements in direction 2. Default: 10
-                spacing_1 (float, optional): Spacing in direction 1. Default: 1.0
-                spacing_2 (float, optional): Spacing in direction 2. Default: 1.0
-                length (float, optional): Length of each line element along normal. Default: 1.0
-                offset_1 (float, optional): Optional offset in direction 1. Default: 0.0
-                offset_2 (float, optional): Optional offset in direction 2. Default: 0.0
-                number_of_lines (int, optional): Number of line elements along normal direction per grid point. Default: 1
-                merge_points (bool, optional): Whether to merge duplicate points. Default: True
+        Initialize a Structured Line Mesh Part.
+
+        Parameters
+        ----------
+        user_name : str
+            Unique user name for the mesh part.
+        element : Element
+            Associated beam element (must have section and transformation).
+        region : RegionBase, optional
+            Associated region.
+        base_point_x : float, optional
+            Base point X coordinate. Default: 0.0
+        base_point_y : float, optional
+            Base point Y coordinate. Default: 0.0
+        base_point_z : float, optional
+            Base point Z coordinate. Default: 0.0
+        base_vector_1_x : float, optional
+            First base vector X component. Default: 1.0
+        base_vector_1_y : float, optional
+            First base vector Y component. Default: 0.0
+        base_vector_1_z : float, optional
+            First base vector Z component. Default: 0.0
+        base_vector_2_x : float, optional
+            Second base vector X component. Default: 0.0
+        base_vector_2_y : float, optional
+            Second base vector Y component. Default: 1.0
+        base_vector_2_z : float, optional
+            Second base vector Z component. Default: 0.0
+        normal_x : float, optional
+            Normal direction X component. Default: 0.0
+        normal_y : float, optional
+            Normal direction Y component. Default: 0.0
+        normal_z : float, optional
+            Normal direction Z component. Default: 1.0
+        grid_size_1 : int, optional
+            Number of elements in direction 1. Default: 10
+        grid_size_2 : int, optional
+            Number of elements in direction 2. Default: 10
+        spacing_1 : float, optional
+            Spacing in direction 1. Default: 1.0
+        spacing_2 : float, optional
+            Spacing in direction 2. Default: 1.0
+        length : float, optional
+            Length of each line element along normal. Default: 1.0
+        offset_1 : float, optional
+            Optional offset in direction 1. Default: 0.0
+        offset_2 : float, optional
+            Optional offset in direction 2. Default: 0.0
+        number_of_lines : int, optional
+            Number of line elements along normal direction per grid point. Default: 1
+        merge_points : bool, optional
+            Whether to merge duplicate points. Default: True
         """
         super().__init__(
             category='line mesh',
@@ -1180,20 +1415,64 @@ MeshPartRegistry.register_mesh_part_type('Line mesh', 'Structured Line Grid', St
 
 class SingleLineMesh(MeshPart):
     """
-    Single Line Mesh Part for beam/column elements
-    Creates a single line element between two points
+    Single Line Mesh Part for beam/column elements.
+    Creates a single line element between two points.
+
+    Parameters
+    ----------
+    user_name : str
+        Unique user name for the mesh part.
+    element : Element
+        Associated beam element (must have section and transformation).
+    region : RegionBase, optional
+        Associated region.
+    x0 : float, optional
+        Start point X coordinate. Default: 0.0
+    y0 : float, optional
+        Start point Y coordinate. Default: 0.0
+    z0 : float, optional
+        Start point Z coordinate. Default: 0.0
+    x1 : float, optional
+        End point X coordinate. Default: 1.0
+    y1 : float, optional
+        End point Y coordinate. Default: 0.0
+    z1 : float, optional
+        End point Z coordinate. Default: 0.0
+    number_of_lines : int, optional
+        Number of line elements to create along the path. Default: 1
+    merge_points : bool, optional
+        Whether to merge duplicate points. Default: True
     """
     _compatible_elements = ["DispBeamColumn", "ForceBeamColumn", "ElasticBeamColumn", "NonlinearBeamColumn"]
     
     def __init__(self, user_name: str, element: Element, region: Optional[RegionBase]=None, **kwargs):
         """
-        Initialize a Single Line Mesh Part
-        
-        Args:
-            user_name (str): Unique user name for the mesh part
-            element (Element): Associated beam element (must have section and transformation)
-            region (Optional[RegionBase]): Associated region
-            **kwargs: Line mesh parameters
+        Initialize a Single Line Mesh Part.
+
+        Parameters
+        ----------
+        user_name : str
+            Unique user name for the mesh part.
+        element : Element
+            Associated beam element (must have section and transformation).
+        region : RegionBase, optional
+            Associated region.
+        x0 : float, optional
+            Start point X coordinate. Default: 0.0
+        y0 : float, optional
+            Start point Y coordinate. Default: 0.0
+        z0 : float, optional
+            Start point Z coordinate. Default: 0.0
+        x1 : float, optional
+            End point X coordinate. Default: 1.0
+        y1 : float, optional
+            End point Y coordinate. Default: 0.0
+        z1 : float, optional
+            End point Z coordinate. Default: 0.0
+        number_of_lines : int, optional
+            Number of line elements to create along the path. Default: 1
+        merge_points : bool, optional
+            Whether to merge duplicate points. Default: True
         """
         super().__init__(
             category='line mesh',
