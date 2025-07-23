@@ -30,6 +30,22 @@ class ElasticSection(Section):
         # Elastic sections don't require external materials
         self.material = None
 
+    """
+    Elastic Section implementation for OpenSees.
+    
+    Parameters
+    ----------
+    user_name : str
+        Name of the section instance.
+    E : float
+        Young's modulus.
+    A : float
+        Cross-sectional area.
+    Iz : float
+        Moment of inertia about z-axis.
+    kwargs : dict
+        Additional parameters.
+    """
     def to_tcl(self) -> str:
         """Generate the OpenSees TCL command for Elastic section"""
         param_order = self.get_parameters()
@@ -144,6 +160,20 @@ class AggregatorSection(Section):
         else:
             self.material = None
 
+
+    """
+    Aggregator Section for OpenSees.
+    Allows combining multiple uniaxial materials for different response codes.
+    
+    Parameters
+    ----------
+    user_name : str
+        Name of the section instance.
+    materials : dict
+        Dictionary mapping response codes to materials (int, str, or Material).
+    kwargs : dict
+        Additional parameters.
+    """
     @staticmethod
     def resolve_section(section_input: Union[int, str, 'Section']) -> 'Section':
         """
@@ -266,8 +296,19 @@ class AggregatorSection(Section):
 
 class UniaxialSection(Section):
     """
-    Uniaxial Section implementation for OpenSees
-    Uses a single uniaxial material for a specific response
+    Uniaxial Section implementation for OpenSees.
+    Uses a single uniaxial material for a specific response.
+
+    Parameters
+    ----------
+    user_name : str
+        Name of the section instance.
+    material : int, str, or Material
+        Uniaxial material (tag, name, or object).
+    response_code : str
+        Response code (e.g., 'P', 'Mz').
+    kwargs : dict
+        Additional parameters.
     """
     
     def __init__(self, user_name: str = "Unnamed", 
@@ -358,7 +399,18 @@ class UniaxialSection(Section):
 
 class FiberElement:
     """
-    Represents a single fiber in a fiber section with enhanced material handling
+    Represents a single fiber in a fiber section with enhanced material handling.
+
+    Parameters
+    ----------
+    y_loc : float
+        Y-coordinate of the fiber.
+    z_loc : float
+        Z-coordinate of the fiber.
+    area : float
+        Area of the fiber.
+    material : int, str, or Material
+        Material for the fiber (tag, name, or object).
     """
     
     def __init__(self, y_loc: float, z_loc: float, area: float, 
@@ -406,8 +458,29 @@ class FiberElement:
 
 class WFSection2d(Section):
     """
-    Wide-flange section for 2D problems using fiber discretization
-    Uses a single uniaxial material for the entire section
+    Wide-flange section for 2D problems using fiber discretization.
+    Uses a single uniaxial material for the entire section.
+
+    Parameters
+    ----------
+    user_name : str
+        Name of the section instance.
+    material : int, str, or Material
+        Uniaxial material (tag, name, or object).
+    d : float
+        Section depth.
+    tw : float
+        Web thickness.
+    bf : float
+        Flange width.
+    tf : float
+        Flange thickness.
+    Nflweb : int
+        Number of fibers in web.
+    Nflflange : int
+        Number of fibers in flange.
+    kwargs : dict
+        Additional parameters.
     """
     
     def __init__(self, user_name: str = "Unnamed", 
@@ -522,8 +595,17 @@ class WFSection2d(Section):
 
 class PlateFiberSection(Section):
     """
-    Plate fiber section for shell elements with plane-stress material models
-    Uses NDMaterial for fiber-discretized behavior through plate thickness
+    Plate fiber section for shell elements with plane-stress material models.
+    Uses NDMaterial for fiber-discretized behavior through plate thickness.
+
+    Parameters
+    ----------
+    user_name : str
+        Name of the section instance.
+    material : int, str, or Material
+        NDMaterial for plane stress (tag, name, or object).
+    kwargs : dict
+        Additional parameters.
     """
     
     def __init__(self, user_name: str = "Unnamed", 
@@ -593,8 +675,23 @@ class PlateFiberSection(Section):
 
 class ElasticMembranePlateSection(Section):
     """
-    Elastic section for membrane-plate behavior in shell elements
-    Uses built-in linear elastic properties - no external materials required
+    Elastic section for membrane-plate behavior in shell elements.
+    Uses built-in linear elastic properties - no external materials required.
+
+    Parameters
+    ----------
+    user_name : str
+        Name of the section instance.
+    E : float
+        Young's modulus.
+    nu : float
+        Poisson's ratio.
+    h : float
+        Plate thickness.
+    rho : float
+        Mass density.
+    kwargs : dict
+        Additional parameters.
     """
     
     def __init__(self, user_name: str = "Unnamed", **kwargs):
@@ -686,7 +783,26 @@ class ElasticMembranePlateSection(Section):
 class RCSection(Section):
     """
     Specialized reinforced concrete section with individual material definitions
-    for core concrete, cover concrete, and steel reinforcement
+    for core concrete, cover concrete, and steel reinforcement.
+
+    Parameters
+    ----------
+    user_name : str
+        Name of the section instance.
+    core_material : int, str, or Material
+        Core concrete material (tag, name, or object).
+    cover_material : int, str, or Material
+        Cover concrete material (tag, name, or object).
+    steel_material : int, str, or Material
+        Steel reinforcement material (tag, name, or object).
+    d : float
+        Section depth.
+    b : float
+        Section width.
+    cover_to_center_of_bar : float
+        Cover distance to reinforcement centroid.
+    kwargs : dict
+        Additional parameters.
     """
     
     def __init__(self, user_name: str = "Unnamed",
@@ -827,7 +943,16 @@ class RCSection(Section):
 
 class ParallelSection(Section):
     """
-    Combines several existing sections in parallel to sum their force-deformation behaviors
+    Combines several existing sections in parallel to sum their force-deformation behaviors.
+
+    Parameters
+    ----------
+    user_name : str
+        Name of the section instance.
+    sections : list of int, str, or Section
+        List of existing sections to combine in parallel (tags, names, or objects).
+    kwargs : dict
+        Additional parameters.
     """
     
     def __init__(self, user_name: str = "Unnamed",
@@ -927,8 +1052,23 @@ class ParallelSection(Section):
 
 class BidirectionalSection(Section):
     """
-    Combines biaxial moment interaction with axial force using built-in yield surface
-    No external materials required - uses built-in bidirectional plasticity
+    Combines biaxial moment interaction with axial force using built-in yield surface.
+    No external materials required - uses built-in bidirectional plasticity.
+
+    Parameters
+    ----------
+    user_name : str
+        Name of the section instance.
+    E : float
+        Elastic modulus.
+    Fy : float
+        Yield strength.
+    Hiso : float
+        Isotropic hardening parameter.
+    Hkin : float
+        Kinematic hardening parameter.
+    kwargs : dict
+        Additional parameters.
     """
     
     def __init__(self, user_name: str = "Unnamed", **kwargs):
@@ -1012,8 +1152,31 @@ class BidirectionalSection(Section):
 
 class Isolator2SpringSection(Section):
     """
-    Used for modeling base isolation systems with bidirectional behavior and vertical coupling
-    No external materials required - uses built-in isolator behavior
+    Used for modeling base isolation systems with bidirectional behavior and vertical coupling.
+    No external materials required - uses built-in isolator behavior.
+
+    Parameters
+    ----------
+    user_name : str
+        Name of the section instance.
+    tol : float
+        Tolerance for convergence.
+    k1 : float
+        Initial stiffness.
+    Fy : float
+        Yield force.
+    k2 : float
+        Post-yield stiffness.
+    kv : float
+        Vertical stiffness.
+    hb : float
+        Isolation height.
+    Pe : float
+        Buckling load.
+    Po : float
+        Vertical load.
+    kwargs : dict
+        Additional parameters.
     """
     
     def __init__(self, user_name: str = "Unnamed", **kwargs):
@@ -1112,7 +1275,18 @@ class Isolator2SpringSection(Section):
 
 class FiberSection(Section):
     """
-    Complete Fiber Section implementation with enhanced material handling
+    Complete Fiber Section implementation with enhanced material handling.
+
+    Parameters
+    ----------
+    user_name : str
+        Name of the section instance.
+    GJ : float, optional
+        Linear-elastic torsional stiffness.
+    components : list, optional
+        List of FiberElement, PatchBase, or LayerBase objects.
+    kwargs : dict
+        Additional parameters.
     """
     
     def __init__(self, user_name: str = "Unnamed", GJ: Optional[float] = None, 
