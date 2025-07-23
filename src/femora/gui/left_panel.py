@@ -15,6 +15,7 @@ from femora.components.Analysis.analysisGUI import AnalysisManagerTab
 from femora.components.Process.processGUI import ProcessGUI
 from femora.components.DRM.combinedDRMGUI import CombinedDRMGUI
 from femora.components.section.section_gui import SectionManagerTab
+from femora.components.interface.interface_gui import InterfaceManagerTab
 
 class LeftPanel(QFrame):
     '''
@@ -56,6 +57,7 @@ class LeftPanel(QFrame):
     def create_tabs(self):
         self.material_tab = QWidget()
         self.mesh_tab = QWidget()
+        self.interface_tab = QWidget()
         self.Assemble_tab = QWidget()
         self.drm_tab = QWidget()
         self.manage_tab = QWidget()
@@ -63,6 +65,7 @@ class LeftPanel(QFrame):
         # Add tabs to the tab widget
         self.tabs.addTab(self.material_tab, "Material && Section")
         self.tabs.addTab(self.mesh_tab, "Mesh")
+        self.tabs.addTab(self.interface_tab, "Interface")
         self.tabs.addTab(self.Assemble_tab, "Assemble")
         self.tabs.addTab(self.drm_tab, "DRM Analysis")
         self.tabs.addTab(self.manage_tab, "Manage")
@@ -84,6 +87,11 @@ class LeftPanel(QFrame):
         self.mesh_tab.layout = QVBoxLayout()
         self.mesh_tab.layout.addWidget(MeshPartManagerTab())
         self.mesh_tab.setLayout(self.mesh_tab.layout)
+
+        # Interface tab
+        self.interface_tab.layout = QVBoxLayout()
+        self.interface_tab.layout.addWidget(InterfaceManagerTab())
+        self.interface_tab.setLayout(self.interface_tab.layout)
 
         # Assemble tab
         self.Assemble_tab.layout = QVBoxLayout()
