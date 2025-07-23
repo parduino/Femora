@@ -10,6 +10,7 @@ from femora.gui.console import InteractiveConsole
 from femora.components.drm_creators.drm_manager import DRMManager
 from femora.gui.plotter import PlotterManager
 from femora.gui.toolbar import ToolbarManager
+from femora.gui.progress_gui import ProgressGUI
 
 
 class MainWindow(QMainWindow):
@@ -77,7 +78,7 @@ class MainWindow(QMainWindow):
         self.setup_splitters()
         self.toolbar_manager = ToolbarManager(self)
         self.apply_theme()
-        
+        ProgressGUI.show("Progress")
         self.showMaximized()
         # if self.current_theme == "SimCenter":
         #     QApplication.instance().setStyleSheet("""
