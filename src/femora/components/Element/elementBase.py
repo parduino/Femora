@@ -398,6 +398,20 @@ class ElementRegistry:
             cls._instance = super(ElementRegistry, cls).__new__(cls)
         return cls._instance
 
+    @property
+    def beam(self):
+        from .element_class_manager import _BeamElements
+        return _BeamElements
+    
+    @property
+    def brick(self):
+        from .element_class_manager import _BrickElements
+        return _BrickElements
+    @property
+    def quad(self):
+        from .element_class_manager import _QuadElements
+        return _QuadElements
+    
     @classmethod
     def register_element_type(cls, name: str, element_class: Type[Element]):
         """
