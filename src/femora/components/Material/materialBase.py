@@ -367,7 +367,10 @@ class MaterialManager:
 
     def _initialize(self):
         """Initialize the singleton instance"""
-        pass
+        # Add nd and uniaxial managers for autocompletion and access
+        from .nd_uniaxial_manager import NDMaterialManager, UniaxialMaterialManager
+        self.nd = NDMaterialManager()
+        self.uniaxial = UniaxialMaterialManager()
 
 
     def create_material(self, 
