@@ -7,20 +7,40 @@ from .elementBase import Element, ElementRegistry
 
 class DispBeamColumnElement(Element):
     """
-    Displacement-Based Beam-Column Element for OpenSees
-    Uses distributed plasticity with displacement-based formulation
+    Displacement-Based Beam-Column Element for OpenSees.
+    Uses distributed plasticity with displacement-based formulation.
+
+    Parameters
+    ----------
+    ndof : int
+        Number of degrees of freedom (3 for 2D, 6 for 3D).
+    section : Section, int, or str
+        Section object, tag, or name.
+    transformation : GeometricTransformation, int, or str
+        Transformation object, tag, or name.
+    numIntgrPts : int, optional
+        Number of integration points along the element.
+    massDens : float, optional
+        Element mass density per unit length.
     """
     
     def __init__(self, ndof: int, section: Union[Section, int, str], 
                  transformation: Union[GeometricTransformation, int, str], **kwargs):
         """
-        Initialize Displacement-Based Beam-Column Element
-        
-        Args:
-            ndof (int): Number of degrees of freedom
-            section (Union[Section, int, str]): Section object, tag, or name
-            transformation (Union[GeometricTransformation, int, str]): Transformation object, tag, or name
-            **kwargs: Element parameters (numIntgrPts, massDens)
+        Initialize Displacement-Based Beam-Column Element.
+
+        Parameters
+        ----------
+        ndof : int
+            Number of degrees of freedom (3 for 2D, 6 for 3D).
+        section : Section, int, or str
+            Section object, tag, or name.
+        transformation : GeometricTransformation, int, or str
+            Transformation object, tag, or name.
+        numIntgrPts : int, optional
+            Number of integration points along the element.
+        massDens : float, optional
+            Element mass density per unit length.
         """
         # Validate DOF requirement (typically 6 for 3D, 3 for 2D)
         if ndof not in [3, 6]:
@@ -176,20 +196,48 @@ class DispBeamColumnElement(Element):
 
 class ForceBeamColumnElement(Element):
     """
-    Force-Based Beam-Column Element for OpenSees (nonlinearBeamColumn)
-    Uses force-based formulation with distributed plasticity
+    Force-Based Beam-Column Element for OpenSees (nonlinearBeamColumn).
+    Uses force-based formulation with distributed plasticity.
+
+    Parameters
+    ----------
+    ndof : int
+        Number of degrees of freedom (3 for 2D, 6 for 3D).
+    section : Section, int, or str
+        Section object, tag, or name.
+    transformation : GeometricTransformation, int, or str
+        Transformation object, tag, or name.
+    numIntgrPts : int, optional
+        Number of integration points along the element.
+    massDens : float, optional
+        Element mass density per unit length.
+    maxIters : int, optional
+        Maximum number of iterations for element compatibility.
+    tol : float, optional
+        Tolerance for satisfaction of element compatibility.
     """
     
     def __init__(self, ndof: int, section: Union[Section, int, str], 
                  transformation: Union[GeometricTransformation, int, str], **kwargs):
         """
-        Initialize Force-Based Beam-Column Element
-        
-        Args:
-            ndof (int): Number of degrees of freedom
-            section (Union[Section, int, str]): Section object, tag, or name
-            transformation (Union[GeometricTransformation, int, str]): Transformation object, tag, or name
-            **kwargs: Element parameters (numIntgrPts, massDens, maxIters, tol)
+        Initialize Force-Based Beam-Column Element.
+
+        Parameters
+        ----------
+        ndof : int
+            Number of degrees of freedom (3 for 2D, 6 for 3D).
+        section : Section, int, or str
+            Section object, tag, or name.
+        transformation : GeometricTransformation, int, or str
+            Transformation object, tag, or name.
+        numIntgrPts : int, optional
+            Number of integration points along the element.
+        massDens : float, optional
+            Element mass density per unit length.
+        maxIters : int, optional
+            Maximum number of iterations for element compatibility.
+        tol : float, optional
+            Tolerance for satisfaction of element compatibility.
         """
         # Validate DOF requirement (typically 6 for 3D, 3 for 2D)
         if ndof not in [3, 6]:
@@ -379,20 +427,40 @@ class ForceBeamColumnElement(Element):
 
 class ElasticBeamColumnElement(Element):
     """
-    Elastic Beam-Column Element for OpenSees with Section
-    Uses elastic formulation with section properties
+    Elastic Beam-Column Element for OpenSees with Section.
+    Uses elastic formulation with section properties.
+
+    Parameters
+    ----------
+    ndof : int
+        Number of degrees of freedom (3 for 2D, 6 for 3D).
+    section : Section, int, or str
+        Section object, tag, or name.
+    transformation : GeometricTransformation, int, or str
+        Transformation object, tag, or name.
+    massDens : float, optional
+        Element mass density per unit length.
+    cMass : bool, optional
+        Use consistent mass matrix instead of lumped.
     """
     
     def __init__(self, ndof: int, section: Union[Section, int, str], 
                  transformation: Union[GeometricTransformation, int, str], **kwargs):
         """
-        Initialize Elastic Beam-Column Element
-        
-        Args:
-            ndof (int): Number of degrees of freedom
-            section (Union[Section, int, str]): Section object, tag, or name
-            transformation (Union[GeometricTransformation, int, str]): Transformation object, tag, or name
-            **kwargs: Element parameters (massDens, cMass)
+        Initialize Elastic Beam-Column Element.
+
+        Parameters
+        ----------
+        ndof : int
+            Number of degrees of freedom (3 for 2D, 6 for 3D).
+        section : Section, int, or str
+            Section object, tag, or name.
+        transformation : GeometricTransformation, int, or str
+            Transformation object, tag, or name.
+        massDens : float, optional
+            Element mass density per unit length.
+        cMass : bool, optional
+            Use consistent mass matrix instead of lumped.
         """
         # Validate DOF requirement (typically 6 for 3D, 3 for 2D)
         if ndof not in [3, 6]:
