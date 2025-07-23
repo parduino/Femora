@@ -286,7 +286,7 @@ class MainWindow(QMainWindow):
             # self.plotter.set_background('white')
         
         # Update font
-        console_font = QFont('Monospace', self.font_size)
+        console_font = QFont('Menlo', self.font_size)
         self.console.font = console_font
     
     def increase_font_size(self):
