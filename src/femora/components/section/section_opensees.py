@@ -18,19 +18,6 @@ from matplotlib.patches import Circle
 
 class ElasticSection(Section):
     """
-    Elastic Section implementation for OpenSees
-    Most commonly used section type for beam-column elements
-    No external material required - uses built-in elastic properties
-    """
-    
-    def __init__(self, user_name: str = "Unnamed", **kwargs):
-        kwargs = self.validate_section_parameters(**kwargs)
-        super().__init__('section', 'Elastic', user_name)
-        self.params = kwargs if kwargs else {}
-        # Elastic sections don't require external materials
-        self.material = None
-
-    """
     Elastic Section implementation for OpenSees.
     
     Parameters
@@ -43,9 +30,22 @@ class ElasticSection(Section):
         Cross-sectional area.
     Iz : float
         Moment of inertia about z-axis.
-    kwargs : dict
-        Additional parameters.
+    Iy : float, optional
+        Moment of inertia about y-axis (3D).
+    G : float, optional
+        Shear modulus.
+    J : float, optional
+        Torsional constant.
     """
+    
+    def __init__(self, user_name: str = "Unnamed", **kwargs):
+        kwargs = self.validate_section_parameters(**kwargs)
+        super().__init__('section', 'Elastic', user_name)
+        self.params = kwargs if kwargs else {}
+        # Elastic sections don't require external materials
+        self.material = None
+
+
     def to_tcl(self) -> str:
         """Generate the OpenSees TCL command for Elastic section"""
         param_order = self.get_parameters()
@@ -135,8 +135,17 @@ class ElasticSection(Section):
 
 class AggregatorSection(Section):
     """
-    Aggregator Section implementation for OpenSees
-    Combines multiple materials for different response quantities
+    Aggregator Section for OpenSees.
+    Allows combining multiple uniaxial materials for different response codes.
+    
+    Parameters
+    ----------
+    user_name : str
+        Name of the section instance.
+    materials : dict
+        Dictionary mapping response codes to materials (int, str, or Material).
+    kwargs : dict
+        Additional parameters.
     """
     
     def __init__(self, user_name: str = "Unnamed", 
@@ -161,19 +170,7 @@ class AggregatorSection(Section):
             self.material = None
 
 
-    """
-    Aggregator Section for OpenSees.
-    Allows combining multiple uniaxial materials for different response codes.
-    
-    Parameters
-    ----------
-    user_name : str
-        Name of the section instance.
-    materials : dict
-        Dictionary mapping response codes to materials (int, str, or Material).
-    kwargs : dict
-        Additional parameters.
-    """
+
     @staticmethod
     def resolve_section(section_input: Union[int, str, 'Section']) -> 'Section':
         """
