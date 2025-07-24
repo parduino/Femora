@@ -494,18 +494,23 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         It writes the necessary TCL commands to the provided file handle.
         """
         # print(f"[EmbeddedBeamSolidInterface:{self.name}] Exporting TCL commands.")
-        crd_transf_tag = self.beam_part.element.get_transformation().tag 
+        crd_transf_tag = self.beam_part.element.get_transformation().tag
+        file_handle.write("set Femora_embeddedBeamSolidStartTag [getFemoraMax eleTag]\n")
         for info in self._embeddedinfo_list:
             file_handle.write("if {$pid == %d} {\n" % info.core_number)
             for beams, solids in info.beams_solids:
-                beams_str = " -beamEle ".join(map(str, beams))
-                solids_str = " -solidEle ".join(map(str, solids))
+                # TODO: need to handle if elements tags are not starting from 1
+                beams_str = " -beamEle ".join(str(b + 1) for b in beams)
+                solids_str = " -solidEle ".join(str(s + 1) for s in solids)
                 file_handle.write(
-                    f"\tgenerateInterfacePoints -beamEle {beams_str} -solidEle {solids_str} {'-gPenalty' if self.g_penalty else ''} " +
+                    f"\tset maxEleTag [generateInterfacePoints -beamEle {beams_str} -solidEle {solids_str} {'-gPenalty' if self.g_penalty else ''} " +
                     f"-shape {self.shape}  -nP {self.n_peri} -nL {self.n_long} -crdTransf {crd_transf_tag} -radius {self.radius} " +
-                    f"-penaltyParam {self.penalty_param}\n"
+                    f"-penaltyParam {self.penalty_param} -startTag $Femora_embeddedBeamSolidStartTag ]\n"
+                    f"\tset Femora_embeddedBeamSolidStartTag [expr $maxEleTag + 1]\n"
+                    f"\tputs $Femora_embeddedBeamSolidStartTag\n"
                 )
             file_handle.write("}\n")
+            file_handle.write("barrier")
 
 
     # Keep an instance-level no-op to avoid accidental per-instance registration elsewhere
