@@ -92,6 +92,60 @@ class MeshMaker:
         """Default progress reporter that uses the shared Progress utility."""
         Progress.callback(value, message, desc="Exporting to TCL")
 
+    def _get_tcl_helper_functions(self):
+        """
+        Return TCL helper functions as a string.
+        
+        This method contains all the TCL helper functions needed for the exported model.
+        Embedding them directly in the code ensures they're always available and makes
+        the package more professional and self-contained.
+        
+        Returns:
+            str: TCL helper functions
+        """
+        return '''proc getFemoraMax {type} {
+	set local_max -1.e8
+	if {$type == "eleTag"} {
+		set Tags [getEleTags]
+	} elseif {$type == "nodeTag"} {
+		set Tags [getNodeTags]
+	} else {
+		puts "Unknown type $type"
+		return -1
+	}
+	# set Tags [getNodeTags]
+	foreach tag $Tags {
+		if {$tag > $local_max} {
+			set local_max $tag
+		}
+	}
+	puts "local_max: $local_max from pid $::pid"
+	# send the max ele tag form each pid to the master
+	if {$::pid == 0} {
+		for {set i 1 } {$i < $::np} {incr i 1} { 
+			recv -pid $i ANY maxTag
+			if {$maxTag > $local_max} {
+				set local_max $maxTag
+			}
+		}
+	} else {
+		send -pid 0 "$local_max"
+	}
+
+	# now send the max ele tag to all pids
+	if {$::pid == 0} {
+		for {set i 1 } {$i < $::np} {incr i 1} { 
+			send -pid $i $local_max
+		}
+		set global_max $local_max
+	} else {
+		recv -pid 0 ANY global_max
+	}
+	return $global_max
+}
+
+'''
+
     @classmethod
     def get_instance(cls, **kwargs):
         """
@@ -190,7 +244,10 @@ class MeshMaker:
                 f.write("set pid [getPID]\n")
                 f.write("set np [getNP]\n")
 
-                # Writ the meshBounds
+                f.write("\n# Helper functions ======================================\n")
+                f.write(self._get_tcl_helper_functions())
+
+                # Write the meshBounds
                 f.write("\n# Mesh Bounds ======================================\n")
                 bounds = self.assembler.AssembeledMesh.bounds
                 f.write(f"set X_MIN {bounds[0]}\n")
