@@ -511,7 +511,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
                     f"\tputs $Femora_embeddedBeamSolidStartTag\n"
                 )
             file_handle.write("}\n")
-            file_handle.write("barrier")
+            file_handle.write("barrier\n")
 
 
     # Keep an instance-level no-op to avoid accidental per-instance registration elsewhere
