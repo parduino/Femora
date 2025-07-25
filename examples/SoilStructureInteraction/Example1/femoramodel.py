@@ -1,4 +1,6 @@
 import femora as fm
+import os
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # ==========================================================
 # Soil 
@@ -9,8 +11,7 @@ soil_mat = fm.material.nd.elastic_isotropic(
     nu=0.4, # Poisson's ratio
     rho = 2100.0 # Density in kg/m^3
 )
-dx = 0.5
-dy = dx ; dz = dx
+dx   = 0.5; dy = dx ; dz = dx
 Xmin = -8.0; Xmax = 8.0; 
 Ymin = -3.0; Ymax = 3.0;
 Zmin = -8.0; Zmax = 0.0;
@@ -20,7 +21,8 @@ Nz = int((Zmax - Zmin) / dz)
 soilele = fm.element.brick.std(
     name="soil_brick",
     material=soil_mat,
-    ndof=3)
+    ndof=3
+)
 
 fm.mesh_part.volume.uniform_rectangular_grid(
     user_name="soil_grid",
@@ -86,9 +88,9 @@ fm.mesh_part.line.single_line(
     number_of_lines = 16,
     merge_points = True,
 )
-# ==========================================================
-# interface 
-# ==========================================================
+# # ==========================================================
+# # interface 
+# # ==========================================================
 fm.interface.beam_solid_interface(
     name = "pile_soil_interface",
     beam_part = "pile",
@@ -106,7 +108,7 @@ fm.interface.beam_solid_interface(
 # ==========================================================
 fm.assembler.create_section(
     meshparts=["soil_grid", "pile"],
-    num_partitions=2,
+    num_partitions=4,
     partition_algorithm="kd-tree",
     merging_points=False,
 )
@@ -115,17 +117,21 @@ fm.assembler.Assemble()
 # ==========================================================
 # PML Layer
 # ==========================================================
-fm.drm.addAbsorbingLayer(numLayers=4,
-                        numPartitions=8,
+ABSORBING_LAYER = "PML" ; # "", "PML", "Rayleigh"
+ABSORBING_LAYER = "Rayleigh"
+# ABSORBING_LAYER = "Fixed"
+if ABSORBING_LAYER in ["PML", "Rayleigh"]:
+    fm.drm.addAbsorbingLayer(numLayers=4,
+                        numPartitions=4,
                         partitionAlgo="kd-tree",
                         geometry="Rectangular",
                         rayleighDamping=0.95,
                         matchDamping=False,
-                        type="PML",
+                        type=ABSORBING_LAYER,
                         )
 
 h5pattern = fm.pattern.create_pattern( 'h5drm',
-                                        filepath='drmload.h5drm',
+                                        filepath='rickter.h5drm',
                                         factor=1.0,
                                         crd_scale=1.0,
                                         distance_tolerance=0.01,
@@ -133,8 +139,34 @@ h5pattern = fm.pattern.create_pattern( 'h5drm',
                                         transform_matrix=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
                                         origin=[0.0, 0.0, 0.0])
 fm.drm.set_pattern(h5pattern)
-fm.drm.createDefaultProcess(finalTime=30, dT=0.01)
+fm.drm.createDefaultProcess(
+    finalTime=4, 
+    dT=0.001,
+    vtkhdfrecorder_file=f"Results_{ABSORBING_LAYER}/result",
+    vtkhdfrecorder_resp_types=["disp", "vel", "accel"],
+    vtkhdfrecorder_delta_t=0.005,
+)
+fm.process.insert_step(
+    index = 0,
+    component = fm.actions.tcl(f"file mkdir Results_{ABSORBING_LAYER}"),
+    description = "Create Results directory"
+)
+
+# ==========================================================
+# add a lumped mass at the top of the pile
+# ==========================================================
+lumpedMass = 25000.0
+beam_head = fm.assembler.AssembeledMesh.find_closest_point(
+    point=(0.0, 0.0, 2.0),
+    n=1
+)
+beam_head += 1  # Adjust for 1-based indexing in Tcl
+fm.process.insert_step(
+    index = 1,
+    component = fm.actions.tcl("if {$pid == 3} {"+ f"mass {beam_head} {lumpedMass} 0.0 0.0 0.0 0.0 0.0" + "}"),
+    description = "Add lumped mass to the top of the pile"
+)
 fm.export_to_tcl(filename="model.tcl")
-fm.gui()
+fm.assembler.plot(show_edges=True, scalars="Core")
 
 
