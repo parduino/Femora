@@ -496,6 +496,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         # print(f"[EmbeddedBeamSolidInterface:{self.name}] Exporting TCL commands.")
         crd_transf_tag = self.beam_part.element.get_transformation().tag
         file_handle.write("set Femora_embeddedBeamSolidStartTag [getFemoraMax eleTag]\n")
+        file_handle.write("set Femora_embeddedBeamSolidStartTag [expr $Femora_embeddedBeamSolidStartTag + 1]\n")
         for info in self._embeddedinfo_list:
             file_handle.write("if {$pid == %d} {\n" % info.core_number)
             for beams, solids in info.beams_solids:
