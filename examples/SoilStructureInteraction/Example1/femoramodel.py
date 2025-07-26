@@ -101,6 +101,18 @@ fm.interface.beam_solid_interface(
     penalty_param = 1.0e12,  # Penalty parameter
     g_penalty = True,  # Use geometric penalty
 )
+# ==========================================================
+# Mass
+# ==========================================================
+# Add a lumped mass at the top of the pile in the x direction
+lumpedMass = 25000.0
+fm.mass.meshpart.closest_point(
+    meshpart_name="pile",
+    xyz= (0.0, 0.0, 2.0),  # Point at the top of the pile
+    mass_vec= (lumpedMass, 0.0, 0.0),  # Mass vector in the x direction
+    combine="override",  # Override existing mass if any
+)
+
 
 
 # ==========================================================
@@ -152,21 +164,9 @@ fm.process.insert_step(
     description = "Create Results directory"
 )
 
-# ==========================================================
-# add a lumped mass at the top of the pile
-# ==========================================================
-lumpedMass = 25000.0
-beam_head = fm.assembler.AssembeledMesh.find_closest_point(
-    point=(0.0, 0.0, 2.0),
-    n=1
-)
-beam_head += 1  # Adjust for 1-based indexing in Tcl
-fm.process.insert_step(
-    index = 1,
-    component = fm.actions.tcl("if {$pid == 3} {"+ f"mass {beam_head} {lumpedMass} 0.0 0.0 0.0 0.0 0.0" + "}"),
-    description = "Add lumped mass to the top of the pile"
-)
+
 fm.export_to_tcl(filename="model.tcl")
-fm.assembler.plot(show_edges=True, scalars="Core")
+# fm.gui()
+# fm.assembler.plot(show_edges=True, scalars="Core")
 
 
