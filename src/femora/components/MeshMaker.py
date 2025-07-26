@@ -15,12 +15,14 @@ from femora.components.DRM.DRM import DRM
 from femora.components.transformation.transformation import GeometricTransformationManager
 from femora.components.interface.interface_base import InterfaceManager
 from femora.components.section.section_base import SectionManager
+from femora.components.mass.mass_manager import MassManager
 import os
 from numpy import unique, zeros, arange, array, abs, concatenate, meshgrid, ones, full, uint16, repeat, where, isin
 from pyvista import Cube, MultiBlock, StructuredGrid
 from pykdtree.kdtree import KDTree as pykdtree
 from femora.components.event.event_bus import EventBus, FemoraEvent
 from femora.utils.progress import get_progress_callback, Progress
+import numpy as np
 
 class MeshMaker:
     """
@@ -61,6 +63,7 @@ class MeshMaker:
         self.material = MaterialManager()
         self.element = ElementRegistry()
         self.damping = DampingManager()
+        self.mass = MassManager()
         self.region = RegionManager()
         self.constraint = Constraint()
         self.meshPart = MeshPartManager()
@@ -285,6 +288,7 @@ class MeshMaker:
                 num_cores = unique(cores)
                 nodes     = self.assembler.AssembeledMesh.points
                 ndfs      = self.assembler.AssembeledMesh.point_data["ndf"]
+                mass      = self.assembler.AssembeledMesh.point_data["Mass"]
                 num_nodes = self.assembler.AssembeledMesh.n_points
                 wroted    = zeros((num_nodes, len(num_cores)), dtype=bool) # to keep track of the nodes that have been written
                 nodeTags  = arange(1, num_nodes+1, dtype=int)
@@ -303,6 +307,12 @@ class MeshMaker:
                     for pid in pids:
                         if not wroted[pid][core]:
                             f.write(f"\tnode {nodeTags[pid]} {nodes[pid][0]} {nodes[pid][1]} {nodes[pid][2]} -ndf {ndfs[pid]}\n")
+                            mass_vec = mass[pid]
+                            mass_vec = mass_vec[:ndfs[pid]] 
+                            # if any of the mass vector is not zero then write it
+                            if abs(mass_vec).sum() > 1e-6:
+                                f.write(f"\tmass {nodeTags[pid]} {' '.join(map(str, mass_vec))}\n")
+                            # write them mass for that node
                             wroted[pid][core] = True
                     
                     eleclass = Element._elements[elementClassTag[i]]
