@@ -8,6 +8,7 @@ from femora.components.Element.elementBase import Element
 from femora.components.Material.materialBase import Material
 from femora.components.event.event_bus import EventBus, FemoraEvent
 from femora.utils.progress import Progress
+from femora.constants import FEMORA_MAX_NDF
   
 
 class Assembler:
@@ -836,6 +837,10 @@ class AssemblySection:
         n_cells = self.mesh.n_cells
         n_points = self.mesh.n_points
         
+        # ensure Mass array exists
+        if "Mass" not in self.mesh.point_data:
+            self.mesh.point_data["Mass"] = np.zeros((n_points, FEMORA_MAX_NDF), dtype=np.float32)
+
         # add cell and point data
         self.mesh.cell_data["ElementTag"]  = np.full(n_cells, EleTag, dtype=np.uint16)
         self.mesh.cell_data["MaterialTag"] = np.full(n_cells, matTag, dtype=np.uint16)
@@ -843,7 +848,7 @@ class AssemblySection:
         self.mesh.point_data["ndf"]        = np.full(n_points, ndf, dtype=np.uint16)
         self.mesh.cell_data["Region"]      = np.full(n_cells, regionTag, dtype=np.uint16)
         self.mesh.cell_data["MeshTag_cell"]   = np.full(n_cells, meshTag, dtype=np.uint16)
-        self.mesh.point_data["MeshTag_point"] = np.full(n_points, meshTag, dtype=np.uint16)
+        self.mesh.point_data["MeshPartTag_pointdata"] = np.full(n_points, meshTag, dtype=np.uint16)
         # Merge subsequent meshes
         n_sections = len(self.meshparts_list)
         perc = 1 / n_sections * 100
@@ -858,6 +863,8 @@ class AssemblySection:
             meshTag  = meshpart.tag
             n_cells_second  = second_mesh.n_cells
             n_points_second = second_mesh.n_points
+            if "Mass" not in second_mesh.point_data:
+                second_mesh.point_data["Mass"] = np.zeros((n_points_second, FEMORA_MAX_NDF), dtype=np.float32)
             # add cell and point data to the second mesh
             second_mesh.cell_data["ElementTag"]  = np.full(n_cells_second, EleTag, dtype=np.uint16)
             second_mesh.cell_data["MaterialTag"] = np.full(n_cells_second, matTag, dtype=np.uint16)
@@ -865,7 +872,7 @@ class AssemblySection:
             second_mesh.cell_data["Region"]      = np.full(n_cells_second, regionTag, dtype=np.uint16)
             second_mesh.cell_data["SectionTag"]  = np.full(n_cells_second, sectionTag, dtype=np.uint16)
             second_mesh.cell_data["MeshTag_cell"]   = np.full(n_cells_second, meshTag, dtype=np.uint16)
-            second_mesh.point_data["MeshTag_point"] = np.full(n_points_second, meshTag, dtype=np.uint16)
+            second_mesh.point_data["MeshPartTag_pointdata"] = np.full(n_points_second, meshTag, dtype=np.uint16)
             # Merge with tolerance and optional point merging
             self.mesh = self.mesh.merge(
                 second_mesh, 
