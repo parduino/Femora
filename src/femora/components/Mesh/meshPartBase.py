@@ -25,6 +25,7 @@ from typing import Dict, List, Tuple, Type, Union, Optional
 from femora.components.Element.elementBase import Element
 from femora.components.Material.materialBase import Material
 from femora.components.Region.regionBase import RegionBase, GlobalRegion
+from femora.constants import FEMORA_MAX_NDF
 
 class MeshPart(ABC):
     """
@@ -189,6 +190,18 @@ class MeshPart(ABC):
         """
         self.actor = actor
 
+    def _ensure_mass_array(self):
+        """Create an all-zero Mass point_data array if it doesn't exist.
+
+        The array has shape (n_points, FEMORA_MAX_NDF).  It is important that every
+        MeshPart carries the Mass array so that PyVista merges the data
+        correctly during assembly.
+        """
+        if self.mesh is None:
+            return
+        if "Mass" not in self.mesh.point_data:
+            n_pts = self.mesh.n_points
+            self.mesh.point_data["Mass"] = np.zeros((n_pts, FEMORA_MAX_NDF), dtype=np.float32)
 
 
 # Optional: Add to registry if needed
