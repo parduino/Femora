@@ -1,10 +1,12 @@
 import os
-from numpy import unique, zeros, arange, array, abs, concatenate, meshgrid, ones, full, uint16, repeat, where, isin
+from numpy import unique, zeros, arange, array, abs, concatenate, meshgrid, ones, full, uint16, repeat, where, isin, float32
 from pyvista import Cube, MultiBlock, StructuredGrid
 import tqdm
 from pykdtree.kdtree import KDTree as pykdtree
 from femora.components.Pattern.patternBase import H5DRMPattern
 from femora.components.Actions.action import ActionManager
+from femora.constants import FEMORA_MAX_NDF
+
 class DRM:
     """
     Singleton class for Domain Reduction Method helper functions
@@ -586,6 +588,10 @@ class DRM:
         Absorbing.cell_data['AbsorbingRegion'] = RegTag
         Absorbing.cell_data['Region'] = RegionTag
         Absorbing.point_data['ndf'] = full(Absorbing.n_points, ndof, dtype=uint16)
+        Absorbing.point_data['Mass'] = full(shape=(Absorbing.n_points, FEMORA_MAX_NDF), fill_value=0.0, dtype=float32)
+        Absorbing.point_data['SectionTag'] = full(Absorbing.n_points, 0, dtype=uint16)
+        Absorbing.point_data['MeshPartTag_pointdata'] = full(Absorbing.n_points, 0, dtype=uint16)
+        Absorbing.cell_data['MeshTag_cell'] = full(Absorbing.n_cells, 0, dtype=uint16)
 
         Absorbing.cell_data["Core"] = full(Absorbing.n_cells, 0, dtype=int)
 
