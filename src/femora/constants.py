@@ -1,0 +1,1 @@
+FEMORA_MAX_NDF = 9  # Global maximum number of degrees of freedom per node 
