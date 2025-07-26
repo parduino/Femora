@@ -58,6 +58,7 @@ mesh_part = _instance.meshPart
 transformation = _instance.transformation
 section = _instance.section
 interface = _instance.interface
+mass = _instance.mass
 
 
 
