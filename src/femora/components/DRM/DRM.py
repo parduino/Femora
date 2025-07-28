@@ -589,7 +589,7 @@ class DRM:
         Absorbing.cell_data['Region'] = RegionTag
         Absorbing.point_data['ndf'] = full(Absorbing.n_points, ndof, dtype=uint16)
         Absorbing.point_data['Mass'] = full(shape=(Absorbing.n_points, FEMORA_MAX_NDF), fill_value=0.0, dtype=float32)
-        Absorbing.point_data['SectionTag'] = full(Absorbing.n_points, 0, dtype=uint16)
+        Absorbing.cell_data['SectionTag'] = full(Absorbing.n_cells, 0, dtype=uint16)
         Absorbing.point_data['MeshPartTag_pointdata'] = full(Absorbing.n_points, 0, dtype=uint16)
         Absorbing.cell_data['MeshTag_cell'] = full(Absorbing.n_cells, 0, dtype=uint16)
 
