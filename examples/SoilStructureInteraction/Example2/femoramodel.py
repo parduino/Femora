@@ -42,8 +42,8 @@ fm.mesh_part.volume.uniform_rectangular_grid(
 # transformation
 transf = fm.transformation.transformation3d(
     transf_type="PDelta",
-    vecxz_x=-1,
-    vecxz_y=0,
+    vecxz_x=0,
+    vecxz_y=1,
     vecxz_z=0,
 )
 
@@ -174,16 +174,16 @@ fm.interface.beam_solid_interface(
     g_penalty = True,  # Use geometric penalty
 )
 
-fm.interface.beam_solid_interface(
-    name = "pile_soil_interface3",
-    beam_part = "pile3",
-    solid_parts = None,  # No solid part specified
-    radius = radius,  # Interface radius
-    n_peri = 8,
-    n_long = 5,
-    penalty_param = 1.0e12,  # Penalty parameter
-    g_penalty = True,  # Use geometric penalty
-)
+# fm.interface.beam_solid_interface(
+#     name = "pile_soil_interface3",
+#     beam_part = "pile3",
+#     solid_parts = None,  # No solid part specified
+#     radius = radius,  # Interface radius
+#     n_peri = 8,
+#     n_long = 5,
+#     penalty_param = 1.0e12,  # Penalty parameter
+#     g_penalty = True,  # Use geometric penalty
+# )
 # ==========================================================
 # Mass
 # ==========================================================
@@ -202,7 +202,7 @@ fm.mass.meshpart.closest_point(
 # Assembly
 # ==========================================================
 fm.assembler.create_section(
-    meshparts=["soil_grid", "pile1", "pile2", "pile3", "beam1", "beam2"],
+    meshparts=["soil_grid", "pile1", "pile2", "beam1", "beam2"],
     num_partitions=4,
     partition_algorithm="kd-tree",
     merging_points=True,
