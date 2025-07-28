@@ -255,6 +255,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
                      beams_solids=beams_solids)
         # add the embedded info to the class-level list
         self._embeddedinfo_list.append(ef)
+        self._instance_embeddedinfo_list.append(ef)
 
 
         assembled_mesh.cell_data["Core"][inner.cell_data["mesh_ind"]] = target_core
@@ -497,7 +498,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         crd_transf_tag = self.beam_part.element.get_transformation().tag
         file_handle.write("set Femora_embeddedBeamSolidStartTag [getFemoraMax eleTag]\n")
         file_handle.write("set Femora_embeddedBeamSolidStartTag [expr $Femora_embeddedBeamSolidStartTag + 1]\n")
-        for info in self._embeddedinfo_list:
+        for info in self._instance_embeddedinfo_list:
             file_handle.write("if {$pid == %d} {\n" % info.core_number)
             for beams, solids in info.beams_solids:
                 # TODO: need to handle if elements tags are not starting from 1
