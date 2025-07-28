@@ -68,6 +68,7 @@ class Assembler:
         num_partitions: int = 1, 
         partition_algorithm: str = "kd-tree", 
         merging_points: bool = True,
+        mass_merging: str = "sum",
         **kwargs: Any
     ) -> 'AssemblySection':
         """
@@ -89,6 +90,10 @@ class Assembler:
             merging_points (bool, optional): Whether to merge points that are within a 
                                            tolerance distance when assembling mesh parts.
                                            Defaults to True.
+            mass_merging (str, optional): Method for merging mass properties of mesh parts.
+                                           Defaults to "sum". Options are "sum" or "average".
+                                           if "sum", the mass is summed across all merged points.
+                                           if "average", the mass is averaged across merged points.
             **kwargs: Additional keyword arguments to pass to AssemblySection constructor
         
         Returns:
@@ -105,6 +110,7 @@ class Assembler:
             num_partitions=num_partitions,
             partition_algorithm=partition_algorithm,
             merging_points=merging_points,
+            mass_merging=mass_merging,
             **kwargs
         )
         
@@ -267,7 +273,11 @@ class Assembler:
         """
         return self._assembly_sections[tag]
     
-    def Assemble(self, merge_points: bool = True, *, progress_callback=None) -> None:
+    def Assemble(self, 
+                 merge_points: bool = True, 
+                 mass_merging: str = "sum",
+                 *, 
+                 progress_callback=None) -> None:
         """
         Assemble all registered AssemblySections into a single unified mesh.
         
@@ -329,10 +339,12 @@ class Assembler:
                 tolerance=1e-5,
             )
             if merge_points:
+                number_of_points_before_cleaning = self.AssembeledMesh.n_points
+                mass = self.AssembeledMesh.point_data["Mass"]
                 self.AssembeledMesh = self.AssembeledMesh.clean(
                     tolerance=1e-5,
                     remove_unused_points=False,
-                    produce_merge_map=False,
+                    produce_merge_map=True,
                     average_point_data=True,
                     merging_array_name="ndf",
                     progress_bar=False,
@@ -341,6 +353,20 @@ class Assembler:
                 self.AssembeledMesh.point_data["ndf"] = self.AssembeledMesh.point_data["ndf"].astype(np.uint16)
                 # make the MeshPartTag_pointdata array uint16
                 self.AssembeledMesh.point_data["MeshPartTag_pointdata"] = self.AssembeledMesh.point_data["MeshPartTag_pointdata"].astype(np.uint16)
+                
+                number_of_points_after_cleaning = self.AssembeledMesh.n_points
+
+                if mass_merging == "sum":
+                    if number_of_points_before_cleaning != number_of_points_after_cleaning:
+                        Mass = np.zeros((number_of_points_after_cleaning, FEMORA_MAX_NDF), dtype=np.float32)
+                        for i in range(self.AssembeledMesh.field_data["PointMergeMap"].shape[0]):
+                            Mass[self.AssembeledMesh.field_data["PointMergeMap"][i],:] += mass[i,:]
+                
+                        self.AssembeledMesh.point_data["Mass"] = Mass
+
+                del self.AssembeledMesh.field_data["PointMergeMap"]
+
+
         except Exception as e:
             raise e
         
@@ -736,7 +762,8 @@ class AssemblySection:
         num_partitions: int = 1, 
         partition_algorithm: str = "kd-tree", 
         merging_points: bool = True,
-        progress_callback=None
+        progress_callback=None,
+        mass_merging: str = "sum"
     ):
         """
         Initialize an AssemblySection by combining multiple mesh parts.
@@ -757,9 +784,12 @@ class AssemblySection:
             partition_algorithm (str, optional): Algorithm used for partitioning the mesh.
                                                Currently supports "kd-tree".
                                                Defaults to "kd-tree".
+            mass_merging (str, optional): Method for merging mass properties of mesh parts.
+                                          Options are "sum" or "average". Defaults to "sum".
             merging_points (bool, optional): Whether to merge points that are within a
                                            tolerance distance when assembling mesh parts.
                                            Defaults to True.
+                                           
         
         Raises:
             ValueError: If no valid mesh parts are provided, if the partition algorithm
@@ -785,6 +815,9 @@ class AssemblySection:
         # Initialize tag to None
         self._tag = None
         self.merging_points = merging_points
+        if mass_merging not in ["sum", "average"]:
+            raise ValueError(f"Invalid mass merging method: {mass_merging}. Must be 'sum' or 'average'.")
+        self.mass_merging = mass_merging
         
         # Assembled mesh attributes
         self.mesh: Optional[pv.UnstructuredGrid] = None
@@ -967,19 +1000,32 @@ class AssemblySection:
             tolerance = 1e-5,
         )
         if self.merging_points:
+            mass = self.mesh.point_data["Mass"]
+            number_of_points_before_cleaning = self.mesh.number_of_points
             self.mesh = self.mesh.clean(
                 tolerance=1e-5,
                 remove_unused_points=False,
-                produce_merge_map=False,
+                produce_merge_map=True,
                 average_point_data=True,
                 merging_array_name="ndf",
                 progress_bar=False,
             )
+
+            number_of_points_after_cleaning = self.mesh.number_of_points
             # make the ndf array uint16
             self.mesh.point_data["ndf"] = self.mesh.point_data["ndf"].astype(np.uint16)
             # make the MeshPartTag_pointdata array uint16
             self.mesh.point_data["MeshPartTag_pointdata"] = self.mesh.point_data["MeshPartTag_pointdata"].astype(np.uint16)
 
+            if self.mass_merging == "sum":
+                if number_of_points_before_cleaning != number_of_points_after_cleaning:
+                    Mass = np.zeros((self.mesh.number_of_points, FEMORA_MAX_NDF), dtype=np.float32)
+                    for i in range(self.mesh.field_data["PointMergeMap"].shape[0]):
+                        Mass[self.mesh.field_data["PointMergeMap"][i],:] += mass[i,:]
+            
+                    self.mesh.point_data["Mass"] = Mass
+
+            del self.mesh.field_data["PointMergeMap"]
 
 
         # partition the mesh
