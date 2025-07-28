@@ -549,6 +549,79 @@ class Assembler:
         """
         if self.AssembeledMesh is None:
             raise ValueError("No assembled mesh exists to plot")
+        if scalars=="Core":
+            cores = self.AssembeledMesh.cell_data["Core"]
+            mesh = pv.MultiBlock()
+            for core in np.unique(cores):
+                core_mesh = self.AssembeledMesh.extract_cells(cores==core)
+                mesh.append(core_mesh)
+            pl = pv.Plotter()
+            pl.add_mesh(mesh,
+                color=color,
+                style=style,
+                scalars=scalars,
+                clim=clim,
+                show_edges=show_edges,
+                edge_color=edge_color,
+                point_size=point_size,
+                line_width=line_width,
+                opacity=opacity,
+                flip_scalars=flip_scalars,
+                lighting=lighting,
+                n_colors=n_colors,
+                interpolate_before_map=interpolate_before_map,
+                cmap=cmap,
+                label=label,
+                reset_camera=reset_camera,
+                scalar_bar_args=scalar_bar_args,
+                show_scalar_bar=show_scalar_bar,
+                multi_colors=True,
+                name=name,
+                texture=texture,
+                render_points_as_spheres=render_points_as_spheres,
+                render_lines_as_tubes=render_lines_as_tubes,
+                smooth_shading=smooth_shading,
+                split_sharp_edges=split_sharp_edges,
+                ambient=ambient,
+                diffuse=diffuse,
+                specular=specular,
+                specular_power=specular_power,
+                nan_color=nan_color,
+                nan_opacity=nan_opacity,
+                culling=culling,
+                rgb=rgb,
+                categories=categories,
+                silhouette=silhouette,
+                use_transparency=use_transparency,
+                below_color=below_color,
+                above_color=above_color,
+                annotations=annotations,
+                pickable=pickable,
+                preference=preference,
+                log_scale=log_scale,
+                pbr=pbr,
+                metallic=metallic,
+                roughness=roughness,
+                render=render,
+                user_matrix=user_matrix,
+                component=component,
+                emissive=emissive,
+                copy_mesh=copy_mesh,
+                backface_params=backface_params,
+                show_vertices=show_vertices,
+                edge_opacity=edge_opacity,
+                **kwargs)
+            if add_axes:
+                pl.add_axes()
+            if add_bounding_box:
+                pl.add_bounding_box()
+            if show_grid:
+                pl.show_grid()
+            pl.show()
+            pl.close()
+            pl.show()
+            pl.close()
+
         else:
             pl = pv.Plotter()
             pl.add_mesh(
@@ -896,10 +969,6 @@ class AssemblySection:
             tolerance = 1e-5,
         )
         if self.merging_points:
-            for key in self.mesh.point_data.keys():
-                print(f"  {key}: {self.mesh.point_data[key].dtype}")
-            for key in self.mesh.cell_data.keys():
-                print(f"  {key}: {self.mesh.cell_data[key].dtype}")
             self.mesh = self.mesh.clean(
                 tolerance=1e-5,
                 remove_unused_points=False,
@@ -908,19 +977,12 @@ class AssemblySection:
                 merging_array_name="ndf",
                 progress_bar=False,
             )
-            # for each key print the dtype
-            for key in self.mesh.point_data.keys():
-                print(f"  {key}: {self.mesh.point_data[key].dtype}")
-            for key in self.mesh.cell_data.keys():
-                print(f"  {key}: {self.mesh.cell_data[key].dtype}")
             # make the ndf array uint16
             self.mesh.point_data["ndf"] = self.mesh.point_data["ndf"].astype(np.uint16)
             # make the MeshPartTag_pointdata array uint16
             self.mesh.point_data["MeshPartTag_pointdata"] = self.mesh.point_data["MeshPartTag_pointdata"].astype(np.uint16)
 
-            # print the final point data keys and dtypes
-            for key in self.mesh.point_data.keys():
-                print(f"  {key}: {self.mesh.point_data[key].dtype}")
+
 
         # partition the mesh
         self.mesh.cell_data["Core"] = np.zeros(self.mesh.n_cells, dtype=int)
