@@ -619,8 +619,6 @@ class Assembler:
                 pl.show_grid()
             pl.show()
             pl.close()
-            pl.show()
-            pl.close()
 
         else:
             pl = pv.Plotter()
