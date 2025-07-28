@@ -311,7 +311,8 @@ class Assembler:
         if first_mesh is None:
             raise ValueError("There is no mesh to assemble. Please create an AssemblySection first.")
         
-        self.AssembeledMesh = first_mesh.copy()  # type: ignore[attr-defined]
+        self.AssembeledMesh = pv.MultiBlock();
+        self.AssembeledMesh.append(first_mesh.copy())
         progress_callback(1 / len(sorted_sections) * 70, f"merged section 1/{len(sorted_sections)}")
         num_partitions = sorted_sections[0][1].num_partitions
 
@@ -320,16 +321,26 @@ class Assembler:
                 second_mesh = section.mesh.copy()  # type: ignore[attr-defined]
                 second_mesh.cell_data["Core"] = second_mesh.cell_data["Core"] + num_partitions
                 num_partitions = num_partitions + section.num_partitions
-                self.AssembeledMesh = self.AssembeledMesh.merge(
-                    second_mesh, 
-                    merge_points=merge_points, 
-                    tolerance=1e-5,
-                    inplace=False,
-                    progress_bar=False
-                )
-                del second_mesh
+                self.AssembeledMesh.append(second_mesh)
                 perc = idx / len(sorted_sections) * 70
                 progress_callback(perc, f"merged section {idx}/{len(sorted_sections)}")
+            self.AssembeledMesh = self.AssembeledMesh.combine(
+                merge_points=False,
+                tolerance=1e-5,
+            )
+            if merge_points:
+                self.AssembeledMesh = self.AssembeledMesh.clean(
+                    tolerance=1e-5,
+                    remove_unused_points=False,
+                    produce_merge_map=False,
+                    average_point_data=True,
+                    merging_array_name="ndf",
+                    progress_bar=False,
+                )
+                # make the ndf array uint16
+                self.AssembeledMesh.point_data["ndf"] = self.AssembeledMesh.point_data["ndf"].astype(np.uint16)
+                # make the MeshPartTag_pointdata array uint16
+                self.AssembeledMesh.point_data["MeshPartTag_pointdata"] = self.AssembeledMesh.point_data["MeshPartTag_pointdata"].astype(np.uint16)
         except Exception as e:
             raise e
         
@@ -823,7 +834,7 @@ class AssemblySection:
             
         # Start with the first mesh
         first_meshpart = self.meshparts_list[0]
-        self.mesh = first_meshpart.mesh.copy()
+        first_mesh = first_meshpart.mesh.copy()
         
         # Collect elements and materials
         ndf = first_meshpart.element._ndof
@@ -834,25 +845,26 @@ class AssemblySection:
         meshTag  = first_meshpart.tag
         
         # Add initial metadata to the first mesh
-        n_cells = self.mesh.n_cells
-        n_points = self.mesh.n_points
-        
+        n_cells = first_mesh.n_cells
+        n_points = first_mesh.n_points
+
         # ensure Mass array exists
-        if "Mass" not in self.mesh.point_data:
-            self.mesh.point_data["Mass"] = np.zeros((n_points, FEMORA_MAX_NDF), dtype=np.float32)
+        if "Mass" not in first_mesh.point_data:
+            first_mesh.point_data["Mass"] = np.zeros((n_points, FEMORA_MAX_NDF), dtype=np.float32)
 
         # add cell and point data
-        self.mesh.cell_data["ElementTag"]  = np.full(n_cells, EleTag, dtype=np.uint16)
-        self.mesh.cell_data["MaterialTag"] = np.full(n_cells, matTag, dtype=np.uint16)
-        self.mesh.cell_data["SectionTag"]  = np.full(n_cells, sectionTag, dtype=np.uint16)
-        self.mesh.point_data["ndf"]        = np.full(n_points, ndf, dtype=np.uint16)
-        self.mesh.cell_data["Region"]      = np.full(n_cells, regionTag, dtype=np.uint16)
-        self.mesh.cell_data["MeshTag_cell"]   = np.full(n_cells, meshTag, dtype=np.uint16)
-        self.mesh.point_data["MeshPartTag_pointdata"] = np.full(n_points, meshTag, dtype=np.uint16)
+        first_mesh.cell_data["ElementTag"]  = np.full(n_cells, EleTag, dtype=np.uint16)
+        first_mesh.cell_data["MaterialTag"] = np.full(n_cells, matTag, dtype=np.uint16)
+        first_mesh.cell_data["SectionTag"]  = np.full(n_cells, sectionTag, dtype=np.uint16)
+        first_mesh.point_data["ndf"]        = np.full(n_points, ndf, dtype=np.uint16)
+        first_mesh.cell_data["Region"]      = np.full(n_cells, regionTag, dtype=np.uint16)
+        first_mesh.cell_data["MeshTag_cell"]   = np.full(n_cells, meshTag, dtype=np.uint16)
+        first_mesh.point_data["MeshPartTag_pointdata"] = np.full(n_points, meshTag, dtype=np.uint16)
         # Merge subsequent meshes
         n_sections = len(self.meshparts_list)
         perc = 1 / n_sections * 100
         progress_callback(perc, f"merged meshpart {1}/{n_sections}")
+        self.mesh = pv.MultiBlock([first_mesh])  # Start with the first mesh as a MultiBlock
         for idx, meshpart in enumerate(self.meshparts_list[1:], start=2):
             second_mesh = meshpart.mesh.copy()
             ndf = meshpart.element._ndof
@@ -874,16 +886,41 @@ class AssemblySection:
             second_mesh.cell_data["MeshTag_cell"]   = np.full(n_cells_second, meshTag, dtype=np.uint16)
             second_mesh.point_data["MeshPartTag_pointdata"] = np.full(n_points_second, meshTag, dtype=np.uint16)
             # Merge with tolerance and optional point merging
-            self.mesh = self.mesh.merge(
-                second_mesh, 
-                merge_points=self.merging_points, 
-                tolerance=1e-5,
-                inplace=False,
-                progress_bar=False
-            )
-            del second_mesh
+            self.mesh.append(second_mesh)
             perc = idx / n_sections * 100
             progress_callback(perc, f"merged meshpart {idx}/{n_sections}")
+
+        
+        self.mesh = self.mesh.combine(
+            merge_points = False,
+            tolerance = 1e-5,
+        )
+        if self.merging_points:
+            for key in self.mesh.point_data.keys():
+                print(f"  {key}: {self.mesh.point_data[key].dtype}")
+            for key in self.mesh.cell_data.keys():
+                print(f"  {key}: {self.mesh.cell_data[key].dtype}")
+            self.mesh = self.mesh.clean(
+                tolerance=1e-5,
+                remove_unused_points=False,
+                produce_merge_map=False,
+                average_point_data=True,
+                merging_array_name="ndf",
+                progress_bar=False,
+            )
+            # for each key print the dtype
+            for key in self.mesh.point_data.keys():
+                print(f"  {key}: {self.mesh.point_data[key].dtype}")
+            for key in self.mesh.cell_data.keys():
+                print(f"  {key}: {self.mesh.cell_data[key].dtype}")
+            # make the ndf array uint16
+            self.mesh.point_data["ndf"] = self.mesh.point_data["ndf"].astype(np.uint16)
+            # make the MeshPartTag_pointdata array uint16
+            self.mesh.point_data["MeshPartTag_pointdata"] = self.mesh.point_data["MeshPartTag_pointdata"].astype(np.uint16)
+
+            # print the final point data keys and dtypes
+            for key in self.mesh.point_data.keys():
+                print(f"  {key}: {self.mesh.point_data[key].dtype}")
 
         # partition the mesh
         self.mesh.cell_data["Core"] = np.zeros(self.mesh.n_cells, dtype=int)
