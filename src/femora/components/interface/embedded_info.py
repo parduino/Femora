@@ -1,4 +1,4 @@
-from typing import List, Tuple, Set, FrozenSet, Optional
+from typing import List, Tuple, Set, FrozenSet, Optional, Union
 from dataclasses import dataclass, field
 import hashlib
 
@@ -138,7 +138,7 @@ class EmbeddedInfo:
     _beams_solids_hash: str = field(repr=False)
     _solids_set: FrozenSet[int] = field(repr=False)
     
-    def __init__(self, beams: List[int] | Set[int], core_number: int, 
+    def __init__(self, beams: Union[List[int], Set[int]], core_number: int, 
                  beams_solids: List[Tuple[List[int], List[int]]]):
         # Convert beams to frozenset
         object.__setattr__(self, 'beams', frozenset(beams))
