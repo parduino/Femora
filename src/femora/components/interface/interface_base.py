@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import List, Dict
+from typing import List, Dict, Optional
 from femora.components.event.event_bus import FemoraEvent, EventBus
 
 class InterfaceBase(ABC):
@@ -75,7 +75,7 @@ class InterfaceManager:
             raise TypeError("interface_cls must be a subclass of InterfaceBase")
         return interface_cls(*args, **kwargs)
 
-    def get(self, name: str) -> InterfaceBase | None:
+    def get(self, name: str) -> Optional[InterfaceBase]:
         return InterfaceBase.get(name)
 
     def all(self) -> Dict[str, InterfaceBase]:
