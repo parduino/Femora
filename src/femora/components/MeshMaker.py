@@ -29,6 +29,7 @@ class MeshMaker:
     Singleton class for managing OpenSees GUI operations and file exports
     """
     _instance = None
+    _results_folder = ""
 
     def __new__(cls, *args, **kwargs):
         """
@@ -246,6 +247,9 @@ class MeshMaker:
                 f.write("model BasicBuilder -ndm 3\n")
                 f.write("set pid [getPID]\n")
                 f.write("set np [getNP]\n")
+
+                if self._results_folder != "":
+                    f.write("if {$pid == 0} {" + f"file mkdir {self._results_folder}" + "} \n")
 
                 f.write("\n# Helper functions ======================================\n")
                 f.write(self._get_tcl_helper_functions())
@@ -558,4 +562,24 @@ class MeshMaker:
         if model_path is not None:
             self.model_path = model_path
 
+    @classmethod
+    def set_results_folder(cls, folder_name):
+        """
+        Set the results folder for the model
+        This method updates the results folder where simulation results will be stored.
 
+        Args:
+            folder_name (str): path to the results folder
+        """
+        cls._results_folder = folder_name
+
+    @classmethod
+    def get_results_folder(cls):
+        """
+        Get the current results folder path
+        
+        Returns:
+            str: The path to the results folder
+        """
+        return cls._results_folder if cls._results_folder else ""
+        
