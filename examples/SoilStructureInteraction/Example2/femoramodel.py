@@ -158,9 +158,11 @@ fm.interface.beam_solid_interface(
     solid_parts = None,  # No solid part specified
     radius = radius,  # Interface radius
     n_peri = 8,
-    n_long = 5,
+    n_long = 3,
     penalty_param = 1.0e12,  # Penalty parameter
     g_penalty = True,  # Use geometric penalty
+    write_connectivity = True,
+    write_interface = True,  # Write interface file
 )
 
 fm.interface.beam_solid_interface(
@@ -169,9 +171,11 @@ fm.interface.beam_solid_interface(
     solid_parts = None,  # No solid part specified
     radius = radius,  # Interface radius
     n_peri = 8,
-    n_long = 5,
+    n_long = 3,
     penalty_param = 1.0e12,  # Penalty parameter
     g_penalty = True,  # Use geometric penalty
+    write_connectivity = True,
+    write_interface = True,
 )
 
 # fm.interface.beam_solid_interface(
@@ -215,6 +219,10 @@ fm.assembler.Assemble()
 ABSORBING_LAYER = "PML" ; # "", "PML", "Rayleigh"
 ABSORBING_LAYER = "Rayleigh"
 ABSORBING_LAYER = "Fixed"
+
+fm.set_results_folder(f"Results_{ABSORBING_LAYER}")
+
+
 if ABSORBING_LAYER in ["PML", "Rayleigh"]:
     fm.drm.addAbsorbingLayer(numLayers=4,
                         numPartitions=4,
@@ -237,14 +245,9 @@ fm.drm.set_pattern(h5pattern)
 fm.drm.createDefaultProcess(
     finalTime=4, 
     dT=0.001,
-    vtkhdfrecorder_file=f"Results_{ABSORBING_LAYER}/result",
+    vtkhdfrecorder_file=f"result",
     vtkhdfrecorder_resp_types=["disp", "vel", "accel"],
     vtkhdfrecorder_delta_t=0.005,
-)
-fm.process.insert_step(
-    index = 0,
-    component = fm.actions.tcl(f"file mkdir Results_{ABSORBING_LAYER}"),
-    description = "Create Results directory"
 )
 
 
