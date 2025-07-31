@@ -41,6 +41,10 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
     region : RegionBase | None
         Optional region to confine the interface to a specific region.
         Not implemented yet, please do not use this parameter for now.
+    write_connectivity : bool
+        Whether to write connectivity information to the output file.
+    write_interface : bool
+        Whether to write interface information to the output file.
     """
 
     _embeddedinfo_list: List[EmbeddedInfo] = []  # Class-level list to store all instances
@@ -58,7 +62,9 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         n_long: int = 10,
         penalty_param: float = 1.0e12,
         g_penalty: bool = True,
-        region: 'RegionBase | None' = None
+        region: 'RegionBase | None' = None,
+        write_connectivity: bool = False,
+        write_interface: bool = False,
     ) -> None:
         # Helper to resolve MeshPart from str, int, or instance
         def resolve_meshpart(mp):
@@ -109,6 +115,8 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
             self.region = region
         else:
             raise NotImplementedError("Region handling is not implemented yet. Please do not use region parameter for now.")
+        self.write_connectivity = write_connectivity
+        self.write_interface = write_interface
 
 
 
@@ -495,21 +503,37 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         It writes the necessary TCL commands to the provided file handle.
         """
         # print(f"[EmbeddedBeamSolidInterface:{self.name}] Exporting TCL commands.")
+        from femora import MeshMaker
         crd_transf_tag = self.beam_part.element.get_transformation().tag
         file_handle.write("set Femora_embeddedBeamSolidStartTag [getFemoraMax eleTag]\n")
         file_handle.write("set Femora_embeddedBeamSolidStartTag [expr $Femora_embeddedBeamSolidStartTag + 1]\n")
-        for info in self._instance_embeddedinfo_list:
+        for ii, info in enumerate(self._instance_embeddedinfo_list):
             file_handle.write("if {$pid == %d} {\n" % info.core_number)
-            for beams, solids in info.beams_solids:
+            # for beams, solids in info.beams_solids:
+            for jj, (beams, solids) in enumerate(info.beams_solids):
                 # TODO: need to handle if elements tags are not starting from 1
                 beams_str = " -beamEle ".join(str(b + 1) for b in beams)
                 solids_str = " -solidEle ".join(str(s + 1) for s in solids)
+                connect_file = f"EmbeddedBeamSolidConnect_{self.name}_beam{ii}_part{jj}.dat"
+                interface_file = f"EmbeddedBeamSolidInterface_{self.name}_beam{ii}_part{jj}.dat"
+                connect_file = MeshMaker.get_results_folder() + "/" + connect_file
+                interface_file = MeshMaker.get_results_folder() + "/" + interface_file
+                if self.write_connectivity:
+                    file_handle.write("\tif {[file exists %s] == 1} {file delete %s}\n" % (connect_file, connect_file))
+                if self.write_interface:
+                    file_handle.write("\tif {[file exists %s] == 1} {file delete %s}\n" % (interface_file, interface_file))
                 file_handle.write(
                     f"\tset maxEleTag [generateInterfacePoints -beamEle {beams_str} -solidEle {solids_str} {'-gPenalty' if self.g_penalty else ''} " +
                     f"-shape {self.shape}  -nP {self.n_peri} -nL {self.n_long} -crdTransf {crd_transf_tag} -radius {self.radius} " +
-                    f"-penaltyParam {self.penalty_param} -startTag $Femora_embeddedBeamSolidStartTag ]\n"
+                    f"-penaltyParam {self.penalty_param} -startTag $Femora_embeddedBeamSolidStartTag" +
+                    f"{f' -connectivity {connect_file}' if self.write_connectivity else ''}" +
+                    f"{f' -file {interface_file}' if self.write_interface else ''}]\n"
+                    f"\tset EmbeddedBeamSolid_{self.name}_beam{ii}_part{jj}_startTag $Femora_embeddedBeamSolidStartTag\n"
+                    f"\tset EmbeddedBeamSolid_{self.name}_beam{ii}_part{jj}_endTag $maxEleTag\n"
+                    # f"\tputs \"EmbeddedBeamSolid_{self.name}_beam{ii}_part{jj} startTag: $EmbeddedBeamSolid_{self.name}_beam{ii}_part{jj}_startTag\"\n"
+                    # f"\tputs \"EmbeddedBeamSolid_{self.name}_beam{ii}_part{jj}_endTag: $EmbeddedBeamSolid_{self.name}_beam{ii}_part{jj}_endTag\"\n"
                     f"\tset Femora_embeddedBeamSolidStartTag [expr $maxEleTag + 1]\n"
-                    f"\tputs $Femora_embeddedBeamSolidStartTag\n"
+                    # f"\tputs $Femora_embeddedBeamSolidStartTag\n"
                 )
             file_handle.write("}\n")
             file_handle.write("barrier\n")
