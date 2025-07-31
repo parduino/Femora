@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Union, Type
+from femora.components.interface.embedded_beam_solid_interface import EmbeddedBeamSolidInterface
+from femora.components.interface.interface_base import InterfaceManager
 
 class Recorder(ABC):
     """
@@ -122,23 +124,114 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
     Args:
         interface (EmbeddedBeamSolidInterface | str): The interface to record. (required)
         resp_type (str | List[str] | None): The type of responses to record. (required)
+        If None, only displacement is recorded.
+        Valid response types include:
+            - "displacement"
+            - "localDisplacement"
+            - "axialDisp"
+            - "radialDisp"  
+            - "tangentialDisp"
+            - "globalForce"
+            - "localForce"
+            - "axialForce"
+            - "radialForce"
+            - "tangentialForce"
+            - "solidForce"
+            - "beamForce"
+            - "beamLocalForce"
+    Raises:
+        ValueError: If the interface is not an instance of EmbeddedBeamSolidInterface or a valid interface name.
+        TypeError: If resp_type is not a string or a list of strings.
+        ValueError: If resp_type contains invalid response types.
+
+    Returns:
+        EmbeddedBeamSolidInterfaceRecorder: An instance of the recorder.
         
     """
-    def __init__(self, **kwargs):
+    def __init__(self, 
+                 interface: Union[str, 'EmbeddedBeamSolidInterface', list['EmbeddedBeamSolidInterface']],
+                 resp_type: Union[str, List[str]] = "displacement",
+                 dt : Union[float, None] = None,
+                 ):
         """
         Initialize an EmbeddedBeamSolidInterfaceRecorder
         
         Args:
-            **kwargs: Parameters for the recorder, such as:
-                - interface : str | EmbeddedBeamSolidInterface instance
+            - interface (EmbeddedBeamSolidInterface | str): The interface to record.
+            - resp_type (str | List[str]): The type of responses to record.
+
+    
         """
         super().__init__("EmbeddedBeamSolidInterface")
-        interface = kwargs.get("interface", None)
-        if interface is None:
-            raise ValueError("An interface must be provided.")
-        self.interface = interface
+        interfaces = []
+        interface_manager = InterfaceManager()
+        if isinstance(interface, list):
+            for iface in interface:
+                if isinstance(iface, str):
+                    resolved = interface_manager.get(iface)
+                    if resolved is None or not isinstance(resolved, EmbeddedBeamSolidInterface):
+                        raise ValueError(f"Interface '{iface}' is not a valid EmbeddedBeamSolidInterface name")
+                    interfaces.append(resolved)
+                elif isinstance(iface, EmbeddedBeamSolidInterface):
+                    interfaces.append(iface)
+                else:
+                    raise ValueError("All interfaces must be instances of EmbeddedBeamSolidInterface or valid names")
+        else:
+            if isinstance(interface, str):
+                resolved = interface_manager.get(interface)
+                if resolved is None or not isinstance(resolved, EmbeddedBeamSolidInterface):
+                    raise ValueError(f"Interface '{interface}' is not a valid EmbeddedBeamSolidInterface name")
+                interfaces.append(resolved)
+            elif isinstance(interface, EmbeddedBeamSolidInterface):
+                interfaces.append(interface)
+            else:
+                raise ValueError("interface must be an instance of EmbeddedBeamSolidInterface or a valid interface name")
+        self.interfaces = interfaces
 
 
+        if isinstance(resp_type, str):
+            resp_type = [resp_type]
+        elif not isinstance(resp_type, list):
+            raise TypeError("resp_type must be a string or a list of strings")
+        
+        self.resp_type = resp_type
+
+        for resp in self.resp_type:
+            if resp not in ["displacement", "localDisplacement", "axialDisp", "radialDisp",
+                            "tangentialDisp", "globalForce", "localForce", "axialForce",
+                            "radialForce", "tangentialForce", "solidForce", "beamForce","beamLocalForce"]:
+                raise ValueError(f"Invalid response type: {resp}. ")
+            
+        self.dt = dt
+
+    
+    @staticmethod
+    def get_parameters() -> List[tuple]:
+        """
+        Get the parameters defining this recorder
+        Returns:
+            List[tuple]: List of (parameter name, description) tuples
+        """
+        return [
+            ("interface", "The interface to record (EmbeddedBeamSolidInterface instance or name)"),
+            ("resp_type", "Type of responses to record (string or list of strings)"),
+            ("dt", "Time interval for recording (optional)")
+        ]
+    
+
+    def get_values(self) -> Dict[str, Union[str, List[str], float]]:
+        """
+        Get the parameters defining this recorder
+        Returns:
+            Dict[str, Union[str, List[str], float]]: Dictionary of parameter values
+        """
+        return {
+            "interface": self.interfaces[0].name if self.interfaces else None,
+            "resp_type": self.resp_type,
+            "dt": self.dt
+        }
+    
+    
     def to_tcl(self) -> str:
         """
         Convert the EmbeddedBeamSolidInterfaceRecorder to a TCL command string for OpenSees
@@ -147,7 +240,14 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
             str: The TCL command string
         """
         # This recorder does not generate a TCL command, it writes directly to a file
-        return ""
+        cmd = "# recorder EmbeddedBeamSolidInterface\n"
+        for interface in self.interfaces:
+           cmd += interface._get_recorder(self.resp_type,
+                                          dt=self.dt)
+           cmd += "\n"
+        return cmd
+    
+
     
 
 class NodeRecorder(Recorder):
@@ -531,6 +631,7 @@ class RecorderManager:
         # Register recorder types
         self.node = NodeRecorder    
         self.vtkhdf = VTKHDFRecorder
+        self.embedded_beam_solid_interface = EmbeddedBeamSolidInterfaceRecorder
 
 
 
