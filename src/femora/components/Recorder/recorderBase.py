@@ -110,6 +110,46 @@ class Recorder(ABC):
         pass
 
 
+
+
+class EmbeddedBeamSolidInterfaceRecorder(Recorder):
+    """
+    Recorder for embedded beam-solid interfaces.
+    
+    This recorder is used to monitor the interaction between embedded beams and solid elements.
+    It generates output files containing the interface points and connectivity information.
+
+    Args:
+        interface (EmbeddedBeamSolidInterface | str): The interface to record. (required)
+        resp_type (str | List[str] | None): The type of responses to record. (required)
+        
+    """
+    def __init__(self, **kwargs):
+        """
+        Initialize an EmbeddedBeamSolidInterfaceRecorder
+        
+        Args:
+            **kwargs: Parameters for the recorder, such as:
+                - interface : str | EmbeddedBeamSolidInterface instance
+        """
+        super().__init__("EmbeddedBeamSolidInterface")
+        interface = kwargs.get("interface", None)
+        if interface is None:
+            raise ValueError("An interface must be provided.")
+        self.interface = interface
+
+
+    def to_tcl(self) -> str:
+        """
+        Convert the EmbeddedBeamSolidInterfaceRecorder to a TCL command string for OpenSees
+        
+        Returns:
+            str: The TCL command string
+        """
+        # This recorder does not generate a TCL command, it writes directly to a file
+        return ""
+    
+
 class NodeRecorder(Recorder):
     """
     Node recorder class records the response of a number of nodes 
@@ -367,8 +407,12 @@ class VTKHDFRecorder(Recorder):
         else:
             fileformat = name[-1]
         name = name[0]
-        name = name+"$pid"
-        file_base_name = name+"." + fileformat
+        name = name + "$pid"
+        from femora import MeshMaker
+        results_folder = MeshMaker.get_results_folder()
+        if results_folder != "":
+            name = results_folder + "/" + name
+        file_base_name = name + "." + fileformat
 
         cmd = f"recorder vtkhdf {file_base_name}"
         
