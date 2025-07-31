@@ -60,6 +60,8 @@ section = _instance.section
 interface = _instance.interface
 mass = _instance.mass
 
+set_results_folder = MeshMaker.set_results_folder
+
 
 
 # Add actions as a separate direct property
