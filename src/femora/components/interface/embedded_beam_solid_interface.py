@@ -539,6 +539,57 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
             file_handle.write("barrier\n")
 
 
+    def _get_recorder(self, 
+                      res_type: list[str],
+                      dt: 'float | None' = None
+                      ) -> str:
+        """
+        This method is helper to get the recorder for the interface.
+        It returns the recorder name based on the res_type.
+
+        This method is caling by the EmbeddedBeamSolidInterfaceRecorder class to get the recorder command.
+
+        Parameters
+        ----------
+        res_type : list[str]
+            The type of the result to be recorded. It can be :
+                - "displacement"
+                - "localDisplacement"
+                - "axialDisp"
+                - "radialDisp"  
+                - "tangentialDisp"
+                - "globalForce"
+                - "localForce"
+                - "axialForce"
+                - "radialForce"
+                - "tangentialForce"
+                - "solidForce"
+                - "beamForce"
+                - "beamLocalForce"
+        Returns
+        -------
+        str
+            The recorder command for the interface.
+
+        Raises
+        ------
+        ValueError
+            If the res_type is not supported.
+        """
+        cmd = ""
+        for ii, info in enumerate(self._instance_embeddedinfo_list):
+            cmd += "if {$pid == %d} {\n" % info.core_number
+            for jj, (beams, solids) in enumerate(info.beams_solids):
+                startEle = f"EmbeddedBeamSolid_{self.name}_beam{ii}_part{jj}_startTag"
+                endEle = f"EmbeddedBeamSolid_{self.name}_beam{ii}_part{jj}_endTag"
+                for res in res_type:
+                    fileName = f"EmbeddedBeamSolid_{self.name}_beam{ii}_part{jj}_{res}.out"
+                    deltaT = "-dT %f" % dt if dt is not None else ""
+                    cmd += f"\trecorder Element -file {fileName} -time {deltaT} -eleRange ${startEle} ${endEle} {res}\n"
+            cmd += "}\n"
+        return cmd
+
+
     # Keep an instance-level no-op to avoid accidental per-instance registration elsewhere
     def _on_resolve_core_conflicts(self, **payload):
         pass
