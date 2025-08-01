@@ -101,7 +101,6 @@ def write_vtkhdf_unstructured(
 
     print(f"Wrote VTKHDF file: {filename}")
 
-interfaces = pv.MultiBlock()
 current_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(current_dir)
 files = os.listdir("./Results_Fixed")
@@ -112,10 +111,7 @@ for filename in files:
         points = np.loadtxt(fname, 
                             delimiter="\t",
                             usecols=(1, 2, 3))
-        interfaces.append(pv.wrap(points).delaunay_3d().extract_surface())
-        print("fname:", filename)
         interface_name = filename.split("EmbeddedBeamSolidInterface")[1].split(".")[0]
-        print("interface_name:", interface_name)
         disp_file = os.path.join(path, f"EmbeddedBeamSolid{interface_name}_displacement.out")
         arrays = {}
 
@@ -154,6 +150,7 @@ for filename in files:
                 arrays[suffix] = data.reshape(len(raw[:, 0]), points.shape[0], 3)
 
         # Determine if we have temporal data
+        interface_name = interface_name.replace("_", "", 1)
         if arrays:
             out_name = os.path.join(path, f"{interface_name}.vtkhdf")
             write_vtkhdf_unstructured(points, out_name, time, arrays)
@@ -162,7 +159,6 @@ for filename in files:
             out_name = os.path.join(path, f"{interface_name}.vtkhdf")
             write_vtkhdf_unstructured(points, out_name)
 
-interfaces.plot(show_edges=True)
 
 
 
