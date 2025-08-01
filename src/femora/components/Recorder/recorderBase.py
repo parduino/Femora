@@ -241,9 +241,17 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
         """
         # This recorder does not generate a TCL command, it writes directly to a file
         cmd = "# recorder EmbeddedBeamSolidInterface\n"
+        from femora import MeshMaker
+        results_folder = MeshMaker.get_results_folder()
+        if results_folder == "":
+            results_folder = "./"
+        else:
+            results_folder += "/"
+
         for interface in self.interfaces:
            cmd += interface._get_recorder(self.resp_type,
-                                          dt=self.dt)
+                                          dt=self.dt,
+                                          results_folder=results_folder)
            cmd += "\n"
         return cmd
     
