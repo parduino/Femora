@@ -541,7 +541,8 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
 
     def _get_recorder(self, 
                       res_type: list[str],
-                      dt: 'float | None' = None
+                      dt: 'float | None' = None,
+                      results_folder: str = "",
                       ) -> str:
         """
         This method is helper to get the recorder for the interface.
@@ -584,6 +585,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
                 endEle = f"EmbeddedBeamSolid_{self.name}_beam{ii}_part{jj}_endTag"
                 for res in res_type:
                     fileName = f"EmbeddedBeamSolid_{self.name}_beam{ii}_part{jj}_{res}.out"
+                    fileName = results_folder + fileName
                     deltaT = "-dT %f" % dt if dt is not None else ""
                     cmd += f"\trecorder Element -file {fileName} -time {deltaT} -eleRange ${startEle} ${endEle} {res}\n"
             cmd += "}\n"
