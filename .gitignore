@@ -10,6 +10,8 @@ main.spec
 *.bash
 *.vtkhdf
 *.vtk
+*.out
+*.dat
 docs/_build
 dist/
 src/femora/tools/motions
