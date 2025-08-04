@@ -2,6 +2,8 @@ from typing import List, Optional, Dict, Any
 import numpy as np
 import pyvista as pv
 import warnings
+import logging
+import sys
 
 from femora.components.Mesh.meshPartBase import MeshPart
 from femora.components.Element.elementBase import Element
@@ -9,7 +11,7 @@ from femora.components.Material.materialBase import Material
 from femora.components.event.event_bus import EventBus, FemoraEvent
 from femora.utils.progress import Progress
 from femora.constants import FEMORA_MAX_NDF
-  
+
 
 class Assembler:
     """
@@ -377,6 +379,8 @@ class Assembler:
         EventBus.emit(FemoraEvent.RESOLVE_CORE_CONFLICTS, assembled_mesh=self.AssembeledMesh)
 
         progress_callback(100, "done")
+        # Announce the number of cores used for assembly
+        self._announce_required_cores()
         
     def delete_assembled_mesh(self) -> None:
         """
@@ -726,6 +730,39 @@ class Assembler:
             Optional[pv.UnstructuredGrid]: The assembled mesh, or None if not yet created
         """
         return self.AssembeledMesh
+
+
+    # Big announcement box
+    def _announce_required_cores(self):
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s [%(levelname)s] %(message)s",
+            handlers=[
+                logging.StreamHandler(sys.stdout)
+            ]
+        )
+        # this part should be gou through the Assembled Mesh and see how many cores are used to print
+        # the number of cores used in the assembly
+        if self.AssembeledMesh is None:
+            logging.warning("No assembled mesh found. Cannot announce required cores.")
+            return
+        cores = self.AssembeledMesh.cell_data["Core"]
+        unique_cores = np.unique(cores) 
+        cores = len(unique_cores)
+        RED = "\033[91m"
+        BOLD = "\033[1m"
+        RESET = "\033[0m"
+        BLUE = "\033[94m"
+        message = f"{BOLD}{BLUE}!!! IMPORTANT RESOURCE NOTICE !!!{RESET}\n" \
+                f"{BOLD}This model requires {RED}{cores}{RESET}{BOLD} CPU cores to run effectively.{RESET}\n" \
+                f"Please ensure your environment has sufficient resources.\n"
+
+        border = "=" * 70
+        full_message = f"\n{BLUE}{border}\n{message}{BLUE}{border}{RESET}\n"
+
+        
+
+        print(full_message)
         
             
 
