@@ -50,13 +50,14 @@ class GeometricTransformation(ABC):
         to_tcl: Abstract method to generate TCL command.
     """
     _instances = []
-    _start_tag = 0
+    _start_tag = 1
 
     @classmethod
     def set_start_tag(cls, start_tag):
         if not isinstance(start_tag, int) or start_tag < 0:
             raise ValueError("start_tag must be a non-negative integer")
         cls._start_tag = start_tag
+        cls._retag_all_instances()
 
     def __init__(self, transf_type, dimension):
         self._transformation_type = transf_type
@@ -67,7 +68,7 @@ class GeometricTransformation(ABC):
 
     @classmethod
     def _assign_tag(cls):
-        return cls._start_tag + len(cls._instances) + 1
+        return cls._start_tag + len(cls._instances)
 
     @classmethod
     def get_all_instances(cls):
@@ -76,6 +77,11 @@ class GeometricTransformation(ABC):
     @classmethod
     def clear_all_instances(cls):
         cls._instances.clear()
+
+    @classmethod
+    def reset(cls):
+        cls._instances.clear()
+        cls._start_tag = 1
 
     @property
     def transf_tag(self):
@@ -103,8 +109,8 @@ class GeometricTransformation(ABC):
 
     @classmethod
     def _retag_all_instances(cls):
-        for i, instance in enumerate(cls._instances):
-            instance._transf_tag = i + 1 + cls._start_tag
+        for i, instance in enumerate(cls._instances, start=cls._start_tag):
+            instance._transf_tag = i 
 
     @abstractmethod
     def has_joint_offsets(self):
