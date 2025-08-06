@@ -8,7 +8,7 @@ class Pattern(ABC):
     Base abstract class for all load patterns
     """
     _patterns = {}  # Class-level dictionary to track all patterns
-    _next_tag = 1   # Class variable to track the next tag to assign
+    _start_tag = 1  # Class variable to track the starting tag
 
     def __init__(self, pattern_type: str):
         """
@@ -17,8 +17,7 @@ class Pattern(ABC):
         Args:
             pattern_type (str): The type of pattern (e.g., 'UniformExcitation', 'H5DRM')
         """
-        self.tag = Pattern._next_tag
-        Pattern._next_tag += 1
+        self.tag = len(Pattern._patterns) + Pattern._start_tag
         
         self.pattern_type = pattern_type
         
@@ -53,11 +52,8 @@ class Pattern(ABC):
         """
         if tag in cls._patterns:
             del cls._patterns[tag]
-            # Recalculate _next_tag if needed
-            if cls._patterns:
-                cls._next_tag = max(cls._patterns.keys()) + 1
-            else:
-                cls._next_tag = 1
+            cls._reassign_tags()
+
 
     @classmethod
     def get_all_patterns(cls) -> Dict[int, 'Pattern']:
@@ -75,7 +71,27 @@ class Pattern(ABC):
         Clear all patterns and reset tags.
         """
         cls._patterns.clear()
-        cls._next_tag = 1
+
+    @classmethod
+    def reset(cls):
+        cls._patterns.clear()
+        cls._start_tag = 1
+
+    @classmethod
+    def set_tag_start(cls, start_tag: int):
+        cls._start_tag = start_tag
+        cls._reassign_tags()
+
+    @classmethod
+    def _reassign_tags(cls) -> None:
+        """
+        Reassign tags to all patterns sequentially starting from _start_tag.
+        """
+        new_patterns = {}
+        for idx, pattern in enumerate(sorted(cls._patterns.values(), key=lambda p: p.tag), start=cls._start_tag):
+            pattern.tag = idx
+            new_patterns[idx] = pattern
+        cls._patterns = new_patterns
 
     @abstractmethod
     def to_tcl(self) -> str:
