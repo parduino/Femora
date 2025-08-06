@@ -16,6 +16,7 @@ class DampingBase:
         _dampings (dict): Class-level registry of all damping instances
     """
     _dampings = {}
+    _start_tag = 1
     def __init__(self):
         """
         Initialize a new damping instance.
@@ -38,7 +39,7 @@ class DampingBase:
         Returns:
             int: The next available tag number
         """
-        return len(cls._dampings) + 1
+        return len(cls._dampings) + cls._start_tag
     
     @classmethod
     def remove_damping(cls, tag):
@@ -96,14 +97,35 @@ class DampingBase:
         a damping has been removed. It renumbers all tags and updates
         the corresponding damping names.
         """
-        tags = cls._dampings.keys()
-        tags = sorted(tags)
+        cls._reassign_tags()
+
+    @classmethod
+    def _reassign_tags(cls):
+        """
+        Reassign tags to all dampings sequentially starting from _start_tag.
+        """
         new_dampings = {}
-        for i, tag in enumerate(tags):
-            cls._dampings[tag].tag = i + 1
-            cls._dampings[tag].name = f"damping{i + 1}"
-            new_dampings[i + 1] = cls._dampings[tag]
+        for idx, damping in enumerate(sorted(cls._dampings.values(), key=lambda d: d.tag), start=cls._start_tag):
+            damping.tag = idx
+            damping.name = f"damping{idx}"
+            new_dampings[idx] = damping
         cls._dampings = new_dampings
+
+    @classmethod
+    def reset(cls):
+        cls._dampings.clear()
+        cls._start_tag = 1
+
+    @classmethod
+    def set_tag_start(cls, start_tag: int):
+        cls._start_tag = start_tag
+        cls._reassign_tags()
+
+    @classmethod
+    def clear_all(cls):
+        cls._dampings.clear()
+        cls._reassign_tags()
+
         
     def __str__(self) -> str:
         """
