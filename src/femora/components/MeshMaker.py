@@ -16,6 +16,7 @@ from femora.components.transformation.transformation import GeometricTransformat
 from femora.components.interface.interface_base import InterfaceManager
 from femora.components.section.section_base import SectionManager
 from femora.components.mass.mass_manager import MassManager
+from femora.components.geometry_ops.spatial_transform_manager import SpatialTransformManager
 import os
 from numpy import unique, zeros, arange, array, abs, concatenate, meshgrid, ones, full, uint16, repeat, where, isin
 from pyvista import Cube, MultiBlock, StructuredGrid
@@ -76,6 +77,12 @@ class MeshMaker:
         self.interface = InterfaceManager()
         self.transformation = GeometricTransformationManager()
         self.section = SectionManager()
+        self.spatial_transform = SpatialTransformManager()
+        
+        # Tag start controls for node and element IDs written to TCL
+        # These control only exported OpenSees node/element tags (not Material/Element class tags)
+        self._start_nodetag: int = 1
+        self._start_ele_tag: int = 1
         
         @property
         def mesh_part(self):
@@ -91,6 +98,28 @@ class MeshMaker:
     # ------------------------------------------------------------------
     # Progress helpers
     # ------------------------------------------------------------------
+
+    def set_nodetag_start(self, start_tag: int) -> None:
+        """
+        Set the starting tag number for nodes in exported TCL.
+
+        Args:
+            start_tag (int): First node tag to use (must be >= 1)
+        """
+        if not isinstance(start_tag, int) or start_tag < 1:
+            raise ValueError("Node tag start must be an integer >= 1")
+        self._start_nodetag = start_tag
+
+    def set_eletag_start(self, start_tag: int) -> None:
+        """
+        Set the starting tag number for elements in exported TCL.
+
+        Args:
+            start_tag (int): First element tag to use (must be >= 1)
+        """
+        if not isinstance(start_tag, int) or start_tag < 1:
+            raise ValueError("Element tag start must be an integer >= 1")
+        self._start_ele_tag = start_tag
 
     def _progress_callback(self, value: float, message: str):
         """Default progress reporter that uses the shared Progress utility."""
@@ -295,8 +324,12 @@ class MeshMaker:
                 mass      = self.assembler.AssembeledMesh.point_data["Mass"]
                 num_nodes = self.assembler.AssembeledMesh.n_points
                 wroted    = zeros((num_nodes, len(num_cores)), dtype=bool) # to keep track of the nodes that have been written
-                nodeTags  = arange(1, num_nodes+1, dtype=int)
-                eleTags   = arange(1, self.assembler.AssembeledMesh.n_cells+1, dtype=int)
+                nodeTags  = arange(self._start_nodetag,
+                                   self._start_nodetag + num_nodes,
+                                   dtype=int)
+                eleTags   = arange(self._start_ele_tag,
+                                   self._start_ele_tag + self.assembler.AssembeledMesh.n_cells,
+                                   dtype=int)
 
 
                 elementClassTag = self.assembler.AssembeledMesh.cell_data["ElementTag"]
