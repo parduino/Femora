@@ -150,7 +150,9 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
     """
     def __init__(self, 
                  interface: Union[str, 'EmbeddedBeamSolidInterface', list['EmbeddedBeamSolidInterface']],
-                 resp_type: Union[str, List[str]] = "displacement",
+                 resp_type: Union[str, List[str]] = ["displacement", "localDisplacement", "axialDisp", "radialDisp",
+                            "tangentialDisp", "globalForce", "localForce", "axialForce",
+                            "radialForce", "tangentialForce", "solidForce", "beamForce","beamLocalForce"],
                  dt : Union[float, None] = None,
                  ):
         """
