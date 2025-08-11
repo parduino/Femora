@@ -951,6 +951,27 @@ class PulseTimeSeries(TimeSeries):
 class PathTimeSeries(TimeSeries):
     """
     TimeSeries object that interpolates between defined time and load factor points
+
+    Args:
+        dt (float): Time increment for path
+        values (list): List of force values
+        filePath (str): Path to file containing force values
+        factor (float): Scale factor for force values
+        useLast (bool): Use last force value beyond the last time point if true
+        prependZero (bool): Prepend a zero value at the start
+        startTime (float): Start time of the time series
+        time (list): List of time points
+        fileTime (str): Path to file containing time points
+
+    Example:
+        timeseries = fm.timeSeries.path(
+            dt=0.02,
+            values=[0.0, 1.0, 0.0],
+            filePath="CFG2_ax_base_02g_avg.acc",
+            factor=9.81,
+        )
+
+    
     """
     def __init__(self, **kwargs):
         """
@@ -1243,6 +1264,16 @@ class TimeSeriesManager:
         if cls._instance is None:
             cls._instance = super(TimeSeriesManager, cls).__new__(cls)
         return cls._instance
+
+    def __init__(self):
+        self.path = PathTimeSeries
+        self.constant = ConstantTimeSeries
+        self.linear = LinearTimeSeries
+        self.trig = TrigTimeSeries
+        self.ramp = RampTimeSeries
+        self.triangular = TriangularTimeSeries
+        self.rectangular = RectangularTimeSeries
+        self.pulse = PulseTimeSeries
     
     def __len__(self):
         """
