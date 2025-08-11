@@ -252,8 +252,7 @@ fm.drm.createDefaultProcess(
 
 recorder = fm.recorder.embedded_beam_solid_interface(
     interface=["pile_soil_interface1", "pile_soil_interface2"],
-    resp_type=["displacement", "axialDisp"],
-    #dt=0.005
+    dt=0.005
     )
 fm.process.insert_step(index=-2,
                        component= recorder,
