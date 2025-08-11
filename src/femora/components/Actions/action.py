@@ -73,7 +73,7 @@ class updateMaterialStageToElastic(Action):
 
     def to_tcl(self) -> str:
         cmd = ""
-        for mat in MaterialManager.get_all_materials().values():
+        for mat in MaterialManager().get_all_materials().values():
             tmp = mat.updateMaterialStage("Elastic")
             if tmp != "":
                 cmd += tmp + "\n"
@@ -92,7 +92,7 @@ class updateMaterialStageToPlastic(Action):
 
         def to_tcl(self) -> str:
             cmd = ""
-            for mat in MaterialManager.get_all_materials().values():
+            for mat in MaterialManager().get_all_materials().values():
                 tmp = mat.updateMaterialStage("Plastic")
                 if tmp != "":
                     cmd += tmp + "\n"
