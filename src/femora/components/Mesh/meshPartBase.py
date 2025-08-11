@@ -26,6 +26,7 @@ from femora.components.Element.elementBase import Element
 from femora.components.Material.materialBase import Material
 from femora.components.Region.regionBase import RegionBase, GlobalRegion
 from femora.constants import FEMORA_MAX_NDF
+from femora.components.geometry_ops import MeshPartTransform
 
 class MeshPart(ABC):
     """
@@ -67,6 +68,9 @@ class MeshPart(ABC):
         
         # Optional pyvista actor (initially None)
         self.actor = None
+
+        # Instance transform proxy for convenient geometry operations
+        self.transform = MeshPartTransform(self)
 
         # Assign tag and register
         self.tag = MeshPart._next_tag
