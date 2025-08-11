@@ -272,6 +272,15 @@ class Material(ABC):
         """
         cls.clear_all()
 
+    def updateMaterialStage(self, state: str)-> str:
+        """
+        Update the material stage.
+        
+        Args:
+            state (str): The new state of the material
+        """
+        return ""
+
 
 class MaterialRegistry:
     """
