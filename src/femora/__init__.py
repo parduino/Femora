@@ -59,6 +59,7 @@ transformation = _instance.transformation
 section = _instance.section
 interface = _instance.interface
 mass = _instance.mass
+spatial_transform = _instance.spatial_transform
 
 set_results_folder = MeshMaker.set_results_folder
 
