@@ -33,7 +33,10 @@ Ny = int((Ymax - Ymin) / dy)
 soilele = fm.element.brick.std(
     name="soil_brick",
     material=soil_mat,
-    ndof=3
+    ndof=3,
+    b1=0.0,
+    b2=0.0,
+    b3=-9.81*1.66,  # Gravity load in z-direction
 )
 
 
@@ -69,6 +72,10 @@ fm.mesh_part.volume.uniform_rectangular_grid(
 rotation_angle = 60
 alum_fy = 1.3e5
 alum_E = 6.89e7
+alum_nu = 0.33
+alum_G  = alum_E / (2 * (1 + alum_nu))  # Shear modulus
+I       = 3.14* (0.4953**4 - 0.449072**4)/4.0
+J       = 2.0 * I  # Polar moment of inertia
 alumHardening_ratio = 0.000001
 fm.material.uniaxial.steel01(
     user_name="Aluminum",
@@ -79,6 +86,7 @@ fm.material.uniaxial.steel01(
 
 pile_section = fm.section.fiber(
     user_name="pile_section",
+    GJ=alum_G*J,
 )
 pile_section.add_circular_patch(
     material="Aluminum",
@@ -184,7 +192,10 @@ Nz = int((Zmax - Zmin) / dz)
 soilele = fm.element.brick.std(
     name="soil_brick",
     material=soil_mat,
-    ndof=3
+    ndof=3,
+    b1=0.0,
+    b2=0.0,
+    b3=-9.81*2.7,
 )
 
 bent = fm.mesh_part.volume.uniform_rectangular_grid(
@@ -252,13 +263,14 @@ gravity_plastic = fm.analysis.create_default_transient_analysis(username="gravit
 
 
 # dynamic analysis
-system = fm.analysis.system.bandGeneral()
-numberer = fm.analysis.numberer.rcm()
+
 dynamic = fm.analysis.create_default_transient_analysis(username="dynamic", 
                                                         final_time=50.0, dt=0.0127,
-                                                        options={"system": system,
-                                                                 "numberer": numberer})
-
+                                                        )
+embedded_recorder = fm.recorder.embedded_beam_solid_interface(
+    interface=["pile_soil_interface1", "pile_soil_interface2"],
+    dt=0.0127
+    )
 
 reset = fm.actions.seTime(pseudo_time=0.0)
 
@@ -266,11 +278,12 @@ reset = fm.actions.seTime(pseudo_time=0.0)
 fm.process.add_step(elastic_update, description="Update Material Stage to Elastic")
 fm.process.add_step(gravity_elastic,     description="Gravity Analysis Step")
 fm.process.add_step(plastic_update, description="Update Material Stage to Plastic")
-fm.process.add_step(gravity_plastic,     description="Gravity Analysis Step")
+# fm.process.add_step(gravity_plastic,     description="Gravity Analysis Step")
 fm.process.add_step(northridge,  description="Uniform Excitation (Northridge record)")
 fm.process.add_step(recorder,    description="Recorder of the whole model")
+fm.process.add_step(embedded_recorder, description="Embedded Beam-Solid Interface Recorder")
 fm.process.add_step(reset,       description="Reset pseudo time")
 fm.process.add_step(dynamic,     description="Dynamic Analysis Step")
-fm.assembler.plot(show_edges=True, scalars="Core")
 
 fm.export_to_tcl(filename="model.tcl")
+fm.assembler.plot(show_edges=True, scalars="Core")
