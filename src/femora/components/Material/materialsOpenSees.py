@@ -377,7 +377,7 @@ class PressureDependMultiYieldMaterial(Material):
 
         # Optional: number of yield surfaces and optional custom backbone pairs
         no_yield = int(p.get('noYieldSurf', 20))
-        parts.append("noYieldSurf=" + str(no_yield))
+        parts.append(str(no_yield))
 
         if no_yield < 0:
             pairs = p.get('pairs', [])
@@ -387,12 +387,12 @@ class PressureDependMultiYieldMaterial(Material):
 
         # Optional critical state and atmospheric pressure parameters
         parts.extend([
-            "e=" + str(p['e']),
-            "cs1=" + str(p['cs1']),
-            "cs2=" + str(p['cs2']),
-            "cs3=" + str(p['cs3']),
-            "pa=" + str(p['pa']),
-            "c=" + str(p['c'])
+            str(p['e']),
+            str(p['cs1']),
+            str(p['cs2']),
+            str(p['cs3']),
+            str(p['pa']),
+            str(p['c'])
         ])
 
         return " ".join(parts) + f"; # {self.user_name}"
