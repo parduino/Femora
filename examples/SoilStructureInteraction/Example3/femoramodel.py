@@ -69,7 +69,7 @@ fm.mesh_part.volume.uniform_rectangular_grid(
 # ==========================================================
 # Pile
 # ==========================================================
-rotation_angle = 60
+rotation_angle = 30
 alum_fy = 1.3e5
 alum_E = 6.89e7
 alum_nu = 0.33
@@ -220,12 +220,23 @@ pile2.transform.rotate_z(angle=rotation_angle)
 # ==========================================================
 # Assembly
 # ==========================================================
+# fm.assembler.create_section(
+#     meshparts=["soil_grid_1", "soil_grid_2", "pile1", "pile2", "bent_grid"],
+#     num_partitions=8,
+#     partition_algorithm="kd-tree",
+#     merging_points=True
+# )
 fm.assembler.create_section(
-    meshparts=["soil_grid_1", "soil_grid_2", "pile1", "pile2", "bent_grid"],
-    num_partitions=8,
+    meshparts=["pile1", "pile2", "bent_grid"],
+    num_partitions=2,
     partition_algorithm="kd-tree",
-    merging_points=False,
-)
+    merging_points=True)
+
+fm.assembler.create_section(
+    meshparts=["soil_grid_1", "soil_grid_2"],
+    num_partitions=4,
+    partition_algorithm="kd-tree",
+    merging_points=True)
 fm.assembler.Assemble()
 
 # Create a TimeSeries for the uniform excitation
@@ -278,7 +289,7 @@ reset = fm.actions.seTime(pseudo_time=0.0)
 fm.process.add_step(elastic_update, description="Update Material Stage to Elastic")
 fm.process.add_step(gravity_elastic,     description="Gravity Analysis Step")
 fm.process.add_step(plastic_update, description="Update Material Stage to Plastic")
-# fm.process.add_step(gravity_plastic,     description="Gravity Analysis Step")
+fm.process.add_step(gravity_plastic,     description="Gravity Analysis Step")
 fm.process.add_step(northridge,  description="Uniform Excitation (Northridge record)")
 fm.process.add_step(recorder,    description="Recorder of the whole model")
 fm.process.add_step(embedded_recorder, description="Embedded Beam-Solid Interface Recorder")
