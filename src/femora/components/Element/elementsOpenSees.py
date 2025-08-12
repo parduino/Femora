@@ -4,7 +4,36 @@ from .elementBase import Element, ElementRegistry
 
 
 class SSPQuadElement(Element):
+    """OpenSees 4-node stabilized single-point integration quadrilateral (SSPquad).
+
+    This element represents a 2D continuum element that can operate in
+    PlaneStrain or PlaneStress. It requires materials of type ``nDMaterial``
+    and exactly 2 DOFs per node.
+
+    Parameters can be supplied at construction time via ``**kwargs`` and are
+    validated by :meth:`validate_element_parameters`.
+
+    Attributes:
+        params (Dict[str, Union[int, float, str]]): Validated element parameters
+            such as ``Type``, ``Thickness``, ``b1`` and ``b2``.
+    """
     def __init__(self, ndof: int, material: Material, **kwargs):
+        """Initialize an SSPQuad element.
+
+        Args:
+            ndof: Number of degrees of freedom per node. Must be ``2``.
+            material: Associated OpenSees material. Must have
+                ``material_type == 'nDMaterial'``.
+            **kwargs: Element parameters. Supported keys are:
+                - ``Type`` (str): Either ``'PlaneStrain'`` or ``'PlaneStress'``. Required.
+                - ``Thickness`` (float): Element thickness (out-of-plane). Required.
+                - ``b1`` (float): Constant body force in global x-direction. Optional.
+                - ``b2`` (float): Constant body force in global y-direction. Optional.
+
+        Raises:
+            ValueError: If the material is incompatible, ``ndof`` != 2, or any
+                parameter is missing/invalid.
+        """
         # Validate material compatibility
         if not self._is_material_compatible(material):
             raise ValueError(f"Material {material.user_name} with type {material.material_type} is not compatible with SSPQuadElement")
@@ -21,10 +50,17 @@ class SSPQuadElement(Element):
         self.params = kwargs if kwargs else {}
 
     def __str__(self):
-        """
-        Generate the OpenSees element string representation
-        
-        Example: element SSPquad $type $thick $b1 $b2
+        """Return a compact string with material tag and parameters.
+
+        This is not a full TCL command. Use :meth:`to_tcl` to generate an
+        executable OpenSees command string.
+
+        Returns:
+            str: ``"<matTag> <paramValues>"`` where parameters are ordered as
+            in :meth:`get_parameters` and included only if present.
+
+        Example:
+            ``"10 PlaneStrain 0.2 0.0 0.0"``
         """
         keys = self.get_parameters()
         params_str = " ".join(str(self.params[key]) for key in keys if key in self.params)
@@ -32,10 +68,21 @@ class SSPQuadElement(Element):
         return f"{self._material.tag} {params_str}"
     
     def to_tcl(self, tag: int, nodes: List[int]) -> str:
-        """
-        Generate the OpenSees element string representation
+        """Generate the OpenSees TCL command for this SSPquad element.
         
-        Example: element SSPquad $tag $nodes $matTag $type $thick $b1 $b2
+        Args:
+            tag: Unique element tag.
+            nodes: List of 4 node tags in counter-clockwise order.
+        
+        Returns:
+            str: A TCL command of the form:
+                 ``element SSPquad <tag> <n1> <n2> <n3> <n4> <matTag> <Type> <Thickness> [b1] [b2]``
+        
+        Raises:
+            ValueError: If ``nodes`` does not contain exactly 4 node IDs.
+        
+        Example:
+            ``element SSPquad 1 1 2 3 4 10 PlaneStress 0.2 0.0 0.0``
         """
         if len(nodes) != 4:
             raise ValueError("SSPQuad element requires 4 nodes")
@@ -47,32 +94,31 @@ class SSPQuadElement(Element):
     
     @classmethod 
     def get_parameters(cls) -> List[str]:
-        """
-        Specific parameters for SSPQuadElement
+        """List the supported parameter names for SSPQuad.
         
         Returns:
-            List[str]: Parameters for SSPQuad element
+            List[str]: ``["Type", "Thickness", "b1", "b2"]``.
         """
         return ["Type", "Thickness", "b1", "b2"]
 
     def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
-        """
-        Retrieve values for specific parameters
+        """Retrieve current values for the given parameters.
         
         Args:
-            keys (List[str]): List of parameter names to retrieve
+            keys: Parameter names to retrieve; see :meth:`get_parameters`.
         
         Returns:
-            Dict[str, Union[int, float, str]]: Dictionary of parameter values
+            Dict[str, Union[int, float, str]]: Mapping from key to stored value
+            (or ``None`` if not present).
         """
         return {key: self.params.get(key) for key in keys}
 
     def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
-        """
-        Update element parameters
+        """Replace all stored parameters with the provided mapping.
         
         Args:
-            values (Dict[str, Union[int, float, str]]): Dictionary of parameter names and values to update
+            values: New parameter mapping. Any previously stored parameter not
+                present in this mapping will be removed.
         """
         self.params.clear()
         self.params.update(values)
@@ -80,31 +126,34 @@ class SSPQuadElement(Element):
 
     @classmethod
     def _is_material_compatible(cls, material: Material) -> bool:
-        """
-        Check material compatibility for SSP Quad Element
+        """Check whether the provided material can be used with SSPQuad.
+        
+        SSPQuad requires an OpenSees ``nDMaterial``.
+        
+        Args:
+            material: Material instance to check.
         
         Returns:
-            bool: True if material is a 2D (nDMaterial) type
+            bool: ``True`` if ``material.material_type == 'nDMaterial'``.
         """
         return material.material_type == 'nDMaterial'
     
     @classmethod
     def get_possible_dofs(cls) -> List[str]:
-        """
-        Get the number of possible DOFs for this element type.
+        """Get the allowed number of DOFs per node for this element.
         
         Returns:
-            List[str]: List of number of possible DOFs
+            List[str]: ``['2']``.
         """
         return ['2']
     
     @classmethod
     def get_description(cls) -> List[str]:
-        """
-        Get the list of parameter descriptions for this element type.
+        """Describe each parameter expected by this element.
         
         Returns:
-            List[str]: List of parameter descriptions
+            List[str]: Human-readable descriptions in the same order as
+            :meth:`get_parameters`.
         """
         return ['Type of element can be either "PlaneStrain" or "PlaneStress" ', 
                 'Thickness of the element in out-of-plane direction ',
@@ -113,11 +162,22 @@ class SSPQuadElement(Element):
     
     @classmethod
     def validate_element_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
-        """
-        Check if the element input parameters are valid.
+        """Validate and coerce SSPQuad parameters.
+
+        The following rules apply:
+        - ``Type`` must be ``'PlaneStrain'`` or ``'PlaneStress'`` (required).
+        - ``Thickness`` must be convertible to ``float`` (required).
+        - ``b1`` and ``b2`` are optional but, if provided, must be ``float``.
+
+        Args:
+            **kwargs: Raw parameter mapping.
 
         Returns:
-            Dict[str, Union[int, float, str]]: Dictionary of parameters with valid values
+            Dict[str, Union[int, float, str]]: Validated and coerced parameters.
+
+        Raises:
+            ValueError: If a required parameter is missing or a value cannot be
+                coerced/validated.
         """
         if 'Type' not in kwargs:
             raise ValueError("Type of element must be specified")
@@ -148,7 +208,31 @@ class SSPQuadElement(Element):
 
 
 class stdBrickElement(Element):
+    """OpenSees 8-node standard brick element (3D continuum).
+
+    This element requires a 3D ``nDMaterial`` and exactly 3 DOFs per node.
+    Optional body forces ``b1``, ``b2``, and ``b3`` may be supplied.
+
+    Attributes:
+        params (Dict[str, Union[int, float, str]]): Validated parameters such as
+            ``b1``, ``b2``, ``b3``.
+    """
     def __init__(self, ndof: int, material: Material, **kwargs):
+        """Initialize a stdBrick element.
+
+        Args:
+            ndof: Number of degrees of freedom per node. Must be ``3``.
+            material: Associated OpenSees material. Must have
+                ``material_type == 'nDMaterial'``.
+            **kwargs: Optional parameters:
+                - ``b1`` (float): Constant body force in global x-direction.
+                - ``b2`` (float): Constant body force in global y-direction.
+                - ``b3`` (float): Constant body force in global z-direction.
+
+        Raises:
+            ValueError: If the material is incompatible, ``ndof`` != 3, or any
+                provided parameter is invalid.
+        """
         # Validate material compatibility
         if not self._is_material_compatible(material):
             raise ValueError(f"Material {material.user_name} with type {material.material_type} is not compatible with stdBrickElement")
@@ -165,10 +249,18 @@ class stdBrickElement(Element):
         self.params = kwargs if kwargs else {}
         
     def to_tcl(self, tag: int, nodes: List[int]) -> str:
-        """
-        Generate the OpenSees element string representation
+        """Generate the OpenSees TCL command for this stdBrick element.
         
-        Example: element stdBrick tag nodes matTag b1 b2 b3
+        Args:
+            tag: Unique element tag.
+            nodes: List of 8 node tags.
+        
+        Returns:
+            str: A TCL command of the form:
+                 ``element stdBrick <tag> <n1> ... <n8> <matTag> [b1] [b2] [b3]``
+        
+        Raises:
+            ValueError: If ``nodes`` does not contain exactly 8 node IDs.
         """
         if len(nodes) != 8:
             raise ValueError("stdBrick element requires 8 nodes")
@@ -180,63 +272,65 @@ class stdBrickElement(Element):
 
     @classmethod
     def get_parameters(cls) -> List[str]:
-        """
-        Specific parameters for stdBrickElement
+        """List the supported parameter names for stdBrick.
         
         Returns:
-            List[str]: Parameters for stdBrick element
+            List[str]: ``["b1", "b2", "b3"]``.
         """
         return ["b1", "b2", "b3"]
     
     def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
-        """
-        Retrieve values for specific parameters
+        """Retrieve current values for the given parameters.
         
         Args:
-            keys (List[str]): List of parameter names to retrieve
+            keys: Parameter names to retrieve; see :meth:`get_parameters`.
         
         Returns:
-            Dict[str, Union[int, float, str]]: Dictionary of parameter values
+            Dict[str, Union[int, float, str]]: Mapping from key to stored value
+            (or ``None`` if not present).
         """
         return {key: self.params.get(key) for key in keys}
     
     def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
-        """
-        Update element parameters
+        """Replace all stored parameters with the provided mapping.
         
         Args:
-            values (Dict[str, Union[int, float, str]]): Dictionary of parameter names and values to update
+            values: New parameter mapping. Any previously stored parameter not
+                present in this mapping will be removed.
         """
         self.params.clear()
         self.params.update(values)
 
     @classmethod
     def _is_material_compatible(cls, material: Material) -> bool:
-        """
-        Check material compatibility for stdBrick Element
+        """Check whether the provided material can be used with stdBrick.
+        
+        stdBrick requires an OpenSees 3D ``nDMaterial``.
+        
+        Args:
+            material: Material instance to check.
         
         Returns:
-            bool: True if material is a 3D (nDMaterial) type
+            bool: ``True`` if ``material.material_type == 'nDMaterial'``.
         """
         return material.material_type == 'nDMaterial'
     
     @classmethod
     def get_possible_dofs(cls) -> List[str]:
-        """
-        Get the number of possible DOFs for this element type.
+        """Get the allowed number of DOFs per node for this element.
         
         Returns:
-            List[str]: List of number of possible DOFs
+            List[str]: ``['3']``.
         """
         return ['3']
     
     @classmethod
     def get_description(cls) -> List[str]:
-        """
-        Get the list of parameter descriptions for this element type.
+        """Describe each parameter expected by this element.
         
         Returns:
-            List[str]: List of parameter descriptions
+            List[str]: Human-readable descriptions in the same order as
+            :meth:`get_parameters`.
         """
         return ['Constant body forces in global x direction',
                 'Constant body forces in global y direction',
@@ -244,11 +338,19 @@ class stdBrickElement(Element):
     
     @classmethod
     def validate_element_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
-        """
-        Check if the element input parameters are valid.
+        """Validate and coerce stdBrick parameters.
+        
+        ``b1``, ``b2`` and ``b3`` are optional but, if provided, must be
+        convertible to ``float``.
+
+        Args:
+            **kwargs: Raw parameter mapping.
 
         Returns:
-            Dict[str, Union[int, float, str]]: Dictionary of parameters with valid values
+            Dict[str, Union[int, float, str]]: Validated and coerced parameters.
+
+        Raises:
+            ValueError: If a value cannot be coerced to ``float``.
         """
         if "b1" in kwargs:
             try:
@@ -272,7 +374,38 @@ class stdBrickElement(Element):
 
 
 class PML3DElement(Element):
+    """OpenSees 8-node Perfectly Matched Layer (PML) 3D element.
+
+    This element augments the standard brick element with PML degrees of
+    freedom (9 DOFs per node). It requires an isotropic elastic 3D
+    ``nDMaterial`` (class name ``ElasticIsotropicMaterial``) and supports two
+    mesh types (``box`` and ``general``) with associated parameters.
+
+    Attributes:
+        params (Dict[str, Union[int, float, str]]): Validated parameters such as
+            ``PML_Thickness``, ``meshType``, ``meshTypeParameters``, and Newmark
+            and PML control parameters.
+    """
     def __init__(self, ndof: int, material: Material, **kwargs):
+        """Initialize a PML3D element.
+
+        Args:
+            ndof: Number of degrees of freedom per node. Must be ``9``.
+            material: Associated OpenSees material. Must be a 3D
+                ``nDMaterial`` with class name ``ElasticIsotropicMaterial``.
+            **kwargs: Element parameters. Required/optional keys include:
+                - ``PML_Thickness`` (float): Thickness of the PML layer. Required.
+                - ``meshType`` (str): ``'box'`` or ``'general'`` (case-insensitive). Required.
+                - ``meshTypeParameters`` (list[str|float] | str): 6 values required.
+                - Newmark: ``gamma`` (float, default=1/2), ``beta`` (float, default=1/4),
+                  ``eta`` (float, default=1/12), ``ksi`` (float, default=1/48).
+                - PML: either ``alpha0`` and ``beta0`` (both float, together) or
+                  ``m`` (float, default=2.0), ``R`` (float, default=1e-8), and optional ``Cp`` (float).
+
+        Raises:
+            ValueError: If the material is incompatible, ``ndof`` != 9, or any
+                parameter is missing/invalid.
+        """
         # Validate material compatibility
         if not self._is_material_compatible(material):
             raise ValueError(f"Material {material.user_name} with type {material.material_type} is not compatible with PML3DElement")
@@ -289,8 +422,21 @@ class PML3DElement(Element):
         self.params = kwargs if kwargs else {}
 
     def to_tcl(self, tag: int, nodes: List[int]) -> str:
-        """
-        Generate the OpenSees element string representation
+        """Generate the OpenSees TCL command for this PML element.
+
+        The command follows OpenSees' ``element PML`` syntax with the Newmark
+        parameters and either ``-alphabeta`` or ``-m -R [-Cp]`` depending on
+        the provided parameters.
+        
+        Args:
+            tag: Unique element tag.
+            nodes: List of 8 node tags.
+        
+        Returns:
+            str: A TCL command string for creating the PML element.
+        
+        Raises:
+            ValueError: If ``nodes`` does not contain exactly 8 node IDs.
         """
         if len(nodes) != 8:
             raise ValueError("PML3D element requires 8 nodes")
@@ -312,11 +458,10 @@ class PML3DElement(Element):
 
     @classmethod
     def get_parameters(cls) -> List[str]:
-        """
-        Specific parameters for PML3D
+        """List the supported parameter names for PML3D.
         
         Returns:
-            List[str]: Parameters for PML3D element
+            List[str]: Names including thickness, mesh, Newmark, and PML controls.
         """
         return ["PML_Thickness", 
                 "meshType", "meshTypeParameters",
@@ -326,11 +471,10 @@ class PML3DElement(Element):
 
     @classmethod
     def get_description(cls) -> List[str]:
-        """
-        Get the list of parameter descriptions for this element type.
+        """Describe each parameter expected by this element.
         
         Returns:
-            List[str]: List of parameter descriptions
+            List[str]: Human-readable descriptions in a UI-friendly format.
         """
         return ['Thickness of the PML layer',
             'Type of mesh for the PML layer (put 1:"General", 2:"Box")',
@@ -347,56 +491,78 @@ class PML3DElement(Element):
     
     @classmethod
     def get_possible_dofs(cls) -> List[str]:
-        """
-        Get the number of possible DOFs for this element type.
+        """Get the allowed number of DOFs per node for this element.
         
         Returns:
-            List[str]: List of number of possible DOFs
+            List[str]: ``['9']``.
         """
         return ['9']
     
     def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
-        """
-        Retrieve values for specific parameters
+        """Retrieve current values for the given parameters.
+        
+        For convenience, ``meshTypeParameters`` is returned as a comma-separated
+        string if present.
         
         Args:
-            keys (List[str]): List of parameter names to retrieve
+            keys: Parameter names to retrieve; see :meth:`get_parameters`.
         
         Returns:
-            Dict[str, Union[int, float, str]]: Dictionary of parameter values
+            Dict[str, Union[int, float, str]]: Mapping from key to stored value
+            (or ``None`` if not present). If ``meshTypeParameters`` is in
+            ``keys``, it is formatted as ``"v1, v2, ... v6"``.
         """
         vals = {key: self.params.get(key) for key in keys}
         vals['meshTypeParameters'] = ", ".join(str(val) for val in vals['meshTypeParameters'])
         return vals
     
     def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
-        """
-        Update element parameters
+        """Replace all stored parameters with the provided mapping.
         
         Args:
-            values (Dict[str, Union[int, float, str]]): Dictionary of parameter names and values to update
+            values: New parameter mapping. Any previously stored parameter not
+                present in this mapping will be removed.
         """
         self.params.clear()
         self.params.update(values)
 
     @classmethod
     def _is_material_compatible(cls, material: Material) -> bool:
-        """
-        Check material compatibility for PML3D Element
+        """Check whether the provided material can be used with PML3D.
+        
+        Requires a 3D ``nDMaterial`` whose class name is
+        ``ElasticIsotropicMaterial``.
+        
+        Args:
+            material: Material instance to check.
         
         Returns:
-            bool: True if material is a 3D (nDMaterial) type and ElasticIsotropicMaterial
+            bool: ``True`` if the material satisfies the requirements.
         """
         check = (material.material_type == 'nDMaterial') and (material.__class__.__name__ == 'ElasticIsotropicMaterial')
         return check
     
     @classmethod
     def validate_element_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
-        """
-        Check if the element input parameters are valid.
+        """Validate and coerce PML3D parameters.
+
+        Validation rules include (non-exhaustive):
+        - ``PML_Thickness``: required, float.
+        - ``meshType``: required, one of ``box`` or ``general`` (case-insensitive).
+        - ``meshTypeParameters``: required, list/string of 6 numeric values.
+        - Newmark params ``gamma``, ``beta``, ``eta``, ``ksi``: optional, float with defaults.
+        - Either provide both ``alpha0`` and ``beta0`` (floats) or provide
+          ``m`` (float, default 2.0), ``R`` (float, default 1e-8) and optional ``Cp`` (float).
+
+        Args:
+            **kwargs: Raw parameter mapping.
 
         Returns:
-            Dict[str, Union[int, float, str]]: Dictionary of parameters with valid values
+            Dict[str, Union[int, float, str]]: Validated and coerced parameters.
+
+        Raises:
+            ValueError: If a required parameter is missing, or a value cannot be
+                coerced/validated, or PML control parameters are inconsistent.
         """
         if 'PML_Thickness' not in kwargs:
             raise ValueError("PML_Thickness must be specified")
