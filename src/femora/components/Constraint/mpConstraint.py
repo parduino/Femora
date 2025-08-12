@@ -283,6 +283,18 @@ class mpConstraintManager:
                 # self.create_equal_dof(master_node=group[0], slave_nodes=group[1:], dofs=dofs)
                 for slave in group[1:]:
                     self.create_equal_dof(master_node=group[0], slave_nodes=[slave], dofs=dofs)
+
+        # import pyvista as pv
+        # pl = pv.Plotter()
+        # for i, group in enumerate(groups):
+        #     if len(group) > 1:  
+        #         pl.add_mesh(pv.PolyData(group[0]), color='black', point_size=10, render_points_as_spheres=True)
+        #         pl.add_mesh(pv.PolyData(group[1:]), color='red', point_size=5, render_points_as_spheres=True)
+
+        # pl.add_mesh(assembler.AssembeledMesh, color='lightblue', opacity=0.5,show_edges=False)
+        # pl.show()
+        # exit(0)
+
     
 
 
