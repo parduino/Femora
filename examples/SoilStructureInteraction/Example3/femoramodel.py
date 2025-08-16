@@ -77,35 +77,46 @@ alum_G  = alum_E / (2 * (1 + alum_nu))  # Shear modulus
 I       = 3.14* (0.4953**4 - 0.449072**4)/4.0
 J       = 2.0 * I  # Polar moment of inertia
 alumHardening_ratio = 0.000001
-fm.material.uniaxial.steel01(
-    user_name="Aluminum",
-    Fy=alum_fy,
-    E0=alum_E,
-    b=alumHardening_ratio
-)
+# fm.material.uniaxial.steel01(
+#     user_name="Aluminum",
+#     Fy=alum_fy,
+#     E0=alum_E,
+#     b=alumHardening_ratio
+# )
 
-pile_section = fm.section.fiber(
+# pile_section = fm.section.fiber(
+#     user_name="pile_section",
+#     GJ=alum_G*J,
+# )
+# pile_section.add_circular_patch(
+#     material="Aluminum",
+#     int_rad=0.449072,
+#     ext_rad=0.4953,  
+#     num_subdiv_circ=48,
+#     num_subdiv_rad=4,
+#     y_center=0.0,
+#     z_center=0.0,
+#     start_ang=0.0,
+#     end_ang=360.0,
+# )
+
+pile_section = fm.section.elastic(
     user_name="pile_section",
-    GJ=alum_G*J,
-)
-pile_section.add_circular_patch(
-    material="Aluminum",
-    int_rad=0.449072,
-    ext_rad=0.4953,  
-    num_subdiv_circ=48,
-    num_subdiv_rad=4,
-    y_center=0.0,
-    z_center=0.0,
-    start_ang=0.0,
-    end_ang=360.0,
+    E=alum_E,
+    A=3.14*(0.4953**2 - 0.449072**2),
+    Iz=I,
+    Iy=I,
+    G=alum_G,
+    J=J,
 )
 
 
 transf = fm.transformation.transformation3d(
-    transf_type="PDelta",
+    transf_type="Linear",
     vecxz_x=-1,
     vecxz_y=0,
     vecxz_z=0,
+
 )
 
 
@@ -184,7 +195,7 @@ soil_mat = fm.material.nd.elastic_isotropic(
     user_name="bent_mat",
     E=alum_E, # Young's modulus in kPa
     nu=0.33, # Poisson's ratio
-    rho = 2.7 # Density in ton/m^3
+    rho = 2.7*0.2 # Density in ton/m^3
 )
 Nx = int((Xmax - Xmin) / dx)
 Ny = int((Ymax - Ymin) / dy)
@@ -237,7 +248,7 @@ fm.assembler.create_section(
     num_partitions=4,
     partition_algorithm="kd-tree",
     merging_points=True)
-fm.assembler.Assemble()
+fm.assembler.Assemble(merge_points=True)
 
 # Create a TimeSeries for the uniform excitation
 timeseries = fm.timeSeries.path(filePath = "CFG2_ax_base_02g_avg.acc",
@@ -274,9 +285,10 @@ gravity_plastic = fm.analysis.create_default_transient_analysis(username="gravit
 
 
 # dynamic analysis
-
+test = fm.analysis.test.normdispincr(tol=1.0e-3, max_iter=20, print_flag=2)
 dynamic = fm.analysis.create_default_transient_analysis(username="dynamic", 
                                                         final_time=50.0, dt=0.0127,
+                                                        options={"test": test}
                                                         )
 embedded_recorder = fm.recorder.embedded_beam_solid_interface(
     interface=["pile_soil_interface1", "pile_soil_interface2"],
@@ -297,4 +309,5 @@ fm.process.add_step(reset,       description="Reset pseudo time")
 fm.process.add_step(dynamic,     description="Dynamic Analysis Step")
 
 fm.export_to_tcl(filename="model.tcl")
-fm.assembler.plot(show_edges=True, scalars="Core")
+print(fm.assembler.get_mesh().cell_data.keys())
+fm.assembler.plot(show_edges=True, scalars="ElementTag")
