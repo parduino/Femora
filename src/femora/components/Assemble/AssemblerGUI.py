@@ -47,22 +47,32 @@ class AssemblyManagerTab(QWidget):
         layout.addWidget(self.assembly_sections_table)
         
         # Button layout for actions
-        button_layout = QHBoxLayout()
+        button_layout = QVBoxLayout()  # Changed from QHBoxLayout to QVBoxLayout
+        
+        # First row: Refresh and Clear buttons
+        first_row_layout = QHBoxLayout()
         
         # Refresh assembly sections button
         refresh_btn = QPushButton("Refresh Assembly Sections List")
         refresh_btn.clicked.connect(self.refresh_assembly_sections_list)
-        button_layout.addWidget(refresh_btn)
-        
-        # Plot all assembly parts button
-        plot_all_btn = QPushButton("Plot All Assembly Parts")
-        plot_all_btn.clicked.connect(self.plot_all_assembly_parts)
-        button_layout.addWidget(plot_all_btn)
+        first_row_layout.addWidget(refresh_btn)
         
         # Clear all assembly parts button
         clear_all_btn = QPushButton("Clear All Assembly Parts")
         clear_all_btn.clicked.connect(self.clear_all_assembly_parts)
-        button_layout.addWidget(clear_all_btn)
+        first_row_layout.addWidget(clear_all_btn)
+        
+        button_layout.addLayout(first_row_layout)
+        
+        # Second row: Plot all assembly parts button
+        second_row_layout = QHBoxLayout()
+        
+        # Plot all assembly parts button
+        plot_all_btn = QPushButton("Plot All Assembly Parts")
+        plot_all_btn.clicked.connect(self.plot_all_assembly_parts)
+        second_row_layout.addWidget(plot_all_btn)
+        
+        button_layout.addLayout(second_row_layout)
         
         layout.addLayout(button_layout)
 
@@ -142,8 +152,17 @@ class AssemblyManagerTab(QWidget):
         """
         try:
             self.refresh_assembly_sections_list()
+            from femora.gui.progress_gui import get_progress_callback_gui
+
             assembler = Assembler.get_instance()
-            assembler.Assemble(merge_points=self.merge_points_checkbox.isChecked())
+
+            # GUI progress bar callback (mirrors console-based Progress)
+            progress_cb = get_progress_callback_gui("Assembling")
+
+            assembler.Assemble(
+                merge_points=self.merge_points_checkbox.isChecked(),
+                progress_callback=progress_cb,
+            )
             
             if assembler.AssembeledMesh is not None:
                 self.plotter = PlotterManager.get_plotter()

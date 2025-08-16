@@ -25,7 +25,8 @@ from typing import Dict, List, Tuple, Type, Union, Optional
 from femora.components.Element.elementBase import Element
 from femora.components.Material.materialBase import Material
 from femora.components.Region.regionBase import RegionBase, GlobalRegion
-
+from femora.constants import FEMORA_MAX_NDF
+from femora.components.geometry_ops import MeshPartTransform
 
 class MeshPart(ABC):
     """
@@ -34,6 +35,8 @@ class MeshPart(ABC):
     # Class-level tracking of mesh part names to ensure uniqueness
     _mesh_parts = {}
     _compatible_elements = []  # Base class empty list
+    _next_tag = 1
+    _tag_map = {}  # user_name -> tag
 
     def __init__(self, category: str, mesh_type: str, user_name: str, element: Element, region: RegionBase=None):
         """
@@ -66,8 +69,14 @@ class MeshPart(ABC):
         # Optional pyvista actor (initially None)
         self.actor = None
 
-        # Register the mesh part
-        self._mesh_parts[user_name] = self
+        # Instance transform proxy for convenient geometry operations
+        self.transform = MeshPartTransform(self)
+
+        # Assign tag and register
+        self.tag = MeshPart._next_tag
+        MeshPart._tag_map[user_name] = self.tag
+        MeshPart._mesh_parts[user_name] = self
+        MeshPart._next_tag += 1
 
     @abstractmethod
     def generate_mesh(self) -> None:
@@ -95,13 +104,18 @@ class MeshPart(ABC):
     @classmethod
     def delete_mesh_part(cls, user_name: str):
         """
-        Delete a mesh part by its user name
-        
+        Delete a mesh part by its user name and reassign tags to all mesh parts
         Args:
             user_name (str): User name of the mesh part to delete
         """
         if user_name in cls._mesh_parts:
             del cls._mesh_parts[user_name]
+            del cls._tag_map[user_name]
+            # Reassign tags to all mesh parts to keep them contiguous
+            for idx, (uname, part) in enumerate(sorted(cls._mesh_parts.items()), start=1):
+                part.tag = idx
+                cls._tag_map[uname] = idx
+            cls._next_tag = len(cls._mesh_parts) + 1
 
     @classmethod
     def clear_all_mesh_parts(cls) -> None:
@@ -146,7 +160,7 @@ class MeshPart(ABC):
         Returns:
             bool: True if compatible, False otherwise
         """
-        return element in cls._compatible_elements
+        return element.lower() in [e.lower() for e in cls._compatible_elements]
 
     @abstractmethod
     def update_parameters(self, **kwargs) -> None:
@@ -180,6 +194,18 @@ class MeshPart(ABC):
         """
         self.actor = actor
 
+    def _ensure_mass_array(self):
+        """Create an all-zero Mass point_data array if it doesn't exist.
+
+        The array has shape (n_points, FEMORA_MAX_NDF).  It is important that every
+        MeshPart carries the Mass array so that PyVista merges the data
+        correctly during assembly.
+        """
+        if self.mesh is None:
+            return
+        if "Mass" not in self.mesh.point_data:
+            n_pts = self.mesh.n_points
+            self.mesh.point_data["Mass"] = np.zeros((n_pts, FEMORA_MAX_NDF), dtype=np.float32)
 
 
 # Optional: Add to registry if needed
@@ -253,6 +279,16 @@ class MeshPartManager:
             self._registry = MeshPartRegistry()
             self._last_operation_status = {"success": True, "message": ""}
             self._initialized = True
+
+    @property
+    def line(self):
+        from femora.components.Mesh.meshPartInstance import LineMeshManager
+        return LineMeshManager
+    
+    @property
+    def volume(self):
+        from femora.components.Mesh.meshPartInstance import VolumeMeshManager
+        return VolumeMeshManager
     
     def create_mesh_part(self, category: str, mesh_part_type: str, user_name: str, 
                         element: Element, region: RegionBase=None, **kwargs) -> MeshPart:

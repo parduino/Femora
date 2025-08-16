@@ -365,6 +365,24 @@ class Element(ABC):
                f"material={'Yes' if self._material else 'No'}, " \
                f"section={'Yes' if self._section else 'No'}, " \
                f"transformation={'Yes' if self._transformation else 'No'})"
+    
+    def get_section_tag(self) -> Optional[int]:
+        """
+        Get the tag of the assigned section.
+        
+        Returns:
+            Optional[int]: The tag of the section, or None if not assigned
+        """
+        return self._section.tag if self._section else 0
+    
+    def get_material_tag(self) -> Optional[int]:
+        """
+        Get the tag of the primary assigned material.
+        
+        Returns:
+            Optional[int]: The tag of the primary material, or None if not assigned
+        """
+        return self._material.tag if self._material else 0
 
 
 
@@ -380,6 +398,20 @@ class ElementRegistry:
             cls._instance = super(ElementRegistry, cls).__new__(cls)
         return cls._instance
 
+    @property
+    def beam(self):
+        from .element_class_manager import _BeamElements
+        return _BeamElements
+    
+    @property
+    def brick(self):
+        from .element_class_manager import _BrickElements
+        return _BrickElements
+    @property
+    def quad(self):
+        from .element_class_manager import _QuadElements
+        return _QuadElements
+    
     @classmethod
     def register_element_type(cls, name: str, element_class: Type[Element]):
         """

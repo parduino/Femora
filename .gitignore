@@ -2,11 +2,16 @@
 *.egg*
 *env*/
 tmp/
+build
+dist
+main.spec
 *.h5drm
 *.tcl
 *.bash
 *.vtkhdf
 *.vtk
+*.out
+*.dat
 docs/_build
 dist/
 src/femora/tools/motions

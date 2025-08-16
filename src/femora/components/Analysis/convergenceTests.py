@@ -517,6 +517,19 @@ class TestManager:
             cls._instance = super(TestManager, cls).__new__(cls)
         return cls._instance
 
+    def __init__(self):
+        self.normdispincr = NormDispIncrTest
+        self.normunbalance = NormUnbalanceTest
+        self.energyincr = EnergyIncrTest
+        self.relativenormunbalance = RelativeNormUnbalanceTest
+        self.relativenormdispincr = RelativeNormDispIncrTest
+        self.relativetotalnormdispincr = RelativeTotalNormDispIncrTest
+        self.relativeenergyincr = RelativeEnergyIncrTest
+        self.fixednumiter = FixedNumIterTest
+        self.normdispandunbalance = NormDispAndUnbalanceTest
+        self.normdisporunbalance = NormDispOrUnbalanceTest
+        
+
     def create_test(self, test_type: str, **kwargs) -> Test:
         """Create a new test"""
         test_type = test_type.lower()

@@ -1,10 +1,12 @@
 import os
-from numpy import unique, zeros, arange, array, abs, concatenate, meshgrid, ones, full, uint16, repeat, where, isin
+from numpy import unique, zeros, arange, array, abs, concatenate, meshgrid, ones, full, uint16, repeat, where, isin, float32
 from pyvista import Cube, MultiBlock, StructuredGrid
 import tqdm
 from pykdtree.kdtree import KDTree as pykdtree
 from femora.components.Pattern.patternBase import H5DRMPattern
 from femora.components.Actions.action import ActionManager
+from femora.constants import FEMORA_MAX_NDF
+
 class DRM:
     """
     Singleton class for Domain Reduction Method helper functions
@@ -416,13 +418,10 @@ class DRM:
                 raise ValueError("Type of the absorbing layer should be one of ['PML', 'Rayleigh', 'ASDA']")
             if kwargs['type'] == "PML":
                 ndof = 9
-                mergeFlag = False
             elif kwargs['type'] == "Rayleigh":
                 ndof = 3
-                mergeFlag = True
             elif kwargs['type'] == "ASDA":
                 ndof = 3
-                mergeFlag = True
                 raise NotImplementedError("ASDA absorbing layer is not implemented yet")
 
         
@@ -589,6 +588,10 @@ class DRM:
         Absorbing.cell_data['AbsorbingRegion'] = RegTag
         Absorbing.cell_data['Region'] = RegionTag
         Absorbing.point_data['ndf'] = full(Absorbing.n_points, ndof, dtype=uint16)
+        Absorbing.point_data['Mass'] = full(shape=(Absorbing.n_points, FEMORA_MAX_NDF), fill_value=0.0, dtype=float32)
+        Absorbing.cell_data['SectionTag'] = full(Absorbing.n_cells, 0, dtype=uint16)
+        Absorbing.point_data['MeshPartTag_pointdata'] = full(Absorbing.n_points, 0, dtype=uint16)
+        Absorbing.cell_data['MeshTag_cell'] = full(Absorbing.n_cells, 0, dtype=uint16)
 
         Absorbing.cell_data["Core"] = full(Absorbing.n_cells, 0, dtype=int)
 
@@ -618,20 +621,21 @@ class DRM:
                 if mat.material_name != "ElasticIsotropic" or mat.material_type != "nDMaterial":
                     raise ValueError(f"boundary elements should have an ElasticIsotropic material not {mat.material_name} {mat.material_type}")
 
-                PMLele = self.meshmaker.element.create_element("PML3D", ndof, mat, 
-                                            gamma = 0.5,
-                                            beta  = 0.25,
-                                            eta   = 1./12.0,
-                                            ksi   = 1.0/48.0,
-                                            PML_Thickness = numLayers*dx,
-                                            m = 2,
-                                            R = 1.0e-8,
-                                            meshType = "Box",
-                                            meshTypeParameters = [RD_center_x, RD_center_y, RD_center_z, RD_width_x, RD_width_y, RD_Depth],
-                                            alpha0 = None,
-                                            beta0 = None,
-                                            Cp = None,
-                                            )
+                PMLele = self.meshmaker.element.create_element(
+                    element_type="PML3D",
+                    ndof=ndof,
+                    material=mat,
+                    gamma=0.5,
+                    beta=0.25,
+                    eta=1./12.0,
+                    ksi=1.0/48.0,
+                    PML_Thickness=numLayers*dx,
+                    m=2,
+                    R=1.0e-8,
+                    meshType="Box",
+                    meshTypeParameters=[RD_center_x, RD_center_y, RD_center_z, RD_width_x, RD_width_y, RD_Depth],
+                )
+                
 
                 PMLeleTag = PMLele.tag
                 PMLTags[tag] = PMLeleTag
@@ -682,16 +686,49 @@ class DRM:
 
 
 
-
-        self.meshmaker.assembler.AssembeledMesh = mesh.merge(Absorbing, 
-                                                  merge_points=mergeFlag, 
-                                                  tolerance=1e-6, 
-                                                  inplace=False, 
-                                                  progress_bar=True)
+        self.meshmaker.assembler.AssembeledMesh = Absorbing.merge(mesh, 
+                                                  merge_points = False, 
+                                                  tolerance = 1e-6, 
+                                                  inplace = False, 
+                                                  progress_bar = True)
         self.meshmaker.assembler.AssembeledMesh.set_active_scalars("AbsorbingRegion")
 
+        if kwargs['type'] == "Rayleigh":
+            interfacepoints = mesh.points
+            xmin, xmax, ymin, ymax, zmin, zmax = mesh.bounds
+            xmin = xmin + eps
+            xmax = xmax - eps
+            ymin = ymin + eps
+            ymax = ymax - eps
+            zmin = zmin + eps
+            zmax = zmax + 10
+            mask = (
+                (interfacepoints[:, 0] > xmin) & 
+                (interfacepoints[:, 0] < xmax) & 
+                (interfacepoints[:, 1] > ymin) & 
+                (interfacepoints[:, 1] < ymax) & 
+                (interfacepoints[:, 2] > zmin) & 
+                (interfacepoints[:, 2] < zmax)
+            )
+            mask = where(~mask)
+            interfacepoints = interfacepoints[mask]
+            tree = pykdtree(self.meshmaker.assembler.AssembeledMesh.points)
+            distances, indices = tree.query(interfacepoints, k=2)
 
-        if kwargs['type'] == "PML":
+            self.meshmaker.assembler.AssembeledMesh.point_data["drm_absorbing_interface"] = arange(self.meshmaker.assembler.AssembeledMesh.n_points, dtype=int)
+            self.meshmaker.assembler.AssembeledMesh.point_data["drm_absorbing_interface"][indices.flatten()] = -1
+            n_points_before = self.meshmaker.assembler.AssembeledMesh.n_points
+            self.meshmaker.assembler.AssembeledMesh = self.meshmaker.assembler.AssembeledMesh.clean( tolerance = 0.0001,
+                        remove_unused_points = False,
+                        produce_merge_map = False,
+                        average_point_data = False,
+                        merging_array_name = "drm_absorbing_interface",
+                        progress_bar = True)
+            n_points_after = self.meshmaker.assembler.AssembeledMesh.n_points
+
+            del self.meshmaker.assembler.AssembeledMesh.point_data["drm_absorbing_interface"]
+
+        elif kwargs['type'] == "PML":
             # creating the mapping for the equal dof 
             interfacepoints = mesh.points
             xmin, xmax, ymin, ymax, zmin, zmax = mesh.bounds
@@ -740,3 +777,6 @@ class DRM:
                     raise ValueError("The PML layer node should have 9 dof and the original mesh should have at least 3 dof")
                 
                 self.meshmaker.constraint.mp.create_equal_dof(masterNode, [slaveNode],[1,2,3])
+
+        else:
+            raise NotImplementedError("ASDA absorbing layer is not implemented yet")

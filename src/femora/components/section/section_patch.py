@@ -241,8 +241,8 @@ class CircularPatch(PatchBase):
     def to_tcl(self) -> str:
         cmd = f"    patch circ {self.material.tag} {self.num_subdiv_circ} {self.num_subdiv_rad} "
         cmd += f"{self.y_center} {self.z_center} {self.int_rad} {self.ext_rad}"
-        if self.start_ang != 0.0 or self.end_ang != 360.0:
-            cmd += f" {self.start_ang} {self.end_ang}"
+        cmd += f" {self.start_ang} {self.end_ang}"
+        cmd += f"; # CircularPatch using material {self.material.user_name}"
         return cmd
 
     def get_patch_type(self) -> str:

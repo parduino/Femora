@@ -2,11 +2,16 @@ from typing import List, Optional, Dict, Any
 import numpy as np
 import pyvista as pv
 import warnings
+import logging
+import sys
 
 from femora.components.Mesh.meshPartBase import MeshPart
 from femora.components.Element.elementBase import Element
 from femora.components.Material.materialBase import Material
-  
+from femora.components.event.event_bus import EventBus, FemoraEvent
+from femora.utils.progress import Progress
+from femora.constants import FEMORA_MAX_NDF
+
 
 class Assembler:
     """
@@ -65,6 +70,7 @@ class Assembler:
         num_partitions: int = 1, 
         partition_algorithm: str = "kd-tree", 
         merging_points: bool = True,
+        mass_merging: str = "sum",
         **kwargs: Any
     ) -> 'AssemblySection':
         """
@@ -86,6 +92,10 @@ class Assembler:
             merging_points (bool, optional): Whether to merge points that are within a 
                                            tolerance distance when assembling mesh parts.
                                            Defaults to True.
+            mass_merging (str, optional): Method for merging mass properties of mesh parts.
+                                           Defaults to "sum". Options are "sum" or "average".
+                                           if "sum", the mass is summed across all merged points.
+                                           if "average", the mass is averaged across merged points.
             **kwargs: Additional keyword arguments to pass to AssemblySection constructor
         
         Returns:
@@ -102,6 +112,7 @@ class Assembler:
             num_partitions=num_partitions,
             partition_algorithm=partition_algorithm,
             merging_points=merging_points,
+            mass_merging=mass_merging,
             **kwargs
         )
         
@@ -264,7 +275,11 @@ class Assembler:
         """
         return self._assembly_sections[tag]
     
-    def Assemble(self, merge_points: bool = True) -> None:
+    def Assemble(self, 
+                 merge_points: bool = True, 
+                 mass_merging: str = "sum",
+                 *, 
+                 progress_callback=None) -> None:
         """
         Assemble all registered AssemblySections into a single unified mesh.
         
@@ -292,27 +307,80 @@ class Assembler:
         if not self._assembly_sections:
             raise ValueError("No assembly sections have been created")
         
+        # Progress setup
+        if progress_callback is None:
+            progress_callback = lambda v, msg="": Progress.callback(v, msg, desc="Assembling")
+
+        progress_callback(0, "initialising")
+
+        # Notify subscribers that assembly is starting
+        EventBus.emit(FemoraEvent.PRE_ASSEMBLE)
+        
         sorted_sections = sorted(self._assembly_sections.items(), key=lambda x: x[0])
         
-        self.AssembeledMesh = sorted_sections[0][1].mesh.copy()
+        first_mesh = sorted_sections[0][1].mesh
+        # assert first_mesh is not None, "AssemblySection mesh is None"
+        if first_mesh is None:
+            raise ValueError("There is no mesh to assemble. Please create an AssemblySection first.")
+        
+        self.AssembeledMesh = pv.MultiBlock();
+        self.AssembeledMesh.append(first_mesh.copy())
+        progress_callback(1 / len(sorted_sections) * 70, f"merged section 1/{len(sorted_sections)}")
         num_partitions = sorted_sections[0][1].num_partitions
 
         try :
-            for tag, section in sorted_sections[1:]:
-
-                second_mesh = section.mesh.copy()
+            for idx, (tag, section) in enumerate(sorted_sections[1:], start=2):
+                second_mesh = section.mesh.copy()  # type: ignore[attr-defined]
                 second_mesh.cell_data["Core"] = second_mesh.cell_data["Core"] + num_partitions
                 num_partitions = num_partitions + section.num_partitions
-                self.AssembeledMesh = self.AssembeledMesh.merge(
-                    second_mesh, 
-                    merge_points=merge_points, 
+                self.AssembeledMesh.append(second_mesh)
+                perc = idx / len(sorted_sections) * 70
+                progress_callback(perc, f"merged section {idx}/{len(sorted_sections)}")
+            self.AssembeledMesh = self.AssembeledMesh.combine(
+                merge_points=False,
+                tolerance=1e-5,
+            )
+            if merge_points:
+                number_of_points_before_cleaning = self.AssembeledMesh.n_points
+                mass = self.AssembeledMesh.point_data["Mass"]
+                self.AssembeledMesh = self.AssembeledMesh.clean(
                     tolerance=1e-5,
-                    inplace=False,
-                    progress_bar=True
+                    remove_unused_points=False,
+                    produce_merge_map=True,
+                    average_point_data=True,
+                    merging_array_name="ndf",
+                    progress_bar=False,
                 )
-                del second_mesh
+                # make the ndf array uint16
+                self.AssembeledMesh.point_data["ndf"] = self.AssembeledMesh.point_data["ndf"].astype(np.uint16)
+                # make the MeshPartTag_pointdata array uint16
+                self.AssembeledMesh.point_data["MeshPartTag_pointdata"] = self.AssembeledMesh.point_data["MeshPartTag_pointdata"].astype(np.uint16)
+                
+                number_of_points_after_cleaning = self.AssembeledMesh.n_points
+
+                if mass_merging == "sum":
+                    if number_of_points_before_cleaning != number_of_points_after_cleaning:
+                        Mass = np.zeros((number_of_points_after_cleaning, FEMORA_MAX_NDF), dtype=np.float32)
+                        for i in range(self.AssembeledMesh.field_data["PointMergeMap"].shape[0]):
+                            Mass[self.AssembeledMesh.field_data["PointMergeMap"][i],:] += mass[i,:]
+                
+                        self.AssembeledMesh.point_data["Mass"] = Mass
+
+                del self.AssembeledMesh.field_data["PointMergeMap"]
+
+
         except Exception as e:
             raise e
+        
+        # Notify any subscribers that the mesh has been assembled and partitioned
+        progress_callback(70, "post-assemble")
+        EventBus.emit(FemoraEvent.POST_ASSEMBLE, assembled_mesh=self.AssembeledMesh)
+        progress_callback(90, "resolving core conflicts")
+        EventBus.emit(FemoraEvent.RESOLVE_CORE_CONFLICTS, assembled_mesh=self.AssembeledMesh)
+
+        progress_callback(100, "done")
+        # Announce the number of cores used for assembly
+        self._announce_required_cores()
         
     def delete_assembled_mesh(self) -> None:
         """
@@ -326,24 +394,329 @@ class Assembler:
             del self.AssembeledMesh
             self.AssembeledMesh = None
 
-    def plot(self, **kwargs) -> None:
+    def plot(
+        self,
+        color=None,
+        style=None,
+        scalars=None,
+        clim=None,
+        show_edges=None,
+        edge_color=None,
+        point_size=None,
+        line_width=None,
+        opacity=None,
+        flip_scalars=False,
+        lighting=None,
+        n_colors=256,
+        interpolate_before_map=None,
+        cmap=None,
+        label=None,
+        reset_camera=None,
+        scalar_bar_args=None,
+        show_scalar_bar=None,
+        multi_colors=False,
+        name=None,
+        texture=None,
+        render_points_as_spheres=None,
+        render_lines_as_tubes=None,
+        smooth_shading=None,
+        split_sharp_edges=None,
+        ambient=None,
+        diffuse=None,
+        specular=None,
+        specular_power=None,
+        nan_color=None,
+        nan_opacity=1.0,
+        culling=None,
+        rgb=None,
+        categories=False,
+        silhouette=None,
+        use_transparency=False,
+        below_color=None,
+        above_color=None,
+        annotations=None,
+        pickable=True,
+        preference='point',
+        log_scale=False,
+        pbr=None,
+        metallic=None,
+        roughness=None,
+        render=True,
+        user_matrix=None,
+        component=None,
+        emissive=None,
+        copy_mesh=False,
+        backface_params=None,
+        show_vertices=None,
+        edge_opacity=None,
+        add_axes=True,
+        add_bounding_box=False,
+        show_grid= False,
+        **kwargs
+    ) -> None:
         """
         Plot the assembled mesh using PyVista.
-        
+
         This method visualizes the assembled mesh for the Assembler instance.
         It uses the PyVista plotting capabilities to render the mesh with
-        optional parameters for customization.
+        all keyword arguments supported by `pyvista.Plotter.add_mesh` for customization.
 
-        Args:
-            **kwargs: Additional keyword arguments to customize the plot (e.g., color, opacity)
-        
-        Raises:
-            ValueError: If no assembled mesh exists to plot
+        Parameters
+        ----------
+        color : str, sequence, or ColorLike, optional
+            Solid color for the mesh. Accepts string, RGB list, or hex color string.
+        style : str, optional
+            Visualization style: 'surface', 'wireframe', 'points', or 'points_gaussian'.
+        scalars : str or numpy.ndarray, optional
+            Scalars used to color the mesh. String name or array.
+        clim : sequence of float, optional
+            Two-item color bar range for scalars. Example: [-1, 2].
+        show_edges : bool, optional
+            Show mesh edges. Not for wireframe style.
+        edge_color : str, sequence, or ColorLike, optional
+            Color for edges when show_edges=True.
+        point_size : float, optional
+            Size of points. Default is 5.0.
+        line_width : float, optional
+            Thickness of lines for wireframe/surface.
+        opacity : float, str, or array_like, optional
+            Opacity of the mesh. Float (0-1), string transfer function, or array.
+        flip_scalars : bool, optional
+            Flip direction of colormap.
+        lighting : bool, optional
+            Enable/disable view direction lighting.
+        n_colors : int, optional
+            Number of colors for scalars. Default is 256.
+        interpolate_before_map : bool, optional
+            Smoother scalars display. Default True.
+        cmap : str, list, or LookupTable, optional
+            Colormap for scalars. String name, list of colors, or LookupTable.
+        label : str, optional
+            Label for legend.
+        reset_camera : bool, optional
+            Reset camera after adding mesh.
+        scalar_bar_args : dict, optional
+            Arguments for scalar bar.
+        show_scalar_bar : bool, optional
+            Show/hide scalar bar.
+        multi_colors : bool, str, cycler, or sequence, optional
+            Color each block by a solid color for MultiBlock datasets.
+        name : str, optional
+            Name for the mesh/actor for updating.
+        texture : pyvista.Texture or np.ndarray, optional
+            Texture to apply if mesh has texture coordinates.
+        render_points_as_spheres : bool, optional
+            Render points as spheres.
+        render_lines_as_tubes : bool, optional
+            Show lines as tubes.
+        smooth_shading : bool, optional
+            Enable smooth shading (Phong algorithm).
+        split_sharp_edges : bool, optional
+            Split sharp edges >30 degrees for smooth shading.
+        ambient : float, optional
+            Ambient lighting coefficient (0-1).
+        diffuse : float, optional
+            Diffuse lighting coefficient. Default 1.0.
+        specular : float, optional
+            Specular lighting coefficient. Default 0.0.
+        specular_power : float, optional
+            Specular power (0.0-128.0).
+        nan_color : str, sequence, or ColorLike, optional
+            Color for NaN values in scalars.
+        nan_opacity : float, optional
+            Opacity for NaN values (0-1). Default 1.0.
+        culling : str, optional
+            Face culling: 'front' or 'back'.
+        rgb : bool, optional
+            Interpret scalars as RGB(A) colors.
+        categories : bool, optional
+            Use unique values in scalars as n_colors.
+        silhouette : dict or bool, optional
+            Plot silhouette highlight for mesh. Dict for properties.
+        use_transparency : bool, optional
+            Invert opacity mapping to transparency.
+        below_color : str, sequence, or ColorLike, optional
+            Color for values below scalars range.
+        above_color : str, sequence, or ColorLike, optional
+            Color for values above scalars range.
+        annotations : dict, optional
+            Annotations for scalar bar.
+        pickable : bool, optional
+            Set actor pickable.
+        preference : str, optional
+            Scalar mapping preference: 'point' or 'cell'.
+        log_scale : bool, optional
+            Use log scale for color mapping.
+        pbr : bool, optional
+            Enable physics-based rendering (PBR).
+        metallic : float, optional
+            Metallic value for PBR (0-1).
+        roughness : float, optional
+            Roughness for PBR (0-1).
+        render : bool, optional
+            Force render. Default True.
+        user_matrix : np.ndarray or vtkMatrix4x4, optional
+            Transformation matrix for actor.
+        component : int, optional
+            Component of vector-valued scalars to plot.
+        emissive : bool, optional
+            Treat points as emissive light sources (for 'points_gaussian').
+        copy_mesh : bool, optional
+            Copy mesh before adding. Default False.
+        backface_params : dict or pyvista.Property, optional
+            Backface rendering parameters.
+        show_vertices : bool, optional
+            Render external surface vertices. See vertex_* kwargs.
+        edge_opacity : float, optional
+            Edge opacity (0-1).
+        **kwargs : dict, optional
+            Additional keyword arguments for PyVista add_mesh.
+
+        Raises
+        ------
+        ValueError
+            If no assembled mesh exists to plot.
         """
         if self.AssembeledMesh is None:
             raise ValueError("No assembled mesh exists to plot")
+        if scalars=="Core":
+            cores = self.AssembeledMesh.cell_data["Core"]
+            mesh = pv.MultiBlock()
+            for core in np.unique(cores):
+                core_mesh = self.AssembeledMesh.extract_cells(cores==core)
+                mesh.append(core_mesh)
+            pl = pv.Plotter()
+            pl.add_mesh(mesh,
+                color=color,
+                style=style,
+                scalars=scalars,
+                clim=clim,
+                show_edges=show_edges,
+                edge_color=edge_color,
+                point_size=point_size,
+                line_width=line_width,
+                opacity=opacity,
+                flip_scalars=flip_scalars,
+                lighting=lighting,
+                n_colors=n_colors,
+                interpolate_before_map=interpolate_before_map,
+                cmap=cmap,
+                label=label,
+                reset_camera=reset_camera,
+                scalar_bar_args=scalar_bar_args,
+                show_scalar_bar=show_scalar_bar,
+                multi_colors=True,
+                name=name,
+                texture=texture,
+                render_points_as_spheres=render_points_as_spheres,
+                render_lines_as_tubes=render_lines_as_tubes,
+                smooth_shading=smooth_shading,
+                split_sharp_edges=split_sharp_edges,
+                ambient=ambient,
+                diffuse=diffuse,
+                specular=specular,
+                specular_power=specular_power,
+                nan_color=nan_color,
+                nan_opacity=nan_opacity,
+                culling=culling,
+                rgb=rgb,
+                categories=categories,
+                silhouette=silhouette,
+                use_transparency=use_transparency,
+                below_color=below_color,
+                above_color=above_color,
+                annotations=annotations,
+                pickable=pickable,
+                preference=preference,
+                log_scale=log_scale,
+                pbr=pbr,
+                metallic=metallic,
+                roughness=roughness,
+                render=render,
+                user_matrix=user_matrix,
+                component=component,
+                emissive=emissive,
+                copy_mesh=copy_mesh,
+                backface_params=backface_params,
+                show_vertices=show_vertices,
+                edge_opacity=edge_opacity,
+                **kwargs)
+            if add_axes:
+                pl.add_axes()
+            if add_bounding_box:
+                pl.add_bounding_box()
+            if show_grid:
+                pl.show_grid()
+            pl.show()
+            pl.close()
+
         else:
-            self.AssembeledMesh.plot(**kwargs)
+            pl = pv.Plotter()
+            pl.add_mesh(
+                self.AssembeledMesh,
+                color=color,
+                style=style,
+                scalars=scalars,
+                clim=clim,
+                show_edges=show_edges,
+                edge_color=edge_color,
+                point_size=point_size,
+                line_width=line_width,
+                opacity=opacity,
+                flip_scalars=flip_scalars,
+                lighting=lighting,
+                n_colors=n_colors,
+                interpolate_before_map=interpolate_before_map,
+                cmap=cmap,
+                label=label,
+                reset_camera=reset_camera,
+                scalar_bar_args=scalar_bar_args,
+                show_scalar_bar=show_scalar_bar,
+                multi_colors=multi_colors,
+                name=name,
+                texture=texture,
+                render_points_as_spheres=render_points_as_spheres,
+                render_lines_as_tubes=render_lines_as_tubes,
+                smooth_shading=smooth_shading,
+                split_sharp_edges=split_sharp_edges,
+                ambient=ambient,
+                diffuse=diffuse,
+                specular=specular,
+                specular_power=specular_power,
+                nan_color=nan_color,
+                nan_opacity=nan_opacity,
+                culling=culling,
+                rgb=rgb,
+                categories=categories,
+                silhouette=silhouette,
+                use_transparency=use_transparency,
+                below_color=below_color,
+                above_color=above_color,
+                annotations=annotations,
+                pickable=pickable,
+                preference=preference,
+                log_scale=log_scale,
+                pbr=pbr,
+                metallic=metallic,
+                roughness=roughness,
+                render=render,
+                user_matrix=user_matrix,
+                component=component,
+                emissive=emissive,
+                copy_mesh=copy_mesh,
+                backface_params=backface_params,
+                show_vertices=show_vertices,
+                edge_opacity=edge_opacity,
+                **kwargs
+            )
+            if add_axes:
+                pl.add_axes()
+            if add_bounding_box:
+                pl.add_bounding_box()
+            if show_grid:
+                pl.show_grid()
+            pl.show()
+            pl.close()
     
 
     def get_mesh(self) -> Optional[pv.UnstructuredGrid]:
@@ -357,6 +730,39 @@ class Assembler:
             Optional[pv.UnstructuredGrid]: The assembled mesh, or None if not yet created
         """
         return self.AssembeledMesh
+
+
+    # Big announcement box
+    def _announce_required_cores(self):
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s [%(levelname)s] %(message)s",
+            handlers=[
+                logging.StreamHandler(sys.stdout)
+            ]
+        )
+        # this part should be gou through the Assembled Mesh and see how many cores are used to print
+        # the number of cores used in the assembly
+        if self.AssembeledMesh is None:
+            logging.warning("No assembled mesh found. Cannot announce required cores.")
+            return
+        cores = self.AssembeledMesh.cell_data["Core"]
+        unique_cores = np.unique(cores) 
+        cores = len(unique_cores)
+        RED = "\033[91m"
+        BOLD = "\033[1m"
+        RESET = "\033[0m"
+        BLUE = "\033[94m"
+        message = f"{BOLD}{BLUE}!!! IMPORTANT RESOURCE NOTICE !!!{RESET}\n" \
+                f"{BOLD}This model requires {RED}{cores}{RESET}{BOLD} CPU cores to run effectively.{RESET}\n" \
+                f"Please ensure your environment has sufficient resources.\n"
+
+        border = "=" * 70
+        full_message = f"\n{BLUE}{border}\n{message}{BLUE}{border}{RESET}\n"
+
+        
+
+        print(full_message)
         
             
 
@@ -392,7 +798,9 @@ class AssemblySection:
         meshparts: List[str], 
         num_partitions: int = 1, 
         partition_algorithm: str = "kd-tree", 
-        merging_points: bool = True
+        merging_points: bool = True,
+        progress_callback=None,
+        mass_merging: str = "sum"
     ):
         """
         Initialize an AssemblySection by combining multiple mesh parts.
@@ -413,9 +821,12 @@ class AssemblySection:
             partition_algorithm (str, optional): Algorithm used for partitioning the mesh.
                                                Currently supports "kd-tree".
                                                Defaults to "kd-tree".
+            mass_merging (str, optional): Method for merging mass properties of mesh parts.
+                                          Options are "sum" or "average". Defaults to "sum".
             merging_points (bool, optional): Whether to merge points that are within a
                                            tolerance distance when assembling mesh parts.
                                            Defaults to True.
+                                           
         
         Raises:
             ValueError: If no valid mesh parts are provided, if the partition algorithm
@@ -441,6 +852,9 @@ class AssemblySection:
         # Initialize tag to None
         self._tag = None
         self.merging_points = merging_points
+        if mass_merging not in ["sum", "average"]:
+            raise ValueError(f"Invalid mass merging method: {mass_merging}. Must be 'sum' or 'average'.")
+        self.mass_merging = mass_merging
         
         # Assembled mesh attributes
         self.mesh: Optional[pv.UnstructuredGrid] = None
@@ -449,8 +863,7 @@ class AssemblySection:
 
         # Assemble the mesh first
         try:
-            self._assemble_mesh()
-            
+            self._assemble_mesh(progress_callback=progress_callback)
             # Only add to Assembler if mesh assembly is successful
             self._tag = Assembler.get_instance()._add_assembly_section(self)
         except Exception as e:
@@ -534,7 +947,7 @@ class AssemblySection:
         
         return True
     
-    def _assemble_mesh(self):
+    def _assemble_mesh(self, progress_callback=None):
         """
         Assemble mesh parts into a single mesh.
         
@@ -553,55 +966,104 @@ class AssemblySection:
             ValueError: If mesh parts have different degrees of freedom and this causes
                       assembly to fail, or if any other error occurs during assembly
         """
+        if progress_callback is None:
+            def progress_callback(v, msg=""):
+                Progress.callback(v, msg, desc=f"Assembly Section: {len(Assembler._assembly_sections) + 1}")
+
         # Validate degrees of freedom
         self._validate_degrees_of_freedom()
             
         # Start with the first mesh
         first_meshpart = self.meshparts_list[0]
-        self.mesh = first_meshpart.mesh.copy()
+        first_mesh = first_meshpart.mesh.copy()
         
         # Collect elements and materials
         ndf = first_meshpart.element._ndof
-        matTag = first_meshpart.element._material.tag
+        matTag = first_meshpart.element.get_material_tag()
         EleTag = first_meshpart.element.tag
         regionTag = first_meshpart.region.tag
+        sectionTag = first_meshpart.element.get_section_tag()
+        meshTag  = first_meshpart.tag
         
         # Add initial metadata to the first mesh
-        n_cells = self.mesh.n_cells
-        n_points = self.mesh.n_points
-        
+        n_cells = first_mesh.n_cells
+        n_points = first_mesh.n_points
+
+        # ensure Mass array exists
+        if "Mass" not in first_mesh.point_data:
+            first_mesh.point_data["Mass"] = np.zeros((n_points, FEMORA_MAX_NDF), dtype=np.float32)
+
         # add cell and point data
-        self.mesh.cell_data["ElementTag"]  = np.full(n_cells, EleTag, dtype=np.uint16)
-        self.mesh.cell_data["MaterialTag"] = np.full(n_cells, matTag, dtype=np.uint16)
-        self.mesh.point_data["ndf"]        = np.full(n_points, ndf, dtype=np.uint16)
-        self.mesh.cell_data["Region"]      = np.full(n_cells, regionTag, dtype=np.uint16)
-        
+        first_mesh.cell_data["ElementTag"]  = np.full(n_cells, EleTag, dtype=np.uint16)
+        first_mesh.cell_data["MaterialTag"] = np.full(n_cells, matTag, dtype=np.uint16)
+        first_mesh.cell_data["SectionTag"]  = np.full(n_cells, sectionTag, dtype=np.uint16)
+        first_mesh.point_data["ndf"]        = np.full(n_points, ndf, dtype=np.uint16)
+        first_mesh.cell_data["Region"]      = np.full(n_cells, regionTag, dtype=np.uint16)
+        first_mesh.cell_data["MeshTag_cell"]   = np.full(n_cells, meshTag, dtype=np.uint16)
+        first_mesh.point_data["MeshPartTag_pointdata"] = np.full(n_points, meshTag, dtype=np.uint16)
         # Merge subsequent meshes
-        for meshpart in self.meshparts_list[1:]:
+        n_sections = len(self.meshparts_list)
+        perc = 1 / n_sections * 100
+        progress_callback(perc, f"merged meshpart {1}/{n_sections}")
+        self.mesh = pv.MultiBlock([first_mesh])  # Start with the first mesh as a MultiBlock
+        for idx, meshpart in enumerate(self.meshparts_list[1:], start=2):
             second_mesh = meshpart.mesh.copy()
             ndf = meshpart.element._ndof
-            matTag = meshpart.element._material.tag
+            matTag = meshpart.element.get_material_tag()
             EleTag = meshpart.element.tag
             regionTag = meshpart.region.tag
-            
+            sectionTag = meshpart.element.get_section_tag()
+            meshTag  = meshpart.tag
             n_cells_second  = second_mesh.n_cells
             n_points_second = second_mesh.n_points
-            
+            if "Mass" not in second_mesh.point_data:
+                second_mesh.point_data["Mass"] = np.zeros((n_points_second, FEMORA_MAX_NDF), dtype=np.float32)
             # add cell and point data to the second mesh
             second_mesh.cell_data["ElementTag"]  = np.full(n_cells_second, EleTag, dtype=np.uint16)
             second_mesh.cell_data["MaterialTag"] = np.full(n_cells_second, matTag, dtype=np.uint16)
             second_mesh.point_data["ndf"]        = np.full(n_points_second, ndf, dtype=np.uint16)
             second_mesh.cell_data["Region"]      = np.full(n_cells_second, regionTag, dtype=np.uint16)
+            second_mesh.cell_data["SectionTag"]  = np.full(n_cells_second, sectionTag, dtype=np.uint16)
+            second_mesh.cell_data["MeshTag_cell"]   = np.full(n_cells_second, meshTag, dtype=np.uint16)
+            second_mesh.point_data["MeshPartTag_pointdata"] = np.full(n_points_second, meshTag, dtype=np.uint16)
             # Merge with tolerance and optional point merging
-            self.mesh = self.mesh.merge(
-                second_mesh, 
-                merge_points=self.merging_points, 
+            self.mesh.append(second_mesh)
+            perc = idx / n_sections * 100
+            progress_callback(perc, f"merged meshpart {idx}/{n_sections}")
+
+        
+        self.mesh = self.mesh.combine(
+            merge_points = False,
+            tolerance = 1e-5,
+        )
+        if self.merging_points:
+            mass = self.mesh.point_data["Mass"]
+            number_of_points_before_cleaning = self.mesh.number_of_points
+            self.mesh = self.mesh.clean(
                 tolerance=1e-5,
-                inplace=False,
-                progress_bar=True
+                remove_unused_points=False,
+                produce_merge_map=True,
+                average_point_data=True,
+                merging_array_name="ndf",
+                progress_bar=False,
             )
 
-            del second_mesh
+            number_of_points_after_cleaning = self.mesh.number_of_points
+            # make the ndf array uint16
+            self.mesh.point_data["ndf"] = self.mesh.point_data["ndf"].astype(np.uint16)
+            # make the MeshPartTag_pointdata array uint16
+            self.mesh.point_data["MeshPartTag_pointdata"] = self.mesh.point_data["MeshPartTag_pointdata"].astype(np.uint16)
+
+            if self.mass_merging == "sum":
+                if number_of_points_before_cleaning != number_of_points_after_cleaning:
+                    Mass = np.zeros((self.mesh.number_of_points, FEMORA_MAX_NDF), dtype=np.float32)
+                    for i in range(self.mesh.field_data["PointMergeMap"].shape[0]):
+                        Mass[self.mesh.field_data["PointMergeMap"][i],:] += mass[i,:]
+            
+                    self.mesh.point_data["Mass"] = Mass
+
+            del self.mesh.field_data["PointMergeMap"]
+
 
         # partition the mesh
         self.mesh.cell_data["Core"] = np.zeros(self.mesh.n_cells, dtype=int)

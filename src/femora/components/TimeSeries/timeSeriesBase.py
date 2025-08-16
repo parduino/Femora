@@ -6,6 +6,7 @@ class TimeSeries(ABC):
     Base abstract class for all time series with simple sequential tagging
     """
     _time_series = {}  # Class-level dictionary to track all time series
+    _start_tag = 1
 
     def __init__(self, series_type: str):
         """
@@ -14,7 +15,7 @@ class TimeSeries(ABC):
         Args:
             series_type (str): The type of time series (e.g., 'Constant', 'Linear')
         """
-        self.tag = len(TimeSeries._time_series) + 1
+        self.tag = len(TimeSeries._time_series) + self._start_tag
         self.series_type = series_type
         
         # Register this time series in the class-level tracking dictionary
@@ -59,7 +60,7 @@ class TimeSeries(ABC):
         Reassign tags to all time series sequentially starting from 1.
         """
         new_time_series = {}
-        for idx, series in enumerate(sorted(cls._time_series.values(), key=lambda ts: ts.tag), start=1):
+        for idx, series in enumerate(sorted(cls._time_series.values(), key=lambda ts: ts.tag), start=cls._start_tag):
             series.tag = idx
             new_time_series[idx] = series
         cls._time_series = new_time_series
@@ -74,6 +75,21 @@ class TimeSeries(ABC):
             Dict[int, TimeSeries]: A dictionary of all time series, keyed by their tags
         """
         return cls._time_series.copy()
+
+    @classmethod
+    def reset(cls):
+        cls._time_series.clear()
+        cls._start_tag = 1
+        cls._reassign_tags()
+
+    @classmethod
+    def set_tag_start(cls, start_tag: int):
+        cls._start_tag = start_tag
+        cls._reassign_tags()
+
+    @classmethod
+    def clear_all(cls):
+        cls._time_series.clear()
 
 
     @abstractmethod
@@ -935,6 +951,27 @@ class PulseTimeSeries(TimeSeries):
 class PathTimeSeries(TimeSeries):
     """
     TimeSeries object that interpolates between defined time and load factor points
+
+    Args:
+        dt (float): Time increment for path
+        values (list): List of force values
+        filePath (str): Path to file containing force values
+        factor (float): Scale factor for force values
+        useLast (bool): Use last force value beyond the last time point if true
+        prependZero (bool): Prepend a zero value at the start
+        startTime (float): Start time of the time series
+        time (list): List of time points
+        fileTime (str): Path to file containing time points
+
+    Example:
+        timeseries = fm.timeSeries.path(
+            dt=0.02,
+            values=[0.0, 1.0, 0.0],
+            filePath="CFG2_ax_base_02g_avg.acc",
+            factor=9.81,
+        )
+
+    
     """
     def __init__(self, **kwargs):
         """
@@ -1227,6 +1264,16 @@ class TimeSeriesManager:
         if cls._instance is None:
             cls._instance = super(TimeSeriesManager, cls).__new__(cls)
         return cls._instance
+
+    def __init__(self):
+        self.path = PathTimeSeries
+        self.constant = ConstantTimeSeries
+        self.linear = LinearTimeSeries
+        self.trig = TrigTimeSeries
+        self.ramp = RampTimeSeries
+        self.triangular = TriangularTimeSeries
+        self.rectangular = RectangularTimeSeries
+        self.pulse = PulseTimeSeries
     
     def __len__(self):
         """

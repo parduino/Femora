@@ -4,7 +4,7 @@ from femora.components.Assemble.Assembler import Assembler
 from femora.components.Damping.dampingBase import DampingManager
 from femora.components.Region.regionBase import RegionManager
 from femora.components.Constraint.constraint import Constraint
-from femora.components.Mesh.meshPartBase import MeshPartRegistry
+from femora.components.Mesh.meshPartBase import MeshPartManager
 from femora.components.Mesh.meshPartInstance import *
 from femora.components.TimeSeries.timeSeriesBase import TimeSeriesManager
 from femora.components.Analysis.analysis import AnalysisManager
@@ -12,17 +12,25 @@ from femora.components.Pattern.patternBase import PatternManager
 from femora.components.Recorder.recorderBase import RecorderManager
 from femora.components.Process.process import ProcessManager
 from femora.components.DRM.DRM import DRM
+from femora.components.transformation.transformation import GeometricTransformationManager
+from femora.components.interface.interface_base import InterfaceManager
+from femora.components.section.section_base import SectionManager
+from femora.components.mass.mass_manager import MassManager
+from femora.components.geometry_ops.spatial_transform_manager import SpatialTransformManager
 import os
 from numpy import unique, zeros, arange, array, abs, concatenate, meshgrid, ones, full, uint16, repeat, where, isin
 from pyvista import Cube, MultiBlock, StructuredGrid
-import tqdm
 from pykdtree.kdtree import KDTree as pykdtree
+from femora.components.event.event_bus import EventBus, FemoraEvent
+from femora.utils.progress import get_progress_callback, Progress
+import numpy as np
 
 class MeshMaker:
     """
     Singleton class for managing OpenSees GUI operations and file exports
     """
     _instance = None
+    _results_folder = ""
 
     def __new__(cls, *args, **kwargs):
         """
@@ -57,44 +65,119 @@ class MeshMaker:
         self.material = MaterialManager()
         self.element = ElementRegistry()
         self.damping = DampingManager()
+        self.mass = MassManager()
         self.region = RegionManager()
         self.constraint = Constraint()
-        self.meshPart = MeshPartRegistry()
+        self.meshPart = MeshPartManager()
         self.timeSeries = TimeSeriesManager()
         self.analysis = AnalysisManager()
         self.pattern = PatternManager()
         self.recorder = RecorderManager()
         self.process = ProcessManager()
+        self.interface = InterfaceManager()
+        self.transformation = GeometricTransformationManager()
+        self.section = SectionManager()
+        self.spatial_transform = SpatialTransformManager()
+        
+        # Tag start controls for node and element IDs written to TCL
+        # These control only exported OpenSees node/element tags (not Material/Element class tags)
+        self._start_nodetag: int = 1
+        self._start_ele_tag: int = 1
+        
+        @property
+        def mesh_part(self):
+            return self.meshPart
+        
+        
+
         
         # Initialize DRMHelper with a reference to this MeshMaker instance
         self.drm = DRM()
         self.drm.set_meshmaker(self)
         
-    def _progress_callback(self, value, message):
+    # ------------------------------------------------------------------
+    # Progress helpers
+    # ------------------------------------------------------------------
+
+    def set_nodetag_start(self, start_tag: int) -> None:
         """
-        Default progress callback using tqdm when no callback is provided
-        
+        Set the starting tag number for nodes in exported TCL.
+
         Args:
-            value (float): Progress value (0-100)
-            message (str): Progress message
+            start_tag (int): First node tag to use (must be >= 1)
         """
-        if not hasattr(self, '_tqdm_progress'):
-            # Initialize tqdm progress bar on first call
-            self._tqdm_progress = tqdm.tqdm(total=100, desc="Exporting to TCL", bar_format="{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}] {postfix}")
-            self._tqdm_progress.set_postfix_str(message)
-            self._tqdm_progress.update(value)
-        else:
-            # Update existing progress bar
-            current = self._tqdm_progress.n
-            increment = int(value) - current
-            if increment > 0:
-                self._tqdm_progress.set_postfix_str(message)
-                self._tqdm_progress.update(increment)
-            
-        # Close the progress bar if we're finished
-        if value >= 100:
-            self._tqdm_progress.close()
-            delattr(self, '_tqdm_progress')
+        if not isinstance(start_tag, int) or start_tag < 1:
+            raise ValueError("Node tag start must be an integer >= 1")
+        self._start_nodetag = start_tag
+
+    def set_eletag_start(self, start_tag: int) -> None:
+        """
+        Set the starting tag number for elements in exported TCL.
+
+        Args:
+            start_tag (int): First element tag to use (must be >= 1)
+        """
+        if not isinstance(start_tag, int) or start_tag < 1:
+            raise ValueError("Element tag start must be an integer >= 1")
+        self._start_ele_tag = start_tag
+
+    def _progress_callback(self, value: float, message: str):
+        """Default progress reporter that uses the shared Progress utility."""
+        Progress.callback(value, message, desc="Exporting to TCL")
+
+    def _get_tcl_helper_functions(self):
+        """
+        Return TCL helper functions as a string.
+        
+        This method contains all the TCL helper functions needed for the exported model.
+        Embedding them directly in the code ensures they're always available and makes
+        the package more professional and self-contained.
+        
+        Returns:
+            str: TCL helper functions
+        """
+        return '''proc getFemoraMax {type} {
+	set local_max -1.e8
+	if {$type == "eleTag"} {
+		set Tags [getEleTags]
+	} elseif {$type == "nodeTag"} {
+		set Tags [getNodeTags]
+	} else {
+		puts "Unknown type $type"
+		return -1
+	}
+	# set Tags [getNodeTags]
+	foreach tag $Tags {
+		if {$tag > $local_max} {
+			set local_max $tag
+		}
+	}
+	puts "local_max: $local_max from pid $::pid"
+	# send the max ele tag form each pid to the master
+	if {$::pid == 0} {
+		for {set i 1 } {$i < $::np} {incr i 1} { 
+			recv -pid $i ANY maxTag
+			if {$maxTag > $local_max} {
+				set local_max $maxTag
+			}
+		}
+	} else {
+		send -pid 0 "$local_max"
+	}
+
+	# now send the max ele tag to all pids
+	if {$::pid == 0} {
+		for {set i 1 } {$i < $::np} {incr i 1} { 
+			send -pid $i $local_max
+		}
+		set global_max $local_max
+	} else {
+		recv -pid 0 ANY global_max
+	}
+	return $global_max
+}
+
+'''
 
     @classmethod
     def get_instance(cls, **kwargs):
@@ -186,12 +269,21 @@ class MeshMaker:
             # Write to file
             with open(filename, 'w') as f:
 
+                # Inform interfaces that we are about to export
+                EventBus.emit(FemoraEvent.PRE_EXPORT, file_handle=f, assembled_mesh=self.assembler.AssembeledMesh)
+
                 f.write("wipe\n")
                 f.write("model BasicBuilder -ndm 3\n")
                 f.write("set pid [getPID]\n")
                 f.write("set np [getNP]\n")
 
-                # Writ the meshBounds
+                if self._results_folder != "":
+                    f.write("if {$pid == 0} {" + f"file mkdir {self._results_folder}" + "} \n")
+
+                f.write("\n# Helper functions ======================================\n")
+                f.write(self._get_tcl_helper_functions())
+
+                # Write the meshBounds
                 f.write("\n# Mesh Bounds ======================================\n")
                 bounds = self.assembler.AssembeledMesh.bounds
                 f.write(f"set X_MIN {bounds[0]}\n")
@@ -210,6 +302,16 @@ class MeshMaker:
                 for tag,mat in self.material.get_all_materials().items():
                     f.write(f"{mat.to_tcl()}\n")
 
+                # write the transformations
+                f.write("\n# Transformations ======================================\n")
+                for transf in self.transformation.get_all_transformations():
+                    f.write(f"{transf.to_tcl()}\n")
+
+                # Write the sections
+                f.write("\n# Sections ======================================\n")
+                for tag,section in self.section.get_all_sections().items():
+                    f.write(f"{section.to_tcl()}\n")
+
                 if progress_callback:
                     progress_callback(5,"writing nodes and elements")
 
@@ -219,10 +321,15 @@ class MeshMaker:
                 num_cores = unique(cores)
                 nodes     = self.assembler.AssembeledMesh.points
                 ndfs      = self.assembler.AssembeledMesh.point_data["ndf"]
+                mass      = self.assembler.AssembeledMesh.point_data["Mass"]
                 num_nodes = self.assembler.AssembeledMesh.n_points
                 wroted    = zeros((num_nodes, len(num_cores)), dtype=bool) # to keep track of the nodes that have been written
-                nodeTags  = arange(1, num_nodes+1, dtype=int)
-                eleTags   = arange(1, self.assembler.AssembeledMesh.n_cells+1, dtype=int)
+                nodeTags  = arange(self._start_nodetag,
+                                   self._start_nodetag + num_nodes,
+                                   dtype=int)
+                eleTags   = arange(self._start_ele_tag,
+                                   self._start_ele_tag + self.assembler.AssembeledMesh.n_cells,
+                                   dtype=int)
 
 
                 elementClassTag = self.assembler.AssembeledMesh.cell_data["ElementTag"]
@@ -237,6 +344,12 @@ class MeshMaker:
                     for pid in pids:
                         if not wroted[pid][core]:
                             f.write(f"\tnode {nodeTags[pid]} {nodes[pid][0]} {nodes[pid][1]} {nodes[pid][2]} -ndf {ndfs[pid]}\n")
+                            mass_vec = mass[pid]
+                            mass_vec = mass_vec[:ndfs[pid]] 
+                            # if any of the mass vector is not zero then write it
+                            if abs(mass_vec).sum() > 1e-6:
+                                f.write(f"\tmass {nodeTags[pid]} {' '.join(map(str, mass_vec))}\n")
+                            # write them mass for that node
                             wroted[pid][core] = True
                     
                     eleclass = Element._elements[elementClassTag[i]]
@@ -247,6 +360,10 @@ class MeshMaker:
                     if progress_callback:
                         progress_callback((i / self.assembler.AssembeledMesh.n_cells) * 45 + 5, "writing nodes and elements")
 
+                # notify EmbbededBeamSolidInterface event
+                EventBus.emit(FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, file_handle=f)             
+                
+                
                 if progress_callback:
                     progress_callback(50, "writing dampings")
                 # writ the dampings 
@@ -478,4 +595,24 @@ class MeshMaker:
         if model_path is not None:
             self.model_path = model_path
 
+    @classmethod
+    def set_results_folder(cls, folder_name):
+        """
+        Set the results folder for the model
+        This method updates the results folder where simulation results will be stored.
 
+        Args:
+            folder_name (str): path to the results folder
+        """
+        cls._results_folder = folder_name
+
+    @classmethod
+    def get_results_folder(cls):
+        """
+        Get the current results folder path
+        
+        Returns:
+            str: The path to the results folder
+        """
+        return cls._results_folder if cls._results_folder else ""
+        

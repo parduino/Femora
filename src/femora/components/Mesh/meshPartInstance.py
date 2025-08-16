@@ -24,7 +24,7 @@ Usage:
     This module is intended to be used as part of the MeshMaker lib for 
     defining and manipulating 3D structured rectangular mesh parts.
 """
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union, Optional
 from abc import ABC, abstractmethod
 import numpy as np
 import pyvista as pv
@@ -38,15 +38,65 @@ from femora.components.Region.regionBase import RegionBase
 class StructuredRectangular3D(MeshPart):
     """
     Structured Rectangular 3D Mesh Part
+
+    Parameters
+    ----------
+    user_name : str
+        Unique user name for the mesh part.
+    element : Element
+        Associated element.
+    region : RegionBase, optional
+        Associated region.
+    X Min : float
+        Minimum X coordinate.
+    X Max : float
+        Maximum X coordinate.
+    Y Min : float
+        Minimum Y coordinate.
+    Y Max : float
+        Maximum Y coordinate.
+    Z Min : float
+        Minimum Z coordinate.
+    Z Max : float
+        Maximum Z coordinate.
+    Nx Cells : int
+        Number of cells in X direction.
+    Ny Cells : int
+        Number of cells in Y direction.
+    Nz Cells : int
+        Number of cells in Z direction.
     """
     _compatible_elements = ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
     def __init__(self, user_name: str, element: Element, region: RegionBase=None,**kwargs):
         """
-        Initialize a 3D Structured Rectangular Mesh Part
-        
-        Args:
-            user_name (str): Unique user name for the mesh part
-            element (Optional[Element]): Associated element
+        Initialize a 3D Structured Rectangular Mesh Part.
+
+        Parameters
+        ----------
+        user_name : str
+            Unique user name for the mesh part.
+        element : Element
+            Associated element.
+        region : RegionBase, optional
+            Associated region.
+        X Min : float
+            Minimum X coordinate.
+        X Max : float
+            Maximum X coordinate.
+        Y Min : float
+            Minimum Y coordinate.
+        Y Max : float
+            Maximum Y coordinate.
+        Z Min : float
+            Minimum Z coordinate.
+        Z Max : float
+            Maximum Z coordinate.
+        Nx Cells : int
+            Number of cells in X direction.
+        Ny Cells : int
+            Number of cells in Y direction.
+        Nz Cells : int
+            Number of cells in Z direction.
         """
         super().__init__(
             category='volume mesh',
@@ -206,20 +256,41 @@ MeshPartRegistry.register_mesh_part_type('Volume mesh', 'Uniform Rectangular Gri
 class CustomRectangularGrid3D(MeshPart):
     """
     Custom Rectangular Grid 3D Mesh Part
+
+    Parameters
+    ----------
+    user_name : str
+        Unique user name for the mesh part.
+    element : Element
+        Associated element.
+    region : RegionBase, optional
+        Associated region.
+    x_coords : list of float (comma separated string)
+        List of X coordinates.
+    y_coords : list of float (comma separated string)
+        List of Y coordinates.
+    z_coords : list of float (comma separated string)
+        List of Z coordinates.
     """
     _compatible_elements = ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
     def __init__(self, user_name: str, element: Element, region: RegionBase=None,**kwargs):
         """
-        Initialize a 3D Custom Rectangular Grid Mesh Part
-        
-        Args:
-            user_name (str): Unique user name for the mesh part
-            element (Optional[Element]): Associated element
-            region (Optional[RegionBase]): Associated region
-            **kwargs: Additional keyword arguments
-                x_coords (List[float]): List of X coordinates
-                y_coords (List[float]): List of Y coordinates
-                z_coords (List[float]): List of Z coordinates
+        Initialize a 3D Custom Rectangular Grid Mesh Part.
+
+        Parameters
+        ----------
+        user_name : str
+            Unique user name for the mesh part.
+        element : Element
+            Associated element.
+        region : RegionBase, optional
+            Associated region.
+        x_coords : list of float (comma separated string)
+            List of X coordinates.
+        y_coords : list of float (comma separated string)
+            List of Y coordinates.
+        z_coords : list of float (comma separated string)
+            List of Z coordinates.
         """
         super().__init__(
             category='volume mesh',
@@ -344,29 +415,77 @@ MeshPartRegistry.register_mesh_part_type('Volume mesh', 'Custom Rectangular Grid
 class GeometricStructuredRectangular3D(MeshPart):
     """
     Geometric Structured Rectangular 3D Mesh Part
+
+    Parameters
+    ----------
+    user_name : str
+        Unique user name for the mesh part.
+    element : Element
+        Associated element.
+    region : RegionBase, optional
+        Associated region.
+    x_min : float
+        Minimum X coordinate.
+    x_max : float
+        Maximum X coordinate.
+    y_min : float
+        Minimum Y coordinate.
+    y_max : float
+        Maximum Y coordinate.
+    z_min : float
+        Minimum Z coordinate.
+    z_max : float
+        Maximum Z coordinate.
+    nx : int
+        Number of cells in X direction.
+    ny : int
+        Number of cells in Y direction.
+    nz : int
+        Number of cells in Z direction.
+    x_ratio : float, optional
+        Ratio of cell increment in X direction (default 1).
+    y_ratio : float, optional
+        Ratio of cell increment in Y direction (default 1).
+    z_ratio : float, optional
+        Ratio of cell increment in Z direction (default 1).
     """
     _compatible_elements = ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
     def __init__(self, user_name: str, element: Element, region: RegionBase=None,**kwargs):
         """
-        Initialize a 3D Geometric Structured Rectangular Mesh Part
-        
-        Args:
-            user_name (str): Unique user name for the mesh part
-            element (Optional[Element]): Associated element
-            region (Optional[RegionBase]): Associated region
-            **kwargs: Additional keyword arguments
-                x_min (float): Minimum X coordinate
-                x_max (float): Maximum X coordinate
-                y_min (float): Minimum Y coordinate
-                y_max (float): Maximum Y coordinate
-                z_min (float): Minimum Z coordinate
-                z_max (float): Maximum Z coordinate
-                nx (int): Number of cells in X direction
-                ny (int): Number of cells in Y direction
-                nz (int): Number of cells in Z direction
-                x_ratio (float): Ratio of cell increment in X direction
-                y_ratio (float): Ratio of cell increment in Y direction
-                z_ratio (float): Ratio of cell increment in Z direction
+        Initialize a 3D Geometric Structured Rectangular Mesh Part.
+
+        Parameters
+        ----------
+        user_name : str
+            Unique user name for the mesh part.
+        element : Element
+            Associated element.
+        region : RegionBase, optional
+            Associated region.
+        x_min : float
+            Minimum X coordinate.
+        x_max : float
+            Maximum X coordinate.
+        y_min : float
+            Minimum Y coordinate.
+        y_max : float
+            Maximum Y coordinate.
+        z_min : float
+            Minimum Z coordinate.
+        z_max : float
+            Maximum Z coordinate.
+        nx : int
+            Number of cells in X direction.
+        ny : int
+            Number of cells in Y direction.
+        nz : int
+            Number of cells in Z direction.
+        x_ratio : float, optional
+            Ratio of cell increment in X direction (default 1).
+        y_ratio : float, optional
+            Ratio of cell increment in Y direction (default 1).
+        z_ratio : float, optional
+            Ratio of cell increment in Z direction (default 1).
         """
         super().__init__(
             category='volume mesh',
@@ -570,30 +689,71 @@ MeshPartRegistry.register_mesh_part_type('Volume mesh', 'Geometric Rectangular G
 
 class ExternalMesh(MeshPart):
     """
-    Custom Mesh Part that can load from a file or accept an existing PyVista mesh
+    Custom Mesh Part that can load from a file or accept an existing PyVista mesh.
+
+    Parameters
+    ----------
+    user_name : str
+        Unique user name for the mesh part.
+    element : Element
+        Associated element.
+    region : RegionBase, optional
+        Associated region.
+    mesh : pv.UnstructuredGrid, optional
+        Existing PyVista mesh to use.
+    filepath : str, optional
+        Path to mesh file to load.
+    scale : float, optional
+        Scale factor for the mesh.
+    rotate_x : float, optional
+        Rotation angle around X-axis in degrees.
+    rotate_y : float, optional
+        Rotation angle around Y-axis in degrees.
+    rotate_z : float, optional
+        Rotation angle around Z-axis in degrees.
+    translate_x : float, optional
+        Translation along X-axis.
+    translate_y : float, optional
+        Translation along Y-axis.
+    translate_z : float, optional
+        Translation along Z-axis.
+    transform_args : dict, optional
+        Optional transformation arguments dictionary containing any of the above transformation parameters.
     """
     _compatible_elements = ["stdBrick", "bbarBrick", "SSPbrick", "PML3D"]
     
     def __init__(self, user_name: str, element: Element, region: RegionBase=None, **kwargs):
         """
-        Initialize a Custom Mesh Part
-        
-        Args:
-            user_name (str): Unique user name for the mesh part
-            element (Element): Associated element
-            region (RegionBase, optional): Associated region
-            **kwargs: Additional keyword arguments
-                mesh (pv.UnstructuredGrid): Existing PyVista mesh to use
-                filepath (str): Path to mesh file to load
-                scale (float): Scale factor for the mesh
-                rotate_x (float): Rotation angle around X-axis in degrees
-                rotate_y (float): Rotation angle around Y-axis in degrees
-                rotate_z (float): Rotation angle around Z-axis in degrees
-                translate_x (float): Translation along X-axis
-                translate_y (float): Translation along Y-axis
-                translate_z (float): Translation along Z-axis
-                transform_args (Dict): Optional transformation arguments dictionary
-                    containing any of the above transformation parameters
+        Initialize a Custom Mesh Part.
+
+        Parameters
+        ----------
+        user_name : str
+            Unique user name for the mesh part.
+        element : Element
+            Associated element.
+        region : RegionBase, optional
+            Associated region.
+        mesh : pv.UnstructuredGrid, optional
+            Existing PyVista mesh to use.
+        filepath : str, optional
+            Path to mesh file to load.
+        scale : float, optional
+            Scale factor for the mesh.
+        rotate_x : float, optional
+            Rotation angle around X-axis in degrees.
+        rotate_y : float, optional
+            Rotation angle around Y-axis in degrees.
+        rotate_z : float, optional
+            Rotation angle around Z-axis in degrees.
+        translate_x : float, optional
+            Translation along X-axis.
+        translate_y : float, optional
+            Translation along Y-axis.
+        translate_z : float, optional
+            Translation along Z-axis.
+        transform_args : dict, optional
+            Optional transformation arguments dictionary containing any of the above transformation parameters.
         """
         super().__init__(
             category='volume mesh',
@@ -789,3 +949,798 @@ class ExternalMesh(MeshPart):
 
 # Register the Custom Mesh part type under the General mesh category
 MeshPartRegistry.register_mesh_part_type('General mesh', 'External mesh', ExternalMesh)
+
+
+class StructuredLineMesh(MeshPart):
+    """
+    Structured Line Mesh Part for beam/column elements.
+    Creates a grid of line elements with arbitrary normal direction.
+
+    Parameters
+    ----------
+    user_name : str
+        Unique user name for the mesh part.
+    element : Element
+        Associated beam element (must have section and transformation).
+    region : RegionBase, optional
+        Associated region.
+    base_point_x : float, optional
+        Base point X coordinate. Default: 0.0
+    base_point_y : float, optional
+        Base point Y coordinate. Default: 0.0
+    base_point_z : float, optional
+        Base point Z coordinate. Default: 0.0
+    base_vector_1_x : float, optional
+        First base vector X component. Default: 1.0
+    base_vector_1_y : float, optional
+        First base vector Y component. Default: 0.0
+    base_vector_1_z : float, optional
+        First base vector Z component. Default: 0.0
+    base_vector_2_x : float, optional
+        Second base vector X component. Default: 0.0
+    base_vector_2_y : float, optional
+        Second base vector Y component. Default: 1.0
+    base_vector_2_z : float, optional
+        Second base vector Z component. Default: 0.0
+    normal_x : float, optional
+        Normal direction X component. Default: 0.0
+    normal_y : float, optional
+        Normal direction Y component. Default: 0.0
+    normal_z : float, optional
+        Normal direction Z component. Default: 1.0
+    grid_size_1 : int, optional
+        Number of elements in direction 1. Default: 10
+    grid_size_2 : int, optional
+        Number of elements in direction 2. Default: 10
+    spacing_1 : float, optional
+        Spacing in direction 1. Default: 1.0
+    spacing_2 : float, optional
+        Spacing in direction 2. Default: 1.0
+    length : float, optional
+        Length of each line element along normal. Default: 1.0
+    offset_1 : float, optional
+        Optional offset in direction 1. Default: 0.0
+    offset_2 : float, optional
+        Optional offset in direction 2. Default: 0.0
+    number_of_lines : int, optional
+        Number of line elements along normal direction per grid point. Default: 1
+    merge_points : bool, optional
+        Whether to merge duplicate points. Default: True
+    """
+    _compatible_elements = ["DispBeamColumn", "ForceBeamColumn", "ElasticBeamColumn", "NonlinearBeamColumn"]
+    
+    def __init__(self, user_name: str, element: Element, region: Optional[RegionBase]=None, **kwargs):
+        """
+        Initialize a Structured Line Mesh Part.
+
+        Parameters
+        ----------
+        user_name : str
+            Unique user name for the mesh part.
+        element : Element
+            Associated beam element (must have section and transformation).
+        region : RegionBase, optional
+            Associated region.
+        base_point_x : float, optional
+            Base point X coordinate. Default: 0.0
+        base_point_y : float, optional
+            Base point Y coordinate. Default: 0.0
+        base_point_z : float, optional
+            Base point Z coordinate. Default: 0.0
+        base_vector_1_x : float, optional
+            First base vector X component. Default: 1.0
+        base_vector_1_y : float, optional
+            First base vector Y component. Default: 0.0
+        base_vector_1_z : float, optional
+            First base vector Z component. Default: 0.0
+        base_vector_2_x : float, optional
+            Second base vector X component. Default: 0.0
+        base_vector_2_y : float, optional
+            Second base vector Y component. Default: 1.0
+        base_vector_2_z : float, optional
+            Second base vector Z component. Default: 0.0
+        normal_x : float, optional
+            Normal direction X component. Default: 0.0
+        normal_y : float, optional
+            Normal direction Y component. Default: 0.0
+        normal_z : float, optional
+            Normal direction Z component. Default: 1.0
+        grid_size_1 : int, optional
+            Number of elements in direction 1. Default: 10
+        grid_size_2 : int, optional
+            Number of elements in direction 2. Default: 10
+        spacing_1 : float, optional
+            Spacing in direction 1. Default: 1.0
+        spacing_2 : float, optional
+            Spacing in direction 2. Default: 1.0
+        length : float, optional
+            Length of each line element along normal. Default: 1.0
+        offset_1 : float, optional
+            Optional offset in direction 1. Default: 0.0
+        offset_2 : float, optional
+            Optional offset in direction 2. Default: 0.0
+        number_of_lines : int, optional
+            Number of line elements along normal direction per grid point. Default: 1
+        merge_points : bool, optional
+            Whether to merge duplicate points. Default: True
+        """
+        super().__init__(
+            category='line mesh',
+            mesh_type='Structured Line Grid',
+            user_name=user_name,
+            element=element,
+            region=region
+        )
+        
+        # Validate element compatibility
+        if not self.is_element_compatible(element):
+            raise ValueError(f"Element type '{element.element_type}' is not compatible with line mesh. "
+                           f"Must be a beam element with section and transformation.")
+        
+        kwargs = self.validate_parameters(**kwargs)
+        self.params = kwargs if kwargs else {}
+        self.generate_mesh()
+
+    def is_element_compatible(self, element: Element) -> bool:
+        """
+        Check if element is compatible with line mesh
+        
+        Args:
+            element (Element): Element to check
+            
+        Returns:
+            bool: True if compatible, False otherwise
+        """
+        # Check element type compatibility using base class method
+        if not self.is_elemnt_compatible(element.element_type):
+            return False
+        
+        # Must have section and transformation
+        if not element.get_section() or not element.get_transformation():
+            return False
+        
+        return True
+
+    def generate_mesh(self) -> pv.UnstructuredGrid:
+        """
+        Generate a structured line mesh
+        
+        Returns:
+            pv.UnstructuredGrid: Generated line mesh
+        """
+        import numpy as np
+        
+        # Extract parameters
+        base_point = np.array([
+            self.params.get('base_point_x', 0),
+            self.params.get('base_point_y', 0),
+            self.params.get('base_point_z', 0)
+        ])
+        
+        base_vector_1 = np.array([
+            self.params.get('base_vector_1_x', 1),
+            self.params.get('base_vector_1_y', 0),
+            self.params.get('base_vector_1_z', 0)
+        ])
+        
+        base_vector_2 = np.array([
+            self.params.get('base_vector_2_x', 0),
+            self.params.get('base_vector_2_y', 1),
+            self.params.get('base_vector_2_z', 0)
+        ])
+        
+        normal = np.array([
+            self.params.get('normal_x', 0),
+            self.params.get('normal_y', 0),
+            self.params.get('normal_z', 1)
+        ])
+        
+        grid_size_1 = self.params.get('grid_size_1', 10)
+        grid_size_2 = self.params.get('grid_size_2', 10)
+        spacing_1 = self.params.get('spacing_1', 1.0)
+        spacing_2 = self.params.get('spacing_2', 1.0)
+        length = self.params.get('length', 1.0)
+        offset_1 = self.params.get('offset_1', 0.0)
+        offset_2 = self.params.get('offset_2', 0.0)
+        number_of_lines = self.params.get('number_of_lines', 1)
+        merge_points = self.params.get('merge_points', True)
+        
+        # Normalize vectors
+        base_vector_1 = base_vector_1 / np.linalg.norm(base_vector_1)
+        base_vector_2 = base_vector_2 / np.linalg.norm(base_vector_2)
+        normal = normal / np.linalg.norm(normal)
+        
+        # Generate grid points
+        points = []
+        lines = []
+        point_id = 0
+        
+        for i in range(grid_size_1 + 1):
+            for j in range(grid_size_2 + 1):
+                # Calculate grid point
+                grid_point = (base_point + 
+                            (i * spacing_1 + offset_1) * base_vector_1 +
+                            (j * spacing_2 + offset_2) * base_vector_2)
+                
+                # Create multiple line elements along the normal direction
+                for k in range(number_of_lines):
+                    # Calculate the start and end points for this line segment
+                    # Each line covers 1/number_of_lines of the total length
+                    t_start = k / number_of_lines
+                    t_end = (k + 1) / number_of_lines
+                    
+                    line_start = grid_point + t_start * length * normal
+                    line_end = grid_point + t_end * length * normal
+                    
+                    # Add points for this line
+                    points.append(line_start)
+                    points.append(line_end)
+                    
+                    # Add line (connect two points)
+                    lines.extend([2, point_id, point_id + 1])
+                    point_id += 2
+        
+        # Create PyVista PolyData
+        if points:
+            points_array = np.array(points)
+            poly_mesh = pv.PolyData(points_array, lines=lines)
+            
+            # Merge points if requested
+            if merge_points:
+                poly_mesh = poly_mesh.merge_points(tolerance=1e-4,
+                                                 inplace=False,
+                                                 progress_bar=False)
+            
+            # Cast to UnstructuredGrid
+            self.mesh = poly_mesh.cast_to_unstructured_grid()
+        else:
+            # Create empty mesh if no points
+            self.mesh = pv.PolyData().cast_to_unstructured_grid()
+        
+        return self.mesh
+
+    @classmethod
+    def get_parameters(cls) -> List[Tuple[str, str]]:
+        """
+        Get the list of parameters for this mesh part type.
+        
+        Returns:
+            List[Tuple[str, str]]: List of (parameter_name, description) tuples
+        """
+        return [
+            ('base_point_x', 'Base point X coordinate'),
+            ('base_point_y', 'Base point Y coordinate'),
+            ('base_point_z', 'Base point Z coordinate'),
+            ('base_vector_1_x', 'First base vector X component'),
+            ('base_vector_1_y', 'First base vector Y component'),
+            ('base_vector_1_z', 'First base vector Z component'),
+            ('base_vector_2_x', 'Second base vector X component'),
+            ('base_vector_2_y', 'Second base vector Y component'),
+            ('base_vector_2_z', 'Second base vector Z component'),
+            ('normal_x', 'Normal direction X component'),
+            ('normal_y', 'Normal direction Y component'),
+            ('normal_z', 'Normal direction Z component'),
+            ('grid_size_1', 'Number of elements in direction 1'),
+            ('grid_size_2', 'Number of elements in direction 2'),
+            ('spacing_1', 'Spacing in direction 1'),
+            ('spacing_2', 'Spacing in direction 2'),
+            ('length', 'Length of each line element along normal'),
+            ('offset_1', 'Optional offset in direction 1'),
+            ('offset_2', 'Optional offset in direction 2'),
+            ('number_of_lines', 'Number of line elements along normal direction per grid point'),
+            ('merge_points', 'Whether to merge duplicate points (True/False)')
+        ]
+
+    @classmethod
+    def validate_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
+        """
+        Validate the input parameters for the line mesh part.
+        
+        Args:
+            **kwargs: Input parameters
+            
+        Returns:
+            Dict[str, Union[int, float, str]]: Validated parameters
+            
+        Raises:
+            ValueError: If parameters are invalid
+        """
+        validated_params = {}
+        
+        # Validate base point coordinates
+        for coord in ['base_point_x', 'base_point_y', 'base_point_z']:
+            if coord in kwargs:
+                try:
+                    validated_params[coord] = float(kwargs[coord])
+                except (ValueError, TypeError):
+                    raise ValueError(f"{coord} must be a valid number")
+            else:
+                validated_params[coord] = 0.0
+        
+        # Validate base vectors
+        for vec_num in [1, 2]:
+            for coord in ['x', 'y', 'z']:
+                param_name = f'base_vector_{vec_num}_{coord}'
+                if param_name in kwargs:
+                    try:
+                        validated_params[param_name] = float(kwargs[param_name])
+                    except (ValueError, TypeError):
+                        raise ValueError(f"{param_name} must be a valid number")
+                else:
+                    # Default values: base_vector_1 = [1,0,0], base_vector_2 = [0,1,0]
+                    if vec_num == 1:
+                        validated_params[param_name] = 1.0 if coord == 'x' else 0.0
+                    else:
+                        validated_params[param_name] = 1.0 if coord == 'y' else 0.0
+        
+        # Validate normal vector
+        for coord in ['normal_x', 'normal_y', 'normal_z']:
+            if coord in kwargs:
+                try:
+                    validated_params[coord] = float(kwargs[coord])
+                except (ValueError, TypeError):
+                    raise ValueError(f"{coord} must be a valid number")
+            else:
+                validated_params[coord] = 1.0 if coord == 'normal_z' else 0.0
+        
+        # Validate grid sizes
+        for size_param in ['grid_size_1', 'grid_size_2']:
+            if size_param in kwargs:
+                try:
+                    size = int(kwargs[size_param])
+                    if size < 0:
+                        raise ValueError(f"{size_param} must be non-negative")
+                    validated_params[size_param] = size
+                except (ValueError, TypeError):
+                    raise ValueError(f"{size_param} must be a non-negative integer")
+            else:
+                validated_params[size_param] = 10
+        
+        # Validate spacings
+        for spacing_param in ['spacing_1', 'spacing_2']:
+            if spacing_param in kwargs:
+                try:
+                    spacing = float(kwargs[spacing_param])
+                    if spacing <= 0:
+                        raise ValueError(f"{spacing_param} must be positive")
+                    validated_params[spacing_param] = spacing
+                except (ValueError, TypeError):
+                    raise ValueError(f"{spacing_param} must be a positive number")
+            else:
+                validated_params[spacing_param] = 1.0
+        
+        # Validate length
+        if 'length' in kwargs:
+            try:
+                length = float(kwargs['length'])
+                if length <= 0:
+                    raise ValueError("length must be positive")
+                validated_params['length'] = length
+            except (ValueError, TypeError):
+                raise ValueError("length must be a positive number")
+        else:
+            validated_params['length'] = 1.0
+        
+        # Validate offsets
+        for offset_param in ['offset_1', 'offset_2']:
+            if offset_param in kwargs:
+                try:
+                    offset = float(kwargs[offset_param])
+                    validated_params[offset_param] = offset
+                except (ValueError, TypeError):
+                    raise ValueError(f"{offset_param} must be a valid number")
+            else:
+                validated_params[offset_param] = 0.0
+        
+        # Validate number of lines
+        if 'number_of_lines' in kwargs:
+            try:
+                num_lines = int(kwargs['number_of_lines'])
+                if num_lines < 1:
+                    raise ValueError("number_of_lines must be at least 1")
+                validated_params['number_of_lines'] = num_lines
+            except (ValueError, TypeError):
+                raise ValueError("number_of_lines must be a positive integer")
+        else:
+            validated_params['number_of_lines'] = 1
+        
+        # Validate merge_points
+        if 'merge_points' in kwargs:
+            merge_val = kwargs['merge_points']
+            if isinstance(merge_val, str):
+                merge_val = merge_val.lower()
+                if merge_val in ['true', '1', 'yes', 'on']:
+                    validated_params['merge_points'] = True
+                elif merge_val in ['false', '0', 'no', 'off']:
+                    validated_params['merge_points'] = False
+                else:
+                    raise ValueError("merge_points must be True/False or a valid boolean string")
+            elif isinstance(merge_val, bool):
+                validated_params['merge_points'] = merge_val
+            else:
+                raise ValueError("merge_points must be a boolean value")
+        else:
+            validated_params['merge_points'] = True
+        
+        return validated_params
+
+    def update_parameters(self, **kwargs) -> None:
+        """
+        Update mesh part parameters
+        
+        Args:
+            **kwargs: Keyword arguments to update
+        """
+        validated_params = self.validate_parameters(**kwargs)
+        self.params.update(validated_params)
+        self.generate_mesh()
+
+    @classmethod
+    def get_Notes(cls) -> Dict[str, Union[str, List[str]]]:
+        """
+        Get notes for the line mesh part type.
+        
+        Returns:
+            Dict[str, Union[str, List[str]]]: Notes with description, usage, limitations, and tips
+        """
+        return {
+            "description": "Structured Line Grid creates a regular grid of line elements (beams/columns) with arbitrary normal direction. Each line element extends from a grid point along the specified normal direction.",
+            "usage": [
+                "Use for creating column grids in buildings",
+                "Use for creating beam grids in floor systems", 
+                "Use for creating inclined structural elements",
+                "Ensure the associated element is a beam type with section and transformation",
+                "Specify base vectors to define the grid orientation",
+                "Specify normal vector to define the direction of line elements"
+            ],
+            "limitations": [
+                "Only compatible with beam element types",
+                "Requires element to have both section and geometric transformation",
+                "Grid is limited to rectangular patterns",
+                "All lines have the same length"
+            ],
+            "tips": [
+                "Use base_vector_1 and base_vector_2 to define the grid plane orientation",
+                "Use normal vector to define the direction of the line elements",
+                "Set grid_size_1 and grid_size_2 to control the density of the grid",
+                "Use spacing_1 and spacing_2 to control the distance between lines",
+                "Use offset_1 and offset_2 to shift the entire grid",
+                "Ensure base vectors are perpendicular for best results"
+            ]
+        }
+
+# Register the Structured Line mesh part type
+MeshPartRegistry.register_mesh_part_type('Line mesh', 'Structured Line Grid', StructuredLineMesh)
+
+
+class SingleLineMesh(MeshPart):
+    """
+    Single Line Mesh Part for beam/column elements.
+    Creates a single line element between two points.
+
+    Parameters
+    ----------
+    user_name : str
+        Unique user name for the mesh part.
+    element : Element
+        Associated beam element (must have section and transformation).
+    region : RegionBase, optional
+        Associated region.
+    x0 : float, optional
+        Start point X coordinate. Default: 0.0
+    y0 : float, optional
+        Start point Y coordinate. Default: 0.0
+    z0 : float, optional
+        Start point Z coordinate. Default: 0.0
+    x1 : float, optional
+        End point X coordinate. Default: 1.0
+    y1 : float, optional
+        End point Y coordinate. Default: 0.0
+    z1 : float, optional
+        End point Z coordinate. Default: 0.0
+    number_of_lines : int, optional
+        Number of line elements to create along the path. Default: 1
+    merge_points : bool, optional
+        Whether to merge duplicate points. Default: True
+    """
+    _compatible_elements = ["DispBeamColumn", "ForceBeamColumn", "ElasticBeamColumn", "NonlinearBeamColumn"]
+    
+    def __init__(self, user_name: str, element: Element, region: Optional[RegionBase]=None, **kwargs):
+        """
+        Initialize a Single Line Mesh Part.
+
+        Parameters
+        ----------
+        user_name : str
+            Unique user name for the mesh part.
+        element : Element
+            Associated beam element (must have section and transformation).
+        region : RegionBase, optional
+            Associated region.
+        x0 : float, optional
+            Start point X coordinate. Default: 0.0
+        y0 : float, optional
+            Start point Y coordinate. Default: 0.0
+        z0 : float, optional
+            Start point Z coordinate. Default: 0.0
+        x1 : float, optional
+            End point X coordinate. Default: 1.0
+        y1 : float, optional
+            End point Y coordinate. Default: 0.0
+        z1 : float, optional
+            End point Z coordinate. Default: 0.0
+        number_of_lines : int, optional
+            Number of line elements to create along the path. Default: 1
+        merge_points : bool, optional
+            Whether to merge duplicate points. Default: True
+        """
+        super().__init__(
+            category='line mesh',
+            mesh_type='Single Line',
+            user_name=user_name,
+            element=element,
+            region=region
+        )
+        
+        # Validate element compatibility
+        if not self.is_element_compatible(element):
+            raise ValueError(f"Element type '{element.element_type}' is not compatible with line mesh. "
+                           f"Must be a beam element with section and transformation.")
+        
+        kwargs = self.validate_parameters(**kwargs)
+        self.params = kwargs if kwargs else {}
+        self.generate_mesh()
+
+    def is_element_compatible(self, element: Element) -> bool:
+        """
+        Check if element is compatible with line mesh
+        
+        Args:
+            element (Element): Element to check
+            
+        Returns:
+            bool: True if compatible, False otherwise
+        """
+        # Check element type compatibility using base class method
+        if not self.is_elemnt_compatible(element.element_type):
+            return False
+        
+        # Must have section and transformation
+        if not element.get_section() or not element.get_transformation():
+            return False
+        
+        return True
+
+    def generate_mesh(self) -> pv.PolyData:
+        """
+        Generate a single line mesh
+        
+        Returns:
+            pv.PolyData: Generated line mesh
+        """
+        import numpy as np
+        
+        # Extract parameters
+        x0 = self.params.get('x0', 0.0)
+        y0 = self.params.get('y0', 0.0)
+        z0 = self.params.get('z0', 0.0)
+        x1 = self.params.get('x1', 1.0)
+        y1 = self.params.get('y1', 0.0)
+        z1 = self.params.get('z1', 0.0)
+        number_of_lines = self.params.get('number_of_lines', 1)
+        merge_points = self.params.get('merge_points', True)
+        
+        # Create start and end points
+        start_point = np.array([x0, y0, z0])
+        end_point = np.array([x1, y1, z1])
+        
+        # Calculate the direction vector
+        direction = end_point - start_point
+        
+        # Create points array for multiple lines
+        points = []
+        lines = []
+        point_id = 0
+        
+        for i in range(number_of_lines):
+            # Calculate the start and end points for this line segment
+            # Each line covers 1/number_of_lines of the total distance
+            t_start = i / number_of_lines
+            t_end = (i + 1) / number_of_lines
+            
+            line_start = start_point + t_start * direction
+            line_end = start_point + t_end * direction
+            
+            # Add points for this line
+            points.append(line_start)
+            points.append(line_end)
+            
+            # Add line (connect two points)
+            lines.extend([2, point_id, point_id + 1])
+            point_id += 2
+        
+        # Create PyVista PolyData
+        if points:
+            points_array = np.array(points)
+            poly_mesh = pv.PolyData(points_array, lines=lines)
+            
+            # Merge points if requested
+            if merge_points:
+                poly_mesh = poly_mesh.merge_points(tolerance=1e-4,
+                                                 inplace=False,
+                                                 progress_bar=False)
+            
+            # Cast to UnstructuredGrid
+            self.mesh = poly_mesh.cast_to_unstructured_grid()
+        else:
+            # Create empty mesh if no points
+            self.mesh = pv.PolyData().cast_to_unstructured_grid()
+        
+        return self.mesh
+
+    @classmethod
+    def get_parameters(cls) -> List[Tuple[str, str]]:
+        """
+        Get the list of parameters for this mesh part type.
+        
+        Returns:
+            List[Tuple[str, str]]: List of (parameter_name, description) tuples
+        """
+        return [
+            ('x0', 'Start point X coordinate'),
+            ('y0', 'Start point Y coordinate'),
+            ('z0', 'Start point Z coordinate'),
+            ('x1', 'End point X coordinate'),
+            ('y1', 'End point Y coordinate'),
+            ('z1', 'End point Z coordinate'),
+            ('number_of_lines', 'Number of line elements to create along the path. default is 1'),
+            ('merge_points', 'Whether to merge duplicate points (True/False). default is True')
+        ]
+
+    @classmethod
+    def validate_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
+        """
+        Validate the input parameters for the single line mesh part.
+        
+        Args:
+            **kwargs: Input parameters
+            
+        Returns:
+            Dict[str, Union[int, float, str]]: Validated parameters
+            
+        Raises:
+            ValueError: If parameters are invalid
+        """
+        validated_params = {}
+        
+        # Validate start point coordinates
+        for coord in ['x0', 'y0', 'z0']:
+            if coord in kwargs:
+                try:
+                    validated_params[coord] = float(kwargs[coord])
+                except (ValueError, TypeError):
+                    raise ValueError(f"{coord} must be a valid number")
+            else:
+                validated_params[coord] = 0.0
+        
+        # Validate end point coordinates
+        for coord in ['x1', 'y1', 'z1']:
+            if coord in kwargs:
+                try:
+                    validated_params[coord] = float(kwargs[coord])
+                except (ValueError, TypeError):
+                    raise ValueError(f"{coord} must be a valid number")
+            else:
+                validated_params[coord] = 1.0 if coord == 'x1' else 0.0
+        
+        # Validate number of lines
+        if 'number_of_lines' in kwargs:
+            try:
+                num_lines = int(kwargs['number_of_lines'])
+                if num_lines < 1:
+                    raise ValueError("Number of lines must be at least 1")
+                validated_params['number_of_lines'] = num_lines
+            except (ValueError, TypeError):
+                raise ValueError("number_of_lines must be a positive integer")
+        else:
+            validated_params['number_of_lines'] = 1
+        
+        # Check that start and end points are different
+        start_point = np.array([validated_params['x0'], validated_params['y0'], validated_params['z0']])
+        end_point = np.array([validated_params['x1'], validated_params['y1'], validated_params['z1']])
+        
+        if np.allclose(start_point, end_point):
+            raise ValueError("Start and end points cannot be the same")
+        
+        # Validate merge_points
+        if 'merge_points' in kwargs:
+            merge_val = kwargs['merge_points']
+            if isinstance(merge_val, str):
+                merge_val = merge_val.lower().strip()
+                if merge_val in ['true', '1', 'yes', 'on']:
+                    validated_params['merge_points'] = True
+                elif merge_val in ['false', '0', 'no', 'off']:
+                    validated_params['merge_points'] = False
+                elif merge_val == '':  # Handle empty string as default True
+                    validated_params['merge_points'] = True
+                else:
+                    raise ValueError("merge_points must be True/False or a valid boolean string")
+            elif isinstance(merge_val, bool):
+                validated_params['merge_points'] = merge_val
+            else:
+                raise ValueError("merge_points must be a boolean value")
+        else:
+            validated_params['merge_points'] = True
+        
+        return validated_params
+
+    @classmethod
+    def is_elemnt_compatible(cls, element: str) -> bool:
+        """
+        Check if element type is compatible with this mesh part
+        
+        Args:
+            element (str): Element type name
+            
+        Returns:
+            bool: True if compatible, False otherwise
+        """
+        return element.lower() in [elem.lower() for elem in cls._compatible_elements]
+
+    def update_parameters(self, **kwargs) -> None:
+        """
+        Update mesh part parameters
+        
+        Args:
+            **kwargs: Keyword arguments to update
+        """
+        validated_params = self.validate_parameters(**kwargs)
+        self.params.update(validated_params)
+        self.generate_mesh()
+
+    @classmethod
+    def get_Notes(cls) -> Dict[str, Union[str, List[str]]]:
+        """
+        Get notes for the mesh part type
+        
+        Returns:
+            Dict[str, Union[str, List[str]]]: Dictionary containing notes about the mesh part
+        """
+        return {
+            "description": "Creates a single line element between two specified points. Ideal for individual beam or column elements.",
+            "usage": [
+                "Use for creating individual beam or column elements",
+                "Specify start and end points to define the line direction and length",
+                "Compatible with beam elements that have section and transformation properties",
+                "Suitable for structural analysis requiring individual line elements"
+            ],
+            "limitations": [
+                "Creates only one line element per mesh part",
+                "Requires beam element with section and transformation",
+                "Cannot create multiple lines or complex geometries"
+            ],
+            "tips": [
+                "Ensure start and end points are different",
+                "Use appropriate beam element type for your analysis",
+                "Consider the coordinate system when specifying points",
+                "Check that the element has proper section and transformation properties"
+            ]
+        }
+
+# Register the Single Line mesh part type
+MeshPartRegistry.register_mesh_part_type('Line mesh', 'Single Line', SingleLineMesh)
+
+
+
+# Manager classes for organizing mesh types
+class LineMeshManager:
+    """Manager class for line mesh types"""
+    single_line = SingleLineMesh
+    structured_lines = StructuredLineMesh
+
+
+class VolumeMeshManager:
+    """Manager class for volume mesh types"""
+    uniform_rectangular_grid = StructuredRectangular3D
+    geometric_rectangular_grid = GeometricStructuredRectangular3D
+    external_mesh = ExternalMesh
