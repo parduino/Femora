@@ -385,7 +385,7 @@ class AnalysisManager:
         # Create components
         numberer = options.get("numberer", self.numberer.create_numberer("parallelrcm"))
         integrator = options.get("integrator", self.integrator.create_integrator("newmark", gamma=0.5, beta=0.25))
-        system = options.get("system", self.system.create_system("mumps", icntl14=100, icntl7=7))
+        system = options.get("system", self.system.create_system("mumps", icntl14=400, icntl7=7))
         test = options.get("test", self.test.create_test("energyincr", tol=1e-3, max_iter=20, print_flag=2))
         algorithm = options.get("algorithm", self.algorithm.create_algorithm("modifiednewton", factor_once=True))
         constraint_handler = options.get("constraint_handler", self.constraint.create_handler("transformation"))
