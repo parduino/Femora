@@ -127,6 +127,7 @@ class TimeHistory:
     def load(file_path: str = None, 
              format: str = 'auto', 
              time_file: str = None, 
+             dt: float = None,
              acc_file: str = None, 
              delimiter: str = ',', 
              unit_in_g: bool = True,
@@ -144,6 +145,21 @@ class TimeHistory:
         Returns:
             TimeHistory: Loaded time history object
         """
+        if time_file is None and dt is None :
+            raise ValueError("Either time_file or dt must be provided.")
+        
+        if dt is not None and time_file is not None:
+            raise ValueError("Cannot provide both dt and time_file. Choose one.")
+        
+        if dt and acc_file:
+            acc = np.loadtxt(acc_file, delimiter=delimiter, skiprows=skiprows)
+            time = np.arange(0, len(acc) * dt, dt)
+            return TimeHistory(time, 
+                               acc, 
+                               unit_in_g=unit_in_g, 
+                               gravity=gravity,
+                               metadata={'source': 'values', 'dt': dt, 'acc_file': acc_file})
+
         if time_file and acc_file:
             time = np.loadtxt(time_file, delimiter=delimiter, skiprows=skiprows)
             acc = np.loadtxt(acc_file, delimiter=delimiter, skiprows=skiprows)
