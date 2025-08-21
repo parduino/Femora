@@ -729,7 +729,7 @@ class Assembler:
         Returns:
             Optional[pv.UnstructuredGrid]: The assembled mesh, or None if not yet created
         """
-        return self.AssembeledMesh
+        return self.AssembeledMesh.copy() 
 
 
     # Big announcement box
