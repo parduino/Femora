@@ -4,6 +4,7 @@ import pyvista as pv
 import warnings
 import logging
 import sys
+from scipy.spatial import KDTree
 
 from femora.components.Mesh.meshPartBase import MeshPart
 from femora.components.Element.elementBase import Element
@@ -71,6 +72,7 @@ class Assembler:
         partition_algorithm: str = "kd-tree", 
         merging_points: bool = True,
         mass_merging: str = "sum",
+        tolerance: float = 1e-5,
         **kwargs: Any
     ) -> 'AssemblySection':
         """
@@ -274,10 +276,36 @@ class Assembler:
             KeyError: If no assembly section with the given tag exists
         """
         return self._assembly_sections[tag]
+
+    @staticmethod
+    def _snap_points(points: np.ndarray, tol: float = 1e-5) -> np.ndarray:
+        """
+        Snap points within tolerance to the first representative point
+        using KDTree.
+        """
+        tree = KDTree(points)
+        groups = tree.query_ball_tree(tree, tol)
+
+        visited = np.zeros(len(points), dtype=bool)
+        snapped = points.copy()
+
+        for i in range(len(points)):
+            if visited[i]:
+                continue
+            cluster = groups[i]
+            rep = points[i]  # pick the first point
+            for j in cluster:
+                snapped[j] = rep
+                visited[j] = True
+
+        return snapped
+
+
     
     def Assemble(self, 
                  merge_points: bool = True, 
                  mass_merging: str = "sum",
+                 tolerance: float = 1e-5,
                  *, 
                  progress_callback=None) -> None:
         """
@@ -342,6 +370,10 @@ class Assembler:
             )
             if merge_points:
                 number_of_points_before_cleaning = self.AssembeledMesh.n_points
+
+                # snap points within tolerance
+                self.AssembeledMesh.points = self._snap_points(self.AssembeledMesh.points, tolerance)
+
                 mass = self.AssembeledMesh.point_data["Mass"]
                 self.AssembeledMesh = self.AssembeledMesh.clean(
                     tolerance=1e-5,
@@ -729,7 +761,7 @@ class Assembler:
         Returns:
             Optional[pv.UnstructuredGrid]: The assembled mesh, or None if not yet created
         """
-        return self.AssembeledMesh
+        return self.AssembeledMesh.copy() 
 
 
     # Big announcement box
@@ -800,7 +832,8 @@ class AssemblySection:
         partition_algorithm: str = "kd-tree", 
         merging_points: bool = True,
         progress_callback=None,
-        mass_merging: str = "sum"
+        mass_merging: str = "sum",
+        tolerance: float = 1e-5,
     ):
         """
         Initialize an AssemblySection by combining multiple mesh parts.
@@ -860,6 +893,7 @@ class AssemblySection:
         self.mesh: Optional[pv.UnstructuredGrid] = None
         self.elements : List[Element] = []
         self.materials : List[Material] = []
+        self.tolerance = tolerance
 
         # Assemble the mesh first
         try:
@@ -946,6 +980,29 @@ class AssemblySection:
             return False
         
         return True
+
+    @staticmethod
+    def _snap_points(points, tol=1e-6):
+        """
+        Snap points within tolerance to the first representative point
+        using KDTree.
+        """
+        tree = KDTree(points)
+        groups = tree.query_ball_tree(tree, tol)
+
+        visited = np.zeros(len(points), dtype=bool)
+        snapped = points.copy()
+
+        for i in range(len(points)):
+            if visited[i]:
+                continue
+            cluster = groups[i]
+            rep = points[i]  # pick the first point
+            for j in cluster:
+                snapped[j] = rep
+                visited[j] = True
+
+        return snapped
     
     def _assemble_mesh(self, progress_callback=None):
         """
@@ -1039,8 +1096,13 @@ class AssemblySection:
         if self.merging_points:
             mass = self.mesh.point_data["Mass"]
             number_of_points_before_cleaning = self.mesh.number_of_points
+
+            # fist we snap points within tolerance to the first representative point
+            points = self._snap_points(self.mesh.points, tol=self.tolerance)
+            self.mesh.points = points
+
             self.mesh = self.mesh.clean(
-                tolerance=1e-5,
+                tolerance=self.tolerance,
                 remove_unused_points=False,
                 produce_merge_map=True,
                 average_point_data=True,
