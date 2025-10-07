@@ -83,6 +83,7 @@ class MeshMaker:
         # These control only exported OpenSees node/element tags (not Material/Element class tags)
         self._start_nodetag: int = 1
         self._start_ele_tag: int = 1
+        self._start_core_tag: int = 0
         
         @property
         def mesh_part(self):
@@ -121,6 +122,17 @@ class MeshMaker:
             raise ValueError("Element tag start must be an integer >= 1")
         self._start_ele_tag = start_tag
 
+    def set_start_core_tag(self, start_tag: int) -> None:
+        """
+        Set the starting tag number for cores in exported TCL.
+
+        Args:
+            start_tag (int): First core tag to use (must be >= 0)
+        """
+        if not isinstance(start_tag, int) or start_tag < 0:
+            raise ValueError("Core tag start must be an integer >= 0")
+        self._start_core_tag = start_tag
+
     def _progress_callback(self, value: float, message: str):
         """Default progress reporter that uses the shared Progress utility."""
         Progress.callback(value, message, desc="Exporting to TCL")
@@ -152,7 +164,6 @@ class MeshMaker:
 			set local_max $tag
 		}
 	}
-	puts "local_max: $local_max from pid $::pid"
 	# send the max ele tag form each pid to the master
 	if {$::pid == 0} {
 		for {set i 1 } {$i < $::np} {incr i 1} { 
