@@ -1,11 +1,12 @@
 name: Docstring Refactoring Bot
 
-on:
-  schedule:
-    # Run once a day at midnight UTC
-    - cron: '0 0 * * *'
-  # Allow manual trigger
-  workflow_dispatch:
+# on:
+#   schedule:
+#     # Run once a day at midnight UTC
+#     - cron: '0 0 * * *'
+#   # Allow manual trigger
+#   workflow_dispatch:
+on: [] # Disabled
 
 permissions:
   contents: write
