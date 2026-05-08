@@ -1,6 +1,4 @@
 targets:
-- path: src/femora/components/pattern/multiple_support.py
-  prompt: ''
 - path: src/femora/components/pattern/plain_pattern.py
   prompt: ''
 - path: src/femora/components/pattern/uniform_excitation.py

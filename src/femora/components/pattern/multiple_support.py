@@ -1,3 +1,9 @@
+I’ll inspect the target file and related pattern/manager definitions, then update only docstrings in the target file to match the Femora standard.
+
+I found the manager entry point; next I’ll align style by checking neighboring pattern docstrings before patching the target file.
+
+I have enough context and will now apply docstring-only edits, then run the project test command to ensure nothing else changed.
+
 from __future__ import annotations
 
 from typing import List
@@ -7,10 +13,31 @@ from femora.core.pattern_base import Pattern
 
 
 class ImposedMotion:
-    """OpenSees ``imposedMotion`` entry for a ``MultipleSupport`` pattern.
+    """OpenSees ``imposedMotion`` entry used inside ``MultipleSupport`` blocks.
+
+    This object represents one support constraint that applies a managed ground
+    motion to a specific node degree of freedom within a
+    ``MultipleSupportPattern``.
 
     Tcl form:
         ``imposedMotion <nodeTag> <dof> <groundMotionTag>``
+
+    Attributes:
+        node_tag: Node tag where the support motion is imposed.
+        dof: 1-based degree-of-freedom direction for the imposed motion.
+        ground_motion: Managed ground motion referenced by this entry.
+
+    Examples:
+        ```python
+        import femora as fm
+
+        model = fm.MeshMaker()
+        ts = model.timeSeries.path(dt=0.01, filePath="support.acc")
+        gm = model.groundMotion.plain(accel=ts)
+        pattern = model.pattern.multiple_support()
+        imposed = pattern.add_imposed_motion(node_tag=1, dof=1, ground_motion=gm)
+        print(imposed.to_tcl())
+        ```
     """
 
     def __init__(self, node_tag: int, dof: int, ground_motion: GroundMotion):
@@ -41,7 +68,14 @@ class ImposedMotion:
         self.ground_motion = ground_motion
 
     def to_tcl(self) -> str:
-        """Render this imposed motion as an OpenSees TCL command."""
+        """Render this imposed motion as an OpenSees Tcl command.
+
+        Returns:
+            Tcl command string for this ``imposedMotion`` entry.
+
+        Raises:
+            ValueError: If ``ground_motion`` does not currently have a tag.
+        """
         if self.ground_motion.tag is None:
             raise ValueError("ground_motion must have a tag before rendering imposedMotion")
         return f"imposedMotion {self.node_tag} {self.dof} {self.ground_motion.tag}"
@@ -57,6 +91,26 @@ class MultipleSupportPattern(Pattern):
 
     Tcl form:
         ``pattern MultipleSupport <patternTag> { groundMotion... imposedMotion... }``
+
+    Notes:
+        Ground motions referenced by imposed motions are deduplicated by tag in
+        the rendered Tcl block.
+
+    Attributes:
+        tag: Manager-assigned identifier after the pattern is added to the
+            pattern manager.
+
+    Examples:
+        ```python
+        import femora as fm
+
+        model = fm.MeshMaker()
+        ts = model.timeSeries.path(dt=0.01, filePath="support.acc")
+        gm = model.groundMotion.plain(accel=ts)
+        pattern = model.pattern.multiple_support()
+        pattern.add_imposed_motion(node_tag=10, dof=1, ground_motion=gm)
+        print(pattern.tag)
+        ```
     """
 
     def __init__(self):
@@ -79,13 +133,20 @@ class MultipleSupportPattern(Pattern):
 
         Returns:
             Created ``ImposedMotion`` instance.
+
+        Raises:
+            ValueError: If any imposed-motion input fails validation.
         """
         imposed_motion = ImposedMotion(node_tag, dof, ground_motion)
         self._imposed_motions.append(imposed_motion)
         return imposed_motion
 
     def get_imposed_motions(self) -> List[ImposedMotion]:
-        """Return a copy of imposed motions attached to this pattern."""
+        """Return imposed motions currently attached to this pattern.
+
+        Returns:
+            Shallow copy of imposed motions in insertion order.
+        """
         return list(self._imposed_motions)
 
     def clear_imposed_motions(self) -> None:
@@ -93,7 +154,15 @@ class MultipleSupportPattern(Pattern):
         self._imposed_motions.clear()
 
     def to_tcl(self) -> str:
-        """Render this pattern as an OpenSees TCL block."""
+        """Render this pattern as an OpenSees Tcl block.
+
+        Returns:
+            Tcl block containing ``groundMotion`` and ``imposedMotion`` lines.
+
+        Raises:
+            ValueError: If the pattern is unmanaged or a referenced ground
+                motion is unmanaged.
+        """
         lines = [f"pattern MultipleSupport {self._require_tag()} {{"]
         for ground_motion in self._referenced_ground_motions():
             lines.append(f"\t{ground_motion.to_tcl()}")
@@ -103,7 +172,15 @@ class MultipleSupportPattern(Pattern):
         return "\n".join(lines)
 
     def _referenced_ground_motions(self) -> List[GroundMotion]:
-        """Return referenced ground motions in dependency-safe render order."""
+        """Return referenced ground motions in dependency-safe render order.
+
+        Returns:
+            Ordered ground motions needed by all imposed motions in this
+            pattern, with dependencies emitted before dependents.
+
+        Raises:
+            ValueError: If any referenced ground motion is unmanaged.
+        """
         ordered: List[GroundMotion] = []
         seen: set[int] = set()
 
