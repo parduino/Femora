@@ -1,28 +1,53 @@
 import os
-import random
-import glob
 from dataclasses import dataclass
 from google import genai
-import time
+import yaml
 
 @dataclass
 class Config:
-    SOURCE_DIR: str = "src/femora"
     STYLE_GUIDE_PATH: str = "STYLE_GUIDE.md"
+    TARGETS_PATH: str = ".github/docstring_targets.yml"
     EXTENSIONS: tuple = (".py",)
-
-def get_random_file(source_dir: str) -> str:
-    """Selects a random Python file from the source directory."""
-    files = glob.glob(os.path.join(source_dir, "**/*.py"), recursive=True)
-    # Filter out __init__.py and empty files if needed
-    valid_files = [f for f in files if os.path.getsize(f) > 0]
-    if not valid_files:
-        raise FileNotFoundError("No Python files found.")
-    return random.choice(valid_files)
 
 def read_file(path: str) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
+
+
+def load_targets(path: str) -> dict:
+    """Load the YAML target manifest."""
+    with open(path, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    if not isinstance(data, dict):
+        raise ValueError("Target manifest must be a YAML mapping.")
+    targets = data.get("targets", [])
+    if targets is None:
+        targets = []
+    if not isinstance(targets, list):
+        raise ValueError("The 'targets' entry must be a list.")
+    data["targets"] = targets
+    return data
+
+
+def save_targets(path: str, data: dict) -> None:
+    """Write the YAML target manifest back to disk."""
+    with open(path, "w", encoding="utf-8") as f:
+        yaml.safe_dump(data, f, sort_keys=False, allow_unicode=True)
+
+
+def normalize_target(entry: dict) -> tuple[str, str]:
+    """Return the file path and optional prompt for one target entry."""
+    if not isinstance(entry, dict):
+        raise ValueError("Each target entry must be a YAML mapping.")
+    path = entry.get("path")
+    prompt = entry.get("prompt", "")
+    if not isinstance(path, str) or not path.strip():
+        raise ValueError("Each target entry must include a non-empty 'path'.")
+    if prompt is None:
+        prompt = ""
+    if not isinstance(prompt, str):
+        raise ValueError("Target 'prompt' must be a string when provided.")
+    return path.strip(), prompt.strip()
 
 def main():
     api_key = os.getenv("GEMINI_API_KEY")
@@ -39,26 +64,74 @@ def main():
         print(f"Error: {Config.STYLE_GUIDE_PATH} not found.")
         return
 
-    # 2. Pick a Target
-    target_file = get_random_file(Config.SOURCE_DIR)
+    try:
+        targets_data = load_targets(Config.TARGETS_PATH)
+    except FileNotFoundError:
+        print(f"Error: {Config.TARGETS_PATH} not found.")
+        return
+    except Exception as e:
+        print(f"Error loading target manifest: {e}")
+        return
+
+    if not targets_data["targets"]:
+        print("No docstring targets are queued.")
+        return
+
+    # 2. Pick the First Explicit Target
+    try:
+        target_file, target_prompt = normalize_target(targets_data["targets"][0])
+    except Exception as e:
+        print(f"Error in first target entry: {e}")
+        return
+
+    if not os.path.exists(target_file):
+        print(f"Error: target file does not exist: {target_file}")
+        return
+
     print(f"Refactoring docstrings for: {target_file}")
     
     original_code = read_file(target_file)
     
     # 3. Prompt Engineering
+    extra_prompt_block = ""
+    if target_prompt:
+        extra_prompt_block = f"""
+
+    Additional file-specific instructions:
+    {target_prompt}
+    """
+
     prompt = f"""
-    You are an expert Python documentation engineer. Your task is to rewrite the docstrings in the following Python code to strictly adhere to the Google Style Guide provided below.
+    You are editing docstrings for the Femora project.
 
-    Rules:
-    1. ONLY change docstrings. Do NOT change logic or variable names.
-    2. Add missing docstrings for all classes and public functions.
-    3. Use the exact indentation and formatting rules from the guide.
-    4. Return ONLY the full valid Python code. No markdown fences.
+    Follow the STYLE_GUIDE below exactly.
 
-    Style Guide:
+    Task:
+    - Review the entire file first.
+    - Read related project files when needed to understand managers, base classes, or usage patterns before editing.
+    - Only change docstrings.
+    - Do not change logic, imports, signatures, names, or behavior.
+    - Rewrite inconsistent docstrings to match the Femora docstring standard.
+    - Add missing docstrings for all classes and all methods.
+    - Every method docstring must be complete, whether the method is public or private.
+    - Keep class docstrings focused on concept, behavior, Tcl form, notes, attributes when needed, and required examples.
+    - Keep __init__ docstrings focused on Args and Raises.
+    - Because MkDocs merges __init__ into the class page, do not duplicate Args in the class docstring.
+    - Never use >>> in examples.
+    - Every class must include at least one example.
+    - Method examples are optional.
+    - If examples are included, use fenced python blocks.
+    - If examples are included for normal Femora usage, prefer:
+      import femora as fm
+      model = fm.MeshMaker()
+      and manager-based creation such as model.pattern..., model.timeSeries..., model.material..., or other appropriate managers.
+    - Return ONLY the full valid Python code. No markdown fences.
+    {extra_prompt_block}
+
+    STYLE_GUIDE:
     {style_guide}
 
-    Target Code:
+    TARGET CODE:
     {original_code}
     """
 
@@ -119,6 +192,10 @@ def main():
     # 5. Save Changes
     with open(target_file, "w", encoding="utf-8") as f:
         f.write(new_code)
+
+    # Remove the completed target from the queue.
+    targets_data["targets"].pop(0)
+    save_targets(Config.TARGETS_PATH, targets_data)
     
     print(f"Successfully updated docstrings for {target_file}")
 
