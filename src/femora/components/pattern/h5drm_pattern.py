@@ -6,11 +6,37 @@ from femora.core.pattern_base import Pattern
 
 
 class H5DRMPattern(Pattern):
-    """OpenSees ``H5DRM`` pattern.
+    """OpenSees ``H5DRM`` pattern for Domain Reduction Method loading.
 
-    The pattern references an HDF5 DRM input file and emits the Femora/OpenSees
-    H5DRM command including scale factors, node matching tolerance, optional
-    coordinate transformation matrix, and origin.
+    This pattern references an H5DRM dataset and configures how dataset
+    coordinates and loads are mapped into the analysis model, including optional
+    coordinate transformation and transformed origin values.
+
+    Tcl form:
+        ``pattern H5DRM <tag> "<filepath>" <factor> <crdScale> <distanceTolerance>
+        <doCoordinateTransformation> <T00> <T01> <T02> <T10> <T11> <T12> <T20>
+        <T21> <T22> <x00> <x01> <x02>``
+
+    Attributes:
+        tag: Manager-assigned identifier after the object is added to a Femora
+            manager.
+
+    Examples:
+        ```python
+        import femora as fm
+
+        model = fm.MeshMaker()
+        pattern = model.pattern.h5drm(
+            filepath="drmload.h5drm",
+            factor=1.0,
+            crd_scale=1.0,
+            distance_tolerance=1.0e-6,
+            do_coordinate_transformation=1,
+            transform_matrix=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
+            origin=[0.0, 0.0, 0.0],
+        )
+        print(pattern.tag)
+        ```
     """
 
     def __init__(
@@ -24,7 +50,7 @@ class H5DRMPattern(Pattern):
         origin: Optional[Sequence[float]] = None,
         **kwargs,
     ):
-        """Create an H5DRM load pattern.
+        """Create an H5DRM pattern with coordinate mapping parameters.
 
         Args:
             filepath: Path to the H5DRM dataset.
@@ -69,7 +95,14 @@ class H5DRMPattern(Pattern):
             raise ValueError("origin must contain 3 values")
 
     def to_tcl(self) -> str:
-        """Render this pattern as an OpenSees TCL command."""
+        """Render this pattern as an OpenSees Tcl command.
+
+        Returns:
+            Tcl command string for the ``H5DRM`` pattern.
+
+        Raises:
+            ValueError: If the pattern has not been assigned a manager tag.
+        """
         matrix = " ".join(map(str, self.transform_matrix))
         origin = " ".join(map(str, self.origin))
         return (
