@@ -1,9 +1,3 @@
-I’ll inspect the target file and related pattern/manager definitions, then update only docstrings in the target file to match the Femora standard.
-
-I found the manager entry point; next I’ll align style by checking neighboring pattern docstrings before patching the target file.
-
-I have enough context and will now apply docstring-only edits, then run the project test command to ensure nothing else changed.
-
 from __future__ import annotations
 
 from typing import List
