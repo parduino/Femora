@@ -14,6 +14,28 @@ class UniformExcitation(Pattern):
     Tcl form:
         ``pattern UniformExcitation <tag> <dof> -accel <tsTag>
         [-vel0 vel0] [-fact factor]``
+
+    Attributes:
+        tag: Manager-assigned identifier after the object is added to a Femora
+            manager.
+
+    Examples:
+        ```python
+        import femora as fm
+
+        model = fm.MeshMaker()
+        # Create a time series (e.g., from a file path)
+        ts = model.timeSeries.path(dt=0.01, filePath="ground_motion.acc")
+
+        # Create a uniform excitation pattern applied in DOF 1
+        pattern = model.pattern.uniform_excitation(
+            dof=1,
+            time_series=ts,
+            vel0=0.0,
+            factor=1.0
+        )
+        print(pattern.tag)
+        ```
     """
 
     def __init__(
@@ -26,14 +48,17 @@ class UniformExcitation(Pattern):
         """Create a uniform excitation pattern.
 
         Args:
-            dof: 1-based excitation direction.
-            time_series: Managed acceleration ``TimeSeries``.
-            vel0: Initial velocity.
-            factor: Scale factor applied to the acceleration series.
+            dof: 1-based excitation direction (e.g., 1 for X, 2 for Y, 3 for Z).
+            time_series: Managed acceleration ``TimeSeries`` object that defines
+                the excitation history.
+            vel0: Initial velocity, typically 0.0 unless starting from a known
+                non-zero initial velocity.
+            factor: Scale factor applied to the acceleration time series.
 
         Raises:
-            ValueError: If ``dof`` is invalid, ``time_series`` is not a
-                ``TimeSeries``, or ``time_series`` has not been managed.
+            ValueError: If ``dof`` is not a positive integer, ``time_series`` is
+                not an instance of ``TimeSeries``, or ``time_series`` has not
+                yet been assigned a tag by a Femora manager.
         """
         super().__init__("UniformExcitation")
         try:
@@ -51,7 +76,11 @@ class UniformExcitation(Pattern):
         self.factor = float(factor)
 
     def to_tcl(self) -> str:
-        """Render this pattern as an OpenSees TCL command."""
+        """Render this pattern as an OpenSees Tcl command.
+
+        Returns:
+            Tcl command string for the ``UniformExcitation`` pattern.
+        """
         cmd = f"pattern UniformExcitation {self._require_tag()} {self.dof} -accel {self.time_series.tag}"
         if self.vel0 != 0.0:
             cmd += f" -vel0 {self.vel0}"
