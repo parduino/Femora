@@ -1,9 +1,3 @@
-I’ll review the target file and related pattern manager/base files first, then update only docstrings in the target file to match the required standard.
-
-I’ve gathered context; next I’ll run the test suite baseline, then apply the docstring-only update in the target file.
-
-I’m now applying a docstring-only rewrite in the target file, including full class/method coverage and a required class example.
-
 from __future__ import annotations
 
 from typing import Optional, Sequence
