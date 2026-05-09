@@ -1,8 +1,3 @@
-I’ll inspect the target file and nearby pattern/time-series usage to align the docstrings exactly with the project standard before editing only docstrings.
-
-I found the file mostly aligned; I’m making a docstring-only pass to ensure full section completeness and strict consistency with the standard.
-
-I’ve applied the docstring updates and will quickly run the project tests, then return the final file content exactly.
 
 from __future__ import annotations
 
