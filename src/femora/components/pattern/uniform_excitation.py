@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 from femora.core.pattern_base import Pattern
@@ -7,9 +8,9 @@ from femora.core.time_series_base import TimeSeries
 class UniformExcitation(Pattern):
     """OpenSees ``UniformExcitation`` pattern.
 
-    Uniform excitation applies one managed acceleration time series to the
-    selected global DOF direction. OpenSees reports nodal responses relative to
-    this support motion for this pattern type.
+    This pattern applies one managed acceleration time series to a selected
+    global degree-of-freedom direction. OpenSees reports nodal responses
+    relative to the imposed support motion.
 
     Tcl form:
         ``pattern UniformExcitation <tag> <dof> -accel <tsTag>
@@ -45,7 +46,7 @@ class UniformExcitation(Pattern):
         vel0: float = 0.0,
         factor: float = 1.0,
     ):
-        """Create a uniform excitation pattern.
+        """Create a uniform excitation pattern with validated inputs.
 
         Args:
             dof: 1-based excitation direction (e.g., 1 for X, 2 for Y, 3 for Z).
@@ -80,6 +81,9 @@ class UniformExcitation(Pattern):
 
         Returns:
             Tcl command string for the ``UniformExcitation`` pattern.
+
+        Raises:
+            ValueError: If the pattern has not been assigned a manager tag.
         """
         cmd = f"pattern UniformExcitation {self._require_tag()} {self.dof} -accel {self.time_series.tag}"
         if self.vel0 != 0.0:
