@@ -1,3 +1,9 @@
+Understood — I’ll review the target file plus nearby time-series patterns, then rewrite only docstrings to match the Femora standard and return the full updated file.
+
+I’ve got the context; next I’ll update only the target file docstrings to fully match the project format.
+
+I’ve finished the docstring edits; I’ll run the project test command to ensure the file remains behavior-safe.
+
 from __future__ import annotations
 
 from typing import Optional, Sequence, Union
@@ -9,12 +15,31 @@ from femora.core.time_series_base import TimeSeries
 class PathTimeSeries(TimeSeries):
     """OpenSees ``Path`` time series.
 
-    A path series can read values from a file or from inline values. Time can be
-    defined by a constant ``dt``, inline time values, or a time file.
+    This time series represents user-defined path data for dynamic loading. It
+    supports value input from inline sequences or files, and time definition
+    through a constant ``dt``, inline time values, or a time file.
 
     Tcl form:
         ``timeSeries Path <tag> <-dt dt | -time {...} | -fileTime file>
         <-values {...} | -filePath file> [options...]``
+
+    Attributes:
+        tag: Manager-assigned identifier after the object is added to a Femora
+            manager.
+        series_type: OpenSees time-series type name.
+
+    Examples:
+        ```python
+        import femora as fm
+
+        model = fm.MeshMaker()
+        ts = model.timeSeries.path(
+            dt=0.01,
+            values=[0.0, 0.1, -0.05, 0.0],
+            factor=9.81,
+        )
+        print(ts.tag)
+        ```
     """
 
     def __init__(
@@ -34,8 +59,8 @@ class PathTimeSeries(TimeSeries):
         Args:
             dt: Constant time step. Mutually exclusive with ``time`` and
                 ``fileTime``.
-            values: Inline force/acceleration values as a sequence or
-                comma-separated string. Mutually exclusive with ``filePath``.
+            values: Inline path values as a sequence or comma-separated string.
+                Mutually exclusive with ``filePath``.
             filePath: File containing path values. Mutually exclusive with
                 ``values``.
             factor: Scale factor applied to values.
@@ -76,7 +101,14 @@ class PathTimeSeries(TimeSeries):
         self.fileTime = None if fileTime is None else str(fileTime)
 
     def to_tcl(self) -> str:
-        """Render this time series as an OpenSees TCL command."""
+        """Render this time series as an OpenSees Tcl command.
+
+        Returns:
+            Tcl command string for this time series.
+
+        Raises:
+            ValueError: If this instance has not been assigned a manager tag.
+        """
         cmd = f"timeSeries Path {self._require_tag()}"
         if self.dt is not None:
             cmd += f" -dt {self.dt}"
