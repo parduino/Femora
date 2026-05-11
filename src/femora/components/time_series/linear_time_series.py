@@ -1,7 +1,3 @@
-Understood — I’ll inspect the target file and nearby time-series patterns first, then rewrite only docstrings in the target file to match the style guide exactly.
-
-I’ve gathered the relevant context and will now apply a docstring-only rewrite to the target file.
-
 from __future__ import annotations
 
 from femora.components.time_series._helpers import as_float
