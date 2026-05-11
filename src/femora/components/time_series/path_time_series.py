@@ -1,9 +1,3 @@
-Understood — I’ll review the target file plus nearby time-series patterns, then rewrite only docstrings to match the Femora standard and return the full updated file.
-
-I’ve got the context; next I’ll update only the target file docstrings to fully match the project format.
-
-I’ve finished the docstring edits; I’ll run the project test command to ensure the file remains behavior-safe.
-
 from __future__ import annotations
 
 from typing import Optional, Sequence, Union
