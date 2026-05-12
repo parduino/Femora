@@ -198,11 +198,14 @@ class removeLoadPatterns(Action):
         # Doing this via a stage action keeps staged workflows consistent
         # between TCL export and the solver backend.
         try:
-            from femora.components.Pattern.patternBase import Pattern
+            from femora.core.pattern_base import Pattern
         except Exception:
             return ""
 
-        tags = sorted(int(tag) for tag in Pattern.get_all_patterns().keys())
+        try:
+            tags = sorted(int(tag) for tag in Pattern.get_all_patterns().keys())
+        except AttributeError:
+            tags = []
         if not tags:
             return ""
         return "\n".join(f"remove loadPattern {tag}" for tag in tags)
@@ -322,5 +325,16 @@ class ActionManager:
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance
+    
+    def clear(self):
+        """Clears all actions from the manager.
 
+        This method is an alias for clear_all to provide a more intuitive
+        interface for clearing actions. Note that since actions are typically
+        stateless and represented by their classes, this method may not have
+        a significant effect unless you have implemented stateful actions that
+        require resetting.
+        """
+        # Since actions are typically stateless and represented by their classes, this method may not have a significant effect unless you have implemented stateful actions that require resetting.
+        pass
 

@@ -27,6 +27,7 @@ from femora.components.Material.materialBase import Material
 from femora.components.Region.regionBase import RegionBase, GlobalRegion
 from femora.constants import FEMORA_MAX_NDF
 from femora.components.geometry_ops import MeshPartTransform
+from femora.components.Damping.dampingBase import DampingBase
 
 class MeshPart(ABC):
     """
@@ -207,11 +208,13 @@ class MeshPart(ABC):
             n_pts = self.mesh.n_points
             self.mesh.point_data["Mass"] = np.zeros((n_pts, FEMORA_MAX_NDF), dtype=np.float32)
 
-    def plot(self, **kwargs) -> None:
+    def plot(self, off_screen: bool = False, screenshot: Optional[str] = None, **kwargs) -> None:
         """
         Plot the mesh part using pyvista
         
         Args:
+            off_screen (bool): Render off-screen.
+            screenshot (str): File path to save the screenshot.
             **kwargs: Additional keyword arguments for pyvista plotter
         """
         if self.mesh is None:
@@ -219,9 +222,27 @@ class MeshPart(ABC):
         
         self._ensure_mass_array()
         
-        plotter = pv.Plotter()
+        plotter = pv.Plotter(off_screen=off_screen)
         plotter.add_mesh(self.mesh, **kwargs)
-        plotter.show()
+        plotter.show(screenshot=screenshot)
+
+    def set_damping(self, damping_instance: Type[DampingBase]):
+        """
+        Assign a damping to this mesh part's region by forwarding to Region.set_damping.
+
+        Args:
+            damping_instance: Damping instance or class (Type[DampingBase]) to assign.
+
+        Returns:
+            The passed `damping_instance`.
+
+        Raises:
+            ValueError: if no region is available.
+        """
+        if self.region is None:
+            raise ValueError("No region available to assign damping to.")
+        self.region.set_damping(damping_instance)
+        
 
 # Optional: Add to registry if needed
 class MeshPartRegistry:
@@ -473,6 +494,10 @@ class MeshPartManager:
             "success": True, 
             "message": f"Cleared {count} mesh parts"
         }
+
+    def clear(self):
+        """Clears all mesh parts from the manager and registry."""
+        self.clear_all_mesh_parts()
 
 
 

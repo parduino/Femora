@@ -1,12 +1,9 @@
 name: Docstring Refactoring Bot
 
-# on:
-#   schedule:
-#     # Run once a day at midnight UTC
-#     - cron: '0 0 * * *'
-#   # Allow manual trigger
-#   workflow_dispatch:
-on: [] # Disabled
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -26,7 +23,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install google-genai
+          pip install google-genai pyyaml
 
       - name: Run Docstring Agent
         id: agent
@@ -48,8 +45,9 @@ jobs:
             
             ## Changes
             - Rewrote docstrings to match `STYLE_GUIDE.md` (Google Style).
-            - Ensured all classes and public functions have documentation.
-            
+            - Ensured classes and methods follow the current Femora docstring standard.
+            - Removed the completed file from `.github/docstring_targets.yml`.
+
             *Please review the changes for accuracy before merging.*
           branch: "docstring-bot/${{ github.run_id }}"
           labels: "documentation, automated"

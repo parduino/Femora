@@ -1,5 +1,6 @@
 from femora.components.Material.materialBase import MaterialManager
 from femora.core.element_base import Element, ElementRegistry
+from femora.core.ground_motion_manager import GroundMotionManager
 from femora.components.Assemble.Assembler import Assembler
 from femora.components.Damping.dampingBase import DampingManager
 from femora.components.Region.regionBase import RegionManager
@@ -7,9 +8,9 @@ from femora.components.Constraint.constraint import Constraint
 from femora.components.Mesh.meshPartBase import MeshPartManager
 from femora.components.Mesh.meshPartInstance import *
 from femora.components.element.ghost_node import GhostNodeElement
-from femora.components.TimeSeries.timeSeriesBase import TimeSeriesManager
+from femora.core.time_series_manager import TimeSeriesManager
 from femora.components.Analysis.analysis import AnalysisManager
-from femora.components.Pattern.patternBase import PatternManager
+from femora.core.pattern_manager import PatternManager
 from femora.components.Recorder.recorderBase import RecorderManager
 from femora.components.Process.process import ProcessManager
 from femora.components.DRM.DRM import DRM
@@ -67,6 +68,7 @@ class MeshMaker:
         self.assembler = Assembler()
         self.material = MaterialManager()
         self.element = ElementRegistry()
+        self.ground_motion = GroundMotionManager()
         self.damping = DampingManager()
         self.mass = MassManager()
         self.region = RegionManager()
@@ -92,6 +94,10 @@ class MeshMaker:
         @property
         def mesh_part(self):
             return self.meshPart
+
+        @property
+        def time_series(self):
+            return self.timeSeries
         
         
 
@@ -681,8 +687,7 @@ class MeshMaker:
         if model_path is not None:
             self.model_path = model_path
 
-    @classmethod
-    def set_results_folder(cls, folder_name):
+    def set_results_folder(self, folder_name):
         """
         Set the results folder for the model
         This method updates the results folder where simulation results will be stored.
@@ -690,17 +695,16 @@ class MeshMaker:
         Args:
             folder_name (str): path to the results folder
         """
-        cls._results_folder = folder_name
+        self._results_folder = folder_name
 
-    @classmethod
-    def get_results_folder(cls):
+    def get_results_folder(self):
         """
         Get the current results folder path
         
         Returns:
             str: The path to the results folder
         """
-        return cls._results_folder if cls._results_folder else ""
+        return self._results_folder if self._results_folder else ""
     
 
     def print_info(self):
@@ -783,3 +787,34 @@ class MeshMaker:
             int: start node tag
         """
         return self._start_nodetag
+
+    def clear_model(self):
+        """
+        Clear the current model and reset all components to their initial state.
+        This method wipes the current mesh, materials, elements, constraints, and all other components,
+        allowing you to start fresh without needing to create a new MeshMaker instance.
+        """
+        self.model = None
+        self.assembler.clear()
+        self.material.clear()
+        self.element.clear()
+        self.damping.clear()
+        self.mass.clear()
+        self.region.clear()
+        self.constraint.clear()
+        self.meshPart.clear()
+        self.timeSeries.clear()
+        self.ground_motion.clear()
+        self.analysis.clear()
+        self.pattern.clear()
+        self.recorder.clear()
+        self.process.clear()
+        self.interface.clear()
+        self.transformation.clear()
+        self.section.clear()
+        self.spatial_transform.clear()
+        self.actions.clear()
+        self._start_nodetag = 1
+        self._start_ele_tag = 1
+        self._start_core_tag = 0
+        

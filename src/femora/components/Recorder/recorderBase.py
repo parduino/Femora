@@ -25,16 +25,18 @@ class Recorder(ABC):
     _recorders = {}  # Class-level dictionary to track all recorders
     _next_tag = 1   # Class variable to track the next tag to assign
 
-    def __init__(self, recorder_type: str):
+    def __init__(self, recorder_type: str, cores: Optional[Union[int, List[int]]] = None):
         """Initializes the Recorder with a sequential tag.
 
         Args:
             recorder_type: The type of recorder (e.g., 'Node', 'Element', 'VTKHDF').
+            cores: List of CPU cores (PIDs) that should execute this recorder.
         """
         self.tag = Recorder._next_tag
         Recorder._next_tag += 1
         
         self.recorder_type = recorder_type
+        self.cores = cores
         
         # Register this recorder in the class-level tracking dictionary
         Recorder._recorders[self.tag] = self
@@ -90,16 +92,38 @@ class Recorder(ABC):
         cls._next_tag = 1
 
     @abstractmethod
+    def _to_tcl_impl(self) -> str:
+        """Internal method to generate the TCL command string.
+        Subclasses should implement this instead of to_tcl.
+        """
+        pass
+
     def to_tcl(self) -> str:
         """Converts the recorder to a TCL command string for OpenSees.
 
-        Subclasses must implement this method to generate the appropriate
-        TCL command for use with OpenSees.
+        Wraps the command in a core-specific conditional if 'cores' is specified.
 
         Returns:
             TCL command string representation of the recorder.
         """
-        pass
+        cmd = self._to_tcl_impl()
+        
+        if self.cores is not None:
+            if isinstance(self.cores, int):
+                core_list = [self.cores]
+            else:
+                core_list = self.cores
+            
+            if len(core_list) == 1:
+                condition = f"$pid == {core_list[0]}"
+            else:
+                condition = f"$pid in {{{' '.join(map(str, core_list))}}}"
+            
+            # Indent the command lines
+            indented_cmd = "\n".join(["\t" + line for line in cmd.split("\n")])
+            return f"if {{{condition}}} {{\n{indented_cmd}\n}}"
+        
+        return cmd
 
     @staticmethod
     def get_parameters() -> List[tuple]:
@@ -122,6 +146,42 @@ class Recorder(ABC):
             Dictionary of parameter values.
         """
         pass
+
+    def _resolve_regions(self, regions_input: Union[int, str, RegionBase, List[Union[int, str, RegionBase]]]) -> List[int]:
+        """
+        Normalize provided regions to a list of integer tags.
+
+        Accepts:
+            - int tag
+            - str name (matched against existing RegionBase.name)
+            - RegionBase instance
+            - list/tuple of the above
+        """
+        if regions_input is None:
+            return []
+
+        def resolve_one(item) -> int:
+            if isinstance(item, int):
+                return item
+            if isinstance(item, RegionBase):
+                return item.tag
+            if isinstance(item, str):
+                # Find by name
+                for tag, region in RegionBase.get_all_regions().items():
+                    if getattr(region, "name", None) == item:
+                        return tag
+                raise ValueError(f"Region with name '{item}' not found")
+            raise TypeError("regions must contain ints, names, or RegionBase instances")
+
+        tags: List[int] = []
+        if isinstance(regions_input, (list, tuple)):
+            for it in regions_input:
+                tag = resolve_one(it)
+                if tag not in tags:
+                    tags.append(tag)
+        else:
+            tags = [resolve_one(regions_input)]
+        return tags
 
 
 
@@ -166,6 +226,7 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
                             "tangentialDisp", "globalForce", "localForce", "axialForce",
                             "radialForce", "tangentialForce", "solidForce", "beamForce","beamLocalForce"],
                  dt : Union[float, None] = None,
+                 cores: Optional[Union[int, List[int]]] = None,
                  ):
         """
         Initialize an EmbeddedBeamSolidInterfaceRecorder
@@ -176,7 +237,7 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
 
     
         """
-        super().__init__("EmbeddedBeamSolidInterface")
+        super().__init__("EmbeddedBeamSolidInterface", cores=cores)
         interfaces = []
         interface_manager = InterfaceManager()
         if isinstance(interface, list):
@@ -246,7 +307,7 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
         }
     
     
-    def to_tcl(self) -> str:
+    def _to_tcl_impl(self) -> str:
         """
         Convert the EmbeddedBeamSolidInterfaceRecorder to a TCL command string for OpenSees
         
@@ -256,7 +317,7 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
         # This recorder does not generate a TCL command, it writes directly to a file
         cmd = "# recorder EmbeddedBeamSolidInterface\n"
         from femora import MeshMaker
-        results_folder = MeshMaker.get_results_folder()
+        results_folder = MeshMaker().get_results_folder()
         if results_folder == "":
             results_folder = "./"
         else:
@@ -327,7 +388,7 @@ class NodeRecorder(Recorder):
             dofs (List[int]): List of DOF at nodes whose response is requested
             resp_type (str): String indicating response required
         """
-        super().__init__("Node")
+        super().__init__("Node", cores=kwargs.get("cores", None))
         self.file_name = kwargs.get("file_name", None)
         self.xml_file = kwargs.get("xml_file", None)
         self.binary_file = kwargs.get("binary_file", None)
@@ -393,7 +454,7 @@ class NodeRecorder(Recorder):
             raise ValueError(f"Invalid response type: {self.resp_type}. " 
                            f"Valid types are: {', '.join(valid_resp_types)}, or 'eigen $mode'")
 
-    def to_tcl(self) -> str:
+    def _to_tcl_impl(self) -> str:
         """
         Convert the Node recorder to a TCL command string for OpenSees
         
@@ -498,12 +559,12 @@ class DriftRecorder(Recorder):
 
     This wraps the OpenSees `recorder Drift` command.
 
-    Notes:
-        - In MPI runs, multiple processes must not write to the same file.
-          This recorder automatically injects `$pid` into the output filename
-          (before the extension if present).
-        - Optionally, a `core` can be provided to emit the recorder inside an
-          `if {$pid == core}` guard.
+        Notes:
+                - In MPI runs, multiple processes must not write to the same file.
+                    This recorder automatically injects `$pid` into the output filename
+                    (before the extension if present).
+                - Optionally, `cores` can be provided to emit the recorder only on
+                    the specified MPI process ids.
 
     Example:
         >>> import femora as fm
@@ -521,7 +582,13 @@ class DriftRecorder(Recorder):
     """
 
     def __init__(self, **kwargs):
-        super().__init__("Drift")
+        # Accept both legacy `core` and new `cores` arguments.
+        cores = kwargs.get("cores", None)
+        core = kwargs.get("core", None)
+        if cores is None and core is not None:
+            cores = int(core)
+
+        super().__init__("Drift", cores=cores)
 
         self.file_name: str = str(kwargs.get("file_name", ""))
 
@@ -536,9 +603,6 @@ class DriftRecorder(Recorder):
         self.time: bool = bool(kwargs.get("time", False))
         self.delta_t: Optional[float] = kwargs.get("delta_t", None)
         self.precision: Optional[int] = kwargs.get("precision", None)
-        core = kwargs.get("core", None)
-        self.core: Optional[int] = int(core) if core is not None else None
-
         self.validate()
 
     @staticmethod
@@ -590,8 +654,17 @@ class DriftRecorder(Recorder):
             if self.precision <= 0:
                 raise ValueError("precision must be > 0 when provided")
 
-        if self.core is not None and self.core < 0:
-            raise ValueError("core must be >= 0 when provided")
+        # Validate provided cores (int or list[int])
+        if self.cores is not None:
+            if isinstance(self.cores, int):
+                if self.cores < 0:
+                    raise ValueError("cores must be >= 0 when provided")
+            elif isinstance(self.cores, (list, tuple)):
+                for c in self.cores:
+                    if not isinstance(c, int) or c < 0:
+                        raise ValueError("each entry in cores must be a non-negative integer")
+            else:
+                raise TypeError("cores must be an int or list/tuple of ints")
 
     @staticmethod
     def get_parameters() -> List[tuple]:
@@ -604,7 +677,7 @@ class DriftRecorder(Recorder):
             ("time", "Include -time flag"),
             ("delta_t", "Recording interval (-dT), optional"),
             ("precision", "Significant digits (-precision), optional"),
-            ("core", "Optional MPI core id to guard recorder creation"),
+            ("cores", "Optional MPI core id or list of ids to guard recorder creation"),
         ]
 
     def get_values(self) -> Dict[str, Union[str, int, float, list, bool]]:
@@ -617,7 +690,7 @@ class DriftRecorder(Recorder):
             "time": self.time,
             "delta_t": self.delta_t,
             "precision": self.precision,
-            "core": self.core,
+            "cores": self.cores,
         }
 
     @staticmethod
@@ -628,10 +701,10 @@ class DriftRecorder(Recorder):
             return file_name[: -(len(ext) + 1)] + f"$pid.{ext}"
         return file_name + "$pid"
 
-    def to_tcl(self) -> str:
+    def _to_tcl_impl(self) -> str:
         from femora import MeshMaker
 
-        results_folder = MeshMaker.get_results_folder()
+        results_folder = MeshMaker().get_results_folder()
         file_path = DriftRecorder._inject_pid_in_filename(self.file_name)
         if results_folder:
             file_path = results_folder + "/" + file_path
@@ -649,9 +722,7 @@ class DriftRecorder(Recorder):
         if self.delta_t is not None:
             cmd += f" -dT {float(self.delta_t)}"
 
-        if self.core is not None:
-            return f"if {{$pid == {int(self.core)}}} {{\n\t{cmd}\n}}"
-
+        # Do not wrap here; `Recorder.to_tcl` will apply any core-guarding
         return cmd
 
 
@@ -684,7 +755,7 @@ class VTKHDFRecorder(Recorder):
             delta_t (float, optional): Time interval for recording
             r_tol_dt (float, optional): Relative tolerance for time step matching
         """
-        super().__init__("VTKHDF")
+        super().__init__("VTKHDF", cores=kwargs.get("cores", None))
         self.file_base_name = kwargs.get("file_base_name", "")
         self.resp_types = kwargs.get("resp_types", [])
         self.delta_t = kwargs.get("delta_t", None)
@@ -717,7 +788,7 @@ class VTKHDFRecorder(Recorder):
                 raise ValueError(f"Invalid response type: {resp_type}. "
                                f"Valid types are: {', '.join(valid_resp_types)}")
 
-    def to_tcl(self) -> str:
+    def _to_tcl_impl(self) -> str:
         """
         Convert the VTKHDF recorder to a TCL command string for OpenSees
         
@@ -734,7 +805,7 @@ class VTKHDFRecorder(Recorder):
         name = name[0]
         name = name + "$pid"
         from femora import MeshMaker
-        results_folder = MeshMaker.get_results_folder()
+        results_folder = MeshMaker().get_results_folder()
         if results_folder != "":
             name = results_folder + "/" + name
         file_base_name = name + "." + fileformat
@@ -813,7 +884,7 @@ class MPCORecorder(Recorder):
             delta_t (float, optional): Recording time interval (mutually exclusive with num_steps)
             num_steps (int, optional): Recording step interval (mutually exclusive with delta_t)
         """
-        super().__init__("MPCO")
+        super().__init__("MPCO", cores=kwargs.get("cores", None))
         self.file_name = kwargs.get("file_name", "")
         self.node_responses = kwargs.get("node_responses", [])
         self.element_responses = kwargs.get("element_responses", [])
@@ -906,7 +977,7 @@ class MPCORecorder(Recorder):
         if self.delta_t is not None and self.num_steps is not None:
             raise ValueError("Only one of delta_t or num_steps may be specified")
 
-    def to_tcl(self) -> str:
+    def _to_tcl_impl(self) -> str:
         """
         Convert the MPCO recorder to a TCL command string for OpenSees
 
@@ -914,7 +985,7 @@ class MPCORecorder(Recorder):
             str: The TCL command string
         """
         from femora import MeshMaker
-        results_folder = MeshMaker.get_results_folder()
+        results_folder = MeshMaker().get_results_folder()
         file_path = self.file_name
         
         file_ext = self.file_name.split(".")[-1]
@@ -1032,7 +1103,7 @@ class BeamForceRecorder(Recorder):
     '''
     """
     def __init__(self, **kwargs):
-        super().__init__("BeamForce")
+        super().__init__("BeamForce", cores=kwargs.get("cores", None))
         self.meshparts = kwargs.get("meshparts", [])
         self.force_type = kwargs.get("force_type", "globalForce")
         self.file_prefix = kwargs.get("file_prefix", "Beam")
@@ -1111,7 +1182,7 @@ class BeamForceRecorder(Recorder):
             ranges.append((start, prev))
         return ranges
 
-    def to_tcl(self) -> str:
+    def _to_tcl_impl(self) -> str:
         from femora import MeshMaker
         import numpy as np
         try:
@@ -1124,7 +1195,7 @@ class BeamForceRecorder(Recorder):
         if assembled is None:
             raise ValueError("No assembled mesh found. Assemble the model before creating BeamForceRecorder.")
 
-        results_folder = MeshMaker.get_results_folder()
+        results_folder = MeshMaker().get_results_folder()
         if results_folder != "":
             results_folder = results_folder + "/"
 
@@ -1221,41 +1292,6 @@ class BeamForceRecorder(Recorder):
 
         return "\n".join(lines)
 
-    def _resolve_regions(self, regions_input: Union[int, str, RegionBase, List[Union[int, str, RegionBase]]]) -> List[int]:
-        """
-        Normalize provided regions to a list of integer tags.
-
-        Accepts:
-            - int tag
-            - str name (matched against existing RegionBase.name)
-            - RegionBase instance
-            - list/tuple of the above
-        """
-        if regions_input is None:
-            return []
-
-        def resolve_one(item) -> int:
-            if isinstance(item, int):
-                return item
-            if isinstance(item, RegionBase):
-                return item.tag
-            if isinstance(item, str):
-                # Find by name
-                for tag, region in RegionBase.get_all_regions().items():
-                    if getattr(region, "name", None) == item:
-                        return tag
-                raise ValueError(f"Region with name '{item}' not found")
-            raise TypeError("regions must contain ints, names, or RegionBase instances")
-
-        tags: List[int] = []
-        if isinstance(regions_input, (list, tuple)):
-            for it in regions_input:
-                tag = resolve_one(it)
-                if tag not in tags:
-                    tags.append(tag)
-        else:
-            tags = [resolve_one(regions_input)]
-        return tags
 
 class RecorderRegistry:
     """Registry for managing recorder types and their creation.
@@ -1336,6 +1372,7 @@ class RecorderManager:
         mpco: Reference to MPCORecorder class.
         beam_force: Reference to BeamForceRecorder class.
         embedded_beam_solid_interface: Reference to EmbeddedBeamSolidInterfaceRecorder class.
+        pile_mpco: Helper that builds an MPCO recorder for line-mesh piles after assembly.
 
     Example:
         >>> from femora.components.Recorder.recorderBase import RecorderManager
@@ -1424,6 +1461,145 @@ class RecorderManager:
         This method removes all registered recorders and resets the tag counter.
         """
         Recorder.clear_all()
+
+    def clear(self):
+        """Clears all recorders (alias for clear_all)."""
+        self.clear_all()
+
+    def pile_mpco(
+        self,
+        meshparts,
+        file_name: str,
+        *,
+        delta_t: Optional[float] = None,
+        num_steps: Optional[int] = None,
+        node_responses: Optional[List[str]] = None,
+        element_responses: Optional[List[str]] = None,
+        node_sensitivities: Optional[List] = None,
+        line_cells_only: bool = True,
+        region_name: str = "pile_mpco_region",
+    ) -> MPCORecorder:
+        """Create an MPCO recorder for beam pile / line mesh parts (after assembly).
+
+        OpenSees ``recorder mpco`` scopes output with ``-R`` region tags. Export builds
+        each ``ElementRegion`` from ``AssembeledMesh.cell_data[\"Region\"]``, so this
+        method assigns a dedicated region tag to the selected pile cells before you
+        export TCL.
+
+        Args:
+            meshparts: Mesh part identifiers: ``user_name`` strings, :class:`~femora.components.Mesh.meshPartBase.MeshPart`
+                instances, or a mix (same as :class:`BeamForceRecorder`).
+            file_name: Output ``*.mpco`` path (``$pid`` is inserted before the extension on export).
+            delta_t: Optional ``-T dt`` interval (mutually exclusive with ``num_steps``).
+            num_steps: Optional ``-T nsteps`` interval (mutually exclusive with ``delta_t``).
+            node_responses: Passed to :class:`MPCORecorder` (default: displacement, velocity, acceleration).
+            element_responses: Passed to :class:`MPCORecorder` (default: ``[\"force\"]``).
+            node_sensitivities: Optional ``-NS`` pairs for :class:`MPCORecorder`.
+            line_cells_only: If True (default), only VTK line-like cells are included so
+                volume parts accidentally sharing a name are ignored.
+            region_name: ``ElementRegion`` display name (must be unique if you create several).
+
+        Returns:
+            Configured :class:`MPCORecorder` instance.
+
+        Note:
+            Call this **after** the assembled mesh is final (e.g. after DRM/PML layers
+            that merge into ``AssembeledMesh``). This updates ``cell_data[\"Region\"]``
+            for the selected cells to the new pile region tag so export emits a matching
+            ``region`` command.
+
+        Raises:
+            ValueError: If the mesh is not assembled, parts are missing, or mesh data is incomplete.
+        """
+        import numpy as np
+
+        from femora import MeshMaker
+        from femora.components.Mesh.meshPartBase import MeshPart
+
+        if node_responses is None:
+            node_responses = ["displacement", "velocity", "acceleration"]
+        if element_responses is None:
+            element_responses = ["force"]
+
+        mm = MeshMaker()
+        mesh = mm.assembler.AssembeledMesh
+        if mesh is None:
+            raise ValueError("pile_mpco requires an assembled mesh (call Assemble first).")
+
+        # Resolve mesh parts (aligned with BeamForceRecorder._resolve_meshparts)
+        resolved: Dict[str, object] = {}
+        if not meshparts:
+            raise ValueError("pile_mpco: meshparts list must not be empty.")
+        for mp in meshparts:
+            if isinstance(mp, str):
+                part = MeshPart.get_mesh_parts().get(mp)
+                if part is None:
+                    raise ValueError(f"MeshPart '{mp}' not found")
+                resolved[mp] = part
+            elif isinstance(mp, MeshPart):
+                resolved[mp.user_name] = mp
+            else:
+                raise TypeError("meshparts entries must be MeshPart instances or user_name strings")
+
+        tags = np.array([int(p.tag) for p in resolved.values()], dtype=np.int64)
+        mesh_tags = mesh.cell_data.get("MeshPartTag_celldata")
+        cores_arr = mesh.cell_data.get("Core")
+        region_arr = mesh.cell_data.get("Region")
+        if mesh_tags is None or cores_arr is None or region_arr is None:
+            raise ValueError(
+                "Assembled mesh missing MeshPartTag_celldata, Core, or Region cell_data."
+            )
+
+        mask = np.isin(mesh_tags.astype(np.int64, copy=False), tags)
+        if line_cells_only:
+            try:
+                import pyvista as pv
+            except Exception:
+                pv = None
+            if pv is not None:
+                celltypes = getattr(mesh, "celltypes", None)
+                if celltypes is not None:
+                    beam_types = set()
+                    if hasattr(pv, "CellType"):
+                        for name in ("LINE", "POLY_LINE"):
+                            if hasattr(pv.CellType, name):
+                                beam_types.add(getattr(pv.CellType, name))
+                    if beam_types:
+                        beam_mask = np.isin(celltypes, list(beam_types))
+                        mask = mask & beam_mask
+
+        idxs = np.where(mask)[0]
+        if idxs.size == 0:
+            raise ValueError("pile_mpco: no matching line-mesh cells for the given meshparts.")
+
+        pile_region = mm.region.create_region("ElementRegion")
+        pile_region._name = region_name
+
+        rtag = int(pile_region.tag)
+        region_arr = np.asarray(region_arr)
+        region_arr[idxs] = rtag
+        mesh.cell_data["Region"] = region_arr
+
+        selected_cores = np.unique(cores_arr[idxs])
+        selected_cores = [
+            int(c)
+            for c in selected_cores
+            if isinstance(c, (int, np.integer)) and int(c) >= 0
+        ]
+        cores_arg: Optional[Union[int, List[int]]] = None
+        if selected_cores:
+            cores_arg = selected_cores[0] if len(selected_cores) == 1 else selected_cores
+
+        return MPCORecorder(
+            file_name=file_name,
+            node_responses=node_responses,
+            element_responses=element_responses,
+            node_sensitivities=node_sensitivities or [],
+            regions=[pile_region],
+            delta_t=delta_t,
+            num_steps=num_steps,
+            cores=cores_arg,
+        )
 
 
 # Example usage

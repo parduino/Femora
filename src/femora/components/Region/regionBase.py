@@ -369,7 +369,8 @@ class GlobalRegion(RegionBase):
         Returns:
             str: TCL command string for the global region
         """
-        return "region 0"
+        #return "#region 0"
+        return ""
 
     def validate(self):
         """No validation required for global region."""
@@ -539,7 +540,7 @@ class ElementRegion(RegionBase):
             if self.damping.get_Type() in ["RayleighDamping", "Frequency Rayleigh"]:
                 cmd += f" -rayleigh {self.damping.alphaM} {self.damping.betaK} {self.damping.betaKInit} {self.damping.betaKComm}"
             else:
-                cmd += f" -damping {self.damping.tag}"
+                cmd += f" -damp {self.damping.tag}"
         cmd += "\""
         return cmd
     
@@ -751,7 +752,7 @@ class NodeRegion(RegionBase):
             if self.damping.get_Type() in ["RayleighDamping", "Frequency Rayleigh"]:
                 cmd += F"-rayleigh {self.damping.alphaM} {self.damping.betaK} {self.damping.betaKInit} {self.damping.betaKComm}"
             else:
-                cmd += f"-damping {self.damping.tag}"
+                cmd += f"-damp {self.damping.tag}"
         return cmd
     
     def __str__(self):
@@ -1024,6 +1025,15 @@ class RegionManager:
             GlobalRegion: The global region instance
         """
         return RegionBase.get_region(0)
+    
+    def clear(self):
+        """
+        Clear all regions and reinitialize the GlobalRegion.
+        
+        This method is an alias for clear_regions() to provide a more intuitive
+        interface for clearing all regions.
+        """
+        self.clear_regions()
     
     
 if __name__ == "__main__":
