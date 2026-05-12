@@ -1,7 +1,3 @@
-I’ll review the target module and related time-series manager/base files, then update only docstrings to match the Femora standard.
-
-I found the manager API path for realistic examples and will now rewrite the target file’s class and method docstrings only.
-
 from __future__ import annotations
 
 from femora.components.time_series._helpers import as_float
