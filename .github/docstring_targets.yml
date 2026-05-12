@@ -1,6 +1,4 @@
 targets:
-- path: src/femora/components/time_series/ramp_time_series.py
-  prompt: ''
 - path: src/femora/components/time_series/rectangular_time_series.py
   prompt: ''
 - path: src/femora/components/time_series/triangular_time_series.py

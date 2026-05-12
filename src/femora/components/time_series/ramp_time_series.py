@@ -1,3 +1,7 @@
+I’ll review the target module and related time-series manager/base files, then update only docstrings to match the Femora standard.
+
+I found the manager API path for realistic examples and will now rewrite the target file’s class and method docstrings only.
+
 from __future__ import annotations
 
 from femora.components.time_series._helpers import as_float
@@ -5,11 +9,35 @@ from femora.core.time_series_base import TimeSeries
 
 
 class RampTimeSeries(TimeSeries):
-    """OpenSees ``Ramp`` time series.
+    """Represent an OpenSees ``Ramp`` time series.
+
+    This time series defines a ramped load factor history starting at ``tStart``
+    and transitioning over ``tRamp`` with optional smoothing, offset, and scale
+    controls.
 
     Tcl form:
         ``timeSeries Ramp <tag> <tStart> <tRamp> -smooth <smoothness>
         -offset <offset> -factor <cFactor>``
+
+    Attributes:
+        tag: Manager-assigned identifier after the time series is added to
+            ``model.timeSeries``.
+        series_type: OpenSees time-series type name.
+
+    Examples:
+        ```python
+        import femora as fm
+
+        model = fm.MeshMaker()
+        ts = model.timeSeries.ramp(
+            tStart=0.0,
+            tRamp=2.0,
+            smoothness=0.1,
+            offset=0.0,
+            cFactor=1.0,
+        )
+        print(ts.tag)
+        ```
     """
 
     def __init__(
@@ -20,7 +48,7 @@ class RampTimeSeries(TimeSeries):
         offset: float = 0.0,
         cFactor: float = 1.0,
     ):
-        """Create a ramp time series.
+        """Create a ramp time series with validated numeric parameters.
 
         Args:
             tStart: Start time of the ramp.
@@ -43,7 +71,11 @@ class RampTimeSeries(TimeSeries):
             raise ValueError("smoothness must be between 0 and 1")
 
     def to_tcl(self) -> str:
-        """Render this time series as an OpenSees TCL command."""
+        """Render this time series as an OpenSees Tcl command.
+
+        Returns:
+            Tcl command string for this ``Ramp`` time series.
+        """
         return (
             f"timeSeries Ramp {self._require_tag()} {self.tStart} {self.tRamp}"
             f" -smooth {self.smoothness} -offset {self.offset} -factor {self.cFactor}"
