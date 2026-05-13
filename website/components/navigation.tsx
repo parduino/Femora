@@ -20,13 +20,13 @@ export function Navigation() {
               Features
             </Link>
             <Link href="#modes" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Modes
+              Workflows
             </Link>
             <Link href="#docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Documentation
             </Link>
             <Link href="#ai" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              AI Features
+              AI Direction
             </Link>
           </div>
 

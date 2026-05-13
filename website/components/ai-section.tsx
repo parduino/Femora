@@ -12,14 +12,14 @@ export function AISection() {
         <div className="text-center mb-16 space-y-4">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-sm">
             <Sparkles className="w-4 h-4 text-primary" />
-            <span className="text-primary font-medium">Coming Soon</span>
+            <span className="text-primary font-medium">AI-Native Direction</span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold text-balance">
-            {"Train with"}
-            <span className="block text-primary">AI-Powered Features</span>
+            {"Structured for"}
+            <span className="block text-primary">Future AI Workflows</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto text-pretty">
-            {"The future of FEMORA includes intelligent assistance powered by large language models"}
+            {"Femora's modular, scriptable workflow is designed so future AI assistants can reason about model parts, assembly steps, interfaces, and recorder strategies instead of only generating disconnected scripts."}
           </p>
         </div>
 
@@ -32,7 +32,7 @@ export function AISection() {
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Model Generation</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {"Describe your model in natural language and let AI generate the code"}
+                  {"Translate high-level modeling intent into reusable Femora modules and code-first workflows."}
                 </p>
               </div>
             </Card>
@@ -44,7 +44,7 @@ export function AISection() {
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Interactive Assistant</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {"Ask questions and get instant help with modeling challenges"}
+                  {"Help users understand assembly choices, interfaces, recorders, and decomposition decisions as the model grows."}
                 </p>
               </div>
             </Card>
@@ -56,7 +56,7 @@ export function AISection() {
               <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Smart Optimization</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {"AI-driven suggestions to optimize your models and analysis"}
+                  {"Suggest cleaner partitioning, reusable modules, and better recording or postprocessing strategies for large studies."}
                 </p>
               </div>
             </Card>
@@ -64,10 +64,10 @@ export function AISection() {
 
           <Card className="glass-strong p-8 md:p-12 space-y-6">
             <div className="space-y-4 max-w-2xl">
-              <h3 className="text-2xl font-bold">Imagine This Workflow</h3>
+              <h3 className="text-2xl font-bold">Why This Matters</h3>
               <p className="text-muted-foreground leading-relaxed">
                 {
-                  '"Create a 3-layer soil profile with elastic bedrock at 30m depth, sandy soil in the middle, and clay at the surface. Apply a 0.3g horizontal ground motion."'
+                  '"As the library grows, the same modular structure that helps researchers build large 3D systems also gives AI a cleaner representation of the model, its parts, and the engineering intent behind them."'
                 }
               </p>
             </div>
@@ -81,7 +81,7 @@ export function AISection() {
                   <p className="text-sm font-medium mb-1">AI Response</p>
                   <p className="text-sm text-muted-foreground font-mono leading-relaxed">
                     {
-                      '"I\'ve created your 3-layer model with the specified materials. The mesh has 2,400 elements with appropriate boundary conditions. Ready to export to OpenSees?"'
+                      '"I found your soil module, structural module, embedded interface, and recorder setup. I can now help modify the assembly, inspect the mesh, or generate a new OpenSees-ready workflow."'
                     }
                   </p>
                 </div>

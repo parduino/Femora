@@ -4,33 +4,33 @@ import { Card } from "@/components/ui/card"
 const features = [
   {
     icon: Box,
-    title: "Powerful Mesh Generation",
-    description: "Create complex 3D soil and structural models with minimal code and intuitive API",
+    title: "Modular 3D Assembly",
+    description: "Compose reusable soil, topography, basin, foundation, pile, structure, and bridge-ready model parts into one assembled OpenSees system.",
   },
   {
     icon: Network,
-    title: "Domain Decomposition",
-    description: "HPC-ready parallel computing with advanced domain decomposition for large-scale simulations",
+    title: "Research-grade Partitioning",
+    description: "Keep explicit control over domain decomposition so researchers can decide which regions, interfaces, or subsystems run on which cores.",
   },
   {
     icon: Layers,
-    title: "Comprehensive Interface",
-    description: "Support all materials, analysis types, elements, and everything available in OpenSees",
+    title: "Interfaces & Embedding",
+    description: "Model embedded piles, embedded beams, embedded nodes, and other coupling strategies needed for demanding soil-structure interaction workflows.",
   },
   {
     icon: Radio,
-    title: "Domain Reduction & PML",
-    description: "Advanced DRM technique and Perfectly Matched Layer elements for realistic seismic wave propagation",
+    title: "Wave-input Workflows",
+    description: "Generate DRM loads, consume H5DRM inputs, and compute transfer functions for site-response and wave-propagation studies when the workflow demands it.",
   },
   {
     icon: Eye,
-    title: "Built-in Visualization",
-    description: "Powerful visualization tools for model inspection and result analysis",
+    title: "In-Code Visualization",
+    description: "Inspect mesh parts, assembly sections, and final assembled meshes directly from scripts or notebooks while you build and debug the model.",
   },
   {
     icon: FileCode,
-    title: "OpenSees Integration",
-    description: "Seamless export to OpenSees TCL files for immediate simulation",
+    title: "Targeted Recording & Export",
+    description: "Attach recorders and postprocessing logic to the regions that matter, then export to OpenSees workflows with the control needed for large studies.",
   },
 ]
 
@@ -40,11 +40,11 @@ export function Features() {
       <div className="container mx-auto">
         <div className="text-center mb-16 space-y-4">
           <h2 className="text-4xl md:text-5xl font-bold text-balance">
-            {"Everything You Need for"}
-            <span className="block text-primary">Finite Element Analysis</span>
+            {"Build Complex Models from"}
+            <span className="block text-primary">Independent Expert Modules</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto text-pretty">
-            {"Built with modern Python, optimized for researchers and engineers working with OpenSees"}
+            {"Femora is designed so geotechnical, structural, and simulation experts can implement their own pieces independently and still assemble one coherent 3D OpenSees model."}
           </p>
         </div>
 

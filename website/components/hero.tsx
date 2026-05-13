@@ -10,17 +10,17 @@ export function Hero() {
           <div className="space-y-8">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass text-sm text-muted-foreground">
               <Sparkles className="w-4 h-4 text-primary" />
-              <span>Fast Efficient Meshing for OpenSees-based Resilience Analysis</span>
+              <span>Fast Efficient Meta-modeling for OpenSees-based Resilience Analysis</span>
             </div>
 
             <div className="space-y-4">
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight text-balance">
-                Revolutionize
-                <span className="block text-primary">Seismic Analysis</span>
+                Modular 3D
+                <span className="block text-primary">OpenSees Meta-Modeling</span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed text-pretty">
                 {
-                  "A powerful Python framework for finite element meshing and seismic analysis. Built on OpenSees, designed for researchers and engineers."
+                  "An open-source Python product for composing soil, structure, interface, loading, and recorder systems into large 3D OpenSees models. Build headlessly, inspect while coding, and assemble complex resilience workflows with full control."
                 }
               </p>
             </div>
@@ -45,18 +45,18 @@ export function Hero() {
 
             <div className="flex items-center gap-8 pt-4">
               <div>
-                <div className="text-2xl font-bold text-primary">50+</div>
-                <div className="text-sm text-muted-foreground">Material Models</div>
+                <div className="text-2xl font-bold text-primary">3D</div>
+                <div className="text-sm text-muted-foreground">Assembly-first Modeling</div>
               </div>
               <div className="w-px h-12 bg-border"></div>
               <div>
-                <div className="text-2xl font-bold text-accent">3D &amp; 2D    </div>
-                <div className="text-sm text-muted-foreground">Mesh Generation</div>
+                <div className="text-2xl font-bold text-accent">HPC</div>
+                <div className="text-sm text-muted-foreground">Partition-aware Workflows</div>
               </div>
               <div className="w-px h-12 bg-border"></div>
               <div>
-                <div className="text-2xl font-bold text-chart-3">DRM</div>
-                <div className="text-sm text-muted-foreground">Wave Propagation</div>
+                <div className="text-2xl font-bold text-chart-3">OSS</div>
+                <div className="text-sm text-muted-foreground">Open-source Product</div>
               </div>
             </div>
           </div>

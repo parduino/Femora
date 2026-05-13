@@ -12,7 +12,7 @@ export function ModesSection() {
             <span className="block text-primary">Workflows</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto text-pretty">
-            {"Build headlessly, then inspect mesh parts and assembled models directly from Python."}
+            {"Femora stays scriptable for supercomputing workflows while still letting you inspect the model as it is being assembled."}
           </p>
         </div>
 
@@ -27,7 +27,7 @@ export function ModesSection() {
                 <h3 className="text-2xl font-bold">Headless Mode</h3>
                 <p className="text-muted-foreground leading-relaxed">
                   {
-                    "Pure Python model construction for automation, reproducible studies, and large scripted workflows."
+                    "Pure Python model construction for reproducible studies, HPC execution, automated exports, and large scripted model-generation pipelines."
                   }
                 </p>
               </div>
@@ -40,11 +40,11 @@ export function ModesSection() {
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2"></div>
-                <p className="text-sm text-muted-foreground">{"Batch generation and export pipelines"}</p>
+                <p className="text-sm text-muted-foreground">{"Batch generation, export, and supercomputing workflows"}</p>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2"></div>
-                <p className="text-sm text-muted-foreground">{"Parametric studies and optimization"}</p>
+                <p className="text-sm text-muted-foreground">{"Parametric studies, modular reuse, and AI-ready code generation"}</p>
               </div>
             </div>
 
@@ -80,7 +80,7 @@ model.assembler.Assemble()`}</code>
                 <h3 className="text-2xl font-bold">Interactive Inspection</h3>
                 <p className="text-muted-foreground leading-relaxed">
                   {
-                    "Visualize mesh parts, assembly sections, and the final assembled mesh directly inside scripts or notebook cells while you build."
+                    "Inspect mesh parts, assembly sections, interfaces, and final assembled meshes directly from Python or notebook cells without switching to a separate modeling product."
                   }
                 </p>
               </div>
@@ -93,11 +93,11 @@ model.assembler.Assemble()`}</code>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2"></div>
-                <p className="text-sm text-muted-foreground">{"Inspect assembly sections and the final assembled mesh"}</p>
+                <p className="text-sm text-muted-foreground">{"Inspect assembly sections, interfaces, and the final assembled mesh"}</p>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2"></div>
-                <p className="text-sm text-muted-foreground">{"Use from Python scripts, saved screenshots, or Jupyter workflows"}</p>
+                <p className="text-sm text-muted-foreground">{"Use from Python scripts, screenshots, and Jupyter workflows"}</p>
               </div>
             </div>
 

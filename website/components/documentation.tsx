@@ -6,19 +6,19 @@ const docSections = [
   {
     icon: BookOpen,
     title: "Getting Started",
-    description: "Installation, setup, and your first FEMORA model",
+    description: "Installation, setup, and your first modular Femora model",
     link: "/docs/getting_started/",
   },
   {
     icon: Code,
     title: "API Reference",
-    description: "Complete documentation of classes, methods, and functions",
+    description: "Complete documentation of the managers, classes, methods, and functions",
     link: "/docs/reference/",
   },
   {
     icon: GraduationCap,
     title: "Examples & Tutorials",
-    description: "Practical examples from simple to advanced applications",
+    description: "Practical 3D examples for site response, SSI, DRM workflows, and assembly strategies",
     link: "/docs/advanced/",
   },
   {
@@ -39,7 +39,7 @@ export function Documentation() {
             <span className="block text-primary">Documentation</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto text-pretty">
-            {"Everything you need to master FEMORA, from quick starts to advanced techniques"}
+            {"From quick starts to advanced 3D assembly workflows, the docs are meant to support both everyday use and research-scale modeling."}
           </p>
         </div>
 
@@ -69,7 +69,7 @@ export function Documentation() {
             <div className="flex-1 space-y-4">
               <h3 className="text-2xl font-bold">Ready to Get Started?</h3>
               <p className="text-muted-foreground leading-relaxed">
-                {"Install FEMORA with pip and start building your first finite element model in minutes."}
+                {"Install Femora with pip and start building modular OpenSees-ready 3D models in Python."}
               </p>
               <pre className="glass p-4 rounded-lg text-sm font-mono">
                 <code className="text-accent">pip install femora</code>

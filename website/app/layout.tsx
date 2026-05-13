@@ -16,8 +16,8 @@ const inter = Inter({ subsets: ["latin"] })
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "FEMORA - Fast Efficient Meshing for OpenSees-based Resilience Analysis",
-  description: "A powerful Python framework for finite element meshing and seismic analysis built on OpenSees",
+  title: "FEMORA - Fast Efficient Meta-modeling for OpenSees-based Resilience Analysis",
+  description: "An open-source Python platform for modular 3D meta-modeling, assembly, and OpenSees export for resilience analysis.",
   generator: "v0.app",
   icons: {
     icon: "docs/assets/femora-mark.svg",

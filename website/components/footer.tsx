@@ -13,7 +13,7 @@ export function Footer() {
               <span className="font-bold text-xl">FEMORA</span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {"Fast Efficient Meshing for OpenSees-based Resilience Analysis"}
+              {"Fast Efficient Meta-modeling for OpenSees-based Resilience Analysis"}
             </p>
           </div>
 
@@ -133,7 +133,7 @@ export function Footer() {
         </div>
 
         <div className="pt-8 border-t border-border/50 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-          <p>© 2025 FEMORA. Developed by Amin Pakzad & Pedro Arduino</p>
+          <p>{"© 2025 FEMORA. Open-source platform developed by Amin Pakzad & Pedro Arduino"}</p>
           <div className="flex gap-6">
             <a
               href="https://github.com/amnp95/Femora/blob/main/LICENSE"

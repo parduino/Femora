@@ -1,6 +1,6 @@
 """
-femora: Fast Efficient Meshing for OpenSees based Resilient Analysis
-===================================================================
+femora: Fast Efficient Meta-modeling for OpenSees based Resilience Analysis
+==========================================================================
 
 This package provides tools for creating and managing meshes for OpenSees simulations.
 
