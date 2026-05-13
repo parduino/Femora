@@ -1,43 +1,84 @@
-/* Base overrides for all schemes - ensure variables are available */
 :root {
-    /* Define the colors locally as variables for reuse if needed, or directly assign to md vars */
+    --femora-header-height: 3.5rem;
+    --femora-header-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
 }
 
-/* Light Mode Overrides (Default) */
 [data-md-color-scheme="default"] {
-    /* Primary Color - Warm Red/Brown from Landing Page (oklch(0.58 0.18 35)) */
-    --md-primary-fg-color: oklch(0.58 0.18 35);
-    --md-primary-fg-color--light: oklch(0.65 0.21 45);
-    --md-primary-fg-color--dark: oklch(0.50 0.15 30);
+    --md-primary-fg-color: oklch(0.965 0.006 240);
+    --md-primary-fg-color--light: oklch(0.985 0.004 240);
+    --md-primary-fg-color--dark: oklch(0.92 0.01 240);
+    --md-primary-bg-color: oklch(0.24 0.025 248);
 
-    /* Accent Color */
-    --md-accent-fg-color: oklch(0.65 0.21 45);
+    --md-accent-fg-color: oklch(0.54 0.075 230);
 
-    /* Background Colors - Warm Off-White (oklch(0.99 0.002 75)) */
-    --md-default-bg-color: oklch(0.99 0.002 75);
-    --md-default-fg-color: oklch(0.12 0.015 45);
-    /* Dark text */
+    --md-default-bg-color: oklch(0.992 0.003 240);
+    --md-default-fg-color: oklch(0.18 0.018 248);
+    --md-default-fg-color--light: oklch(0.42 0.014 248);
+    --md-default-fg-color--lighter: oklch(0.6 0.012 248);
 
-    /* Surface/Card Colors */
-    --md-code-bg-color: oklch(0.96 0.005 75);
-    /* Muted/Code background */
+    --md-code-bg-color: oklch(0.972 0.006 240);
+    --md-typeset-a-color: oklch(0.46 0.08 230);
+    --md-typeset-table-color: color-mix(in oklab, black 10%, transparent 90%);
+    --md-typeset-table-color--light: color-mix(in oklab, black 5%, transparent 95%);
 }
 
-/* Dark Mode Overrides (Slate) */
 [data-md-color-scheme="slate"] {
-    /* Primary Color - Orange/Rust (oklch(0.72 0.19 45)) */
-    --md-primary-fg-color: oklch(0.72 0.19 45);
-    --md-primary-fg-color--light: oklch(0.75 0.20 50);
-    --md-primary-fg-color--dark: oklch(0.68 0.22 35);
+    --md-primary-fg-color: oklch(0.2 0.018 248);
+    --md-primary-fg-color--light: oklch(0.24 0.02 248);
+    --md-primary-fg-color--dark: oklch(0.17 0.015 248);
+    --md-primary-bg-color: oklch(0.95 0.008 240);
 
-    /* Accent Color */
-    --md-accent-fg-color: oklch(0.68 0.22 35);
+    --md-accent-fg-color: oklch(0.7 0.08 220);
 
-    /* Background Colors - Dark Warm Gray (oklch(0.09 0.01 45)) */
-    --md-default-bg-color: oklch(0.09 0.01 45);
-    --md-default-fg-color: oklch(0.98 0.005 75);
+    --md-default-bg-color: oklch(0.12 0.012 248);
+    --md-default-fg-color: oklch(0.93 0.008 240);
+    --md-default-fg-color--light: oklch(0.76 0.01 240);
+    --md-default-fg-color--lighter: oklch(0.58 0.012 240);
 
-    /* Surface/Card Colors */
-    --md-code-bg-color: oklch(0.12 0.015 45);
-    /* Card background for code */
+    --md-code-bg-color: oklch(0.15 0.014 248);
+    --md-typeset-a-color: oklch(0.75 0.085 220);
+    --md-typeset-table-color: color-mix(in oklab, white 12%, transparent 88%);
+    --md-typeset-table-color--light: color-mix(in oklab, white 6%, transparent 94%);
+}
+
+.md-header {
+    box-shadow: var(--femora-header-shadow);
+}
+
+.md-header__inner {
+    min-height: var(--femora-header-height);
+}
+
+.md-header__button,
+.md-header__option {
+    border-radius: 0.75rem;
+}
+
+.md-logo img,
+.md-logo svg {
+    height: 1.45rem !important;
+    width: auto !important;
+    max-width: none !important;
+}
+
+.md-source {
+    border-radius: 0.75rem;
+}
+
+.md-tabs {
+    border-bottom: 1px solid color-mix(in oklab, currentColor 8%, transparent 92%);
+}
+
+.md-tabs__link {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.md-tabs__link:hover,
+.md-tabs__link:focus-visible,
+.md-header__button:hover,
+.md-header__button:focus-visible,
+.md-source:hover,
+.md-source:focus-visible {
+    opacity: 1;
 }

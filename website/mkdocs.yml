@@ -5,20 +5,23 @@ repo_name: amnp95/Femora
 
 theme:
   name: material
+  logo: assets/femora-mark.svg
+  icon:
+    repo: fontawesome/brands/github
   features:
     - navigation.tabs
     - content.code.copy
     - content.code.annotate
   palette: 
     - scheme: default
-      primary: teal
+      primary: custom
       toggle:
-        icon: material/weather-night
+        icon: material/moon-waxing-crescent
         name: Switch to dark mode
     - scheme: slate
-      primary: teal
+      primary: custom
       toggle:
-        icon: material/weather-sunny
+        icon: material/white-balance-sunny
         name: Switch to light mode
 
 # --- NEW: Math Support Configuration ---

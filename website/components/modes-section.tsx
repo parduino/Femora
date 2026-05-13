@@ -8,11 +8,11 @@ export function ModesSection() {
       <div className="container mx-auto">
         <div className="text-center mb-16 space-y-4">
           <h2 className="text-4xl md:text-5xl font-bold text-balance">
-            {"Two Powerful"}
-            <span className="block text-primary">Working Modes</span>
+            {"Two Practical"}
+            <span className="block text-primary">Workflows</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto text-pretty">
-            {"Choose the workflow that fits your needs - code-first or visual-first"}
+            {"Build headlessly, then inspect mesh parts and assembled models directly from Python."}
           </p>
         </div>
 
@@ -27,7 +27,7 @@ export function ModesSection() {
                 <h3 className="text-2xl font-bold">Headless Mode</h3>
                 <p className="text-muted-foreground leading-relaxed">
                   {
-                    "Pure Python API for programmatic model creation. Perfect for automation, batch processing, and integration into larger workflows."
+                    "Pure Python model construction for automation, reproducible studies, and large scripted workflows."
                   }
                 </p>
               </div>
@@ -40,7 +40,7 @@ export function ModesSection() {
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2"></div>
-                <p className="text-sm text-muted-foreground">{"Integration with CI/CD pipelines"}</p>
+                <p className="text-sm text-muted-foreground">{"Batch generation and export pipelines"}</p>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2"></div>
@@ -50,11 +50,11 @@ export function ModesSection() {
 
             <div className="pt-4">
               <pre className="glass p-4 rounded-lg text-xs font-mono overflow-x-auto">
-                <code className="text-accent">{`from femora import Model
+                <code className="text-accent">{`import femora as fm
 
-model = Model()
-model.add_mesh(type='soil', layers=3)
-model.export_to_opensees('model.tcl')`}</code>
+model = fm.MeshMaker()
+# build materials, mesh parts, patterns, and assembly
+model.assembler.Assemble()`}</code>
               </pre>
             </div>
 
@@ -70,17 +70,17 @@ model.export_to_opensees('model.tcl')`}</code>
             </Button>
           </Card>
 
-          {/* GUI Mode */}
+          {/* In-Code Visualization */}
           <Card className="glass-strong p-8 space-y-6 hover:bg-card/50 transition-all group">
             <div className="space-y-4">
               <div className="w-16 h-16 rounded-xl bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
                 <Layout className="w-8 h-8 text-accent" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-2xl font-bold">GUI Mode</h3>
+                <h3 className="text-2xl font-bold">Interactive Inspection</h3>
                 <p className="text-muted-foreground leading-relaxed">
                   {
-                    "Visual interface for interactive model construction. Ideal for rapid prototyping, teaching, and exploratory analysis."
+                    "Visualize mesh parts, assembly sections, and the final assembled mesh directly inside scripts or notebook cells while you build."
                   }
                 </p>
               </div>
@@ -89,38 +89,31 @@ model.export_to_opensees('model.tcl')`}</code>
             <div className="space-y-3 pt-4">
               <div className="flex items-start gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2"></div>
-                <p className="text-sm text-muted-foreground">{"Interactive 3D visualization"}</p>
+                <p className="text-sm text-muted-foreground">{"Plot individual mesh parts during model creation"}</p>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2"></div>
-                <p className="text-sm text-muted-foreground">{"Real-time model preview"}</p>
+                <p className="text-sm text-muted-foreground">{"Inspect assembly sections and the final assembled mesh"}</p>
               </div>
               <div className="flex items-start gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-accent mt-2"></div>
-                <p className="text-sm text-muted-foreground">{"Beginner-friendly interface"}</p>
+                <p className="text-sm text-muted-foreground">{"Use from Python scripts, saved screenshots, or Jupyter workflows"}</p>
               </div>
             </div>
 
-            <div className="pt-4 glass p-4 rounded-lg">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                  <span>{"Visual model builder"}</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <div className="w-2 h-2 rounded-full bg-accent"></div>
-                  <span>{"Material property editor"}</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <div className="w-2 h-2 rounded-full bg-primary"></div>
-                  <span>{"Analysis configuration"}</span>
-                </div>
-              </div>
+            <div className="pt-4">
+              <pre className="glass p-4 rounded-lg text-xs font-mono overflow-x-auto">
+                <code className="text-accent">{`import femora as fm
+
+model = fm.MeshMaker()
+mesh_part.plot()
+model.assembler.plot(show_edges=True)`}</code>
+              </pre>
             </div>
 
             <Button variant="outline" className="w-full group/btn bg-transparent" asChild>
               <a
-                href="https://amnp95.github.io/Femora/introduction/installation.html"
+                href="https://amnp95.github.io/Femora/introduction/quick_start.html"
                 target="_blank"
                 rel="noopener noreferrer"
               >
