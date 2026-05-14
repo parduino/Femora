@@ -1,7 +1,3 @@
-Got it — I’ll review this file and related time-series patterns first, then rewrite only the docstrings to match the style guide exactly.
-
-I’ve got the context; next I’m updating only this file’s docstrings to match the Femora standard.
-
 from __future__ import annotations
 
 from femora.components.time_series._helpers import as_float
