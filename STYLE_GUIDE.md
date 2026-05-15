@@ -53,8 +53,9 @@ These rules apply to all Femora Python files.
 9. If type hints already exist in the signature, do not repeat types in
    parentheses in `Args`.
 10. Use the section labels in this file exactly.
-11. An AI may read related project files for context before writing docstrings,
-    especially managers, base classes, and nearby components.
+11. An AI should read related project files for context before writing
+    docstrings, especially the relevant manager, base classes, and nearby
+    components, and should understand that context before editing.
 
 ---
 
@@ -113,7 +114,9 @@ class SomeComponent:
         ``command Name <arg1> <arg2> ...``
 
     Notes:
-        Add only meaningful user-facing or developer-facing notes here.
+        - Add only meaningful user-facing or developer-facing notes here.
+        - If there are multiple notes, write each one as its own bullet.
+        - Start note bullets with `-`.
 
     Attributes:
         tag: Manager-assigned identifier after the object is added to a Femora
@@ -126,6 +129,9 @@ class SomeComponent:
         model = fm.MeshMaker()
         component = model.some_manager.some_factory(...)
         print(component.tag)
+
+        If the class has an especially useful method or a natural follow-up use,
+        the example may continue to show that method in action.
         ```
     """
 ```
@@ -165,6 +171,7 @@ def __init__(self, a: int, b: float = 1.0):
 
     Raises:
         ValueError: If the provided values are invalid.
+
     """
 ```
 
@@ -208,6 +215,10 @@ def to_tcl(self) -> str:
 - "Complete" means the docstring should document behavior, inputs, outputs, and
   raised errors as needed for that method.
 - Do not add empty sections only to satisfy a template.
+- When `Returns:` is included, prefer starting the description with the return
+  type when that improves clarity, for example `str: ...`.
+- `Raises:` should document only errors that the current implementation can
+  actually raise. Do not guess or invent exceptions.
 - `Examples:` are optional for methods.
 - If a method example is included and the method belongs to a manager-driven
   Femora workflow, prefer calling it through `model = fm.MeshMaker()` and the
@@ -240,6 +251,11 @@ model = fm.MeshMaker()
   - `model.pattern...`
   - other manager entry points as appropriate
 - Show realistic dependency creation when tags or manager ownership matter.
+- Make sure the example uses the correct manager path. Some classes are created
+  through sub-managers rather than directly from the top-level manager.
+- Verify the correct manager path from the current implementation before writing
+  the example. Do not guess whether creation belongs to a top-level manager or a
+  sub-manager.
 
 ### Direct construction rule
 
@@ -337,6 +353,9 @@ Examples:
   it represents
 - a manager method may need a short explanation of what it creates or registers
 - a helper method may only need a direct behavior description
+- For runtime classes, document runtime behavior only. Do not describe GUI
+  forms, widgets, editor flows, or legacy GUI behavior unless the file itself is
+  explicitly GUI-related.
 
 Do not add theory for its own sake. Add conceptual explanation only when it
 helps the reader understand the code and API.
@@ -351,6 +370,10 @@ When updating docstrings, an AI must not:
 - change names
 - change signatures
 - add fake APIs
+- insert process narration, planning text, status updates, or assistant-style
+  commentary into the source file
+- introduce mojibake, encoding artifacts, or unnecessary non-ASCII punctuation
+  into docstrings
 - use `>>>`
 - add markdown headings inside docstrings
 - duplicate constructor `Args:` in both the class docstring and `__init__`
@@ -368,8 +391,9 @@ docstrings for a Femora file.
 ### AI task instructions
 
 1. Review the entire target file before editing.
-2. Read related project files when needed to understand managers, base classes,
-   usage patterns, or neighboring components.
+2. Read related project files when needed to understand the relevant manager,
+   base classes, usage patterns, or neighboring components, and understand
+   that context before editing.
 3. Only modify docstrings in the target file unless explicitly instructed
    otherwise.
 4. Preserve all code logic, imports, signatures, names, and behavior.
@@ -406,8 +430,9 @@ Follow STYLE_GUIDE.md exactly.
 
 Task:
 - Review the entire target file first.
-- Read related project files when needed to understand managers, base classes,
-  or usage patterns before editing.
+- Read related project files when needed to understand the relevant manager,
+  base classes, or usage patterns before editing, and make sure that context is
+  understood before writing docstrings.
 - Only change docstrings in the target file.
 - Do not change logic, imports, signatures, names, or behavior.
 - Rewrite inconsistent docstrings to match the Femora docstring standard.
