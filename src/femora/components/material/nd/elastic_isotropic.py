@@ -1,7 +1,3 @@
-Understood — I’ll review the target file and related material manager/base context first, then update only docstrings in the target file.
-
-I’ve confirmed the manager usage path and will now normalize the target file docstrings to the project format without changing any code behavior.
-
 """Isotropic linear elastic continuum material for OpenSees nD elements."""
 
 from __future__ import annotations
