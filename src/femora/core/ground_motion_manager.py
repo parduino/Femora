@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Dict, Iterator, List, Optional, Union
 from femora.components.ground_motion.interpolated_ground_motion import InterpolatedGroundMotion
 from femora.components.ground_motion.plain_ground_motion import PlainGroundMotion
 from femora.core.ground_motion_base import GroundMotion
+from femora.core.tagging import CompactRetagPolicy
 from femora.core.time_series_base import TimeSeries
 
 if TYPE_CHECKING:
@@ -46,6 +47,7 @@ class GroundMotionManager:
         self._mesh_maker = mesh_maker
         self._ground_motions: Dict[int, GroundMotion] = {}
         self._start_tag = 1
+        self._tagging = CompactRetagPolicy[GroundMotion]()
         self._time_series_manager = time_series_manager
 
     def __len__(self) -> int:
@@ -66,24 +68,28 @@ class GroundMotionManager:
             The same ground-motion instance, now tagged and managed.
 
         Raises:
-            ValueError: If ``ground_motion`` is not a ``GroundMotion`` or if it
-                already has a tag from another manager.
+            TypeError: If ``ground_motion`` is not a ``GroundMotion``.
+            ValueError: If ``ground_motion`` belongs to another manager or its
+                preassigned tag conflicts with another object managed here.
         """
         if not isinstance(ground_motion, GroundMotion):
-            raise ValueError("ground_motion must be a GroundMotion instance")
+            raise TypeError("ground_motion must be a GroundMotion instance")
         if ground_motion._owner is None:
             ground_motion._owner = self
-        elif ground_motion._owner is self:
-            if ground_motion.tag is not None and self._ground_motions.get(ground_motion.tag) is ground_motion:
-                return ground_motion
-        else:
+        elif ground_motion._owner is not self:
             raise ValueError("ground_motion already belongs to another manager")
 
         self._validate_dependencies(ground_motion)
 
-        tag = self._next_tag()
-        ground_motion.tag = tag
-        self._ground_motions[tag] = ground_motion
+        try:
+            ground_motion.tag = self._tagging.assign_tag(
+                self._ground_motions,
+                ground_motion,
+                self._start_tag,
+            )
+        except ValueError as exc:
+            raise ValueError(f"GroundMotion tag {ground_motion.tag} already exists") from exc
+        self._ground_motions[ground_motion.tag] = ground_motion
         return ground_motion
 
     def plain(
@@ -179,12 +185,11 @@ class GroundMotionManager:
             self._reassign_tags()
 
     def clear(self) -> None:
-        """Remove all ground motions and reset the next tag start to 1."""
+        """Remove all ground motions and clear their assigned tags."""
         for ground_motion in self._ground_motions.values():
             ground_motion.tag = None
             ground_motion._owner = None
         self._ground_motions.clear()
-        self._start_tag = 1
 
     def set_tag_start(self, start_tag: int) -> None:
         """Set the first tag and retag existing ground motions.
@@ -195,26 +200,16 @@ class GroundMotionManager:
         Raises:
             ValueError: If ``start_tag`` is less than 1.
         """
-        start_tag = int(start_tag)
-        if start_tag < 1:
-            raise ValueError("start_tag must be a positive integer")
-        self._start_tag = start_tag
+        self._start_tag = self._tagging.validate_start_tag(start_tag)
         self._reassign_tags()
 
-    def _next_tag(self) -> int:
-        if not self._ground_motions:
-            return self._start_tag
-        return max(self._ground_motions) + 1
+    def _next_available_tag(self) -> int:
+        """Return the next unused tag in this manager's local tag space."""
+        return self._tagging.next_available_tag(self._ground_motions, self._start_tag)
 
     def _reassign_tags(self) -> None:
-        ground_motions = sorted(
-            self._ground_motions.values(),
-            key=lambda ground_motion: ground_motion.tag or 0,
-        )
-        self._ground_motions.clear()
-        for tag, ground_motion in enumerate(ground_motions, start=self._start_tag):
-            ground_motion.tag = tag
-            self._ground_motions[tag] = ground_motion
+        """Retag all managed ground motions from ``_start_tag`` in tag order."""
+        self._tagging.reassign_tags(self._ground_motions, self._start_tag)
 
     def _validate_dependencies(self, ground_motion: GroundMotion) -> None:
         """Ensure a ground motion only references local managed dependencies."""

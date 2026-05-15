@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence
+from typing import TYPE_CHECKING, Dict, Optional, Sequence
 
 from femora.components.pattern.h5drm_pattern import H5DRMPattern
 from femora.components.pattern.multiple_support import MultipleSupportPattern
 from femora.components.pattern.plain_pattern import PlainPattern
 from femora.components.pattern.uniform_excitation import UniformExcitation
 from femora.core.pattern_base import Pattern
+from femora.core.tagging import CompactRetagPolicy
 from femora.core.time_series_base import TimeSeries
 
 if TYPE_CHECKING:
@@ -34,6 +35,7 @@ class PatternManager:
         self._mesh_maker = mesh_maker
         self._patterns: Dict[int, Pattern] = {}
         self._start_tag = 1
+        self._tagging = CompactRetagPolicy[Pattern]()
         self._time_series_manager = time_series_manager
         self._ground_motion_manager = ground_motion_manager
 
@@ -58,10 +60,14 @@ class PatternManager:
         elif pattern._owner is not self:
             raise ValueError("pattern already belongs to another manager")
         self._validate_dependencies(pattern)
-        if pattern.tag is None:
-            pattern.tag = self._next_available_tag()
-        elif pattern.tag in self._patterns and self._patterns[pattern.tag] is not pattern:
-            raise ValueError(f"Pattern tag {pattern.tag} already exists")
+        try:
+            pattern.tag = self._tagging.assign_tag(
+                self._patterns,
+                pattern,
+                self._start_tag,
+            )
+        except ValueError as exc:
+            raise ValueError(f"Pattern tag {pattern.tag} already exists") from exc
         self._patterns[pattern.tag] = pattern
         self._sync_attached_load_tags(pattern)
         return pattern
@@ -109,10 +115,7 @@ class PatternManager:
         Raises:
             ValueError: If ``start_tag`` is less than ``1``.
         """
-        start_tag = int(start_tag)
-        if start_tag < 1:
-            raise ValueError("start_tag must be a positive integer")
-        self._start_tag = start_tag
+        self._start_tag = self._tagging.validate_start_tag(start_tag)
         self._reassign_tags()
 
     def uniform_excitation(
@@ -233,21 +236,12 @@ class PatternManager:
 
     def _next_available_tag(self) -> int:
         """Return the next unused pattern tag in this manager's tag space."""
-        tag = self._start_tag
-        while tag in self._patterns:
-            tag += 1
-        return tag
+        return self._tagging.next_available_tag(self._patterns, self._start_tag)
 
     def _reassign_tags(self) -> None:
         """Retag all managed patterns from ``_start_tag`` in tag order."""
-        items: List[Pattern] = sorted(
-            self._patterns.values(),
-            key=lambda item: item.tag if item.tag is not None else 0,
-        )
-        self._patterns.clear()
-        for offset, pattern in enumerate(items):
-            pattern.tag = self._start_tag + offset
-            self._patterns[pattern.tag] = pattern
+        self._tagging.reassign_tags(self._patterns, self._start_tag)
+        for pattern in self._patterns.values():
             self._sync_attached_load_tags(pattern)
 
     def _sync_attached_load_tags(self, pattern: Pattern) -> None:

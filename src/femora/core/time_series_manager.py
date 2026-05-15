@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Dict, Optional, Sequence, Union
 
 from femora.components.time_series import (
     ConstantTimeSeries,
@@ -12,6 +12,7 @@ from femora.components.time_series import (
     TriangularTimeSeries,
     TrigTimeSeries,
 )
+from femora.core.tagging import CompactRetagPolicy
 from femora.core.time_series_base import TimeSeries
 
 if TYPE_CHECKING:
@@ -35,6 +36,7 @@ class TimeSeriesManager:
         self._mesh_maker = mesh_maker
         self._time_series: Dict[int, TimeSeries] = {}
         self._start_tag = 1
+        self._tagging = CompactRetagPolicy[TimeSeries]()
 
     def add(self, time_series: TimeSeries) -> TimeSeries:
         """Add an existing time series and assign a tag if needed.
@@ -56,10 +58,14 @@ class TimeSeriesManager:
             time_series._owner = self
         elif time_series._owner is not self:
             raise ValueError("time_series already belongs to another manager")
-        if time_series.tag is None:
-            time_series.tag = self._next_available_tag()
-        elif time_series.tag in self._time_series and self._time_series[time_series.tag] is not time_series:
-            raise ValueError(f"TimeSeries tag {time_series.tag} already exists")
+        try:
+            time_series.tag = self._tagging.assign_tag(
+                self._time_series,
+                time_series,
+                self._start_tag,
+            )
+        except ValueError as exc:
+            raise ValueError(f"TimeSeries tag {time_series.tag} already exists") from exc
         self._time_series[time_series.tag] = time_series
         return time_series
 
@@ -111,10 +117,7 @@ class TimeSeriesManager:
         Raises:
             ValueError: If ``start_tag`` is less than ``1``.
         """
-        start_tag = int(start_tag)
-        if start_tag < 1:
-            raise ValueError("start_tag must be a positive integer")
-        self._start_tag = start_tag
+        self._start_tag = self._tagging.validate_start_tag(start_tag)
         self._reassign_tags()
 
     def constant(self, factor: float = 1.0) -> ConstantTimeSeries:
@@ -336,18 +339,8 @@ class TimeSeriesManager:
 
     def _next_available_tag(self) -> int:
         """Return the next unused tag in this manager's local tag space."""
-        tag = self._start_tag
-        while tag in self._time_series:
-            tag += 1
-        return tag
+        return self._tagging.next_available_tag(self._time_series, self._start_tag)
 
     def _reassign_tags(self) -> None:
         """Retag all managed time series from ``_start_tag`` in tag order."""
-        items: List[TimeSeries] = sorted(
-            self._time_series.values(),
-            key=lambda item: item.tag if item.tag is not None else 0,
-        )
-        self._time_series.clear()
-        for offset, time_series in enumerate(items):
-            time_series.tag = self._start_tag + offset
-            self._time_series[time_series.tag] = time_series
+        self._tagging.reassign_tags(self._time_series, self._start_tag)

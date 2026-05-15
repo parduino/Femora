@@ -1097,7 +1097,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
     # ============================================================================
     # set the start tags to push the numberings
     fm.material.set_material_tag_start(20000)
-    fm.transformation.set_start_tag(30000)
+    fm.transformation.set_tag_start(30000)
     fm.section.set_start_tag(40000)
     fm.damping.set_start_tag(45000)
 
@@ -1332,7 +1332,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
 
         # write the transformations
         f.write("\n# Transformations ======================================\n")
-        for transf in self.transformation.get_all_transformations():
+        for transf in self.transformation:
             f.write(f"{transf.to_tcl()}\n")
 
 

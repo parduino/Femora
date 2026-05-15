@@ -14,7 +14,7 @@ from femora.core.pattern_manager import PatternManager
 from femora.components.Recorder.recorderBase import RecorderManager
 from femora.components.Process.process import ProcessManager
 from femora.components.DRM.DRM import DRM
-from femora.components.transformation.transformation import GeometricTransformationManager
+from femora.core.transformation_manager import TransformationManager
 from femora.components.interface.interface_base import InterfaceManager
 from femora.components.section.section_base import SectionManager
 from femora.components.mass.mass_manager import MassManager
@@ -84,7 +84,7 @@ class MeshMaker:
         self.recorder = RecorderManager()
         self.process = ProcessManager()
         self.interface = InterfaceManager()
-        self.transformation = GeometricTransformationManager()
+        self.transformation = TransformationManager(mesh_maker=self)
         self.section = SectionManager()
         self.spatial_transform = SpatialTransformManager()
         self.actions = ActionManager()
@@ -368,7 +368,7 @@ class MeshMaker:
 
                 # write the transformations
                 f.write("\n# Transformations ======================================\n")
-                for transf in self.transformation.get_all_transformations():
+                for transf in self.transformation:
                     f.write(f"{transf.to_tcl()}\n")
 
                 # Write the sections

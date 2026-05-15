@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Type, Optional, Union, Any
 from femora.components.Material.materialBase import Material, MaterialManager
 from femora.components.section.section_base import Section, SectionManager
-from femora.components.transformation.transformation import GeometricTransformation, GeometricTransformationManager
+from femora.core.transformation_base import GeometricTransformation
 
 
 class Element(ABC):
@@ -720,12 +720,18 @@ class ElementRegistry:
         if transformation is None:
             return None
 
-        if isinstance(transformation, (str, int)):
-            resolved_transformation = GeometricTransformationManager.get_transformation(transformation)
+        if isinstance(transformation, str):
+            raise ValueError("Transformation lookup by name is not supported; pass a managed transformation object")
+        if isinstance(transformation, int):
+            from femora.components.MeshMaker import MeshMaker
+
+            resolved_transformation = MeshMaker.get_instance().transformation.get(transformation)
             if resolved_transformation is None:
                 raise ValueError(f"Transformation '{transformation}' not found")
             return resolved_transformation
         elif isinstance(transformation, GeometricTransformation):
+            if transformation.tag is None:
+                raise ValueError("Transformation must be managed before assigning it to an element")
             return transformation
         else:
             raise ValueError(f"Invalid transformation type: {type(transformation)}")
