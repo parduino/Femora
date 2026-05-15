@@ -2,25 +2,21 @@ import inspect
 
 import pytest
 
-from femora.components.TimeSeries.timeSeriesBase import TimeSeries
 from femora.components.ground_motion import (
     InterpolatedGroundMotion,
     PlainGroundMotion,
 )
 from femora.core.ground_motion_manager import GroundMotionManager
+from femora.core.time_series_manager import TimeSeriesManager
 
 
 @pytest.fixture(autouse=True)
 def clear_managers():
-    TimeSeries.reset()
     yield
-    TimeSeries.reset()
 
 
 def constant_series():
-    from femora.components.TimeSeries.timeSeriesBase import ConstantTimeSeries
-
-    return ConstantTimeSeries(factor=1.0)
+    return TimeSeriesManager().constant(factor=1.0)
 
 
 def test_plain_ground_motion_is_not_self_registering():
@@ -90,8 +86,9 @@ def test_manager_can_add_explicit_instance():
 
 
 def test_plain_ground_motion_to_tcl():
-    accel = constant_series()
-    disp = constant_series()
+    time_series = TimeSeriesManager()
+    accel = time_series.constant()
+    disp = time_series.constant()
     manager = GroundMotionManager()
     gm = manager.plain(
         accel=accel,

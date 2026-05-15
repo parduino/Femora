@@ -27,7 +27,7 @@ class DRMGUI(QWidget):
         super().__init__(parent)
 
         self.meshmaker = MeshMaker.get_instance()
-        self.pattern_manager = PatternManager()
+        self.pattern_manager = PatternManager(mesh_maker=self.meshmaker)
         
         # Set size policy for the main widget
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)

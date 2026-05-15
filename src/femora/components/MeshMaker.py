@@ -68,15 +68,19 @@ class MeshMaker:
         self.assembler = Assembler()
         self.material = MaterialManager()
         self.element = ElementRegistry()
-        self.ground_motion = GroundMotionManager()
+        self.time_series = TimeSeriesManager(mesh_maker=self)
+        self.ground_motion = GroundMotionManager(mesh_maker=self, time_series_manager=self.time_series)
         self.damping = DampingManager()
         self.mass = MassManager()
         self.region = RegionManager()
         self.constraint = Constraint()
         self.meshPart = MeshPartManager()
-        self.timeSeries = TimeSeriesManager()
         self.analysis = AnalysisManager()
-        self.pattern = PatternManager()
+        self.pattern = PatternManager(
+            mesh_maker=self,
+            time_series_manager=self.time_series,
+            ground_motion_manager=self.ground_motion,
+        )
         self.recorder = RecorderManager()
         self.process = ProcessManager()
         self.interface = InterfaceManager()
@@ -94,10 +98,6 @@ class MeshMaker:
         @property
         def mesh_part(self):
             return self.meshPart
-
-        @property
-        def time_series(self):
-            return self.timeSeries
         
         
 
@@ -588,9 +588,9 @@ class MeshMaker:
 
                 # write time series
                 f.write("\n# Time Series ======================================\n")
-                size = len(self.timeSeries)
+                size = len(self.time_series)
                 indx = 1
-                for timeSeries in self.timeSeries:
+                for timeSeries in self.time_series:
                     f.write(f"{timeSeries.to_tcl()}\n")
                     if progress_callback:
                         progress_callback(85 + indx / size * 5, "writing time series")
@@ -803,7 +803,7 @@ class MeshMaker:
         self.region.clear()
         self.constraint.clear()
         self.meshPart.clear()
-        self.timeSeries.clear()
+        self.time_series.clear()
         self.ground_motion.clear()
         self.analysis.clear()
         self.pattern.clear()

@@ -131,6 +131,14 @@ class MultipleSupportPattern(Pattern):
         Raises:
             ValueError: If any imposed-motion input fails validation.
         """
+        owner = self._owner
+        expected_mesh_maker = getattr(owner, "_mesh_maker", None)
+        ground_motion_mesh_maker = getattr(ground_motion._owner, "_mesh_maker", None)
+        if ground_motion_mesh_maker is not expected_mesh_maker:
+            raise ValueError("ground_motion must belong to the local MeshMaker")
+        expected_manager = getattr(owner, "_ground_motion_manager", None)
+        if expected_manager is not None and ground_motion._owner is not expected_manager:
+            raise ValueError("ground_motion must belong to the local GroundMotionManager")
         imposed_motion = ImposedMotion(node_tag, dof, ground_motion)
         self._imposed_motions.append(imposed_motion)
         return imposed_motion

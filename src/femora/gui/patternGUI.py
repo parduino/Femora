@@ -8,6 +8,7 @@ from qtpy.QtWidgets import (
 
 from femora.components.Pattern.patternBase import Pattern, PatternManager
 from femora.components.TimeSeries.timeSeriesBase import TimeSeries, TimeSeriesManager
+from femora.components.MeshMaker import MeshMaker
 from femora.utils.validator import DoubleValidator, IntValidator
 
 class PatternManagerTab(QDialog):
@@ -19,8 +20,8 @@ class PatternManagerTab(QDialog):
         self.resize(800, 600)
         
         # Get the pattern manager instance
-        self.pattern_manager = PatternManager()
-        self.time_series_manager = TimeSeriesManager()
+        self.pattern_manager = PatternManager(mesh_maker=MeshMaker.get_instance())
+        self.time_series_manager = TimeSeriesManager(mesh_maker=MeshMaker.get_instance())
         
         # Main layout
         layout = QVBoxLayout(self)
@@ -149,8 +150,8 @@ class UniformExcitationCreationDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Create Uniform Excitation Pattern")
-        self.pattern_manager = PatternManager()
-        self.time_series_manager = TimeSeriesManager()
+        self.pattern_manager = PatternManager(mesh_maker=MeshMaker.get_instance())
+        self.time_series_manager = TimeSeriesManager(mesh_maker=MeshMaker.get_instance())
         self.int_validator = IntValidator()
         self.double_validator = DoubleValidator()
         
@@ -270,8 +271,8 @@ class UniformExcitationEditDialog(QDialog):
         super().__init__(parent)
         self.pattern = pattern
         self.setWindowTitle(f"Edit Uniform Excitation Pattern (Tag: {pattern.tag})")
-        self.pattern_manager = PatternManager()
-        self.time_series_manager = TimeSeriesManager()
+        self.pattern_manager = PatternManager(mesh_maker=MeshMaker.get_instance())
+        self.time_series_manager = TimeSeriesManager(mesh_maker=MeshMaker.get_instance())
         self.int_validator = IntValidator()
         self.double_validator = DoubleValidator()
         
@@ -391,7 +392,7 @@ class H5DRMCreationDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Create H5DRM Pattern")
-        self.pattern_manager = PatternManager()
+        self.pattern_manager = PatternManager(mesh_maker=MeshMaker.get_instance())
         self.double_validator = DoubleValidator()
         self.int_validator = IntValidator()
         
@@ -548,7 +549,7 @@ class H5DRMEditDialog(QDialog):
         super().__init__(parent)
         self.pattern = pattern
         self.setWindowTitle(f"Edit H5DRM Pattern (Tag: {pattern.tag})")
-        self.pattern_manager = PatternManager()
+        self.pattern_manager = PatternManager(mesh_maker=MeshMaker.get_instance())
         self.double_validator = DoubleValidator()
         self.int_validator = IntValidator()
         

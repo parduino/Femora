@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from typing import Dict, Iterator, List, Optional, Union
+from typing import TYPE_CHECKING, Dict, Iterator, List, Optional, Union
 
 from femora.components.ground_motion.interpolated_ground_motion import InterpolatedGroundMotion
 from femora.components.ground_motion.plain_ground_motion import PlainGroundMotion
 from femora.core.ground_motion_base import GroundMotion
 from femora.core.time_series_base import TimeSeries
+
+if TYPE_CHECKING:
+    from femora.components.MeshMaker import MeshMaker
 
 
 class GroundMotionManager:
@@ -34,10 +37,16 @@ class GroundMotionManager:
         ```
     """
 
-    def __init__(self):
+    def __init__(self, mesh_maker: MeshMaker, time_series_manager=None):
         """Create an empty ground-motion manager with tags starting at 1."""
+        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+
+        if not isinstance(mesh_maker, MeshMakerClass):
+            raise TypeError("mesh_maker must be a MeshMaker instance")
+        self._mesh_maker = mesh_maker
         self._ground_motions: Dict[int, GroundMotion] = {}
         self._start_tag = 1
+        self._time_series_manager = time_series_manager
 
     def __len__(self) -> int:
         """Return the number of managed ground motions."""
@@ -62,11 +71,15 @@ class GroundMotionManager:
         """
         if not isinstance(ground_motion, GroundMotion):
             raise ValueError("ground_motion must be a GroundMotion instance")
-        if ground_motion.tag is not None:
-            existing = self._ground_motions.get(ground_motion.tag)
-            if existing is ground_motion:
+        if ground_motion._owner is None:
+            ground_motion._owner = self
+        elif ground_motion._owner is self:
+            if ground_motion.tag is not None and self._ground_motions.get(ground_motion.tag) is ground_motion:
                 return ground_motion
-            raise ValueError("ground_motion already has a tag managed elsewhere")
+        else:
+            raise ValueError("ground_motion already belongs to another manager")
+
+        self._validate_dependencies(ground_motion)
 
         tag = self._next_tag()
         ground_motion.tag = tag
@@ -162,12 +175,14 @@ class GroundMotionManager:
         if tag in self._ground_motions:
             removed = self._ground_motions.pop(tag)
             removed.tag = None
+            removed._owner = None
             self._reassign_tags()
 
     def clear(self) -> None:
         """Remove all ground motions and reset the next tag start to 1."""
         for ground_motion in self._ground_motions.values():
             ground_motion.tag = None
+            ground_motion._owner = None
         self._ground_motions.clear()
         self._start_tag = 1
 
@@ -200,6 +215,37 @@ class GroundMotionManager:
         for tag, ground_motion in enumerate(ground_motions, start=self._start_tag):
             ground_motion.tag = tag
             self._ground_motions[tag] = ground_motion
+
+    def _validate_dependencies(self, ground_motion: GroundMotion) -> None:
+        """Ensure a ground motion only references local managed dependencies."""
+        for time_series in (
+            getattr(ground_motion, "accel", None),
+            getattr(ground_motion, "vel", None),
+            getattr(ground_motion, "disp", None),
+        ):
+            if time_series is None:
+                continue
+            if time_series.tag is None or time_series._owner is None:
+                raise ValueError("GroundMotion references an unmanaged TimeSeries")
+            owner_manager = time_series._owner
+            owner_mesh_maker = getattr(owner_manager, "_mesh_maker", None)
+            if owner_mesh_maker is not self._mesh_maker:
+                raise ValueError("GroundMotion references a TimeSeries from another MeshMaker")
+            if (
+                self._time_series_manager is not None
+                and owner_manager is not self._time_series_manager
+            ):
+                raise ValueError("GroundMotion references a TimeSeries from another manager")
+
+        for dependency in getattr(ground_motion, "ground_motions", []):
+            if dependency.tag is None or dependency._owner is None:
+                raise ValueError("GroundMotion references an unmanaged GroundMotion")
+            owner_manager = dependency._owner
+            owner_mesh_maker = getattr(owner_manager, "_mesh_maker", None)
+            if owner_mesh_maker is not self._mesh_maker:
+                raise ValueError("GroundMotion references a GroundMotion from another MeshMaker")
+            if owner_manager is not self:
+                raise ValueError("GroundMotion references a GroundMotion from another manager")
 
 
 __all__ = [

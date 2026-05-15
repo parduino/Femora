@@ -33,6 +33,7 @@ class GroundMotion(ABC):
             motion_type: OpenSees ground-motion type name used by subclasses.
         """
         self.tag: Optional[int] = None
+        self._owner: object | None = None
         self.motion_type = motion_type
 
     def _require_tag(self) -> int:

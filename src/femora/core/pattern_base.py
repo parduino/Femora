@@ -22,6 +22,7 @@ class Pattern(ABC):
 
     def __init__(self, pattern_type: str):
         self.tag: Optional[int] = None
+        self._owner: object | None = None
         self.pattern_type = pattern_type
 
     def _require_tag(self) -> int:

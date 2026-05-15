@@ -1538,9 +1538,9 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
 
         # write time series
         f.write("\n# Time Series ======================================\n")
-        size = len(self.timeSeries)
+        size = len(self.time_series)
         indx = 1
-        for timeSeries in self.timeSeries:
+        for timeSeries in self.time_series:
             f.write(f"{timeSeries.to_tcl()}\n")
             if progress_callback:
                 progress_callback(85 + indx / size * 5, "writing time series")

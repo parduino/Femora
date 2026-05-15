@@ -971,7 +971,7 @@ class FEMA_SAC_SteelFrame:
         points = mesh.points
         tol = 1e-4
 
-        ts = model.timeSeries.create_time_series("constant", factor=1.0)
+        ts = model.time_series.create_time_series("constant", factor=1.0)
         pattern = model.pattern.create_pattern("plain", time_series=ts, factor=1.0)
         n_per_floor = self.num_x_grid * self.num_y_grid
         if n_per_floor == 0:

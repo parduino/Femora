@@ -14,6 +14,7 @@ from femora.components.Process.process import ProcessManager
 from femora.components.Recorder.recorderBase import Recorder, RecorderManager
 from femora.components.Analysis.analysis import Analysis, AnalysisManager
 from femora.components.Pattern.patternBase import Pattern, PatternManager
+from femora.components.MeshMaker import MeshMaker
 
 
 class ComponentDragItem(QListWidgetItem):
@@ -119,7 +120,7 @@ class ProcessListWidget(QListWidget):
                 component = RecorderManager().get_recorder(tag)
                 description = f"Recorder: {component.recorder_type}"
             elif component_type == "Pattern":
-                component = PatternManager().get_pattern(tag)
+                component = PatternManager(mesh_maker=MeshMaker.get_instance()).get_pattern(tag)
                 description = f"Pattern: {component.pattern_type}"
             
             if component:
@@ -247,7 +248,7 @@ class ProcessTab(QWidget):
         
         elif self.component_type == "Pattern":
             # Get patterns from the manager
-            manager = PatternManager()
+            manager = PatternManager(mesh_maker=MeshMaker.get_instance())
             for tag, pattern in manager.get_all_patterns().items():
                 item = ComponentDragItem(tag, self.component_type, pattern.pattern_type)
                 self.component_list.addItem(item)
@@ -273,7 +274,7 @@ class ProcessTab(QWidget):
             component = RecorderManager().get_recorder(tag)
             description = f"Recorder: {component.recorder_type}"
         elif self.component_type == "Pattern":
-            component = PatternManager().get_pattern(tag)
+            component = PatternManager(mesh_maker=MeshMaker.get_instance()).get_pattern(tag)
             description = f"Pattern: {component.pattern_type}"
         
         if component:
@@ -383,7 +384,8 @@ if __name__ == "__main__":
     # Create some sample components for testing
     recorder_manager = RecorderManager()
     analysis_manager = AnalysisManager()
-    pattern_manager = PatternManager()
+    mesh_maker = MeshMaker.get_instance()
+    pattern_manager = PatternManager(mesh_maker=mesh_maker)
     
     # Create sample recorders
     from femora.components.Recorder.recorderBase import NodeRecorder, VTKHDFRecorder
@@ -396,7 +398,7 @@ if __name__ == "__main__":
         from femora.components.Pattern.patternBase import UniformExcitation, H5DRMPattern
         
         # Create a sample time series
-        time_series = TimeSeriesManager().create_time_series("Path", filePath="accel.dat", fileTime="accel.time" )
+        time_series = TimeSeriesManager(mesh_maker=mesh_maker).create_time_series("Path", filePath="accel.dat", fileTime="accel.time" )
         
         # Create a sample UniformExcitation pattern
         pattern1 = pattern_manager.create_pattern("uniformexcitation", 

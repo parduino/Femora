@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Sequence
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence
 
 from femora.components.pattern.h5drm_pattern import H5DRMPattern
 from femora.components.pattern.multiple_support import MultipleSupportPattern
@@ -8,6 +8,9 @@ from femora.components.pattern.plain_pattern import PlainPattern
 from femora.components.pattern.uniform_excitation import UniformExcitation
 from femora.core.pattern_base import Pattern
 from femora.core.time_series_base import TimeSeries
+
+if TYPE_CHECKING:
+    from femora.components.MeshMaker import MeshMaker
 
 
 class PatternManager:
@@ -17,10 +20,22 @@ class PatternManager:
     independent pattern tag space for one model context.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        mesh_maker: MeshMaker,
+        time_series_manager=None,
+        ground_motion_manager=None,
+    ):
         """Create an empty manager with pattern tags starting at ``1``."""
+        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+
+        if not isinstance(mesh_maker, MeshMakerClass):
+            raise TypeError("mesh_maker must be a MeshMaker instance")
+        self._mesh_maker = mesh_maker
         self._patterns: Dict[int, Pattern] = {}
         self._start_tag = 1
+        self._time_series_manager = time_series_manager
+        self._ground_motion_manager = ground_motion_manager
 
     def add(self, pattern: Pattern) -> Pattern:
         """Add an existing pattern and assign a tag if needed.
@@ -38,6 +53,11 @@ class PatternManager:
         """
         if not isinstance(pattern, Pattern):
             raise TypeError("pattern must be a Pattern instance")
+        if pattern._owner is None:
+            pattern._owner = self
+        elif pattern._owner is not self:
+            raise ValueError("pattern already belongs to another manager")
+        self._validate_dependencies(pattern)
         if pattern.tag is None:
             pattern.tag = self._next_available_tag()
         elif pattern.tag in self._patterns and self._patterns[pattern.tag] is not pattern:
@@ -70,12 +90,14 @@ class PatternManager:
         pattern = self._patterns.pop(tag, None)
         if pattern is not None:
             pattern.tag = None
+            pattern._owner = None
             self._reassign_tags()
 
     def clear(self) -> None:
         """Remove all patterns and clear their assigned tags."""
         for pattern in self._patterns.values():
             pattern.tag = None
+            pattern._owner = None
         self._patterns.clear()
 
     def set_tag_start(self, start_tag: int) -> None:
@@ -235,3 +257,36 @@ class PatternManager:
             return
         for load in get_loads():
             load.pattern_tag = pattern.tag
+
+    def _validate_dependencies(self, pattern: Pattern) -> None:
+        """Ensure a pattern only references dependencies from the local context."""
+        time_series = getattr(pattern, "time_series", None)
+        if time_series is not None:
+            if time_series.tag is None or time_series._owner is None:
+                raise ValueError("Pattern references an unmanaged TimeSeries")
+            owner_manager = time_series._owner
+            owner_mesh_maker = getattr(owner_manager, "_mesh_maker", None)
+            if owner_mesh_maker is not self._mesh_maker:
+                raise ValueError("Pattern references a TimeSeries from another MeshMaker")
+            if (
+                self._time_series_manager is not None
+                and owner_manager is not self._time_series_manager
+            ):
+                raise ValueError("Pattern references a TimeSeries from another manager")
+
+        get_imposed_motions = getattr(pattern, "get_imposed_motions", None)
+        if get_imposed_motions is None:
+            return
+        for imposed_motion in get_imposed_motions():
+            ground_motion = imposed_motion.ground_motion
+            if ground_motion.tag is None or ground_motion._owner is None:
+                raise ValueError("Pattern references an unmanaged GroundMotion")
+            owner_manager = ground_motion._owner
+            owner_mesh_maker = getattr(owner_manager, "_mesh_maker", None)
+            if owner_mesh_maker is not self._mesh_maker:
+                raise ValueError("Pattern references a GroundMotion from another MeshMaker")
+            if (
+                self._ground_motion_manager is not None
+                and owner_manager is not self._ground_motion_manager
+            ):
+                raise ValueError("Pattern references a GroundMotion from another manager")

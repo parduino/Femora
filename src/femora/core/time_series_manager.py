@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Union
 
 from femora.components.time_series import (
     ConstantTimeSeries,
@@ -14,6 +14,9 @@ from femora.components.time_series import (
 )
 from femora.core.time_series_base import TimeSeries
 
+if TYPE_CHECKING:
+    from femora.components.MeshMaker import MeshMaker
+
 
 class TimeSeriesManager:
     """Local manager for ``TimeSeries`` lifecycle and tag assignment.
@@ -23,8 +26,13 @@ class TimeSeriesManager:
     their own time-series collections.
     """
 
-    def __init__(self):
+    def __init__(self, mesh_maker: MeshMaker):
         """Create an empty manager with tags starting at ``1``."""
+        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+
+        if not isinstance(mesh_maker, MeshMakerClass):
+            raise TypeError("mesh_maker must be a MeshMaker instance")
+        self._mesh_maker = mesh_maker
         self._time_series: Dict[int, TimeSeries] = {}
         self._start_tag = 1
 
@@ -44,6 +52,10 @@ class TimeSeriesManager:
         """
         if not isinstance(time_series, TimeSeries):
             raise TypeError("time_series must be a TimeSeries instance")
+        if time_series._owner is None:
+            time_series._owner = self
+        elif time_series._owner is not self:
+            raise ValueError("time_series already belongs to another manager")
         if time_series.tag is None:
             time_series.tag = self._next_available_tag()
         elif time_series.tag in self._time_series and self._time_series[time_series.tag] is not time_series:
@@ -80,12 +92,14 @@ class TimeSeriesManager:
         time_series = self._time_series.pop(tag, None)
         if time_series is not None:
             time_series.tag = None
+            time_series._owner = None
             self._reassign_tags()
 
     def clear(self) -> None:
         """Remove all time series and clear their assigned tags."""
         for time_series in self._time_series.values():
             time_series.tag = None
+            time_series._owner = None
         self._time_series.clear()
 
     def set_tag_start(self, start_tag: int) -> None:
