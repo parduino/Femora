@@ -8,12 +8,11 @@ from femora.core.material_base import Material
 
 
 class ElasticIsotropicMaterial(Material):
-    """Homogeneous isotropic elastic solid with constant stiffness and density.
+    """Homogeneous isotropic elastic material for continuum nD analysis.
 
-    This model wraps OpenSees ``ElasticIsotropic`` for use as an ``nDMaterial``.
-    Stress-strain behavior is governed by Young's modulus and Poisson's ratio.
-    Optional mass density is included for analyses that read material density
-    for inertia or gravity effects.
+    This class represents the OpenSees ``ElasticIsotropic`` nD material model.
+    The constitutive response is defined by Young's modulus and Poisson's ratio,
+    with optional density for analyses that require material mass.
 
     Tcl form:
         ``nDMaterial ElasticIsotropic <tag> <E> <nu> <rho>; # user_name``
@@ -21,14 +20,14 @@ class ElasticIsotropicMaterial(Material):
     Notes:
         - Coordinate ``E``, ``nu``, and ``rho`` with the unit system used by
           the mesh and exported Tcl model.
-        - ``rho`` defaults to ``0.0`` when the material is used without mass.
-        - Duplicate ``user_name`` values are rejected by the owning
-          :class:`~femora.core.material_manager.MaterialManager`.
+        - ``rho`` defaults to ``0.0`` for stiffness-only definitions.
         - Instances are typically created through
           :meth:`~femora.core.nd_material_manager.NDMaterialManager.elastic_isotropic`.
 
     Attributes:
-        - ``params``: Stored validated parameters keyed by ``E``, ``nu``, and ``rho``.
+        tag: Manager-assigned identifier after registration with the owning
+            material manager.
+        params: Validated parameter values keyed by ``E``, ``nu``, and ``rho``.
 
     Examples:
         ```python
@@ -54,24 +53,21 @@ class ElasticIsotropicMaterial(Material):
         rho: float = 0.0,
         **_: Any,
     ) -> None:
-        """Create an elastic isotropic material with validated moduli and density.
+        """Create an elastic isotropic material with validated parameters.
 
         Args:
-            - user_name: Label referenced in the emitted Tcl comment and stored
-              by the owning material manager.
-            - E: Young's modulus. Must convert to a finite float strictly
-              greater than zero.
-            - nu: Poisson's ratio. Must lie in ``[0, 0.5)`` after conversion to ``float``.
-            - rho: Mass density, non-negative after conversion. Defaults to
-              ``0.0`` for stiffness-only use.
-            - **_: Additional keyword arguments accepted and ignored for
-              forward-compatible factory calls.
+            user_name: Label included in the emitted Tcl comment and stored by
+                the owning material manager.
+            E: Young's modulus. Must be a positive numeric value.
+            nu: Poisson's ratio. Must be numeric and in the range ``[0, 0.5)``.
+            rho: Mass density. Must be a non-negative numeric value.
+            **_: Additional keyword arguments accepted and ignored for
+                forward-compatible factory calls.
 
         Raises:
-            ValueError: When ``E`` or ``nu`` is missing.
-            ValueError: When ``E``, ``nu``, or ``rho`` cannot be converted to numeric values.
-            ValueError: When ``E`` is not positive, ``nu`` falls outside ``[0, 0.5)``,
-                or ``rho`` is negative.
+            ValueError: If ``E`` or ``nu`` is missing, if any numeric parameter
+                cannot be converted to ``float``, if ``E`` is not positive, if
+                ``nu`` is outside ``[0, 0.5)``, or if ``rho`` is negative.
         """
         if E is None:
             raise ValueError("ElasticIsotropicMaterial requires the 'E' parameter.")
@@ -111,8 +107,8 @@ class ElasticIsotropicMaterial(Material):
         """Render the OpenSees ``nDMaterial ElasticIsotropic`` command.
 
         Returns:
-            str: Tcl source line defining this material using the assigned tag
-            and stored parameter values, ending with ``; # user_name``.
+            str: Tcl command defining this material with its assigned tag and
+                validated parameters, ending with ``; # user_name``.
 
         Raises:
             ValueError: If this instance has no manager-assigned tag yet.
