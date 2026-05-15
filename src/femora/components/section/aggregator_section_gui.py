@@ -224,7 +224,8 @@ class AggregatorSectionEditDialog(QDialog):
 
 
 if __name__ == "__main__":
-    from femora.components.Material.materialsOpenSees import ElasticUniaxialMaterial, ElasticIsotropicMaterial
+    from femora.components.material.uniaxial import ElasticUniaxialMaterial
+    from femora.components.material.nd import ElasticIsotropicMaterial
     from qtpy.QtWidgets import QApplication
     elas1 = ElasticUniaxialMaterial(user_name="Elastic1", E=30000, G=12000, nu=0.2)
     elas2 = ElasticUniaxialMaterial(user_name="Elastic2", E=25000, G=10000, nu=0.3)

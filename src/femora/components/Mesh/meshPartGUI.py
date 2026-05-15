@@ -995,7 +995,8 @@ if __name__ == "__main__":
     Test the MeshPartManagerTab GUI
     '''
     from PySide6.QtWidgets import QApplication
-    from femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial, ElasticUniaxialMaterial
+    from femora.components.material.nd import ElasticIsotropicMaterial
+    from femora.components.material.uniaxial import ElasticUniaxialMaterial
     import sys
     # Create the Qt Application
     app = QApplication(sys.argv)

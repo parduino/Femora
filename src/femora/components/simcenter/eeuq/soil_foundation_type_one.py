@@ -1524,7 +1524,7 @@ while {[getTime] < $endTime} {
 
         # Write the materials
         f.write("\n# Materials ======================================\n")
-        for tag,mat in self.material.get_all_materials().items():
+        for tag,mat in self.material.get_all().items():
             f.write(f"{mat.to_tcl()}\n")
 
 

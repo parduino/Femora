@@ -666,7 +666,7 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     # 1. Create materials and elements
     # ------------------------------------------------------------------
-    soil_mat = fm.material.create_material("nDMaterial", "ElasticIsotropic", user_name="Soil", E=30e6, nu=0.3, rho=2000)
+    soil_mat = fm.material.nd.elastic_isotropic(user_name="Soil", E=30e6, nu=0.3, rho=2000)
     brick_ele = fm.element.create_element("stdBrick", ndof=3, material=soil_mat)
 
     # Beam – needs section + transformation

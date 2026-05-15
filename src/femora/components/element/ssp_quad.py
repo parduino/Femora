@@ -1,5 +1,5 @@
 from typing import Dict, List, Union, Optional
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 from femora.core.element_base import Element, ElementRegistry
 
 class SSPQuadElement(Element):

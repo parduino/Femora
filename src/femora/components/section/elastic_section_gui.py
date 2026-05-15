@@ -11,7 +11,7 @@ from qtpy.QtWidgets import (
 from qtpy.QtCore import Qt
 
 from femora.components.section.section_opensees import ElasticSection
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 
 # Import utilities if available
 try:

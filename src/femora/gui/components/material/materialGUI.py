@@ -5,8 +5,61 @@ from qtpy.QtWidgets import (
 )
 from qtpy.QtCore import Qt
 
-from femora.components.Material.materialBase import Material, MaterialRegistry
-from femora.components.Material.materialsOpenSees import *
+from femora.components.MeshMaker import MeshMaker
+from femora.components.material import (
+    DruckerPragerMaterial,
+    ElasticIsotropicMaterial,
+    ElasticUniaxialMaterial,
+    J2CyclicBoundingSurfaceMaterial,
+    LinearElasticGGmaxMaterial,
+    PressureDependMultiYieldMaterial,
+    PressureIndependMultiYieldMaterial,
+    Steel01Material,
+)
+
+# GUI-only table for form construction (not a runtime registry).
+_GUI_MATERIAL_TYPES = {
+    "nDMaterial": {
+        "ElasticIsotropic": ElasticIsotropicMaterial,
+        "J2CyclicBoundingSurface": J2CyclicBoundingSurfaceMaterial,
+        "LinearElasticGGmax": LinearElasticGGmaxMaterial,
+        "DruckerPrager": DruckerPragerMaterial,
+        "PressureDependMultiYield": PressureDependMultiYieldMaterial,
+        "PressureIndependMultiYield": PressureIndependMultiYieldMaterial,
+    },
+    "uniaxialMaterial": {
+        "Elastic": ElasticUniaxialMaterial,
+        "Steel01": Steel01Material,
+    },
+}
+
+
+class _GuiMaterialForms:
+    """Maps Tcl category/type labels to concrete classes for the material tab."""
+
+    @staticmethod
+    def get_material_categories():
+        return list(_GUI_MATERIAL_TYPES.keys())
+
+    @staticmethod
+    def get_material_types(category):
+        return list(_GUI_MATERIAL_TYPES.get(category, {}).keys())
+
+    @staticmethod
+    def create_material(material_category, material_type, user_name, **params):
+        table = _GUI_MATERIAL_TYPES.get(material_category, {})
+        cls = table.get(material_type)
+        if cls is None:
+            raise ValueError(f"Unknown material {material_category} / {material_type}")
+        inst = cls(user_name=user_name, **params)
+        return MeshMaker.get_instance().material.add(inst)
+
+
+MaterialRegistry = _GuiMaterialForms  # legacy name in this module only
+
+
+def _mesh_materials():
+    return MeshMaker.get_instance().material
 
 
 
@@ -103,7 +156,7 @@ class MaterialManagerTab(QWidget):
         self.materials_table.setRowCount(0)
         
         # Get all materials
-        materials = Material.get_all_materials()
+        materials = _mesh_materials().get_all()
         
         # Set row count
         self.materials_table.setRowCount(len(materials))
@@ -143,7 +196,7 @@ class MaterialManagerTab(QWidget):
             selected_row = self.materials_table.currentRow()
             if selected_row != -1:
                 tag = int(self.materials_table.item(selected_row, 0).text())
-                material = Material.get_material_by_tag(tag)
+                material = _mesh_materials().get(tag)
                 self.open_material_edit_dialog(material)
         elif action == delete_action:
             selected_row = self.materials_table.currentRow()
@@ -160,7 +213,7 @@ class MaterialManagerTab(QWidget):
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         
         if reply == QMessageBox.Yes:
-            Material.clear_all_materials()
+            MeshMaker.get_instance().material.clear()
             self.refresh_materials_list()
 
     def open_material_edit_dialog(self, material):
@@ -181,7 +234,7 @@ class MaterialManagerTab(QWidget):
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         
         if reply == QMessageBox.Yes:
-            Material.delete_material(tag)
+            MeshMaker.get_instance().material.remove(tag)
             self.refresh_materials_list()
 
 class MaterialCreationDialog(QDialog):
@@ -198,7 +251,7 @@ class MaterialCreationDialog(QDialog):
         self.user_name_input = QLineEdit()
         form_layout.addRow("Material Name:", self.user_name_input)
 
-        material_class = MaterialRegistry._material_types[material_category][material_type]
+        material_class = _GUI_MATERIAL_TYPES[material_category][material_type]
 
         # Parameter inputs
         self.param_inputs = {}
@@ -245,7 +298,7 @@ class MaterialCreationDialog(QDialog):
                 QMessageBox.warning(self, "Input Error", "Please enter a material name.")
                 return
             else:
-                if user_name in Material._names:
+                if _mesh_materials().get_by_name(user_name):
                     QMessageBox.warning(self, "Input Error", f"Material with name {user_name} already exists.")
                     return
 
@@ -298,11 +351,13 @@ class MaterialEditDialog(QDialog):
         self.param_inputs = {}
         params = self.material.get_parameters()
         description = self.material.get_description()
-        current_values = self.material.get_values(params)
+        current_values = {
+            p: self.material.params.get(p) for p in params if p in self.material.params
+        }
 
         # Add label and input fields to the grid layout
         row = 0
-        for param,desc in zip(params, description):
+        for param, desc in zip(params, description):
             label = QLabel(param)
             input_field = QLineEdit()
             
@@ -336,26 +391,11 @@ class MaterialEditDialog(QDialog):
         layout.addLayout(btn_layout)
 
     def edit_material(self):
-        try:
-            new_values = {}
-            for param, input_field in self.param_inputs.items():
-                value = input_field.text().strip()
-                if value:
-                    new_values[param] = value
-
-            if not new_values:
-                QMessageBox.warning(self, "Input Error",
-                                    "Please enter at least one material parameter.")
-                return
-
-            self.material.update_values(**new_values)
-            self.accept()
-
-        except ValueError as e:
-            QMessageBox.warning(self, "Input Error",
-                                f"Invalid input: {str(e)}\nPlease enter numeric values.")
-        except Exception as e:
-            QMessageBox.critical(self, "Error", str(e))
+        QMessageBox.information(
+            self,
+            "Not supported",
+            "Parameter edits are not supported here. Remove the material and create a new one.",
+        )
 
 
 if __name__ == "__main__":

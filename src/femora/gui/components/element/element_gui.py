@@ -7,7 +7,7 @@ from qtpy.QtWidgets import (
 
 from femora.core.element_base import Element, ElementRegistry
 from femora.components.element import *
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 
 # Import beam element GUI components
 from femora.gui.components.element.beam_gui import (
@@ -360,7 +360,8 @@ class ElementEditDialog(QDialog):
 if __name__ == '__main__':
     from qtpy.QtWidgets import QApplication
     import sys
-    from femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial, ElasticUniaxialMaterial
+    from femora.components.material.nd import ElasticIsotropicMaterial
+    from femora.components.material.uniaxial import ElasticUniaxialMaterial
     from femora.components.section.section_opensees import ElasticSection
     from femora.components.transformation.transformation import GeometricTransformation3D
     from femora.components.element import ElasticBeamColumnElement

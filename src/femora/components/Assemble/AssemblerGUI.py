@@ -824,7 +824,7 @@ if __name__ == "__main__":
     import sys
 
     # Preliminary setup of mesh parts for testing
-    from femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial
+    from femora.components.material.nd import ElasticIsotropicMaterial
     from femora.components.element.std_brick import stdBrickElement
     from femora.components.Mesh.meshPartInstance import StructuredRectangular3D
 

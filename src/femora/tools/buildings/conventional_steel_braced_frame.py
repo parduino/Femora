@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union
 import numpy as np
 import pyvista as pv
 
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 from femora.components.Mesh.meshPartInstance import CompositeMesh
 from femora.components.element.elastic_beam_column import ElasticBeamColumnElement
 from femora.components.element.ghost_node import GhostNodeElement

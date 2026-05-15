@@ -11,7 +11,7 @@ from qtpy.QtWidgets import (
 from qtpy.QtCore import Qt
 
 from femora.components.section.section_opensees import WFSection2d
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 
 # Import utilities if available
 from femora.components.section.section_gui_utils import (
@@ -356,7 +356,7 @@ class WFSection2dEditDialog(QDialog):
 if __name__ == "__main__":
     import sys
     from qtpy.QtWidgets import QApplication
-    from femora.components.Material.materialsOpenSees import ElasticUniaxialMaterial
+    from femora.components.material.uniaxial import ElasticUniaxialMaterial
     
     app = QApplication(sys.argv)
     

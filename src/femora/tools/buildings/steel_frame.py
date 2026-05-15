@@ -7,7 +7,7 @@ from femora.components.Mesh.meshPartBase import MeshPart
 from femora.components.Mesh.meshPartInstance import CompositeMesh
 from femora.components.element.elastic_beam_column import ElasticBeamColumnElement
 from femora.components.element.ghost_node import GhostNodeElement
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 from femora.tools.sections import aisc
 from femora.core.element_base import Element
 from femora.core.pattern_base import Pattern

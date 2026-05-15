@@ -252,7 +252,8 @@ class SectionManagerTab(QWidget):
 if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
     import sys
-    from femora.components.Material.materialsOpenSees import ElasticUniaxialMaterial, ElasticIsotropicMaterial
+    from femora.components.material.uniaxial import ElasticUniaxialMaterial
+    from femora.components.material.nd import ElasticIsotropicMaterial
     from femora.components.section.section_opensees import ElasticSection
     from femora.components.section.section_opensees import WFSection2d
     

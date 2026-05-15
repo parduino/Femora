@@ -7,7 +7,7 @@ from typing import List, Dict, Union, Optional, Tuple
 from abc import ABC, abstractmethod
 import math
 from femora.components.section.section_base import Section, SectionRegistry
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 from femora.components.section.section_patch import PatchBase
 from femora.components.section.section_layer import LayerBase
 import matplotlib.pyplot as plt
@@ -1929,7 +1929,8 @@ def create_example_sections():
     """
     Create example sections demonstrating enhanced material handling across all section types
     """
-    from femora.components.Material.materialsOpenSees import ElasticUniaxialMaterial, ElasticIsotropicMaterial
+    from femora.components.material.uniaxial import ElasticUniaxialMaterial
+    from femora.components.material.nd import ElasticIsotropicMaterial
     
     # Create materials
     steel = ElasticUniaxialMaterial(user_name="Steel_A992", E=200000, eta=0.0)

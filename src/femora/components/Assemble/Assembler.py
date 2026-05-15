@@ -8,7 +8,7 @@ from scipy.spatial import cKDTree
 from femora.components.Mesh.meshPartBase import MeshPart
 from femora.components.partitioner.partitioner import PartitionerRegistry
 from femora.core.element_base import Element
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 from femora.components.event.event_bus import EventBus, FemoraEvent
 from femora.utils.progress import Progress
 from femora.constants import FEMORA_MAX_NDF

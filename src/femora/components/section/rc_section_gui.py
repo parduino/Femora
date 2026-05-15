@@ -11,7 +11,7 @@ from qtpy.QtWidgets import (
 from qtpy.QtCore import Qt
 
 from femora.components.section.section_opensees import RCSection
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 from femora.components.section.section_gui_utils import (
     setup_uniaxial_material_dropdown, get_material_by_combo_selection, set_combo_to_material, validate_material_selection
 )

@@ -5,7 +5,7 @@ Following the established patterns in the codebase with improved material handli
 
 from abc import ABC, abstractmethod
 from typing import List, Dict, Type, Optional, Union, Any
-from femora.components.Material.materialBase import Material, MaterialManager
+from femora.core.material_base import Material
 
 
 class Section(ABC):
@@ -71,7 +71,15 @@ class Section(ABC):
             
         if isinstance(material_input, (int, str)):
             try:
-                return MaterialManager.get_material(material_input)
+                from femora.components.MeshMaker import MeshMaker
+                mm = MeshMaker.get_instance()
+                if isinstance(material_input, int):
+                    mat = mm.material.get(material_input)
+                else:
+                    mat = mm.material.get_by_name(material_input)
+                if mat is None:
+                    raise KeyError(material_input)
+                return mat
             except (KeyError, TypeError) as e:
                 raise ValueError(f"Material not found: {material_input}. Error: {str(e)}")
                 

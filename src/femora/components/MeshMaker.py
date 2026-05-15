@@ -1,4 +1,4 @@
-from femora.components.Material.materialBase import MaterialManager
+from femora.core.material_manager import MaterialManager
 from femora.core.element_base import Element, ElementRegistry
 from femora.core.ground_motion_manager import GroundMotionManager
 from femora.components.Assemble.Assembler import Assembler
@@ -66,7 +66,7 @@ class MeshMaker:
         self.model_name = kwargs.get('model_name')
         self.model_path = kwargs.get('model_path')
         self.assembler = Assembler()
-        self.material = MaterialManager()
+        self.material = MaterialManager(mesh_maker=self)
         self.element = ElementRegistry()
         self.time_series = TimeSeriesManager(mesh_maker=self)
         self.ground_motion = GroundMotionManager(mesh_maker=self, time_series_manager=self.time_series)
@@ -363,7 +363,7 @@ class MeshMaker:
 
                 # Write the materials
                 f.write("\n# Materials ======================================\n")
-                for tag,mat in self.material.get_all_materials().items():
+                for tag, mat in self.material.get_all().items():
                     f.write(f"{mat.to_tcl()}\n")
 
                 # write the transformations
@@ -818,6 +818,7 @@ class MeshMaker:
         self.ground_motion.set_tag_start(1)
         self.pattern.set_tag_start(1)
         self.transformation.set_tag_start(1)
+        self.material.set_tag_start(1)
         self._start_nodetag = 1
         self._start_ele_tag = 1
         self._start_core_tag = 0

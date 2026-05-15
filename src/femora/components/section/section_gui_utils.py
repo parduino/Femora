@@ -4,7 +4,7 @@ Common utilities for section GUI dialogs
 """
 
 from qtpy.QtWidgets import QComboBox
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 
 
 def setup_material_dropdown(combo_box: QComboBox, material_filter=None, placeholder_text="Select Material"):

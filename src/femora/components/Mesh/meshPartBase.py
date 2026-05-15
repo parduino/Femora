@@ -10,7 +10,7 @@ Modules:
     abc: A module that provides tools for defining abstract base classes.
     typing: A module that provides runtime support for type hints.
     femora.components.Element.elementBase: A module that defines the Element and ElementRegistry classes.
-    femora.components.Material.materialBase: A module that defines the Material class.
+    femora.core.material_base: Abstract Material base used by MeshPart tagging.
     femora.components.Region.regionBase: A module that defines the RegionBase and GlobalRegion classes.
 Usage:
     This module is intended to be used as part of a larger DRM analysis application. 
@@ -23,7 +23,7 @@ import pyvista as pv
 from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple, Type, Union, Optional
 from femora.core.element_base import Element
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 from femora.components.Region.regionBase import RegionBase, GlobalRegion
 from femora.constants import FEMORA_MAX_NDF
 from femora.components.geometry_ops import MeshPartTransform

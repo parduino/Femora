@@ -2,7 +2,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from typing import Union, Dict
 import matplotlib.pyplot as plt
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 from femora.components.section.section_base import Section
 
 

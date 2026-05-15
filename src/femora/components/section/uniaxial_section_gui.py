@@ -217,7 +217,8 @@ class UniaxialSectionEditDialog(QDialog):
 
 if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
-    from femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial, ElasticUniaxialMaterial
+    from femora.components.material.nd import ElasticIsotropicMaterial
+    from femora.components.material.uniaxial import ElasticUniaxialMaterial
     import sys
 
     elas1 = ElasticIsotropicMaterial(user_name="Steel", E=210e9, nu=0.3)

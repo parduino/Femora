@@ -13,7 +13,7 @@ Example usage:
 import femora as fm
 
 # Create materials
-material = fm.material.create_material(...)
+material = fm.material.nd.elastic_isotropic(user_name="soil", E=30e6, nu=0.3, rho=2000)
 
 # Create elements
 element = fm.element.create_element(...)

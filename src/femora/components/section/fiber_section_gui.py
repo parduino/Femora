@@ -19,7 +19,7 @@ from femora.components.section.section_opensees import (
 )
 from femora.components.section.section_layer import *
 from femora.components.section.section_patch import *
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 from femora.components.section.section_gui_utils import(setup_uniaxial_material_dropdown,
                                                         validate_material_selection)
 
@@ -1229,7 +1229,8 @@ if __name__ == "__main__":
     # Test the dialog
     from qtpy.QtWidgets import QApplication
     import sys
-    from femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial, ElasticUniaxialMaterial
+    from femora.components.material.nd import ElasticIsotropicMaterial
+    from femora.components.material.uniaxial import ElasticUniaxialMaterial
     elas1 = ElasticUniaxialMaterial(user_name="Steel", E=210e9, nu=0.3)
     elas2 = ElasticUniaxialMaterial(user_name="Concrete", E=30e9, nu=0.2)
 

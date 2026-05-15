@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from femora.components.Material.materialBase import MaterialManager, Material
-from femora.components.Assemble.Assembler import Assembler 
+from femora.core.material_base import Material
+from femora.components.Assemble.Assembler import Assembler
 from typing import Union
 
 class Action(ABC):
@@ -88,11 +88,23 @@ class SetMaterialParameter(Action):
 
         from femora.components.MeshMaker import MeshMaker
         import numpy as np
-    
+
+        mm = MeshMaker.get_instance()
         try:
-            self.mat = MaterialManager().get_material(material)
-        except ValueError:
-            raise ValueError(f"Material '{material}' not found in MaterialManager.")
+            if isinstance(material, int):
+                self.mat = mm.material.get(material)
+                if self.mat is None:
+                    raise KeyError(material)
+            elif isinstance(material, str):
+                self.mat = mm.material.get_by_name(material)
+                if self.mat is None:
+                    raise KeyError(material)
+            elif isinstance(material, Material):
+                self.mat = material
+            else:
+                raise TypeError(f"material must be int, str, or Material, got {type(material)}")
+        except (KeyError, TypeError) as exc:
+            raise ValueError(f"Material '{material}' not found in MaterialManager.") from exc
 
         # create list of element tags if not provided
         if element_tags is None:
@@ -129,12 +141,13 @@ class updateMaterialStageToElastic(Action):
 
     def to_tcl(self) -> str:
         cmd = ""
-        for mat in MaterialManager().get_all_materials().values():
+        from femora.components.MeshMaker import MeshMaker
+        for mat in MeshMaker.get_instance().material.get_all().values():
             tmp = mat.updateMaterialStage("Elastic")
             if tmp != "":
                 cmd += tmp + "\n"
         return cmd
-    
+
 class updateMaterialStageToPlastic(Action):
         """
         Action to update all materials to plastic stage.
@@ -148,7 +161,8 @@ class updateMaterialStageToPlastic(Action):
 
         def to_tcl(self) -> str:
             cmd = ""
-            for mat in MaterialManager().get_all_materials().values():
+            from femora.components.MeshMaker import MeshMaker
+            for mat in MeshMaker.get_instance().material.get_all().values():
                 tmp = mat.updateMaterialStage("Plastic")
                 if tmp != "":
                     cmd += tmp + "\n"

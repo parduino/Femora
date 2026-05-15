@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Type, Optional, Union, Any
-from femora.components.Material.materialBase import Material, MaterialManager
+from femora.core.material_base import Material
+from femora.core.material_manager import MaterialManager
 from femora.components.section.section_base import Section, SectionManager
 from femora.core.transformation_base import GeometricTransformation
 
