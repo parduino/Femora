@@ -651,7 +651,6 @@ if __name__ == "__main__":
     `embedded_demo.tcl`.  Run with `python concrete_embedded_beam_solid.py`.
     """
     import femora as fm
-    from femora.components.transformation.transformation import GeometricTransformation3D
     from femora.components.section.section_base import SectionManager
     # Ensure section types (e.g., 'Elastic') are registered
     import femora.components.section.section_opensees
@@ -673,7 +672,7 @@ if __name__ == "__main__":
     # Beam – needs section + transformation
     sec_mgr = SectionManager()   
     beam_sec = sec_mgr.create_section("Elastic", user_name="PileSection", E=2e11, A=0.05, Iz=1e-4, Iy=1e-4)
-    transf = GeometricTransformation3D("Linear", 0, 1, 0)  # Local y-axis as vecXZ
+    transf = fm.transformation.transformation3d("Linear", 0, 1, 0)  # Local y-axis as vecXZ
     beam_ele = fm.element.create_element("DispBeamColumn", ndof=6, section=beam_sec, transformation=transf)
 
     # ------------------------------------------------------------------

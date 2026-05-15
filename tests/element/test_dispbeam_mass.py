@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 import pyvista as pv
-from femora.components.Element.elements_opensees_beam import DispBeamColumnElement
+from femora.components.element.disp_beam_column import DispBeamColumnElement
 from femora.components.Mesh.meshPartInstance import SingleLineMesh, StructuredLineMesh
 from femora.components.section.section_base import Section # We need a dummy section
 from femora.components.transformation.transformation import GeometricTransformation # And dummy transformation
@@ -18,8 +18,10 @@ class DummySection(Section):
 
 class DummyTransform(GeometricTransformation):
     def __init__(self, tag=1):
-        super().__init__("Linear", tag=tag) # Assuming Linear exists or base accepts it
+        super().__init__("Linear", 3)
+        self.tag = tag
     def to_tcl(self): return ""
+    def has_joint_offsets(self): return False
     @classmethod
     def get_parameters(cls): return []
     

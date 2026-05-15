@@ -1,12 +1,17 @@
-from femora.core.ground_motion_manager import GroundMotionManager
-from femora.core.pattern_manager import PatternManager
-from femora.core.time_series_manager import TimeSeriesManager
+import pytest
+
+from femora.components.MeshMaker import MeshMaker
+
+@pytest.fixture(autouse=True)
+def managers():
+    mesh_maker = MeshMaker.get_instance()
+    mesh_maker.clear_model()
+    yield mesh_maker.time_series, mesh_maker.ground_motion, mesh_maker.pattern
+    mesh_maker.clear_model()
 
 
-def test_multiple_support_pattern_to_tcl():
-    time_series = TimeSeriesManager()
-    ground_motions = GroundMotionManager()
-    patterns = PatternManager()
+def test_multiple_support_pattern_to_tcl(managers):
+    time_series, ground_motions, patterns = managers
 
     accel = time_series.path(dt=0.01, filePath="support_x.acc", factor=9.81)
     disp = time_series.path(dt=0.01, filePath="support_x.disp")
@@ -25,10 +30,8 @@ def test_multiple_support_pattern_to_tcl():
     )
 
 
-def test_multiple_support_includes_interpolated_dependencies_first():
-    time_series = TimeSeriesManager()
-    ground_motions = GroundMotionManager()
-    patterns = PatternManager()
+def test_multiple_support_includes_interpolated_dependencies_first(managers):
+    time_series, ground_motions, patterns = managers
 
     ts = time_series.constant()
     gm1 = ground_motions.plain(accel=ts)

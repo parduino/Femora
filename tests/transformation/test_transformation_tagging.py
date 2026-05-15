@@ -13,9 +13,11 @@ class DummyTransformation(GeometricTransformation):
 
 @pytest.fixture(autouse=True)
 def manager():
-    transformation_manager = TransformationManager(mesh_maker=MeshMaker.get_instance())
+    mesh_maker = MeshMaker.get_instance()
+    mesh_maker.clear_model()
+    transformation_manager = mesh_maker.transformation
     yield transformation_manager
-    transformation_manager.clear()
+    mesh_maker.clear_model()
 
 def test_transformation_tag_is_none_until_managed(manager):
     t1 = DummyTransformation('Linear', 2)

@@ -9,7 +9,6 @@ from femora.components.element.elastic_beam_column import ElasticBeamColumnEleme
 from femora.components.element.ghost_node import GhostNodeElement
 from femora.components.Material.materialBase import Material
 from femora.tools.sections import aisc
-from femora.components.transformation.transformation import GeometricTransformation3D
 from femora.core.element_base import Element
 from femora.core.pattern_base import Pattern
 from femora.constants import FEMORA_MAX_NDF
@@ -435,9 +434,9 @@ class FEMA_SAC_SteelFrame:
         current_point_id = 0
     
         # --- Transformations ---
-        transf_col_x = GeometricTransformation3D("Linear", 1, 0, 0, description="Column_Transf_X")
-        transf_col_y = GeometricTransformation3D("Linear", 0, 1, 0, description="Column_Transf_Y")
-        transf_beam = GeometricTransformation3D("Linear", 0, 0, 1, description="Beam_Transf")
+        transf_col_x = model.transformation.transformation3d("Linear", 1, 0, 0, description="Column_Transf_X")
+        transf_col_y = model.transformation.transformation3d("Linear", 0, 1, 0, description="Column_Transf_Y")
+        transf_beam = model.transformation.transformation3d("Linear", 0, 0, 1, description="Beam_Transf")
         
         cat_transf_map = {
             "Column_Grav": transf_col_x, 

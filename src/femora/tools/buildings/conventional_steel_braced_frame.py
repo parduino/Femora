@@ -17,7 +17,6 @@ from femora.components.element.ghost_node import GhostNodeElement
 from femora.components.element.truss import TrussElement
 from femora.components.section.section_opensees import ElasticSection
 from femora.components.Region.regionBase import RegionBase
-from femora.components.transformation.transformation import GeometricTransformation3D
 from femora.constants import FEMORA_MAX_NDF
 from femora.core.element_base import Element
 from femora.core.pattern_base import Pattern
@@ -186,10 +185,10 @@ class ConventionalSteelBracedFrame:
         cell_element_tags: List[int] = []
         current_point_id = 0
 
-        transf_col_x = GeometricTransformation3D("Linear", 1, 0, 0, description="CBF_Column_Transf_X")
-        transf_col_y = GeometricTransformation3D("Linear", 0, 1, 0, description="CBF_Column_Transf_Y")
-        transf_beam_x = GeometricTransformation3D("Linear", 0, 0, 1, description="CBF_Beam_Transf_X")
-        transf_beam_y = GeometricTransformation3D("Linear", 0, 0, 1, description="CBF_Beam_Transf_Y")
+        transf_col_x = model.transformation.transformation3d("Linear", 1, 0, 0, description="CBF_Column_Transf_X")
+        transf_col_y = model.transformation.transformation3d("Linear", 0, 1, 0, description="CBF_Column_Transf_Y")
+        transf_beam_x = model.transformation.transformation3d("Linear", 0, 0, 1, description="CBF_Beam_Transf_X")
+        transf_beam_y = model.transformation.transformation3d("Linear", 0, 0, 1, description="CBF_Beam_Transf_Y")
 
         def get_or_create_beam_element(category: str, section_name: str) -> ElasticBeamColumnElement:
             key = (category, section_name)

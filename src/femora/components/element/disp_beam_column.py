@@ -1,6 +1,6 @@
 from typing import Dict, List, Union
 from femora.components.section.section_base import Section, SectionManager
-from femora.components.transformation.transformation import GeometricTransformation, GeometricTransformationManager
+from femora.core.transformation_base import GeometricTransformation
 from femora.core.element_base import Element, ElementRegistry
 
 class DispBeamColumnElement(Element):
@@ -77,9 +77,18 @@ class DispBeamColumnElement(Element):
     def _resolve_transformation(transf_input: Union[GeometricTransformation, int, str]) -> GeometricTransformation:
         """Resolve transformation from different input types"""
         if isinstance(transf_input, GeometricTransformation):
+            if transf_input.tag is None:
+                raise ValueError("Transformation must be managed before assigning it to an element")
             return transf_input
-        if isinstance(transf_input, (int, str)):
-            return GeometricTransformationManager.get_transformation(transf_input)
+        if isinstance(transf_input, str):
+            raise ValueError("Transformation lookup by name is not supported; pass a managed transformation object")
+        if isinstance(transf_input, int):
+            from femora.components.MeshMaker import MeshMaker
+
+            transformation = MeshMaker.get_instance().transformation.get(transf_input)
+            if transformation is None:
+                raise ValueError(f"Transformation '{transf_input}' not found")
+            return transformation
         raise ValueError(f"Invalid transformation input type: {type(transf_input)}")
 
     def __str__(self):

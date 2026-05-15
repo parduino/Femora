@@ -1,6 +1,6 @@
 import pytest
 from femora.components.Material.materialBase import Material
-from femora.components.Element.elementsOpenSees import stdBrickElement
+from femora.components.element.std_brick import stdBrickElement
 
 
 class DummyNDMaterial(Material):

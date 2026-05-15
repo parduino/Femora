@@ -1,6 +1,6 @@
 import pytest
+from femora.components.MeshMaker import MeshMaker
 from femora.core.time_series_base import TimeSeries
-from femora.core.time_series_manager import TimeSeriesManager
 
 class DummyTimeSeries(TimeSeries):
     def __init__(self, series_type):
@@ -19,11 +19,13 @@ class DummyTimeSeries(TimeSeries):
         return {}
 
 @pytest.fixture(autouse=True)
-def clear_time_series():
-    yield
+def manager():
+    mesh_maker = MeshMaker.get_instance()
+    mesh_maker.clear_model()
+    yield mesh_maker.time_series
+    mesh_maker.clear_model()
 
-def test_time_series_sequential_tagging():
-    manager = TimeSeriesManager()
+def test_time_series_sequential_tagging(manager):
     ts1 = manager.add(DummyTimeSeries('Constant'))
     ts2 = manager.add(DummyTimeSeries('Constant'))
     ts3 = manager.add(DummyTimeSeries('Constant'))
@@ -31,24 +33,21 @@ def test_time_series_sequential_tagging():
     assert ts2.tag == 2
     assert ts3.tag == 3
 
-def test_time_series_custom_start_tag():
-    manager = TimeSeriesManager()
+def test_time_series_custom_start_tag(manager):
     manager.set_tag_start(100)
     ts1 = manager.add(DummyTimeSeries('Constant'))
     ts2 = manager.add(DummyTimeSeries('Constant'))
     assert ts1.tag == 100
     assert ts2.tag == 101
 
-def test_time_series_tag_reset():
-    manager = TimeSeriesManager()
+def test_time_series_tag_reset(manager):
     manager.add(DummyTimeSeries('Constant'))
     manager.clear()
     manager.set_tag_start(50)
     ts2 = manager.add(DummyTimeSeries('Constant'))
     assert ts2.tag == 50
 
-def test_time_series_set_tag_start_after_some_created():
-    manager = TimeSeriesManager()
+def test_time_series_set_tag_start_after_some_created(manager):
     manager.set_tag_start(1)
     ts1 = manager.add(DummyTimeSeries('Constant'))
     ts2 = manager.add(DummyTimeSeries('Constant'))
@@ -66,8 +65,7 @@ def test_time_series_set_tag_start_after_some_created():
     ts4 = manager.add(DummyTimeSeries('Constant'))
     assert ts4.tag == 13
 
-def test_time_series_tagging_with_deletions_and_start_tag_change():
-    manager = TimeSeriesManager()
+def test_time_series_tagging_with_deletions_and_start_tag_change(manager):
     manager.set_tag_start(10)
     ts1 = manager.add(DummyTimeSeries('Constant'))  # tag 10
     ts2 = manager.add(DummyTimeSeries('Constant'))  # tag 11

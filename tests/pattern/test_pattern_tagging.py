@@ -1,6 +1,6 @@
 import pytest
+from femora.components.MeshMaker import MeshMaker
 from femora.core.pattern_base import Pattern
-from femora.core.pattern_manager import PatternManager
 
 class DummyPattern(Pattern):
     def __init__(self, pattern_type):
@@ -16,11 +16,13 @@ class DummyPattern(Pattern):
         pass
 
 @pytest.fixture(autouse=True)
-def clear_patterns():
-    yield
+def manager():
+    mesh_maker = MeshMaker.get_instance()
+    mesh_maker.clear_model()
+    yield mesh_maker.pattern
+    mesh_maker.clear_model()
 
-def test_pattern_sequential_tagging():
-    manager = PatternManager()
+def test_pattern_sequential_tagging(manager):
     p1 = manager.add(DummyPattern('Uniform'))
     p2 = manager.add(DummyPattern('Uniform'))
     p3 = manager.add(DummyPattern('Uniform'))
@@ -28,24 +30,21 @@ def test_pattern_sequential_tagging():
     assert p2.tag == 2
     assert p3.tag == 3
 
-def test_pattern_custom_start_tag():
-    manager = PatternManager()
+def test_pattern_custom_start_tag(manager):
     manager.set_tag_start(100)
     p1 = manager.add(DummyPattern('Uniform'))
     p2 = manager.add(DummyPattern('Uniform'))
     assert p1.tag == 100
     assert p2.tag == 101
 
-def test_pattern_tag_reset():
-    manager = PatternManager()
+def test_pattern_tag_reset(manager):
     manager.add(DummyPattern('Uniform'))
     manager.clear()
     manager.set_tag_start(50)
     p2 = manager.add(DummyPattern('Uniform'))
     assert p2.tag == 50
 
-def test_pattern_set_tag_start_after_some_created():
-    manager = PatternManager()
+def test_pattern_set_tag_start_after_some_created(manager):
     manager.set_tag_start(1)
     p1 = manager.add(DummyPattern('Uniform'))
     p2 = manager.add(DummyPattern('Uniform'))
@@ -63,8 +62,7 @@ def test_pattern_set_tag_start_after_some_created():
     p4 = manager.add(DummyPattern('Uniform'))
     assert p4.tag == 13
 
-def test_pattern_tagging_with_deletions_and_start_tag_change():
-    manager = PatternManager()
+def test_pattern_tagging_with_deletions_and_start_tag_change(manager):
     manager.set_tag_start(10)
     p1 = manager.add(DummyPattern('Uniform'))  # tag 10
     p2 = manager.add(DummyPattern('Uniform'))  # tag 11

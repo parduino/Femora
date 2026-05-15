@@ -13,7 +13,7 @@ from qtpy.QtCore import Qt
 from femora.core.element_base import ElementRegistry
 from femora.components.section.section_base import Section, SectionManager
 from femora.components.transformation.transformation import GeometricTransformation, GeometricTransformationManager
-from femora.components.transformation.transformation_gui import TransformationWidget3D
+from femora.gui.transformation_gui import TransformationWidget3D
 
 
 def setup_section_dropdown(combo_box: QComboBox, placeholder_text: str = "Select Section"):

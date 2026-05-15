@@ -814,6 +814,10 @@ class MeshMaker:
         self.section.clear()
         self.spatial_transform.clear()
         self.actions.clear()
+        self.time_series.set_tag_start(1)
+        self.ground_motion.set_tag_start(1)
+        self.pattern.set_tag_start(1)
+        self.transformation.set_tag_start(1)
         self._start_nodetag = 1
         self._start_ele_tag = 1
         self._start_core_tag = 0
