@@ -8,27 +8,29 @@ from femora.core.material_base import Material
 
 
 class LinearElasticGGmaxMaterial(Material):
+    __doc_controls__ = {
+        "show_docstring_attributes": False,
+        "members": ["__init__"],
+    }
+
     """Linear elastic soil skeleton with shear-modulus degradation versus strain.
 
     OpenSees evaluates an effective modulus path using a selectable backbone:
     tabulated ``(gamma, G/Gmax)``, Hardin-Drnevich style, Vucetic-Dobry, or
-    Darendeli, controlled by ``curveType``. Bulk response is supplied via
-    ``K_or_nu``: values in the special OpenSees ratio range are interpreted as
-    Poisson's ratio and larger magnitudes are treated as bulk modulus.
+    Darendeli, controlled by [curveType][femora.material.nd.linear_elastic_ggmax.LinearElasticGGmaxMaterial.__init__].
+    Bulk response is supplied via [K_or_nu][femora.material.nd.linear_elastic_ggmax.LinearElasticGGmaxMaterial.__init__]:
+    values in the special OpenSees ratio range are interpreted as Poisson's
+    ratio, and larger magnitudes are treated as bulk modulus.
 
     Tcl form:
         ``nDMaterial LinearElasticGGmax <tag> G K_or_nu rho curveType [tail]; #``
 
-    Notes:
-        - For ``curveType == 0`` you may omit ``pairs`` entirely or supply a
+    Note:
+        - For ``curveType == 0``, you may omit ``pairs`` entirely or supply a
           user-defined backbone of ``gamma`` versus normalized ``G/Gmax``.
         - Positive ``rho`` enforcement matches OpenSees mass-density usage.
         - The caller is responsible for unit consistency across ``G``, ``rho``,
           and the chosen interpretation of ``K_or_nu``.
-
-    Attributes:
-        - ``params``: Curve type, modulus inputs, density, and curve-specific
-          tail values exactly as queued for Tcl.
 
     Example:
         ```python
@@ -68,18 +70,20 @@ class LinearElasticGGmaxMaterial(Material):
         """Create a LinearElasticGGmax material with backbone validation rules.
 
         Args:
-            - user_name: Unique label referenced in Tcl export comments under
-              the owning material manager.
-            - G: Small-strain shear modulus ``G_max``, strictly greater than zero.
-            - K_or_nu: Interpreted by OpenSees as Poisson's ratio in the special
-              range, otherwise as bulk modulus.
-            - rho: Saturated density for mass coupling, required to be non-negative.
-            - curveType: Integer backbone selector ``{0, 1, 2, 3}``.
-            - pairs: User-defined backbone data for ``curveType == 0``.
-            - param1: Curve-specific scalar used by built-in backbone types.
-            - param2: Darendeli-specific parameter used when ``curveType == 3``.
-            - param3: Darendeli-specific parameter used when ``curveType == 3``.
-            - **_: Ignored compatibility keyword arguments.
+            user_name: Unique label referenced in Tcl export comments under
+                the owning material manager.
+            G: Small-strain shear modulus ``G_max``, strictly greater than zero.
+            K_or_nu: Interpreted by OpenSees as Poisson's ratio in the special
+                range, otherwise as bulk modulus.
+            rho: Saturated density for mass coupling, required to be non-negative.
+            curveType: Integer backbone selector ``{0, 1, 2, 3}``.
+            pairs: User-defined backbone data for ``curveType == 0``, either as
+                a sequence of ``(gamma, G/Gmax)`` tuples or a flattened
+                sequence ``[gamma1, GG1, gamma2, GG2, ...]``.
+            param1: Curve-specific scalar used by built-in backbone types.
+            param2: Darendeli-specific parameter used when ``curveType == 3``.
+            param3: Darendeli-specific parameter used when ``curveType == 3``.
+            **_: Ignored compatibility keyword arguments.
 
         Raises:
             ValueError: If ``G`` or ``K_or_nu`` is missing.
@@ -145,7 +149,7 @@ class LinearElasticGGmaxMaterial(Material):
             append the corresponding built-in curve parameters.
 
         Raises:
-            ValueError: If the material is unmanaged.
+            ValueError: If the material is unmanaged, thus lacking a valid tag.
         """
         p = self.params
         parts: List[str] = [
