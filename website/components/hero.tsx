@@ -8,9 +8,24 @@ export function Hero() {
       <div className="container mx-auto">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass text-sm text-muted-foreground">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span>Fast Efficient Meta-modeling for OpenSees-based Resilience Analysis</span>
+            <div className="glass-strong rounded-3xl p-5 sm:p-6">
+              <div className="flex items-center gap-5">
+                <img src="/femora-logo.svg" alt="Femora logo" className="h-36 sm:h-56 w-auto shrink-0" />
+                <div className="space-y-3">
+                  <div className="text-2xl sm:text-3xl font-semibold tracking-tight">Femora</div>
+                  <div className="flex items-start gap-2 text-sm sm:text-[0.95rem] leading-relaxed text-muted-foreground">
+                    <Sparkles className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+                    <p className="text-balance">
+                      <span className="font-semibold text-accent">F</span>ast{" "}
+                      <span className="font-semibold text-accent">E</span>fficient{" "}
+                      <span className="font-semibold text-accent">M</span>eta-modeling for{" "}
+                      <span className="font-semibold text-accent">O</span>penSees-based{" "}
+                      <span className="font-semibold text-accent">R</span>esilience{" "}
+                      <span className="font-semibold text-accent">A</span>nalysis
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -28,16 +43,14 @@ export function Hero() {
             <div className="flex flex-col sm:flex-row gap-4">
               <Button size="lg" className="group" asChild>
                 <a
-                  href="https://amnp95.github.io/Femora/introduction/quick_start.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/docs/getting_started/"
                 >
                   Quick Start
                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                 </a>
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <a href="https://amnp95.github.io/Femora/" target="_blank" rel="noopener noreferrer">
+                <a href="/docs/">
                   View Documentation
                 </a>
               </Button>
@@ -56,7 +69,7 @@ export function Hero() {
               <div className="w-px h-12 bg-border"></div>
               <div>
                 <div className="text-2xl font-bold text-chart-3">OSS</div>
-                <div className="text-sm text-muted-foreground">Open-source Product</div>
+                <div className="text-sm text-muted-foreground">Composable Open-source Core</div>
               </div>
             </div>
           </div>

@@ -20,9 +20,9 @@ export const metadata: Metadata = {
   description: "An open-source Python platform for modular 3D meta-modeling, assembly, and OpenSees export for resilience analysis.",
   generator: "v0.app",
   icons: {
-    icon: "docs/assets/femora-mark.svg",
-    shortcut: "docs/assets/femora-mark.svg",
-    apple: "docs/assets/femora-mark.svg",
+    icon: "/femora-logo.svg",
+    shortcut: "/femora-logo.svg",
+    apple: "/femora-logo.svg",
   },
 }
 

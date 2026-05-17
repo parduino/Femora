@@ -10,14 +10,39 @@ import mkdocs_gen_files
 # Folders to completely hide from the generated API docs.
 SKIP_FOLDERS = {"gui", "constants", "constant", "styles", "utils"}
 
+# Modules to skip (legacy shims without valid imports — break mkdocstrings if scanned).
+SKIP_MODULE_NAMES = {"materialsOpenSees"}
+
 nav = mkdocs_gen_files.Nav()
 
 script_dir = Path(__file__).parent
 src_root = (script_dir.parent / "src").resolve()
+TOP_LEVEL_LABELS = {
+    "components": "🧩 components",
+    "core": "⚙ core",
+    "tools": "🛠 tools",
+}
+def display_parts(parts: tuple[str, ...]) -> tuple[str, ...]:
+    """Return navigation parts with the top-level ``femora`` package collapsed."""
+    if parts and parts[0] == "femora":
+        parts = parts[1:]
+    if not parts:
+        return parts
+    head = TOP_LEVEL_LABELS.get(parts[0], parts[0])
+    return (head,) + parts[1:]
+
+
+def doc_parts(parts: tuple[str, ...]) -> tuple[str, ...]:
+    """Return filesystem doc parts with the top-level ``femora`` package collapsed."""
+    if parts and parts[0] == "femora":
+        return parts[1:]
+    return parts
 
 
 def should_skip(parts: tuple[str, ...]) -> bool:
     """Return True when a module path should not appear in the docs."""
+    if parts and parts[-1] in SKIP_MODULE_NAMES:
+        return True
     if set(parts).intersection(SKIP_FOLDERS):
         return True
     if any(part.startswith("_") for part in parts if part != "__init__"):
@@ -98,6 +123,8 @@ for path in files:
         nav_parts = parts[:-1]
         if not nav_parts:
             continue
+        if nav_parts == ("femora",):
+            continue
         package_infos.append((nav_parts, path, parse_module_docstring(path)))
         continue
 
@@ -108,19 +135,19 @@ for path in files:
     if class_names:
         package_classes.setdefault(parts[:-1], []).extend(class_names)
         for class_name in class_names:
-            class_doc_path = Path("reference", *parts[:-1], class_name, "index.md")
-            nav[parts[:-1] + (class_name,)] = class_doc_path.relative_to("reference").as_posix()
+            class_doc_path = Path("reference", *doc_parts(parts[:-1]), class_name, "index.md")
+            nav[display_parts(parts[:-1]) + (class_name,)] = class_doc_path.relative_to("reference").as_posix()
             write_class_page(class_doc_path, ".".join(parts) + "." + class_name, path)
     else:
-        doc_path = Path("reference", *parts).with_suffix(".md")
-        nav[parts] = doc_path.relative_to("reference").as_posix()
+        doc_path = Path("reference", *doc_parts(parts)).with_suffix(".md")
+        nav[display_parts(parts)] = doc_path.relative_to("reference").as_posix()
         with mkdocs_gen_files.open(doc_path, "w") as fd:
             fd.write(f"::: {'.'.join(parts)}")
         mkdocs_gen_files.set_edit_path(doc_path, path)
 
 for nav_parts, path, description in package_infos:
-    doc_path = Path("reference", *nav_parts, "index.md")
-    nav[nav_parts] = doc_path.relative_to("reference").as_posix()
+    doc_path = Path("reference", *doc_parts(nav_parts), "index.md")
+    nav[display_parts(nav_parts)] = doc_path.relative_to("reference").as_posix()
     class_links = [
         (class_name, f"{class_name}/")
         for class_name in package_classes.get(nav_parts, [])
@@ -135,4 +162,5 @@ for nav_parts, path, description in package_infos:
     )
 
 with mkdocs_gen_files.open("reference/SUMMARY.md", "w") as nav_file:
+    nav_file.write("- [Overview](index.md)\n")
     nav_file.writelines(nav.build_literate_nav())

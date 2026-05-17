@@ -94,7 +94,7 @@ export function AISection() {
                 Join Waitlist
               </Button>
               <Button size="lg" variant="outline" className="flex-1 bg-transparent" asChild>
-                <a href="https://github.com/amnp95/Femora/discussions" target="_blank" rel="noopener noreferrer">
+                <a href="https://github.com/GeotechUW/Femora/discussions" target="_blank" rel="noopener noreferrer">
                   Share Your Ideas
                 </a>
               </Button>

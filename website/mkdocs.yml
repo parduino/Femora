@@ -1,11 +1,12 @@
 site_name: Femora
-site_url: https://amnp95.github.io/Femora/docs/
+site_url: https://femora.io/docs/
 repo_url: https://github.com/amnp95/Femora
 repo_name: amnp95/Femora
 
 theme:
   name: material
-  logo: assets/femora-mark.svg
+  logo: assets/femora-logo.svg
+  favicon: assets/femora-logo.svg
   icon:
     repo: fontawesome/brands/github
   features:
@@ -16,18 +17,20 @@ theme:
     - scheme: default
       primary: custom
       toggle:
-        icon: material/moon-waxing-crescent
+        icon: material/toggle-switch
         name: Switch to dark mode
     - scheme: slate
       primary: custom
       toggle:
-        icon: material/white-balance-sunny
+        icon: material/toggle-switch-off-outline
         name: Switch to light mode
 
 # --- NEW: Math Support Configuration ---
 markdown_extensions:
+  - admonition
   - pymdownx.highlight:
       anchor_linenums: true
+  - pymdownx.details
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
@@ -51,6 +54,7 @@ extra_css:
 
 plugins:
   - search
+  - autorefs
   - gen-files:
       scripts:
         - gen_ref_pages.py
@@ -76,9 +80,11 @@ plugins:
               show_root_full_path: false
               show_root_heading: true
               show_if_no_docstring: false 
-              members: false
+              members: true
+              filters: public
 
 nav:
+  - Website: https://femora.io/
   - Home: index.md
   - User Guide:
       - Installation: installation.md

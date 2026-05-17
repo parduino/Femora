@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { BookOpen, Code, GraduationCap, FileText, ArrowRight } from "lucide-react"
+import { BookOpen, Code, GraduationCap, Wrench, ArrowRight } from "lucide-react"
 
 const docSections = [
   {
@@ -22,10 +22,10 @@ const docSections = [
     link: "/docs/advanced/",
   },
   {
-    icon: FileText,
-    title: "Developer Guide",
-    description: "Contributing, code style, and development setup",
-    link: "/docs/reference/",
+    icon: Wrench,
+    title: "Installation",
+    description: "Environment setup, repository workflow, and local documentation build steps",
+    link: "/docs/installation/",
   },
 ]
 
@@ -84,7 +84,7 @@ export function Documentation() {
                 </a>
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <a href="https://github.com/amnp95/Femora" target="_blank" rel="noopener noreferrer">
+                <a href="https://github.com/GeotechUW/Femora" target="_blank" rel="noopener noreferrer">
                   View on GitHub
                 </a>
               </Button>

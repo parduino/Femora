@@ -1,5 +1,7 @@
 import { Hero } from "@/components/hero"
 import { Features } from "@/components/features"
+import { WorkflowSection } from "@/components/workflow-section"
+import { UseCasesSection } from "@/components/use-cases-section"
 import { ModesSection } from "@/components/modes-section"
 import { Documentation } from "@/components/documentation"
 import { AISection } from "@/components/ai-section"
@@ -15,8 +17,8 @@ export default function Home() {
           className="absolute inset-0"
           style={{
             backgroundImage: `
-            linear-gradient(to right, rgba(99, 179, 237, 0.1) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(99, 179, 237, 0.1) 1px, transparent 1px)
+            linear-gradient(to right, rgba(169, 116, 97, 0.08) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(169, 116, 97, 0.08) 1px, transparent 1px)
           `,
             backgroundSize: "40px 40px",
           }}
@@ -35,6 +37,8 @@ export default function Home() {
       <Navigation />
       <Hero />
       <Features />
+      <WorkflowSection />
+      <UseCasesSection />
       <ModesSection />
       <Documentation />
       <AISection />
