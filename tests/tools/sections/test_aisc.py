@@ -6,7 +6,7 @@ import os
 sys.path.append(r"d:\Projects\Femora\src")
 
 from femora.tools.sections import aisc
-from femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial
+from femora.components.material.nd import ElasticIsotropicMaterial
 from femora.components.section.section_opensees import ElasticSection
 from femora.components.MeshMaker import MeshMaker
 
@@ -16,14 +16,15 @@ class TestAISCTool(unittest.TestCase):
         self.model = MeshMaker()
         # Ensure clean state
         self.model.section.clear_all_sections()
-        self.model.material.clear_all_materials()
-        
-        # Create a dummy material for testing
-        self.material = ElasticIsotropicMaterial("TestSteel", E=29000.0, nu=0.3)
+        self.model.material.clear()
+
+        # Create and manage a material for testing
+        mat = ElasticIsotropicMaterial("TestSteel", E=29000.0, nu=0.3)
+        self.material = self.model.material.add(mat)
 
     def tearDown(self):
         self.model.section.clear_all_sections()
-        self.model.material.clear_all_materials()
+        self.model.material.clear()
 
     def test_create_valid_section(self):
         """Test creating a valid W-section"""

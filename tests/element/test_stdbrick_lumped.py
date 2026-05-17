@@ -1,26 +1,23 @@
 import pytest
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 from femora.components.element.std_brick import stdBrickElement
 
 
 class DummyNDMaterial(Material):
     def __init__(self, user_name="dummyND"):
         super().__init__(material_type='nDMaterial', material_name='DummyND', user_name=user_name)
+        self.tag = 1  # manually assign for element-level tests
+
     @classmethod
     def get_parameters(cls):
         return []
+
     @classmethod
     def get_description(cls):
         return []
+
     def to_tcl(self):
         return ""
-
-
-@pytest.fixture(autouse=True)
-def clear_materials():
-    Material.clear_all()
-    yield
-    Material.clear_all()
 
 
 def test_stdbrick_to_tcl_with_lumped_flag():

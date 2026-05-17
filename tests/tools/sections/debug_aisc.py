@@ -8,7 +8,7 @@ try:
     print("Importing aisc...")
     from femora.tools.sections import aisc
     print("Importing ElasticIsotropicMaterial...")
-    from femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial
+    from femora.components.material.nd import ElasticIsotropicMaterial
     print("Importing ElasticSection...")
     from femora.components.section.section_opensees import ElasticSection
     

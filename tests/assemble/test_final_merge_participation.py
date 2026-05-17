@@ -2,11 +2,11 @@ import pytest
 
 from femora.components.Assemble.Assembler import Assembler
 from femora.components.Mesh.meshPartBase import MeshPart
-from femora.components.Material.materialBase import Material
+from femora.components.MeshMaker import MeshMaker
 from femora.core.element_base import Element
 from femora.components.event.event_bus import EventBus
 
-from femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial
+from femora.components.material.nd import ElasticIsotropicMaterial
 from femora.components.element.std_brick import stdBrickElement
 from femora.components.Mesh.meshPartInstance import StructuredRectangular3D
 
@@ -22,9 +22,9 @@ def femora_clean_state():
     old_subscribers = EventBus._subscribers.copy()
     EventBus._subscribers.clear()
 
-    # Clear model registries
+    mm = MeshMaker.get_instance()
+    mm.clear_model()
     MeshPart.clear_all_mesh_parts()
-    Material.clear_all_materials()
     Element.clear_all_elements()
 
     assembler = Assembler.get_instance()
@@ -37,13 +37,14 @@ def femora_clean_state():
         assembler.clear_assembly_sections()
         assembler.delete_assembled_mesh()
         MeshPart.clear_all_mesh_parts()
-        Material.clear_all_materials()
+        mm.clear_model()
         Element.clear_all_elements()
         EventBus._subscribers = old_subscribers
 
 
 def _make_two_adjacent_brick_meshparts():
-    mat = ElasticIsotropicMaterial(user_name="mat", E=200e3, nu=0.3, rho=0.0)
+    mm = MeshMaker.get_instance()
+    mat = mm.material.add(ElasticIsotropicMaterial(user_name="mat", E=200e3, nu=0.3, rho=0.0))
     ele = stdBrickElement(ndof=3, material=mat)
 
     # Two cubes that share the x=1 face (4 coincident points)

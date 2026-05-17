@@ -10,7 +10,7 @@ if src_dir not in sys.path:
     sys.path.append(src_dir)
 
 from femora.components.element import SSPbrickElement
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 
 class DummyMaterial(Material):
     def __init__(self, tag: int, mat_type: str):
@@ -34,10 +34,8 @@ from femora.core.element_base import Element
 
 @pytest.fixture(autouse=True)
 def setup_teardown():
-    Material.clear_all()
     Element.clear_all_elements()
     yield
-    Material.clear_all()
     Element.clear_all_elements()
 
 def test_ssp_brick_initialization():

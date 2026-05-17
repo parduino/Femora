@@ -10,7 +10,7 @@ if src_dir not in sys.path:
     sys.path.append(src_dir)
 
 from femora.components.element import SSPQuadElement
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 from femora.core.element_base import Element
 
 class DummyMaterial(Material):
@@ -33,10 +33,8 @@ class DummyMaterial(Material):
 
 @pytest.fixture(autouse=True)
 def setup_teardown():
-    Material.clear_all()
     Element.clear_all_elements()
     yield
-    Material.clear_all()
     Element.clear_all_elements()
 
 def test_ssp_quad_initialization():

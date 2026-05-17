@@ -1,7 +1,7 @@
 
 import femora as fm
 from femora.components.MeshMaker import MeshMaker
-from femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial
+from femora.components.material.nd import ElasticIsotropicMaterial
 from femora.tools.buildings.steel_frame import FEMA_SAC_SteelFrame
 
 def main():

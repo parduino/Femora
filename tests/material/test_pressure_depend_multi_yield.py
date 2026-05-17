@@ -1,14 +1,17 @@
+"""Tests for PressureDependMultiYieldMaterial using the manager-owned architecture."""
+
 import pytest
 
-from femora.components.Material.materialBase import Material
-from femora.components.Material.materialsOpenSees import PressureDependMultiYieldMaterial
+from femora.components.MeshMaker import MeshMaker
+from femora.components.material.nd import PressureDependMultiYieldMaterial
 
 
 @pytest.fixture(autouse=True)
-def clear_materials_registry():
-    Material.clear_all()
-    yield
-    Material.clear_all()
+def manager():
+    mm = MeshMaker.get_instance()
+    mm.clear_model()
+    yield mm.material
+    mm.clear_model()
 
 
 def base_params():
@@ -38,47 +41,83 @@ def base_params():
     )
 
 
-def test_pdm_basic_auto_surfaces_to_tcl():
+# ---------------------------------------------------------------------------
+# Tag lifecycle
+# ---------------------------------------------------------------------------
+
+def test_pdm_tag_none_before_add():
+    mat = PressureDependMultiYieldMaterial(user_name="Unmanaged", **base_params())
+    assert mat.tag is None
+
+
+def test_pdm_to_tcl_fails_without_manager():
+    mat = PressureDependMultiYieldMaterial(user_name="Unmanaged", **base_params())
+    with pytest.raises(ValueError, match="managed"):
+        mat.to_tcl()
+
+
+def test_pdm_tag_assigned_by_manager(manager):
+    mat = manager.add(
+        PressureDependMultiYieldMaterial(user_name="SoilAuto", **base_params())
+    )
+    assert mat.tag == 1
+
+
+# ---------------------------------------------------------------------------
+# TCL output – positional format
+# ---------------------------------------------------------------------------
+
+def test_pdm_basic_auto_surfaces_to_tcl(manager):
     params = base_params()
-    mat = PressureDependMultiYieldMaterial(user_name="SoilAuto", **params)
+    mat = manager.add(
+        PressureDependMultiYieldMaterial(user_name="SoilAuto", **params)
+    )
     tcl = mat.to_tcl()
     assert "nDMaterial PressureDependMultiYield" in tcl
-    # Exact expected TCL string
     expected = (
-        f"nDMaterial PressureDependMultiYield {mat.tag} 3 2.0 100000.0 300000.0 37.0 0.1 80.0 0.5 27.0 "
-        "0.05 0.6 3.0 5.0 0.003 1.0 noYieldSurf=20 e=0.55 cs1=0.9 cs2=0.02 cs3=0.7 pa=101.0 c=0.3; # SoilAuto"
+        f"nDMaterial PressureDependMultiYield {mat.tag} 3 2.0 100000.0 300000.0 "
+        "37.0 0.1 80.0 0.5 27.0 0.05 0.6 3.0 5.0 0.003 1.0 20 "
+        "0.55 0.9 0.02 0.7 101.0 0.3; # SoilAuto"
     )
     assert tcl == expected
 
 
-def test_pdm_negative_surfaces_with_flat_pairs():
+def test_pdm_negative_surfaces_with_flat_pairs(manager):
     params = base_params()
-    params.update(noYieldSurf=-2)
-    # two pairs => 4 numbers
-    params.update(pairs=[0.0001, 1.0, 0.01, 0.8])
-    mat = PressureDependMultiYieldMaterial(user_name="SoilPairsFlat", **params)
+    params.update(noYieldSurf=-2, pairs=[0.0001, 1.0, 0.01, 0.8])
+    mat = manager.add(
+        PressureDependMultiYieldMaterial(user_name="SoilPairsFlat", **params)
+    )
     tcl = mat.to_tcl()
     expected = (
-        f"nDMaterial PressureDependMultiYield {mat.tag} 3 2.0 100000.0 300000.0 37.0 0.1 80.0 0.5 27.0 "
-        "0.05 0.6 3.0 5.0 0.003 1.0 noYieldSurf=-2 0.0001 1.0 0.01 0.8 "
-        "e=0.55 cs1=0.9 cs2=0.02 cs3=0.7 pa=101.0 c=0.3; # SoilPairsFlat"
+        f"nDMaterial PressureDependMultiYield {mat.tag} 3 2.0 100000.0 300000.0 "
+        "37.0 0.1 80.0 0.5 27.0 0.05 0.6 3.0 5.0 0.003 1.0 -2 "
+        "0.0001 1.0 0.01 0.8 0.55 0.9 0.02 0.7 101.0 0.3; # SoilPairsFlat"
     )
     assert tcl == expected
 
 
-def test_pdm_negative_surfaces_with_tuple_pairs():
+def test_pdm_negative_surfaces_with_tuple_pairs(manager):
     params = base_params()
-    params.update(noYieldSurf=-3)
-    params.update(pairs=[(0.0001, 1.0), (0.001, 0.95), (0.01, 0.8)])
-    mat = PressureDependMultiYieldMaterial(user_name="SoilPairsTuples", **params)
+    params.update(
+        noYieldSurf=-3,
+        pairs=[(0.0001, 1.0), (0.001, 0.95), (0.01, 0.8)],
+    )
+    mat = manager.add(
+        PressureDependMultiYieldMaterial(user_name="SoilPairsTuples", **params)
+    )
     tcl = mat.to_tcl()
     expected = (
-        f"nDMaterial PressureDependMultiYield {mat.tag} 3 2.0 100000.0 300000.0 37.0 0.1 80.0 0.5 27.0 "
-        "0.05 0.6 3.0 5.0 0.003 1.0 noYieldSurf=-3 0.0001 1.0 0.001 0.95 0.01 0.8 "
-        "e=0.55 cs1=0.9 cs2=0.02 cs3=0.7 pa=101.0 c=0.3; # SoilPairsTuples"
+        f"nDMaterial PressureDependMultiYield {mat.tag} 3 2.0 100000.0 300000.0 "
+        "37.0 0.1 80.0 0.5 27.0 0.05 0.6 3.0 5.0 0.003 1.0 -3 "
+        "0.0001 1.0 0.001 0.95 0.01 0.8 0.55 0.9 0.02 0.7 101.0 0.3; # SoilPairsTuples"
     )
     assert tcl == expected
 
+
+# ---------------------------------------------------------------------------
+# Validation errors
+# ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize(
     "bad_params, error_msg",
@@ -91,8 +130,7 @@ def test_pdm_negative_surfaces_with_tuple_pairs():
 def test_pdm_validation_errors_minimal(bad_params, error_msg):
     params = base_params()
     params.update(bad_params)
-    # Remove pairs if any residual
-    params.pop('pairs', None)
+    params.pop("pairs", None)
     with pytest.raises(ValueError) as ei:
         PressureDependMultiYieldMaterial(user_name="BadSoil", **params)
     assert error_msg in str(ei.value)
@@ -100,19 +138,13 @@ def test_pdm_validation_errors_minimal(bad_params, error_msg):
 
 def test_pdm_pairs_length_validation():
     params = base_params()
-    params.update(noYieldSurf=-2)
-    # Wrong number of values (3 not 4)
-    params.update(pairs=[0.0001, 1.0, 0.01])
+    params.update(noYieldSurf=-2, pairs=[0.0001, 1.0, 0.01])
     with pytest.raises(ValueError):
         PressureDependMultiYieldMaterial(user_name="BadPairsLen", **params)
 
 
 def test_pdm_pairs_value_ranges():
     params = base_params()
-    params.update(noYieldSurf=-1)
-    # Invalid Gs (>1)
-    params.update(pairs=[0.0001, 1.2])
+    params.update(noYieldSurf=-1, pairs=[0.0001, 1.2])  # Gs > 1
     with pytest.raises(ValueError):
         PressureDependMultiYieldMaterial(user_name="BadPairsRange", **params)
-
-

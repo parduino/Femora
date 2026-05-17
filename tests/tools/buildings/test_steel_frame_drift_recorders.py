@@ -1,7 +1,7 @@
 import uuid
 
 from femora.components.MeshMaker import MeshMaker
-from femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial
+from femora.components.material.nd import ElasticIsotropicMaterial
 from femora.components.Recorder.recorderBase import Recorder
 from femora.tools.buildings.steel_frame import FEMA_SAC_SteelFrame
 
