@@ -111,8 +111,9 @@ Every class docstring should use this structure and order:
 1. Summary line
 2. Short description paragraph
 3. `Tcl form:` if applicable
-4. `Notes:` if needed
-5. `Attributes:` if needed
+4. `Note:` if needed
+5. `Tip:` if needed
+5. `Attributes:` only if they add real user-facing value
 6. `Example:` required for classes
 
 ### Class template
@@ -127,14 +128,14 @@ class SomeComponent:
     Tcl form:
         ``command Name <arg1> <arg2> ...``
 
-    Notes:
+    Note:
         - Add only meaningful user-facing or developer-facing notes here.
         - If there are multiple notes, write each one as its own bullet.
         - Start note bullets with `-`.
 
-    Attributes:
-        tag: Manager-assigned identifier after the object is added to a Femora
-            manager.
+    Tip:
+        - Add only when the code or runtime behavior suggests a practical
+          usage tip, caveat, or modeling shortcut.
 
     Example:
         ```python
@@ -156,8 +157,18 @@ class SomeComponent:
 - The description should usually be one short paragraph.
 - `Tcl form:` is required for classes that directly emit Tcl commands or Tcl
   blocks.
-- `Notes:` is optional.
-- `Attributes:` is optional.
+- `Note:` is optional.
+- `Tip:` is optional.
+- Skip `Attributes:` by default.
+- Only include `Attributes:` when the class exposes important public runtime
+  state that is not already obvious from the constructor or methods.
+- Do not use `Attributes:` for internal implementation details such as
+  `_owner`, compatibility dictionaries, or other non-user-facing fields.
+- Add `Note:` or `Tip:` only when they communicate something meaningful that is
+  not already obvious from the summary, constructor, or method docs.
+- If the implementation has important corner cases, limitations, geometry
+  assumptions, unmanaged-state behavior, or modeling caveats, document them in
+  `Note:` or `Tip:` instead of forcing a generic paragraph.
 - Every class must include at least one example.
 - Prefer manager-based creation through `model = fm.MeshMaker()` when that is
   the normal API.
@@ -171,7 +182,7 @@ Every constructor docstring should use this structure and order:
 1. Summary line
 2. `Args:` if the constructor has parameters
 3. `Raises:` if the constructor validates and raises
-4. `Notes:` if truly needed
+4. `Note:` if truly needed
 
 ### Constructor template
 
@@ -340,7 +351,8 @@ Use these labels exactly:
 - `Returns:`
 - `Raises:`
 - `Attributes:`
-- `Notes:`
+- `Note:`
+- `Tip:`
 - `Example:`
 - `Tcl form:`
 
@@ -376,7 +388,46 @@ helps the reader understand the code and API.
 
 ---
 
-## 11. What AI Must Not Do
+## 11. Doc Controls For Generated API Pages
+
+Femora API pages use class-level metadata to control what `mkdocstrings`
+renders for that class page.
+
+Every public runtime class should define a class attribute named
+`__doc_controls__`.
+
+Example:
+
+```python
+class SomeComponent:
+    __doc_controls__ = {
+        "show_docstring_attributes": False,
+        "members": ["__init__"],
+    }
+```
+
+Rules:
+
+- `__doc_controls__` is mandatory for public runtime classes that appear in the
+  generated API reference.
+- Keep it small and machine-readable.
+- Do not describe `__doc_controls__` in the user-facing docstring.
+- Use it instead of hardcoding page-specific exceptions in the docs generator.
+- The `members` list should be chosen intentionally after understanding the code
+  and deciding which methods help users understand or use the class.
+- Prefer including constructors, primary runtime methods, important helpers, and
+  user-facing utilities.
+- Do not include every public method mechanically.
+- Do not include `to_tcl` in `members` by default, because the Tcl form is
+  usually already documented in the class docstring. Include `to_tcl` only when
+  its method-level behavior has important special cases worth surfacing on the
+  page.
+- Avoid using `members` to expose internal helpers unless they provide real
+  user-facing value.
+
+---
+
+## 12. What AI Must Not Do
 
 When updating docstrings, an AI must not:
 
@@ -398,7 +449,7 @@ When updating docstrings, an AI must not:
 
 ---
 
-## 12. AI Review and Rewrite Instructions
+## 13. AI Review and Rewrite Instructions
 
 Use the following instructions whenever an AI is asked to review or complete
 docstrings for a Femora file.
@@ -417,7 +468,7 @@ docstrings for a Femora file.
 7. Every method docstring must be complete, whether the method is public or
    private.
 8. Keep class docstrings focused on concept, behavior, Tcl form, notes,
-   attributes when useful, and required examples.
+   tips when useful, attributes when useful, and required examples.
 9. Keep `__init__` docstrings focused on constructor arguments and validation.
 10. Because MkDocs merges `__init__` into the class page, do not duplicate
     constructor `Args:` in the class docstring.
@@ -433,7 +484,17 @@ docstrings for a Femora file.
     ```
 
     and then use manager-based creation when practical.
-15. Return the full valid Python file, with no markdown fences around the full
+15. Do not add `Note:` or `Tip:` mechanically. Read the implementation first
+    and add them only when they communicate real runtime caveats, corner cases,
+    or practical usage guidance.
+16. Examples must be meaningful, current, and aligned with the actual runtime
+    API. Prefer the updated manager or sub-manager path used by the code today.
+17. When a public runtime class appears in the generated API docs, maintain or
+    add a meaningful `__doc_controls__` block and choose its `members` list
+    intentionally based on the code.
+18. Do not include `to_tcl` in `__doc_controls__["members"]` by default unless
+    the method has important special behavior that deserves separate visibility.
+19. Return the full valid Python file, with no markdown fences around the full
     file.
 
 ### Reusable AI prompt
@@ -454,7 +515,7 @@ Task:
 - Add missing docstrings for all classes and all methods.
 - Every method docstring must be complete, whether the method is public or private.
 - Keep class docstrings focused on concept, behavior, Tcl form, notes,
-  attributes when useful, and required examples.
+  tips when useful, attributes when useful, and required examples.
 - Keep __init__ docstrings focused on Args and Raises.
 - Because MkDocs merges __init__ into the class page, do not duplicate Args in
   the class docstring.
@@ -467,13 +528,23 @@ Task:
   model = fm.MeshMaker()
   and manager-based creation such as model.pattern..., model.timeSeries...,
   model.material..., or other appropriate managers.
+- If the target class participates in the generated API docs, preserve or add a
+  meaningful __doc_controls__ block and choose the members list intentionally.
+- Do not include to_tcl in __doc_controls__["members"] by default. Include it
+  only when its behavior has a meaningful special case worth showing as a
+  separate API entry.
+- Do not add Note or Tip sections mechanically. Understand the code first and
+  add them only when there is a real runtime caveat, edge case, or practical
+  usage insight worth surfacing.
+- Understand the code and methods first, then decide what belongs in
+  __doc_controls__["members"] for the best documentation page.
 
 Return only the final valid Python code for the full file.
 ```
 
 ---
 
-## 13. AI Checklist
+## 14. AI Checklist
 
 Any human or AI reviewing a docstring update must verify:
 

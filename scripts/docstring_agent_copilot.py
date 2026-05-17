@@ -8,8 +8,9 @@ import yaml
 @dataclass
 class Config:
     STYLE_GUIDE_PATH: str = "STYLE_GUIDE.md"
-    TARGETS_PATH: str = ".github/docstring_targets.yml"
+    TARGETS_PATH: str = ".github/docstring_targets_copilot.yml"
     MODEL_ENV_NAME: str = "COPILOT_MODEL"
+    BATCH_SIZE: int = int(os.getenv("DOCSTRING_BATCH_SIZE", "3"))
 
 
 def read_file(path: str) -> str:
@@ -51,6 +52,18 @@ def normalize_target(entry: dict) -> tuple[str, str]:
     if not isinstance(prompt, str):
         raise ValueError("Target 'prompt' must be a string when provided.")
     return path.strip(), prompt.strip()
+
+
+def append_github_output(name: str, value: str) -> None:
+    """Append one output entry to the GitHub Actions output file."""
+    output_path = os.environ.get("GITHUB_OUTPUT")
+    if not output_path:
+        return
+    with open(output_path, "a", encoding="utf-8") as f:
+        if "\n" in value:
+            f.write(f"{name}<<EOF\n{value}\nEOF\n")
+        else:
+            f.write(f"{name}={value}\n")
 
 
 def build_prompt(style_guide: str, target_file: str, original_code: str, target_prompt: str) -> str:
@@ -146,6 +159,7 @@ def clean_response(text: str) -> str:
 
 
 def main():
+    append_github_output("refactored_count", "0")
     token = os.getenv("COPILOT_GITHUB_TOKEN")
     if not token:
         print("Skipping: COPILOT_GITHUB_TOKEN not found.")
@@ -170,37 +184,46 @@ def main():
         print("No Copilot docstring targets are queued.")
         return
 
-    try:
-        target_file, target_prompt = normalize_target(targets_data["targets"][0])
-    except Exception as e:
-        print(f"Error in first target entry: {e}")
+    batch_size = max(1, Config.BATCH_SIZE)
+    queued_targets = targets_data["targets"][:batch_size]
+    processed_files: list[str] = []
+
+    for index, target_entry in enumerate(queued_targets):
+        try:
+            target_file, target_prompt = normalize_target(target_entry)
+        except Exception as e:
+            print(f"Error in target entry {index + 1}: {e}")
+            break
+
+        if not os.path.exists(target_file):
+            print(f"Error: target file does not exist: {target_file}")
+            break
+
+        print(f"Refactoring docstrings with Copilot for: {target_file}")
+        original_code = read_file(target_file)
+        prompt = build_prompt(style_guide, target_file, original_code, target_prompt)
+
+        try:
+            new_code = clean_response(run_copilot(prompt))
+        except Exception as e:
+            print(str(e))
+            break
+
+        with open(target_file, "w", encoding="utf-8") as f:
+            f.write(new_code)
+
+        processed_files.append(target_file)
+        print(f"Successfully updated docstrings for {target_file}")
+
+    if not processed_files:
         return
 
-    if not os.path.exists(target_file):
-        print(f"Error: target file does not exist: {target_file}")
-        return
-
-    print(f"Refactoring docstrings with Copilot for: {target_file}")
-    original_code = read_file(target_file)
-    prompt = build_prompt(style_guide, target_file, original_code, target_prompt)
-
-    try:
-        new_code = clean_response(run_copilot(prompt))
-    except Exception as e:
-        print(str(e))
-        return
-
-    with open(target_file, "w", encoding="utf-8") as f:
-        f.write(new_code)
-
-    targets_data["targets"].pop(0)
+    targets_data["targets"] = targets_data["targets"][len(processed_files):]
     save_targets(Config.TARGETS_PATH, targets_data)
 
-    print(f"Successfully updated docstrings for {target_file}")
-
-    if "GITHUB_OUTPUT" in os.environ:
-        with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-            f.write(f"refactored_file={target_file}\n")
+    append_github_output("refactored_count", str(len(processed_files)))
+    append_github_output("refactored_summary", ", ".join(processed_files))
+    append_github_output("refactored_files", "\n".join(processed_files))
 
 
 if __name__ == "__main__":
