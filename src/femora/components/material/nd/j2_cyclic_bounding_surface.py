@@ -8,6 +8,11 @@ from femora.core.material_base import Material
 
 
 class J2CyclicBoundingSurfaceMaterial(Material):
+    __doc_controls__ = {
+        "show_docstring_attributes": False,
+        "members": ["updateMaterialStage"],
+    }
+
     """Bounding-surface J2 plasticity for undrained cyclic loading.
 
     Combines translational hardening on an inner yield surface with a bounding
@@ -19,16 +24,16 @@ class J2CyclicBoundingSurfaceMaterial(Material):
     Tcl form:
         ``nDMaterial J2CyclicBoundingSurface <tag> G K Su Den h m h0 chi beta; #``
 
-    Notes:
+    Note:
         - ``beta`` selects explicit (0), implicit (1), or midpoint (0.5)
           integration of the constitutive update.
         - Typical staged workflows use ``elastic`` and ``plastic`` states via
-          :meth:`updateMaterialStage`.
+          [updateMaterialStage][femora.materials.nd_materials.j2_cyclic_bounding_surface.J2CyclicBoundingSurfaceMaterial.updateMaterialStage].
         - ``Den`` may be zero for stiffness-only analyses.
 
     Attributes:
-        - ``params``: Validated stiffness, strength, density, hardening,
-          damping, and integration parameters keyed for Tcl emission.
+        params: Validated stiffness, strength, density, hardening,
+            damping, and integration parameters keyed for Tcl emission.
 
     Example:
         ```python
@@ -69,17 +74,17 @@ class J2CyclicBoundingSurfaceMaterial(Material):
         """Create a J2 cyclic bounding surface material with validated parameters.
 
         Args:
-            - user_name: Instance label appended to Tcl and stored by the owning manager.
-            - G: Shear modulus, strictly positive.
-            - K: Bulk modulus, strictly positive.
-            - Su: Undrained shear strength, strictly positive.
-            - Den: Mass density for inertia or body-force coupling, ``>= 0``.
-            - h: Hardening parameter controlling plastic modulus evolution.
-            - m: Hardening exponent shaping the nonlinear hardening curve.
-            - h0: Initial or reference hardening level.
-            - chi: Viscous damping coefficient used by the OpenSees model.
-            - beta: Implicit-explicit blending weight on ``[0, 1]``.
-            - **_: Ignored forward-compatibility keywords.
+            user_name: Instance label appended to Tcl and stored by the owning manager.
+            G: Shear modulus, strictly positive.
+            K: Bulk modulus, strictly positive.
+            Su: Undrained shear strength, strictly positive.
+            Den: Mass density for inertia or body-force coupling, ``>= 0``.
+            h: Hardening parameter controlling plastic modulus evolution.
+            m: Hardening exponent shaping the nonlinear hardening curve.
+            h0: Initial or reference hardening level.
+            chi: Viscous damping coefficient used by the OpenSees model.
+            beta: Implicit-explicit blending weight on ``[0, 1]``.
+            **_: Ignored forward-compatibility keywords.
 
         Raises:
             ValueError: If any mandatory parameter is missing.
@@ -132,7 +137,7 @@ class J2CyclicBoundingSurfaceMaterial(Material):
         """Render the defining Tcl command with parameters in fixed order.
 
         Returns:
-            str: Tcl line ``nDMaterial J2CyclicBoundingSurface`` followed by the
+            Tcl line ``nDMaterial J2CyclicBoundingSurface`` followed by the
             tag and ``G K Su Den h m h0 chi beta`` values.
 
         Raises:
@@ -150,11 +155,11 @@ class J2CyclicBoundingSurfaceMaterial(Material):
         """Emit Tcl to switch elastic versus plastic modulus stages.
 
         Args:
-            - state: Case-insensitive stage name. ``"elastic"`` selects stage
+            state: Case-insensitive stage name. ``"elastic"`` selects stage
               ``0`` and ``"plastic"`` selects stage ``1``.
 
         Returns:
-            str: The ``updateMaterialStage`` Tcl snippet for the matched state,
+            The ``updateMaterialStage`` Tcl snippet for the matched state,
             or an empty string when ``state`` is unrecognized.
 
         Raises:
