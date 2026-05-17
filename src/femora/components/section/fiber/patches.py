@@ -1,58 +1,20 @@
-from abc import ABC, abstractmethod
-from typing import Union, Dict, List, Tuple, Optional
-import numpy as np
+"""Concrete patch definitions for fiber sections."""
+
+from typing import Dict, List, Optional, Tuple, Union
+
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle, Wedge, Polygon
+import numpy as np
+from matplotlib.patches import Polygon, Rectangle, Wedge
+
 from femora.core.material_base import Material
-from femora.components.section.section_base import Section
-
-
-class PatchBase(ABC):
-    """
-    Abstract base class for all patch types in fiber sections with enhanced material handling
-    """
-    
-    def __init__(self, material: Union[int, str, Material]):
-        self.material = Section.resolve_material(material)
-        if self.material is None:
-            raise ValueError("Patch requires a valid material")
-        self.validate()
-
-    @abstractmethod
-    def plot(self, ax: plt.Axes, material_colors: Dict[str, str], 
-             show_patch_outline: bool = True, show_fiber_grid: bool = False) -> None:
-        """Plot the patch on matplotlib axes"""
-        pass
-    
-    @abstractmethod
-    def to_tcl(self) -> str:
-        """Generate OpenSees TCL command for this patch"""
-        pass
-    
-    @abstractmethod
-    def validate(self) -> None:
-        """Validate patch parameters"""
-        pass
-    
-    @abstractmethod
-    def get_patch_type(self) -> str:
-        """Return the patch type name"""
-        pass
-    
-    @abstractmethod
-    def estimate_fiber_count(self) -> int:
-        """Estimate the number of fibers this patch will generate"""
-        pass
+from femora.components.section.fiber._base import PatchBase
 
 
 class RectangularPatch(PatchBase):
-    """
-    Rectangular patch for fiber sections with enhanced material handling
-    """
-    
+    """Rectangular patch for fiber sections."""
+
     def __init__(self, material: Union[int, str, Material], num_subdiv_y: int, num_subdiv_z: int,
                  y1: float, z1: float, y2: float, z2: float):
-        # Store parameters before calling parent (which calls validate)
         try:
             self.num_subdiv_y = int(num_subdiv_y)
             self.num_subdiv_z = int(num_subdiv_z)
@@ -62,24 +24,17 @@ class RectangularPatch(PatchBase):
             self.z2 = float(z2)
         except (ValueError, TypeError):
             raise ValueError("Invalid numeric values for rectangular patch parameters")
-        
         super().__init__(material)
 
-    def plot(self, ax: plt.Axes, material_colors: Dict[str, str], 
+    def plot(self, ax: plt.Axes, material_colors: Dict[str, str],
              show_patch_outline: bool = True, show_fiber_grid: bool = False) -> None:
-        """Plot rectangular patch"""
-        color = material_colors.get(self.material.user_name, 'blue')
-        
+        color = material_colors.get(self.material.user_name, "blue")
         if show_patch_outline:
             rect = Rectangle((self.y1, self.z1), self.y2 - self.y1, self.z2 - self.z1,
-                     linewidth=2, edgecolor=color, facecolor='none', alpha=0.8)
+                             linewidth=2, edgecolor=color, facecolor="none", alpha=0.8)
             ax.add_patch(rect)
-
-        # Draw filled rectangle
         ax.add_patch(Rectangle((self.y1, self.z1), self.y2 - self.y1, self.z2 - self.z1,
-                       facecolor=color, edgecolor='none', alpha=0.3))
-
-        # Draw grid lines if requested
+                               facecolor=color, edgecolor="none", alpha=0.3))
         if show_fiber_grid:
             y_edges = np.linspace(self.y1, self.y2, self.num_subdiv_y + 1)
             z_edges = np.linspace(self.z1, self.z2, self.num_subdiv_z + 1)
@@ -87,9 +42,8 @@ class RectangularPatch(PatchBase):
                 ax.plot([y, y], [self.z1, self.z2], color="white", linewidth=0.8, alpha=0.7)
             for z in z_edges:
                 ax.plot([self.y1, self.y2], [z, z], color="white", linewidth=0.8, alpha=0.7)
-    
+
     def validate(self) -> None:
-        """Validate rectangular patch parameters"""
         if self.num_subdiv_y <= 0:
             raise ValueError("Number of subdivisions in y-direction must be positive")
         if self.num_subdiv_z <= 0:
@@ -98,23 +52,20 @@ class RectangularPatch(PatchBase):
             raise ValueError("y1 must be less than y2 for rectangular patch")
         if self.z1 >= self.z2:
             raise ValueError("z1 must be less than z2 for rectangular patch")
-    
+
     def to_tcl(self) -> str:
-        """Generate OpenSees TCL command for rectangular patch"""
         return f"    patch rect {self.material.tag} {self.num_subdiv_y} {self.num_subdiv_z} {self.y1} {self.z1} {self.y2} {self.z2}"
-    
+
     def get_patch_type(self) -> str:
         return "Rectangular"
-    
+
     def estimate_fiber_count(self) -> int:
         return self.num_subdiv_y * self.num_subdiv_z
 
 
-
 class QuadrilateralPatch(PatchBase):
-    """
-    Quadrilateral patch for fiber sections
-    """
+    """Quadrilateral patch for fiber sections."""
+
     def __init__(self, material: Union[int, str, Material], num_subdiv_ij: int, num_subdiv_jk: int,
                  vertices: List[Tuple[float, float]]):
         try:
@@ -127,13 +78,13 @@ class QuadrilateralPatch(PatchBase):
             raise ValueError("Invalid parameters for quadrilateral patch")
         super().__init__(material)
 
-    def plot(self, ax: plt.Axes, material_colors: Dict[str, str], 
+    def plot(self, ax: plt.Axes, material_colors: Dict[str, str],
              show_patch_outline: bool = True, show_fiber_grid: bool = False) -> None:
-        color = material_colors.get(self.material.user_name, 'blue')
+        color = material_colors.get(self.material.user_name, "blue")
         if show_patch_outline:
-            quad = Polygon(self.vertices, linewidth=2, edgecolor=color, facecolor='none', alpha=0.8, closed=True)
+            quad = Polygon(self.vertices, linewidth=2, edgecolor=color, facecolor="none", alpha=0.8, closed=True)
             ax.add_patch(quad)
-        ax.add_patch(Polygon(self.vertices, facecolor=color, edgecolor='none', alpha=0.3, closed=True))
+        ax.add_patch(Polygon(self.vertices, facecolor=color, edgecolor="none", alpha=0.3, closed=True))
         if show_fiber_grid:
             y_s = np.array([v[0] for v in self.vertices])
             z_s = np.array([v[1] for v in self.vertices])
@@ -157,14 +108,12 @@ class QuadrilateralPatch(PatchBase):
             raise ValueError("Number of subdivisions along J-K edge must be positive")
         if len(self.vertices) != 4:
             raise ValueError("Quadrilateral patch requires exactly 4 vertices")
-        # Could add more geometric validation here
 
     def to_tcl(self) -> str:
         coords = []
         for y, z in self.vertices:
             coords.extend([str(y), str(z)])
-        coords_str = " ".join(coords)
-        return f"    patch quad {self.material.tag} {self.num_subdiv_ij} {self.num_subdiv_jk} {coords_str}"
+        return f"    patch quad {self.material.tag} {self.num_subdiv_ij} {self.num_subdiv_jk} {' '.join(coords)}"
 
     def get_patch_type(self) -> str:
         return "Quadrilateral"
@@ -174,9 +123,8 @@ class QuadrilateralPatch(PatchBase):
 
 
 class CircularPatch(PatchBase):
-    """
-    Circular patch for fiber sections
-    """
+    """Circular patch for fiber sections."""
+
     def __init__(self, material: Union[int, str, Material], num_subdiv_circ: int, num_subdiv_rad: int,
                  y_center: float, z_center: float, int_rad: float, ext_rad: float,
                  start_ang: Optional[float] = 0.0, end_ang: Optional[float] = 360.0):
@@ -193,15 +141,15 @@ class CircularPatch(PatchBase):
             raise ValueError("Invalid parameters for circular patch")
         super().__init__(material)
 
-    def plot(self, ax: plt.Axes, material_colors: Dict[str, str], 
+    def plot(self, ax: plt.Axes, material_colors: Dict[str, str],
              show_patch_outline: bool = True, show_fiber_grid: bool = False) -> None:
-        color = material_colors.get(self.material.user_name, 'blue')
+        color = material_colors.get(self.material.user_name, "blue")
         if show_patch_outline:
             wedge = Wedge((self.y_center, self.z_center), self.ext_rad, self.start_ang, self.end_ang,
-                          width=self.ext_rad - self.int_rad, linewidth=2, edgecolor=color, facecolor='none', alpha=0.8)
+                          width=self.ext_rad - self.int_rad, linewidth=2, edgecolor=color, facecolor="none", alpha=0.8)
             ax.add_patch(wedge)
         ax.add_patch(Wedge((self.y_center, self.z_center), self.ext_rad, self.start_ang, self.end_ang,
-                           width=self.ext_rad - self.int_rad, facecolor=color, edgecolor='none', alpha=0.3))
+                           width=self.ext_rad - self.int_rad, facecolor=color, edgecolor="none", alpha=0.3))
         if show_fiber_grid:
             angles = np.linspace(np.radians(self.start_ang), np.radians(self.end_ang), self.num_subdiv_circ + 1)
             yinner = self.int_rad * np.cos(angles) + self.y_center
@@ -211,16 +159,16 @@ class CircularPatch(PatchBase):
             if self.is_solid():
                 for i in range(len(angles) - 1):
                     ax.plot([self.y_center, youter[i]], [self.z_center, zouter[i]], color="white", linewidth=0.5, alpha=0.5)
-                    ax.plot([self.y_center, youter[i+1]], [self.z_center, zouter[i+1]], color="white", linewidth=0.5, alpha=0.5)
+                    ax.plot([self.y_center, youter[i + 1]], [self.z_center, zouter[i + 1]], color="white", linewidth=0.5, alpha=0.5)
             else:
                 for i in range(len(yinner) - 1):
                     ax.plot([yinner[i], youter[i]], [zinner[i], zouter[i]], color="white", linewidth=0.5, alpha=0.5)
-                    ax.plot([yinner[i+1], youter[i+1]], [zinner[i+1], zouter[i+1]], color="white", linewidth=0.5, alpha=0.5)
+                    ax.plot([yinner[i + 1], youter[i + 1]], [zinner[i + 1], zouter[i + 1]], color="white", linewidth=0.5, alpha=0.5)
             for r in np.linspace(self.int_rad, self.ext_rad, self.num_subdiv_rad):
                 if r < 1e-12:
                     continue
                 ax.add_patch(Wedge((self.y_center, self.z_center), r, self.start_ang, self.end_ang,
-                                   width=0.00, linewidth=0.5, edgecolor="white", facecolor='none', alpha=1.0))
+                                   width=0.0, linewidth=0.5, edgecolor="white", facecolor="none", alpha=1.0))
 
     def validate(self) -> None:
         if self.num_subdiv_circ <= 0:
@@ -240,8 +188,7 @@ class CircularPatch(PatchBase):
 
     def to_tcl(self) -> str:
         cmd = f"    patch circ {self.material.tag} {self.num_subdiv_circ} {self.num_subdiv_rad} "
-        cmd += f"{self.y_center} {self.z_center} {self.int_rad} {self.ext_rad}"
-        cmd += f" {self.start_ang} {self.end_ang}"
+        cmd += f"{self.y_center} {self.z_center} {self.int_rad} {self.ext_rad} {self.start_ang} {self.end_ang}"
         cmd += f"; # CircularPatch using material {self.material.user_name}"
         return cmd
 
@@ -253,4 +200,3 @@ class CircularPatch(PatchBase):
 
     def is_solid(self) -> bool:
         return abs(self.int_rad) < 1e-12
-

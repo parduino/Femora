@@ -89,7 +89,8 @@ class BidirectionalSectionCreationDialog(QDialog):
                 QMessageBox.warning(self, "Input Error", "Please enter a section name.")
                 return
             try:
-                existing_section = BidirectionalSection.get_section_by_name(user_name)
+                from femora.components.MeshMaker import MeshMaker
+                existing_section = MeshMaker.get_instance().section.get(user_name)
                 QMessageBox.warning(self, "Input Error", f"Section with name '{user_name}' already exists.")
                 return
             except KeyError:

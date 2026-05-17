@@ -16,7 +16,7 @@ from femora.components.Process.process import ProcessManager
 from femora.components.DRM.DRM import DRM
 from femora.core.transformation_manager import TransformationManager
 from femora.components.interface.interface_base import InterfaceManager
-from femora.components.section.section_base import SectionManager
+from femora.core.section_manager import SectionManager
 from femora.components.mass.mass_manager import MassManager
 from femora.components.geometry_ops.spatial_transform_manager import SpatialTransformManager
 from femora.components.mask.mask_manager import MaskManager
@@ -67,7 +67,7 @@ class MeshMaker:
         self.model_path = kwargs.get('model_path')
         self.assembler = Assembler()
         self.material = MaterialManager(mesh_maker=self)
-        self.element = ElementRegistry()
+        self.element = ElementRegistry(mesh_maker=self)
         self.time_series = TimeSeriesManager(mesh_maker=self)
         self.ground_motion = GroundMotionManager(mesh_maker=self, time_series_manager=self.time_series)
         self.damping = DampingManager()
@@ -85,7 +85,7 @@ class MeshMaker:
         self.process = ProcessManager()
         self.interface = InterfaceManager()
         self.transformation = TransformationManager(mesh_maker=self)
-        self.section = SectionManager()
+        self.section = SectionManager(mesh_maker=self)
         self.spatial_transform = SpatialTransformManager()
         self.actions = ActionManager()
         
@@ -373,7 +373,7 @@ class MeshMaker:
 
                 # Write the sections
                 f.write("\n# Sections ======================================\n")
-                for tag,section in self.section.get_all_sections().items():
+                for tag, section in self.section.get_all().items():
                     f.write(f"{section.to_tcl()}\n")
 
                 if progress_callback:
@@ -819,6 +819,7 @@ class MeshMaker:
         self.pattern.set_tag_start(1)
         self.transformation.set_tag_start(1)
         self.material.set_tag_start(1)
+        self.section.set_tag_start(1)
         self._start_nodetag = 1
         self._start_ele_tag = 1
         self._start_core_tag = 0

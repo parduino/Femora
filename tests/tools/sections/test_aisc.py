@@ -7,7 +7,7 @@ sys.path.append(r"d:\Projects\Femora\src")
 
 from femora.tools.sections import aisc
 from femora.components.material.nd import ElasticIsotropicMaterial
-from femora.components.section.section_opensees import ElasticSection
+from femora.components.section.beam import ElasticSection
 from femora.components.MeshMaker import MeshMaker
 
 class TestAISCTool(unittest.TestCase):
@@ -39,19 +39,17 @@ class TestAISCTool(unittest.TestCase):
         self.assertIn(section_name, section.user_name)
         
         # Check if parameters were assigned (E, A, Iz, Iy, G, J)
-        params = section.params
-        self.assertIn('E', params)
-        self.assertIn('A', params)
-        self.assertIn('Iz', params)
+        self.assertTrue(hasattr(section, 'E'))
+        self.assertTrue(hasattr(section, 'A'))
+        self.assertTrue(hasattr(section, 'Iz'))
         
     def test_section_properties_accuracy(self):
         """Test that properties match the internal database for a known section"""
         
         section = aisc.create_section("W14X90", self.model, self.material)
-        params = section.params
         
-        self.assertAlmostEqual(params['A'], 26.5, places=2)
-        self.assertAlmostEqual(params['Iz'], 999.0, delta=5.0) 
+        self.assertAlmostEqual(section.A, 26.5, places=2)
+        self.assertAlmostEqual(section.Iz, 999.0, delta=5.0) 
 
     def test_case_sensitivity(self):
         """Test that section lookup handles case/separators if implemented, or fails correctly"""
@@ -85,14 +83,13 @@ class TestAISCTool(unittest.TestCase):
         expected_Ix_m = 999.0 * (scale_m ** 4)
         
         section_m = aisc.create_section("W14X90", self.model, self.material, unit_system='m', user_name='W14X90_m')
-        params_m = section_m.params
         
-        self.assertAlmostEqual(params_m['A'], expected_A_m, delta=0.1 * expected_A_m) # 10% tolerance for variation/rounding
-        self.assertAlmostEqual(params_m['Iz'], expected_Ix_m, delta=0.1 * expected_Ix_m)
+        self.assertAlmostEqual(section_m.A, expected_A_m, delta=0.1 * expected_A_m) # 10% tolerance for variation/rounding
+        self.assertAlmostEqual(section_m.Iz, expected_Ix_m, delta=0.1 * expected_Ix_m)
         
         # Material properties should be UNCHANGED
         # self.material has E=29000
-        self.assertAlmostEqual(params_m['E'], 29000.0)
+        self.assertAlmostEqual(section_m.E, 29000.0)
 
         # Test 2: Conversion to Millimeters
         # Scale factor = 25.4
@@ -100,10 +97,9 @@ class TestAISCTool(unittest.TestCase):
         expected_A_mm = 26.5 * (scale_mm ** 2)
         
         section_mm = aisc.create_section("W14X90", self.model, self.material, unit_system='mm', user_name='W14X90_mm')
-        params_mm = section_mm.params
         
-        self.assertAlmostEqual(params_mm['A'], expected_A_mm, delta=0.1 * expected_A_mm)
-        self.assertAlmostEqual(params_mm['E'], 29000.0) # Material still unchanged
+        self.assertAlmostEqual(section_mm.A, expected_A_mm, delta=0.1 * expected_A_mm)
+        self.assertAlmostEqual(section_mm.E, 29000.0) # Material still unchanged
 
     def test_invalid_unit_system(self):
         """Test invalid unit system raises error"""

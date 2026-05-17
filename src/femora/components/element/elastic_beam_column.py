@@ -1,5 +1,5 @@
 from typing import Dict, List, Union
-from femora.components.section.section_base import Section, SectionManager
+from femora.core.section_base import Section
 from femora.core.transformation_base import GeometricTransformation
 from femora.core.element_base import Element, ElementRegistry
 
@@ -67,7 +67,8 @@ class ElasticBeamColumnElement(Element):
         if isinstance(section_input, Section):
             return section_input
         if isinstance(section_input, (int, str)):
-            return SectionManager.get_section(section_input)
+            from femora.components.MeshMaker import MeshMaker
+            return MeshMaker.get_instance().section.get(section_input)
         raise ValueError(f"Invalid section input type: {type(section_input)}")
 
     @staticmethod

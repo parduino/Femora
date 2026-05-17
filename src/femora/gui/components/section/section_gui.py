@@ -171,7 +171,8 @@ class SectionManagerTab(QWidget):
         self.sections_table.setRowCount(0)
         
         # Get all sections
-        sections = Section.get_all_sections()
+        from femora.components.MeshMaker import MeshMaker
+        sections = MeshMaker.get_instance().section.get_all()
         
         # Set row count
         self.sections_table.setRowCount(len(sections))
@@ -201,20 +202,23 @@ class SectionManagerTab(QWidget):
             if selected_row != -1:
                 name = self.sections_table.item(selected_row, 1).text()
                 # Find section by user_name
-                section = next((s for s in Section.get_all_sections().values() if s.user_name == name), None)
+                from femora.components.MeshMaker import MeshMaker
+                section = MeshMaker.get_instance().section.get(name)
                 if section:
                     self.open_section_edit_dialog(section)
         elif action == delete_action:
             selected_row = self.sections_table.currentRow()
             if selected_row != -1:
                 name = self.sections_table.item(selected_row, 1).text()
-                section = next((s for s in Section.get_all_sections().values() if s.user_name == name), None)
+                from femora.components.MeshMaker import MeshMaker
+                section = MeshMaker.get_instance().section.get(name)
                 if section:
                     self.delete_section(section.tag)
 
     def delete_section(self, tag):
         """Delete a section from the system"""
-        section = Section.get_section_by_tag(tag)
+        from femora.components.MeshMaker import MeshMaker
+        section = MeshMaker.get_instance().section.get(tag)
         
         # Confirm deletion
         reply = QMessageBox.question(
@@ -225,13 +229,14 @@ class SectionManagerTab(QWidget):
         )
         
         if reply == QMessageBox.Yes:
-            Section.delete_section(tag)
+            MeshMaker.get_instance().section.remove(tag)
             self.refresh_sections_list()
             QMessageBox.information(self, "Success", f"Section '{section.user_name}' deleted successfully.")
 
     def clear_all_sections(self):
         """Clear all sections from the system"""
-        if not Section.get_all_sections():
+        from femora.components.MeshMaker import MeshMaker
+        if not MeshMaker.get_instance().section.get_all():
             QMessageBox.information(self, "No Sections", "There are no sections to clear.")
             return
             
@@ -243,8 +248,8 @@ class SectionManagerTab(QWidget):
         )
         
         if reply == QMessageBox.Yes:
-            count = len(Section.get_all_sections())
-            Section.clear_all_sections()
+            count = len(MeshMaker.get_instance().section.get_all())
+            MeshMaker.get_instance().section.clear()
             self.refresh_sections_list()
             QMessageBox.information(self, "Success", f"All {count} sections cleared successfully.")
 

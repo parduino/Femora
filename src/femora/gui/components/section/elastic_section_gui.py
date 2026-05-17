@@ -154,10 +154,12 @@ class ElasticSectionCreationDialog(QDialog):
             
             # Check if name already exists
             try:
-                existing_section = ElasticSection.get_section_by_name(user_name)
-                QMessageBox.warning(self, "Input Error", f"Section with name '{user_name}' already exists.")
-                return
-            except KeyError:
+                from femora.components.MeshMaker import MeshMaker
+                existing_section = MeshMaker.get_instance().section.get(user_name)
+                if existing_section:
+                    QMessageBox.warning(self, "Input Error", f"Section with name '{user_name}' already exists.")
+                    return
+            except Exception:
                 pass  # Name is available
             
             # Collect parameters from input fields

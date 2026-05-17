@@ -651,9 +651,8 @@ if __name__ == "__main__":
     `embedded_demo.tcl`.  Run with `python concrete_embedded_beam_solid.py`.
     """
     import femora as fm
-    from femora.components.section.section_base import SectionManager
     # Ensure section types (e.g., 'Elastic') are registered
-    import femora.components.section.section_opensees
+    import femora.components.section
 
     # Clear previous global state (helpful when running repeatedly)
     # fm.material.clear_all_materials()
@@ -670,8 +669,7 @@ if __name__ == "__main__":
     brick_ele = fm.element.create_element("stdBrick", ndof=3, material=soil_mat)
 
     # Beam – needs section + transformation
-    sec_mgr = SectionManager()   
-    beam_sec = sec_mgr.create_section("Elastic", user_name="PileSection", E=2e11, A=0.05, Iz=1e-4, Iy=1e-4)
+    beam_sec = fm.section.create_section("Elastic", user_name="PileSection", E=2e11, A=0.05, Iz=1e-4, Iy=1e-4)
     transf = fm.transformation.transformation3d("Linear", 0, 1, 0)  # Local y-axis as vecXZ
     beam_ele = fm.element.create_element("DispBeamColumn", ndof=6, section=beam_sec, transformation=transf)
 

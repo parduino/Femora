@@ -10,7 +10,7 @@ try:
     print("Importing ElasticIsotropicMaterial...")
     from femora.components.material.nd import ElasticIsotropicMaterial
     print("Importing ElasticSection...")
-    from femora.components.section.section_opensees import ElasticSection
+    from femora.components.section.beam import ElasticSection
     
     print("Creating material...")
     mat = ElasticIsotropicMaterial("TestSteel", E=29000.0, nu=0.3)

@@ -3,18 +3,14 @@ import numpy as np
 import pyvista as pv
 from femora.components.element.disp_beam_column import DispBeamColumnElement
 from femora.components.Mesh.meshPartInstance import SingleLineMesh, StructuredLineMesh
-from femora.components.section.section_base import Section # We need a dummy section
+from femora.core.section_base import Section  # We need a dummy section
 from femora.components.transformation.transformation import GeometricTransformation # And dummy transformation
 
 class DummySection(Section):
     def __init__(self, tag=1):
-        super().__init__("Dummy", "Elastic", tag=tag)
+        super().__init__("section", "Elastic", f"dummy_section_{tag}")
+        self.tag = tag
     def to_tcl(self): return ""
-    @classmethod
-    def get_parameters(cls): return []
-    @classmethod
-    def validate_parameters(cls, **kwargs): return {}
-    def update_parameters(self, **kwargs): pass
 
 class DummyTransform(GeometricTransformation):
     def __init__(self, tag=1):

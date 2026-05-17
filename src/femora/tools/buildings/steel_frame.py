@@ -450,12 +450,14 @@ class FEMA_SAC_SteelFrame:
             if key in elements_cache: return elements_cache[key]
             
             try:
-                try: fm_section = model.section.get_section(section_name)
-                except KeyError: fm_section = aisc.create_section(section_name, model, material, type="Elastic", unit_system=self.section_unit_system)
+                fm_section = model.section.get(section_name)
+                if fm_section is None:
+                    fm_section = aisc.create_section(section_name, model, material, type="Elastic", unit_system=self.section_unit_system)
             except Exception as e:
                 print(f"Warning: Issue with section {section_name}: {e}. using W14X90")
-                try: fm_section = model.section.get_section('W14X90')
-                except KeyError: fm_section = aisc.create_section('W14X90', model, material, type="Elastic", unit_system=self.section_unit_system)
+                fm_section = model.section.get('W14X90')
+                if fm_section is None:
+                    fm_section = aisc.create_section('W14X90', model, material, type="Elastic", unit_system=self.section_unit_system)
     
             transf = cat_transf_map.get(category, transf_col_x)
             element = ElasticBeamColumnElement(ndof=6, section=fm_section, transformation=transf)

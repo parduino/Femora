@@ -1,7 +1,8 @@
 import math
 from typing import Dict, Union, Optional
-from femora.components.section.section_opensees import ElasticSection, FiberSection
-from femora.components.section.section_base import Section
+from femora.components.section.beam import ElasticSection
+from femora.components.section.fiber import FiberSection
+from femora.core.section_base import Section
 
 
 # AISC Section Database moved to aisc_data.py

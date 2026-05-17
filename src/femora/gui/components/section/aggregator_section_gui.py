@@ -57,7 +57,9 @@ class AggregatorSectionCreationDialog(QDialog):
         base_section_layout = QFormLayout(base_section_group)
         self.base_section_combo = QComboBox()
         self.base_section_combo.addItem("None", None)
-        for tag, section in Section.get_all_sections().items():
+        
+        from femora.components.MeshMaker import MeshMaker
+        for tag, section in MeshMaker.get_instance().section.get_all().items():
             self.base_section_combo.addItem(f"{section.user_name} (Tag: {tag})", section)
         base_section_layout.addRow("Base Section:", self.base_section_combo)
         left_layout.addWidget(base_section_group)
@@ -97,7 +99,8 @@ class AggregatorSectionCreationDialog(QDialog):
                 QMessageBox.warning(self, "Input Error", "Please enter a section name.")
                 return
             try:
-                existing_section = AggregatorSection.get_section_by_name(user_name)
+                from femora.components.MeshMaker import MeshMaker
+                existing_section = MeshMaker.get_instance().section.get(user_name)
                 QMessageBox.warning(self, "Input Error", f"Section with name '{user_name}' already exists.")
                 return
             except KeyError:
@@ -172,7 +175,9 @@ class AggregatorSectionEditDialog(QDialog):
         base_section_layout = QFormLayout(base_section_group)
         self.base_section_combo = QComboBox()
         self.base_section_combo.addItem("None", None)
-        for tag, s in Section.get_all_sections().items():
+        
+        from femora.components.MeshMaker import MeshMaker
+        for tag, s in MeshMaker.get_instance().section.get_all().items():
             self.base_section_combo.addItem(f"{s.user_name} (Tag: {tag})", s)
         if hasattr(section, 'base_section') and section.base_section:
             set_combo_to_material(self.base_section_combo, section.base_section)

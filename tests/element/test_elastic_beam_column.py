@@ -11,12 +11,13 @@ if src_dir not in sys.path:
 
 from femora.components.element import ElasticBeamColumnElement
 from femora.core.element_base import Element
-from femora.components.section.section_base import Section
+from femora.core.section_base import Section
 from femora.components.transformation.transformation import GeometricTransformation
 
 # Mock classes
 class MockSection(Section):
     def __init__(self, tag):
+        super().__init__("section", "Mock", f"Sec{tag}")
         self.tag = tag
         self.section_type = "MockSection"
         self.user_name = f"Sec{tag}"
@@ -25,17 +26,6 @@ class MockSection(Section):
     
     def to_tcl(self):
         return f"section {self.tag}"
-
-    @classmethod
-    def get_parameters(cls): return []
-    @classmethod
-    def get_description(cls): return []
-    @classmethod
-    def get_help_text(cls): return ""
-    @classmethod
-    def validate_section_parameters(cls, **kwargs): return kwargs
-    def get_values(self, keys): return {}
-    def update_values(self, values): pass
 
 class MockTransformation(GeometricTransformation):
     def __init__(self, tag):

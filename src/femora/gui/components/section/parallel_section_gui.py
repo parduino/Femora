@@ -42,7 +42,9 @@ class ParallelSectionCreationDialog(QDialog):
         sections_layout = QVBoxLayout(sections_group)
         self.sections_list = QListWidget()
         self.sections_list.setSelectionMode(QListWidget.MultiSelection)
-        for tag, section in Section.get_all_sections().items():
+        
+        from femora.components.MeshMaker import MeshMaker
+        for tag, section in MeshMaker.get_instance().section.get_all().items():
             item = QListWidgetItem(f"{section.user_name} (Tag: {tag})")
             item.setData(Qt.UserRole, section)
             self.sections_list.addItem(item)
@@ -78,13 +80,14 @@ class ParallelSectionCreationDialog(QDialog):
         main_layout.setStretch(2, 2)
 
     def create_section(self):
+        from femora.components.MeshMaker import MeshMaker
         try:
             user_name = self.user_name_input.text().strip()
             if not user_name:
                 QMessageBox.warning(self, "Input Error", "Please enter a section name.")
                 return
             try:
-                existing_section = ParallelSection.get_section_by_name(user_name)
+                existing_section = MeshMaker.get_instance().section.get(user_name)
                 QMessageBox.warning(self, "Input Error", f"Section with name '{user_name}' already exists.")
                 return
             except KeyError:
@@ -134,7 +137,9 @@ class ParallelSectionEditDialog(QDialog):
         sections_layout = QVBoxLayout(sections_group)
         self.sections_list = QListWidget()
         self.sections_list.setSelectionMode(QListWidget.MultiSelection)
-        all_sections = list(Section.get_all_sections().values())
+        
+        from femora.components.MeshMaker import MeshMaker
+        all_sections = list(MeshMaker.get_instance().section.get_all().values())
         for s in all_sections:
             item = QListWidgetItem(f"{s.user_name} (Tag: {s.tag})")
             item.setData(Qt.UserRole, s)

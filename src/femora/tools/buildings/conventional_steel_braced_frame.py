@@ -15,7 +15,7 @@ from femora.components.Mesh.meshPartInstance import CompositeMesh
 from femora.components.element.elastic_beam_column import ElasticBeamColumnElement
 from femora.components.element.ghost_node import GhostNodeElement
 from femora.components.element.truss import TrussElement
-from femora.components.section.section_opensees import ElasticSection
+from femora.components.section.beam import ElasticSection
 from femora.components.Region.regionBase import RegionBase
 from femora.constants import FEMORA_MAX_NDF
 from femora.core.element_base import Element
@@ -195,9 +195,8 @@ class ConventionalSteelBracedFrame:
             if key in elements_cache:
                 return elements_cache[key]  # type: ignore[return-value]
             try:
-                try:
-                    section = model.section.get_section(section_name)
-                except KeyError:
+                section = model.section.get(section_name)
+                if section is None:
                     section = aisc.create_section(
                         section_name,
                         model,
@@ -619,11 +618,12 @@ class ConventionalSteelBracedFrame:
     @staticmethod
     def _scale_elastic_section_geometry(section: ElasticSection, factor: float) -> None:
         """Scale area and inertias for period calibration (axial stiffness ∝ EA)."""
-        p = dict(section.params)
-        for key in ("A", "Iz", "Iy", "J"):
-            if key in p:
-                p[key] = float(p[key]) * factor
-        section.update_values(p)
+        section.A = float(section.A) * factor
+        section.Iz = float(section.Iz) * factor
+        if section.Iy is not None:
+            section.Iy = float(section.Iy) * factor
+        if section.J is not None:
+            section.J = float(section.J) * factor
 
     def _get_or_create_brace_section(self, model, material: Material) -> ElasticSection:
         """Elastic brace section referenced by ``trussSection`` elements."""
@@ -636,9 +636,14 @@ class ConventionalSteelBracedFrame:
             params = dict(E=E_val, A=A0, Iz=Iz0, Iy=Iz0, G=G_val, J=2.0 * Iz0)
             user_name = f"{self.name_prefix}_cbf_brace"
             try:
-                existing = model.section.get_section(user_name)
-                if isinstance(existing, ElasticSection):
-                    existing.update_values(params)
+                existing = model.section.get(user_name)
+                if existing is not None:
+                    existing.E = float(params["E"])
+                    existing.A = float(params["A"])
+                    existing.Iz = float(params["Iz"])
+                    existing.Iy = float(params["Iy"])
+                    existing.G = float(params["G"])
+                    existing.J = float(params["J"])
                     return existing
             except Exception:
                 pass
@@ -646,9 +651,8 @@ class ConventionalSteelBracedFrame:
 
         section_name = self._section_for(self.brace_sections, 1, 0, 0, default="HSS8X8X3/8")
         try:
-            try:
-                section = model.section.get_section(section_name)
-            except KeyError:
+            section = model.section.get(section_name)
+            if section is None:
                 section = aisc.create_section(
                     section_name,
                     model,
@@ -662,8 +666,8 @@ class ConventionalSteelBracedFrame:
                 "Provide brace_area and optional brace_E to use direct brace properties."
             ) from exc
 
-        if not isinstance(section, ElasticSection):
-            raise ValueError("Brace sections for trussSection must be Elastic sections.")
+        if section is None:
+            raise ValueError("Brace section could not be resolved.")
 
         if self.brace_area_scale != 1.0:
             self._scale_elastic_section_geometry(section, self.brace_area_scale)

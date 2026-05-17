@@ -1,6 +1,6 @@
 from typing import Dict, List, Union
 
-from femora.components.section.section_base import Section, SectionManager
+from femora.core.section_base import Section
 from femora.core.element_base import Element, ElementRegistry
 
 
@@ -75,7 +75,11 @@ class TrussElement(Element):
         if isinstance(section_input, Section):
             return section_input
         if isinstance(section_input, (int, str)):
-            return SectionManager().get_section(section_input)
+            from femora.components.MeshMaker import MeshMaker
+            resolved = MeshMaker.get_instance().section.get(section_input)
+            if resolved is None:
+                raise ValueError(f"Section {section_input!r} not found")
+            return resolved
         raise ValueError(f"Invalid section input type: {type(section_input)}")
 
     def to_tcl(self, tag: int, nodes: List[int]) -> str:

@@ -98,13 +98,14 @@ class UniaxialSectionCreationDialog(QDialog):
         main_layout.setStretch(2, 2)
 
     def create_section(self):
+        from femora.components.MeshMaker import MeshMaker
         try:
             user_name = self.user_name_input.text().strip()
             if not user_name:
                 QMessageBox.warning(self, "Input Error", "Please enter a section name.")
                 return
             try:
-                existing_section = UniaxialSection.get_section_by_name(user_name)
+                existing_section = MeshMaker.get_instance().section.get(user_name)
                 QMessageBox.warning(self, "Input Error", f"Section with name '{user_name}' already exists.")
                 return
             except KeyError:

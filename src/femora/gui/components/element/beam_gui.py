@@ -20,32 +20,19 @@ def setup_section_dropdown(combo_box: QComboBox, placeholder_text: str = "Select
     """Populates a QComboBox with available section objects.
 
     This function clears the given QComboBox and adds a placeholder item,
-    followed by all sections retrieved from the `Section` registry. Each
+    followed by all sections retrieved from the section manager. Each
     section is displayed using its `user_name` and `section_name`.
 
     Args:
         combo_box: The QComboBox widget to populate.
         placeholder_text: The text for the initial, non-selectable item
             in the dropdown.
-    
-    Example:
-        >>> from qtpy.QtWidgets import QApplication, QComboBox
-        >>> from femora.components.section.section_opensees import ElasticSection
-        >>> app = QApplication([])
-        >>> combo = QComboBox()
-        >>> # Assume ElasticSection is registered with 'get_all_sections'
-        >>> ElasticSection(tag=1, user_name="Concrete Rect", E=30e9, G=12e9, A=0.1, Iy=1e-3, Iz=2e-3, J=3e-3)
-        >>> setup_section_dropdown(combo)
-        >>> print(combo.itemText(0))
-        Select Section
-        >>> print(combo.itemText(1)) # Assuming 'Concrete Rect' is the first added section
-        Concrete Rect (ElasticSection)
-        >>> app.quit()
     """
     combo_box.clear()
     combo_box.addItem(placeholder_text)
     
-    sections = Section.get_all_sections()
+    from femora.components.MeshMaker import MeshMaker
+    sections = MeshMaker.get_instance().section.get_all()
     for section in sections.values():
         display_text = f"{section.user_name} ({section.section_name})"
         combo_box.addItem(display_text, section)
