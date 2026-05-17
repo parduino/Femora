@@ -30,7 +30,7 @@ class PressureIndependMultiYieldMaterial(Material):
     Attributes:
         - ``params``: Final soil parameters plus optional backbone list.
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 

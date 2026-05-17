@@ -20,7 +20,7 @@ class TriangularTimeSeries(TimeSeries):
         tag: Manager-assigned identifier after the object is added to a Femora
             manager.
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 

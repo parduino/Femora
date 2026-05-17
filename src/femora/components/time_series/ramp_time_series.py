@@ -20,7 +20,7 @@ class RampTimeSeries(TimeSeries):
             ``model.timeSeries``.
         series_type: OpenSees time-series type name.
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 

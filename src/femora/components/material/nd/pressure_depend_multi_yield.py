@@ -30,7 +30,7 @@ class PressureDependMultiYieldMaterial(Material):
     Attributes:
         - ``params``: Validated soil, backbone, and optional critical-state constants.
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 

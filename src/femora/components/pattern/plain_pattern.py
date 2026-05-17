@@ -17,7 +17,7 @@ class PlainPattern(Pattern):
     Tcl form:
         ``pattern Plain <patternTag> <timeSeriesTag> [-fact factor] { ... }``
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 
@@ -127,7 +127,7 @@ class PlainPattern(Pattern):
         to the owning ``PlainPattern`` instance. This ensures that the loads
         are rendered within the pattern's Tcl block.
 
-        Examples:
+        Example:
             ```python
             import femora as fm
 

@@ -337,7 +337,7 @@ class DRM:
             bool: True if the absorbing layer is added successfully, False otherwise
 
         
-        Examples:
+        Example:
             >>> addAbsorbingLayer(2, 2, "metis", "Rectangular", type="PML")
         """
         if self.meshmaker.assembler.AssembeledMesh is None:
@@ -391,7 +391,7 @@ class DRM:
         Returns:
             bool: True if the absorbing layer is added successfully, False otherwise
         
-        Examples:
+        Example:
             >>> _addRectangularAbsorbingLayer(2, 2, "metis", type="PML")
         """
 

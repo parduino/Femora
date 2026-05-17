@@ -58,7 +58,7 @@ class TimeHistory:
     Returns:
         TimeHistory: An instance of the TimeHistory class containing the time and acceleration data.
 
-    Examples:
+    Example:
         >>> from femora.tools.transferFunction import TimeHistory
         >>> import numpy as np
 

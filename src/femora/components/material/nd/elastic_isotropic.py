@@ -22,14 +22,14 @@ class ElasticIsotropicMaterial(Material):
           the mesh and exported Tcl model.
         - ``rho`` defaults to ``0.0`` for stiffness-only definitions.
         - Instances are typically created through
-          :meth:`~femora.core.nd_material_manager.NDMaterialManager.elastic_isotropic`.
+          [NDMaterialManager.elastic_isotropic][femora.core.nd_material_manager.NDMaterialManager.elastic_isotropic].
 
     Attributes:
         tag: Manager-assigned identifier after registration with the owning
             material manager.
         params: Validated parameter values keyed by ``E``, ``nu``, and ``rho``.
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 

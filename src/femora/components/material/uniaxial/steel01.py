@@ -30,7 +30,7 @@ class Steel01Material(Material):
     Attributes:
         - ``params``: Holds ``Fy``, ``E0``, ``b``, and optional ``a1`` to ``a4``.
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 

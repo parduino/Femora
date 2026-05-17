@@ -33,7 +33,7 @@ class GeometricTransformation2D(GeometricTransformation):
         ndm: The number of dimensions for the transformation (always 2 for this class).
         description: An optional description string for the transformation.
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 
@@ -116,7 +116,7 @@ class GeometricTransformation3D(GeometricTransformation):
         ndm: The number of dimensions for the transformation (always 3 for this class).
         description: An optional description string for the transformation.
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 

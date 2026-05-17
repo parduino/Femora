@@ -30,7 +30,7 @@ class J2CyclicBoundingSurfaceMaterial(Material):
         - ``params``: Validated stiffness, strength, density, hardening,
           damping, and integration parameters keyed for Tcl emission.
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 

@@ -56,6 +56,20 @@ These rules apply to all Femora Python files.
 11. An AI should read related project files for context before writing
     docstrings, especially the relevant manager, base classes, and nearby
     components, and should understand that context before editing.
+12. When linking to documented classes or methods inside docstrings, use the
+    MkDocs/autorefs Markdown reference format:
+
+    ```text
+    [Label][full.python.path]
+    ```
+
+    or
+
+    ```text
+    [full.python.path][]
+    ```
+
+    Do not use Sphinx-style roles such as `:class:` or `:meth:`.
 
 ---
 
@@ -99,7 +113,7 @@ Every class docstring should use this structure and order:
 3. `Tcl form:` if applicable
 4. `Notes:` if needed
 5. `Attributes:` if needed
-6. `Examples:` required for classes
+6. `Example:` required for classes
 
 ### Class template
 
@@ -122,7 +136,7 @@ class SomeComponent:
         tag: Manager-assigned identifier after the object is added to a Femora
             manager.
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 
@@ -196,7 +210,7 @@ Use this order:
 3. `Args:` if needed
 4. `Returns:` if needed
 5. `Raises:` if needed
-6. `Examples:` if useful
+6. `Example:` if useful
 
 ### Method template
 
@@ -219,7 +233,7 @@ def to_tcl(self) -> str:
   type when that improves clarity, for example `str: ...`.
 - `Raises:` should document only errors that the current implementation can
   actually raise. Do not guess or invent exceptions.
-- `Examples:` are optional for methods.
+- `Example:` are optional for methods.
 - If a method example is included and the method belongs to a manager-driven
   Femora workflow, prefer calling it through `model = fm.MeshMaker()` and the
   appropriate manager path when practical.
@@ -276,7 +290,7 @@ Direct class construction is acceptable only when:
 ### Example template
 
 ```python
-Examples:
+Example:
     ```python
     import femora as fm
 
@@ -327,7 +341,7 @@ Use these labels exactly:
 - `Raises:`
 - `Attributes:`
 - `Notes:`
-- `Examples:`
+- `Example:`
 - `Tcl form:`
 
 Do not use alternatives such as:
@@ -347,7 +361,7 @@ Consistency matters more than preference.
 Docstrings should explain the concept behind a class or method when that
 context improves understanding.
 
-Examples:
+Example:
 
 - a class may need a short explanation of what physical or computational idea
   it represents
@@ -376,6 +390,7 @@ When updating docstrings, an AI must not:
   into docstrings
 - use `>>>`
 - add markdown headings inside docstrings
+- use Sphinx-style cross-reference roles such as `:class:` or `:meth:`
 - duplicate constructor `Args:` in both the class docstring and `__init__`
 - add `Returns:` to `__init__`
 - skip private method docstrings

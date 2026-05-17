@@ -30,7 +30,7 @@ class LinearElasticGGmaxMaterial(Material):
         - ``params``: Curve type, modulus inputs, density, and curve-specific
           tail values exactly as queued for Tcl.
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 

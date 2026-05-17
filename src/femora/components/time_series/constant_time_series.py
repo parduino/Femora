@@ -15,7 +15,7 @@ class ConstantTimeSeries(TimeSeries):
     Tcl form:
         ``timeSeries Constant <tag> -factor <factor>``
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 

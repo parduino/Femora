@@ -16,7 +16,7 @@ class PulseTimeSeries(TimeSeries):
         ``timeSeries Pulse <tag> <tStart> <tEnd> <period> -width <width>
         -factor <factor> -shift <shift>``
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 

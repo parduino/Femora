@@ -30,7 +30,7 @@ class DruckerPragerMaterial(Material):
     Attributes:
         - ``params``: All validated Tcl arguments keyed by parameter name.
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 

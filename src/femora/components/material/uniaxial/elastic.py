@@ -28,7 +28,7 @@ class ElasticUniaxialMaterial(Material):
     Attributes:
         - ``params``: Mapping of emitted ``E``, ``eta``, and ``Eneg`` values.
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 

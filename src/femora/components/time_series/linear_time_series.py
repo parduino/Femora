@@ -19,7 +19,7 @@ class LinearTimeSeries(TimeSeries):
             time-series manager.
         factor: Scale factor applied to pseudo-time.
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 

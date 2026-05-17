@@ -21,7 +21,7 @@ class ImposedMotion:
         dof: 1-based degree-of-freedom direction for the imposed motion.
         ground_motion: Managed ground motion referenced by this entry.
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 
@@ -94,7 +94,7 @@ class MultipleSupportPattern(Pattern):
         tag: Manager-assigned identifier after the pattern is added to the
             pattern manager.
 
-    Examples:
+    Example:
         ```python
         import femora as fm
 
