@@ -867,6 +867,10 @@ class FEMA_SAC_SteelFrame:
         # Round coordinates for robust matching
         x_set = {round(val, 4) for val in x_coords}
         y_set = {round(val, 4) for val in y_coords}
+        x_min = float(min(x_coords)) - 1e-4
+        x_max = float(max(x_coords)) + 1e-4
+        y_min = float(min(y_coords)) - 1e-4
+        y_max = float(max(y_coords)) + 1e-4
         
         print(f"\nAdding Rigid Diaphragms for {self.num_stories} stories...")
         
@@ -875,7 +879,13 @@ class FEMA_SAC_SteelFrame:
             
             # 1. Potential floor nodes (vectorized search for Z)
             mask_z = np.abs(points[:, 2] - z_floor) < 1e-4
-            floor_indices = np.where(mask_z)[0]
+            mask_xy = (
+                (points[:, 0] >= x_min)
+                & (points[:, 0] <= x_max)
+                & (points[:, 1] >= y_min)
+                & (points[:, 1] <= y_max)
+            )
+            floor_indices = np.where(mask_z & mask_xy)[0]
             
             if len(floor_indices) == 0:
                 print(f"  [Floor {s}] No nodes found at z={z_floor:.2f}")
