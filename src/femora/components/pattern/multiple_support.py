@@ -86,7 +86,7 @@ class MultipleSupportPattern(Pattern):
     Tcl form:
         ``pattern MultipleSupport <patternTag> { groundMotion... imposedMotion... }``
 
-    Notes:
+    Note:
         Ground motions referenced by imposed motions are deduplicated by tag in
         the rendered Tcl block.
 

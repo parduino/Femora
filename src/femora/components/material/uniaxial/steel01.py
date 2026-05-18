@@ -19,7 +19,7 @@ class Steel01Material(Material):
     Tcl form:
         ``uniaxialMaterial Steel01 <tag> Fy E0 b [a1 a2 a3 a4]; #``
 
-    Notes:
+    Note:
         - When all four isotropic parameters exist, they emit after ``b`` exactly
           as OpenSees expects.
         - If the isotropic hardening set is omitted, the Tcl command ends after ``b``.

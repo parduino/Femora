@@ -100,7 +100,7 @@ class DRM:
             ValueError: If time step or number of steps parameters are invalid
             ValueError: If option dictionaries are not properly formatted
         
-        Notes:
+        Note:
             This method follows a sequence of:
             1. Applying gravity loads in an elastic phase
             2. Applying gravity loads in a plastic phase

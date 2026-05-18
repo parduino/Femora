@@ -223,7 +223,7 @@ class RegionCreationDialog(QDialog):
         right_layout = QVBoxLayout(right_widget)
         
         notes_display = QTextBrowser()
-        notes_display.setHtml(f"<b>Notes:</b><br>")
+        notes_display.setHtml(f"<b>Note:</b><br>")
         info = self.region_class.getNotes()
         for i, note in enumerate(info["Notes"]):
             notes_display.append(f"<b>{i+1}</b>) {note}")
@@ -342,7 +342,7 @@ class RegionEditDialog(QDialog):
         right_layout = QVBoxLayout(right_widget)
         
         notes_display = QTextBrowser()
-        notes_display.setHtml(f"<b>Notes:</b><br>")
+        notes_display.setHtml(f"<b>Note:</b><br>")
         info = region.getNotes()
         for i, note in enumerate(info["Notes"]):
             notes_display.append(f"<b>{i+1}</b>) {note}")

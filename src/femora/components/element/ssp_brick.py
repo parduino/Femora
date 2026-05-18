@@ -32,7 +32,7 @@ class SSPbrickElement(Element):
         OpenSees command syntax:
             ``element SSPbrick $tag $n1 $n2 $n3 $n4 $n5 $n6 $n7 $n8 $matTag [$b1 $b2 $b3]``
 
-        Notes:
+        Note:
             1. Body forces are constant in the global coordinate directions and
                default to 0.0 when omitted.
             2. Recorder queries (e.g. ``stress``, ``strain``) correspond to those of

@@ -532,7 +532,7 @@ class NodeRecorderCreationDialog(QDialog):
         notes_text = QTextEdit()
         notes_text.setReadOnly(True)
         notes_text.setPlainText(
-            "Notes:\n"
+            "Note:\n"
             "- Precision: Number of significant digits (default: 6)\n"
             "- Time Series: Tag of previously constructed TimeSeries\n"
             "- Include Time: Places domain time in first output column\n"
@@ -970,7 +970,7 @@ class NodeRecorderEditDialog(QDialog):
         notes_text = QTextEdit()
         notes_text.setReadOnly(True)
         notes_text.setPlainText(
-            "Notes:\n"
+            "Note:\n"
             "- Precision: Number of significant digits (default: 6)\n"
             "- Time Series: Tag of previously constructed TimeSeries\n"
             "- Include Time: Places domain time in first output column\n"
@@ -1257,7 +1257,7 @@ class VTKHDFRecorderCreationDialog(QDialog):
         notes_text = QTextEdit()
         notes_text.setReadOnly(True)
         notes_text.setPlainText(
-            "Notes:\n"
+            "Note:\n"
             "- File Base Name: Output will be generated as <base_name>.h5 and can be visualized with ParaView\n"
             "- Response Types: Select the types of response to record\n"
             "- Time Interval: Record only at specified intervals\n"

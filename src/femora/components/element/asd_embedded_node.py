@@ -56,7 +56,7 @@ class ASDEmbeddedNodeElement3D(Element):
         OpenSees command syntax:
             ``element ASDEmbeddedNodeElement $eleTag $Cnode $Rnode1 $Rnode2 $Rnode3 $Rnode4 [-rot] [-p] [-K $K] [-KP $KP] [ -contact $Kn $Kt $mu [-orient $orient] [-int_type $int_type]]``
 
-        Notes:
+        Note:
             ``1) Using ASDEmbeddedNodeElement3D is solely for 3D problems could be very hard. This element is implemented to use with EmbeddedNodeInterFace element.``
 
         Example:

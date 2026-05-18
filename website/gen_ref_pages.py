@@ -52,8 +52,8 @@ def should_skip(parts: tuple[str, ...]) -> bool:
     return "gui" in parts[-1].lower()
 
 
-def parse_public_classes(path: Path) -> list[str]:
-    """Return top-level public class names from a module."""
+def parse_public_classes(path: Path) -> list[tuple[str, dict]]:
+    """Return top-level public class names and doc controls from a module."""
     try:
         source = path.read_text(encoding="utf-8")
         tree = ast.parse(source)
@@ -61,10 +61,25 @@ def parse_public_classes(path: Path) -> list[str]:
         print(f"WARNING: Could not parse {path}: {exc}")
         return []
 
-    classes: list[str] = []
+    classes: list[tuple[str, dict]] = []
     for node in tree.body:
         if isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
-            classes.append(node.name)
+            doc_controls: dict = {}
+            for class_node in node.body:
+                if not isinstance(class_node, ast.Assign):
+                    continue
+                for target in class_node.targets:
+                    if isinstance(target, ast.Name) and target.id == "__doc_controls__":
+                        try:
+                            doc_controls = ast.literal_eval(class_node.value)
+                        except Exception as exc:
+                            print(
+                                f"WARNING: Could not parse __doc_controls__ "
+                                f"for {path}:{node.name}: {exc}",
+                            )
+                            doc_controls = {}
+                        break
+            classes.append((node.name, doc_controls))
     return classes
 
 
@@ -99,10 +114,22 @@ def write_package_index(
     mkdocs_gen_files.set_edit_path(doc_path, edit_path)
 
 
-def write_class_page(doc_path: Path, ident: str, edit_path: Path) -> None:
+def write_class_page(doc_path: Path, ident: str, edit_path: Path, doc_controls: dict | None = None) -> None:
     """Write one page for an individual public class."""
     with mkdocs_gen_files.open(doc_path, "w") as fd:
         fd.write(f"::: {ident}\n")
+        if doc_controls:
+            fd.write("    options:\n")
+            for key, value in doc_controls.items():
+                if isinstance(value, bool):
+                    rendered = "true" if value else "false"
+                    fd.write(f"      {key}: {rendered}\n")
+                elif isinstance(value, list):
+                    fd.write(f"      {key}:\n")
+                    for item in value:
+                        fd.write(f"        - {item}\n")
+                else:
+                    fd.write(f"      {key}: {value}\n")
     mkdocs_gen_files.set_edit_path(doc_path, edit_path)
 
 
@@ -128,16 +155,18 @@ for path in files:
         package_infos.append((nav_parts, path, parse_module_docstring(path)))
         continue
 
-    class_names = parse_public_classes(path)
+    class_entries = parse_public_classes(path)
 
     # Keep the older class-page style, but flatten the navigation so packages
     # list classes directly instead of showing a file name before the class.
-    if class_names:
-        package_classes.setdefault(parts[:-1], []).extend(class_names)
-        for class_name in class_names:
+    if class_entries:
+        package_classes.setdefault(parts[:-1], []).extend(
+            class_name for class_name, _ in class_entries
+        )
+        for class_name, doc_controls in class_entries:
             class_doc_path = Path("reference", *doc_parts(parts[:-1]), class_name, "index.md")
             nav[display_parts(parts[:-1]) + (class_name,)] = class_doc_path.relative_to("reference").as_posix()
-            write_class_page(class_doc_path, ".".join(parts) + "." + class_name, path)
+            write_class_page(class_doc_path, ".".join(parts) + "." + class_name, path, doc_controls)
     else:
         doc_path = Path("reference", *doc_parts(parts)).with_suffix(".md")
         nav[display_parts(parts)] = doc_path.relative_to("reference").as_posix()

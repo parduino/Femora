@@ -656,7 +656,7 @@ class TransferFunction:
                 internal (np.ndarray): Boolean array indicating internal nodes, shape (n_nodes,).
             Raises:
                 ValueError: If any coordinate's depth does not match a DRM depth within a tolerance.
-            Notes:
+            Note:
                 - The output file is overwritten if it exists.
                 - Data is organized into two main groups: "DRM_Data" (containing the main arrays)
                   and "DRM_Metadata" (containing simulation and box metadata).

@@ -559,7 +559,7 @@ class DriftRecorder(Recorder):
 
     This wraps the OpenSees `recorder Drift` command.
 
-        Notes:
+        Note:
                 - In MPI runs, multiple processes must not write to the same file.
                     This recorder automatically injects `$pid` into the output filename
                     (before the extension if present).

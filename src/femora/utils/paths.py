@@ -14,7 +14,7 @@ def motions_dir() -> Path:
     1) Environment override via `FEMORA_MOTIONS_DIR`
     2) Repository-local default: `<repo>/examples/inputs/motions`
 
-    Notes:
+    Note:
     - This helper is intended for *example scripts* shipped in this repository.
     - If Femora is installed from a wheel (no repo checkout), the repo-local
       default may not exist. In that case, set `FEMORA_MOTIONS_DIR`.

@@ -207,7 +207,7 @@ def _partition_geometric(mesh: pv.UnstructuredGrid, num_partitions: int) -> np.n
 def _morton_key_ints(coords: np.ndarray) -> np.ndarray:
     """Compute 64-bit Morton (Z-order) keys for 3D integer coordinates.
 
-    Notes:
+    Note:
         This is a 21-bit-per-axis Morton code (63 bits total) packed into
         ``uint64``. Inputs are expected to be in ``[0, 2**21-1]``; the partitioner
         quantizes coordinates accordingly.
@@ -307,7 +307,7 @@ def _hilbert_keys_3d(q: np.ndarray, p: int) -> np.ndarray:
     Returns:
         Array of shape (N,) with ``uint64`` Hilbert indices.
 
-    Notes:
+    Note:
         This is a vectorized form of the Skilling coordinate-to-index algorithm
         used in `_hilbert_c2i`, avoiding per-point Python loops.
     """
