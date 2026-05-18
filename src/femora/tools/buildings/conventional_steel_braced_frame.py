@@ -321,11 +321,22 @@ class ConventionalSteelBracedFrame:
         x_coords, y_coords, z_coords = self.get_coordinates()
         x_set = {round(float(value), 4) for value in x_coords}
         y_set = {round(float(value), 4) for value in y_coords}
+        x_min = float(min(x_coords)) - 1e-4
+        x_max = float(max(x_coords)) + 1e-4
+        y_min = float(min(y_coords)) - 1e-4
+        y_max = float(max(y_coords)) + 1e-4
         self._com_node_tags = []
 
         for story in range(1, self.num_stories + 1):
             z_floor = float(z_coords[story])
-            floor_indices = np.where(np.abs(points[:, 2] - z_floor) < 1e-4)[0]
+            floor_mask = np.abs(points[:, 2] - z_floor) < 1e-4
+            footprint_mask = (
+                (points[:, 0] >= x_min)
+                & (points[:, 0] <= x_max)
+                & (points[:, 1] >= y_min)
+                & (points[:, 1] <= y_max)
+            )
+            floor_indices = np.where(floor_mask & footprint_mask)[0]
             if not len(floor_indices):
                 print(f"  [Floor {story}] Warning: no floor nodes found at z={z_floor:.3f}")
                 continue
