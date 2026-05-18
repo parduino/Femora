@@ -10,6 +10,78 @@ if TYPE_CHECKING:
     from femora.core.material_base import Material
 
 
+class _BeamSectionNamespace:
+    """Beam-section factory namespace bound to a SectionManager."""
+
+    def __init__(self, manager: "SectionManager"):
+        self._manager = manager
+
+    def elastic(self, user_name: str = "Unnamed", **kwargs) -> Section:
+        return self._manager.create_section("Elastic", user_name=user_name, **kwargs)
+
+    def uniaxial(self, user_name: str = "Unnamed", **kwargs) -> Section:
+        return self._manager.create_section("Uniaxial", user_name=user_name, **kwargs)
+
+    def wf2d(self, user_name: str = "Unnamed", **kwargs) -> Section:
+        return self._manager.create_section("WFSection2d", user_name=user_name, **kwargs)
+
+
+class _CompositeSectionNamespace:
+    """Composite-section factory namespace bound to a SectionManager."""
+
+    def __init__(self, manager: "SectionManager"):
+        self._manager = manager
+
+    def aggregator(self, user_name: str = "Unnamed", **kwargs) -> Section:
+        return self._manager.create_section("Aggregator", user_name=user_name, **kwargs)
+
+    def parallel(self, user_name: str = "Unnamed", **kwargs) -> Section:
+        return self._manager.create_section("Parallel", user_name=user_name, **kwargs)
+
+
+class _FiberSectionNamespace:
+    """Fiber-section factory namespace bound to a SectionManager."""
+
+    def __init__(self, manager: "SectionManager"):
+        self._manager = manager
+
+    def section(self, user_name: str = "Unnamed", **kwargs) -> Section:
+        return self._manager.create_section("Fiber", user_name=user_name, **kwargs)
+
+    def rc(self, user_name: str = "Unnamed", **kwargs) -> Section:
+        return self._manager.create_section("RC", user_name=user_name, **kwargs)
+
+
+class _ShellSectionNamespace:
+    """Shell-section factory namespace bound to a SectionManager."""
+
+    def __init__(self, manager: "SectionManager"):
+        self._manager = manager
+
+    def elastic_membrane_plate(self, user_name: str = "Unnamed", **kwargs) -> Section:
+        return self._manager.create_section(
+            "ElasticMembranePlateSection",
+            user_name=user_name,
+            **kwargs,
+        )
+
+    def plate_fiber(self, user_name: str = "Unnamed", **kwargs) -> Section:
+        return self._manager.create_section("PlateFiber", user_name=user_name, **kwargs)
+
+
+class _SpecialSectionNamespace:
+    """Special-section factory namespace bound to a SectionManager."""
+
+    def __init__(self, manager: "SectionManager"):
+        self._manager = manager
+
+    def bidirectional(self, user_name: str = "Unnamed", **kwargs) -> Section:
+        return self._manager.create_section("Bidirectional", user_name=user_name, **kwargs)
+
+    def isolator2spring(self, user_name: str = "Unnamed", **kwargs) -> Section:
+        return self._manager.create_section("Isolator2spring", user_name=user_name, **kwargs)
+
+
 class SectionManager:
     """Local manager for ``Section`` lifecycle and tag assignment.
 
@@ -43,6 +115,11 @@ class SectionManager:
         self._names: Dict[str, Section] = {}
         self._start_tag = 1
         self._tagging = CompactRetagPolicy[Section]()
+        self.beam = _BeamSectionNamespace(self)
+        self.composite = _CompositeSectionNamespace(self)
+        self.fiber = _FiberSectionNamespace(self)
+        self.shell = _ShellSectionNamespace(self)
+        self.special = _SpecialSectionNamespace(self)
 
     def add(self, section: Section) -> Section:
         """Add an existing section and assign a tag if needed.

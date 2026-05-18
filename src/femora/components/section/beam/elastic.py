@@ -5,7 +5,60 @@ from femora.core.section_base import Section
 
 
 class ElasticSection(Section):
-    """Elastic OpenSees section with explicit geometric properties."""
+    """Linear-elastic section defined by explicit geometric and material constants.
+
+    This section represents a linear beam-column cross-section. Unlike most
+    other Femora sections, it does not reference a `Material` object; instead,
+    it takes material moduli (E, G) and geometric properties (A, I, J) directly
+    as constructor arguments.
+
+    Tcl form:
+        - 2D: ``section Elastic <tag> <E> <A> <Iz>``
+        - 3D: ``section Elastic <tag> <E> <A> <Iz> <Iy> <G> <J>``
+
+    Note:
+        - This section is strictly linear. For nonlinear behavior, use
+          [FiberSection][femora.components.section.fiber.section.FiberSection] or
+          [UniaxialSection][femora.components.section.beam.uniaxial.UniaxialSection].
+        - When using this section in a 3D model, you must provide all six
+          parameters (E, A, Iz, Iy, G, J). OpenSees usually expects either 3 or 6
+          values for the Elastic section command.
+
+    Tip:
+        - Use this section for preliminary modeling or when physical section
+          dimensions are unknown but aggregate properties (like equivalent
+          stiffness) are available.
+
+    Example:
+        ```python
+        import femora as fm
+
+        model = fm.MeshMaker()
+        # Create a 2D elastic section
+        sec_2d = model.section.beam.elastic(
+            user_name="Beam2D",
+            E=29000.0,
+            A=10.0,
+            Iz=150.0
+        )
+
+        # Create a 3D elastic section
+        sec_3d = model.section.beam.elastic(
+            user_name="Column3D",
+            E=29000.0,
+            A=26.5,
+            Iz=999.0,
+            Iy=150.0,
+            G=11200.0,
+            J=2.5
+        )
+        ```
+    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": False,
+        "members": ["__init__", "to_tcl", "get_materials", "get_area", "get_Iz", "get_Iy", "get_J"],
+    }
 
     def __init__(
         self,
@@ -18,6 +71,21 @@ class ElasticSection(Section):
         G: Optional[float] = None,
         J: Optional[float] = None,
     ):
+        """Create an ElasticSection with validated geometric properties.
+
+        Args:
+            user_name: User-specified name for the section.
+            E: Young's modulus.
+            A: Cross-sectional area.
+            Iz: Second moment of area about the local z-axis.
+            Iy: Optional second moment of area about the local y-axis (for 3D).
+            G: Optional shear modulus (for 3D).
+            J: Optional torsional constant (for 3D).
+
+        Raises:
+            ValueError: If parameters are not numeric or if essential values
+                (E, A, Iz) are non-positive.
+        """
         try:
             E = float(E)
             A = float(A)
@@ -47,6 +115,11 @@ class ElasticSection(Section):
         self.material = None
 
     def to_tcl(self) -> str:
+        """Render the section as an OpenSees Tcl command.
+
+        Returns:
+            Tcl command string.
+        """
         values = [self.E, self.A, self.Iz]
         if self.Iy is not None:
             values.append(self.Iy)
@@ -58,16 +131,41 @@ class ElasticSection(Section):
         return f"section Elastic {self._require_tag()} {params_str}; # {self.user_name}"
 
     def get_materials(self) -> list[Material]:
+        """Return materials used by this section.
+
+        Returns:
+            An empty list as ElasticSection does not use Material objects.
+        """
         return []
 
     def get_area(self) -> float:
+        """Return the cross-sectional area.
+
+        Returns:
+            Area value.
+        """
         return self.A
 
     def get_Iz(self) -> float:
+        """Return the second moment of area about the local z-axis.
+
+        Returns:
+            Iz value.
+        """
         return self.Iz
 
     def get_Iy(self) -> float:
+        """Return the second moment of area about the local y-axis.
+
+        Returns:
+            Iy value, or 0.0 if not defined.
+        """
         return 0.0 if self.Iy is None else self.Iy
 
     def get_J(self) -> float:
+        """Return the torsional constant.
+
+        Returns:
+            J value, or 0.0 if not defined.
+        """
         return 0.0 if self.J is None else self.J

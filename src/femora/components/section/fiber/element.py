@@ -10,23 +10,54 @@ from femora.core.material_base import Material
 from femora.core.section_base import Section
 
 class FiberElement:
-    """
-    Represents a single fiber in a fiber section with enhanced material handling.
+    """Represents a single fiber in a fiber section.
 
-    Parameters
-    ----------
-    y_loc : float
-        Y-coordinate of the fiber.
-    z_loc : float
-        Z-coordinate of the fiber.
-    area : float
-        Area of the fiber.
-    material : int, str, or Material
-        Material for the fiber (tag, name, or object).
+    A fiber is the smallest unit of discretization in a fiber section, defined by
+     its position (y, z) and its area. Each fiber is associated with a material
+     response.
+
+    Tcl form:
+        ``fiber <yLoc> <zLoc> <area> <matTag>``
+
+    Attributes:
+        y_loc: Local y-coordinate of the fiber center.
+        z_loc: Local z-coordinate of the fiber center.
+        area: Cross-sectional area of the fiber.
+        material: Resolved Material object for the fiber.
+
+    Example:
+        ```python
+        import femora as fm
+
+        model = fm.MeshMaker()
+        mat = model.material.create_material("Uniaxial", "Steel01", user_name="S", Fy=50.0, E=29000.0, b=0.01)
+        
+        # Fiber is usually created inside FiberSection.add_fiber
+        # but can be instantiated directly
+        fiber = fm.components.section.fiber.element.FiberElement(
+            y_loc=0.5,
+            z_loc=0.5,
+            area=0.1,
+            material=mat
+        )
+        print(fiber.to_tcl())
+        ```
     """
     
     def __init__(self, y_loc: float, z_loc: float, area: float, 
                  material: Union[int, str, Material]):
+        """Create a FiberElement with validated coordinates and area.
+
+        Args:
+            y_loc: Local y-coordinate.
+            z_loc: Local z-coordinate.
+            area: Fiber area.
+            material: Uniaxial material reference (object, tag, or name).
+
+        Raises:
+            ValueError: If coordinates or area are not numeric, if area is
+                non-positive, or if the material cannot be resolved.
+        """
         # Validate and convert inputs
         try:
             self.y_loc = float(y_loc)
@@ -45,7 +76,14 @@ class FiberElement:
 
     def plot(self, ax: plt.Axes, material_colors: Dict[str, str], 
              scale_factor: float = 1.0, show_fibers: bool = True) -> None:
-        """Plot the fiber on the given matplotlib axes"""
+        """Plot the fiber on the given matplotlib axes.
+
+        Args:
+            ax: Matplotlib axes to plot on.
+            material_colors: Dictionary mapping material names to colors.
+            scale_factor: Scaling factor for visualization.
+            show_fibers: Whether to actually draw the fiber.
+        """
         if not show_fibers:
             return
             
@@ -61,9 +99,13 @@ class FiberElement:
         ax.add_patch(circle)
     
     def to_tcl(self) -> str:
-        """Generate OpenSees TCL command for this fiber"""
+        """Render the fiber as an OpenSees Tcl command.
+
+        Returns:
+            Tcl command string.
+        """
         return f"    fiber {self.y_loc} {self.z_loc} {self.area} {self.material.tag}"
     
     def __str__(self) -> str:
+        """Return a string representation of the fiber."""
         return f"Fiber at ({self.y_loc}, {self.z_loc}) with area {self.area}, material '{self.material.user_name}'"
-
