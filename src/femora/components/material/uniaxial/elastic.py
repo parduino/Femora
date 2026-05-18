@@ -8,6 +8,10 @@ from femora.core.material_base import Material
 
 
 class ElasticUniaxialMaterial(Material):
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
     """One-dimensional elastic stress-strain law with optional asymmetric stiffness.
 
     Suitable for simple bars, trusses, springs, and fiber sections needing a
@@ -18,15 +22,15 @@ class ElasticUniaxialMaterial(Material):
     Tcl form:
         ``uniaxialMaterial Elastic <tag> E eta Eneg; # user_name``
 
-    Notes:
-        - Manager ownership is required prior to :meth:`to_tcl` so the OpenSees
+    Note:
+        - Manager ownership is required prior to [to_tcl][femora.uniaxial_materials.elastic.ElasticUniaxialMaterial.to_tcl] so the OpenSees
           tag can be inserted after ``Elastic``.
         - ``Eneg`` defaults to ``E`` when omitted.
         - This material is typically created through
-          :meth:`~femora.core.uniaxial_material_manager.UniaxialMaterialManager.elastic`.
+          [elastic][femora.core.uniaxial_material_manager.UniaxialMaterialManager.elastic].
 
     Attributes:
-        - ``params``: Mapping of emitted ``E``, ``eta``, and ``Eneg`` values.
+        params: Mapping of emitted ``E``, ``eta``, and ``Eneg`` values.
 
     Example:
         ```python
@@ -55,11 +59,11 @@ class ElasticUniaxialMaterial(Material):
         """Normalize moduli and damping tangent for OpenSees insertion.
 
         Args:
-            - user_name: Comment key for Tcl plus manager uniqueness constraint.
-            - E: Primary tensile or loading stiffness, strictly positive.
-            - eta: Supplemental damping tangent, non-negative after coercion.
-            - Eneg: Compression-side stiffness. Falls back to ``E`` when omitted.
-            - **_: Ignored extension keywords.
+            user_name: Comment key for Tcl plus manager uniqueness constraint.
+            E: Primary tensile or loading stiffness, strictly positive.
+            eta: Supplemental damping tangent, non-negative after coercion.
+            Eneg: Compression-side stiffness. Falls back to ``E`` when omitted.
+            **_: Ignored extension keywords.
 
         Raises:
             ValueError: If ``E`` is missing.
