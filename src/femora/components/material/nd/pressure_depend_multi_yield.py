@@ -18,7 +18,7 @@ class PressureDependMultiYieldMaterial(Material):
     Tcl form:
         ``nDMaterial PressureDependMultiYield <tag> nd rho Gr Br ... liquefac3 noYieldSurf [gamma Gs ...] e cs1 cs2 cs3 pa c; #``
 
-    Notes:
+    Note:
         - ``nd`` must be ``2`` for plane strain or ``3`` for three-dimensional use.
         - Positive ``noYieldSurf`` requests auto-generated nested yield surfaces.
         - Negative ``noYieldSurf`` switches to user-defined backbone input with
@@ -26,9 +26,6 @@ class PressureDependMultiYieldMaterial(Material):
         - Supplied ``pairs`` may be a flat list ``[g1, Gs1, ...]`` or a list of
           ``(gamma, Gs)`` tuples.
         - Unrecognized keyword arguments are ignored for compatibility.
-
-    Attributes:
-        - ``params``: Validated soil, backbone, and optional critical-state constants.
 
     Example:
         ```python
@@ -58,34 +55,39 @@ class PressureDependMultiYieldMaterial(Material):
         ```
     """
 
+    __doc_controls__ = {
+        "show_docstring_attributes": False,
+        "members": ["__init__", "updateMaterialStage"],
+    }
+
     def __init__(self, user_name: str = "Unnamed", **kwargs: Any) -> None:
         """Construct the material from keyword arguments matching OpenSees naming.
 
         Args:
-            - user_name: Label placed in the trailing Tcl comment once managed.
-            - nd: Spatial dimension flag, either ``2`` or ``3``.
-            - rho: Saturated mass density, strictly positive in model units.
-            - refShearModul: Reference low-strain shear modulus at ``refPress``.
-            - refBulkModul: Reference bulk modulus at ``refPress``.
-            - frictionAng: Peak friction angle in degrees.
-            - peakShearStra: Octahedral shear strain at peak strength, strictly positive.
-            - refPress: Reference mean effective stress, strictly positive.
-            - pressDependCoe: Non-negative confinement dependence coefficient.
-            - PTAng: Phase-transformation angle in degrees.
-            - contrac: Contractive plasticity parameter.
-            - dilat1: First dilatancy parameter.
-            - dilat2: Second dilatancy parameter.
-            - liquefac1: Liquefaction parameter 1.
-            - liquefac2: Liquefaction parameter 2.
-            - liquefac3: Liquefaction parameter 3.
-            - noYieldSurf: Surface count or negative custom-backbone selector.
-            - pairs: Custom backbone data required when ``noYieldSurf < 0``.
-            - e: Optional void ratio, default ``0.6``.
-            - cs1: Optional critical-state coefficient, default ``0.9``.
-            - cs2: Optional critical-state coefficient, default ``0.02``.
-            - cs3: Optional critical-state coefficient, default ``0.7``.
-            - pa: Optional atmospheric or reference pressure, default ``101.0``.
-            - c: Optional cohesion-like intercept, default ``0.3``.
+            user_name: Label placed in the trailing Tcl comment once managed.
+            nd: Spatial dimension flag, either ``2`` or ``3``.
+            rho: Saturated mass density, strictly positive in model units.
+            refShearModul: Reference low-strain shear modulus at ``refPress``.
+            refBulkModul: Reference bulk modulus at ``refPress``.
+            frictionAng: Peak friction angle in degrees.
+            peakShearStra: Octahedral shear strain at peak strength, strictly positive.
+            refPress: Reference mean effective stress, strictly positive.
+            pressDependCoe: Non-negative confinement dependence coefficient.
+            PTAng: Phase-transformation angle in degrees.
+            contrac: Contractive plasticity parameter.
+            dilat1: First dilatancy parameter.
+            dilat2: Second dilatancy parameter.
+            liquefac1: Liquefaction parameter 1.
+            liquefac2: Liquefaction parameter 2.
+            liquefac3: Liquefaction parameter 3.
+            noYieldSurf: Surface count or negative custom-backbone selector.
+            pairs: Custom backbone data required when ``noYieldSurf < 0``.
+            e: Optional void ratio, default ``0.6``.
+            cs1: Optional critical-state coefficient, default ``0.9``.
+            cs2: Optional critical-state coefficient, default ``0.02``.
+            cs3: Optional critical-state coefficient, default ``0.7``.
+            pa: Optional atmospheric or reference pressure, default ``101.0``.
+            c: Optional cohesion-like intercept, default ``0.3``.
 
         Raises:
             ValueError: If a required Tcl argument is missing.
@@ -264,8 +266,8 @@ class PressureDependMultiYieldMaterial(Material):
         """Return Tcl that toggles elastic staging for staged analysis workflows.
 
         Args:
-            - state: ``"elastic"`` maps to stage ``0`` and ``"plastic"``
-              maps to stage ``1``. Other strings yield an empty return.
+            state: ``"elastic"`` maps to stage ``0`` and ``"plastic"``
+                maps to stage ``1``. Other strings yield an empty return.
 
         Returns:
             str: An ``updateMaterialStage`` command or an empty string.

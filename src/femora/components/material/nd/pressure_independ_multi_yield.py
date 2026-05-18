@@ -13,22 +13,24 @@ class PressureIndependMultiYieldMaterial(Material):
     Use this ``nDMaterial`` when layer strength is specified through reference
     moduli, cohesion, friction, and optionally a tabular backbone instead of
     the pressure-dependent coupling used by
-    :class:`~femora.components.material.nd.pressure_depend_multi_yield.PressureDependMultiYieldMaterial`.
+    [femora.components.material.nd.pressure_depend_multi_yield.PressureDependMultiYieldMaterial][].
 
     Tcl form:
         ``nDMaterial PressureIndependMultiYield <tag> nd rho Gr Br cohesi peakShearStra frictionAng refPress pressDependCoe noYieldSurf [gamma Gs ...]; #``
 
-    Notes:
+    Note:
         - Positive ``noYieldSurf`` allocates that many auto-generated surfaces.
         - Negative ``noYieldSurf`` requires ``pairs`` with ``abs(noYieldSurf)``
           backbone points.
         - ``frictionAng`` defaults to ``0``, ``refPress`` defaults to ``100``,
           and ``pressDependCoe`` defaults to ``0``.
-        - :meth:`updateMaterialStage` preserves ``user_name`` in an inline Tcl comment.
-        - :meth:`set_parameter` emits Tcl loops for supported runtime updates.
+        - [updateMaterialStage][femora.components.material.nd.pressure_independ_multi_yield.PressureIndependMultiYieldMaterial.updateMaterialStage]
+          preserves ``user_name`` in an inline Tcl comment.
+        - [set_parameter][femora.components.material.nd.pressure_independ_multi_yield.PressureIndependMultiYieldMaterial.set_parameter]
+          emits Tcl loops for supported runtime updates.
 
     Attributes:
-        - ``params``: Final soil parameters plus optional backbone list.
+        params (dict): Final soil parameters plus optional backbone list.
 
     Example:
         ```python
@@ -49,27 +51,33 @@ class PressureIndependMultiYieldMaterial(Material):
         ```
     """
 
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__", "updateMaterialStage", "set_parameter"],
+    }
+
     def __init__(self, user_name: str = "Unnamed", **kwargs: Any) -> None:
         """Validate soil keyword arguments before storing them for Tcl export.
 
         Args:
-            - user_name: Comment annotation and manager registry key.
-            - nd: ``2`` or ``3`` dimensional analysis flag.
-            - rho: Saturated density, strictly positive.
-            - refShearModul: Reference small-strain shear modulus, strictly positive.
-            - refBulkModul: Reference bulk modulus, strictly positive.
-            - cohesi: Apparent cohesion intercept, non-negative.
-            - peakShearStra: Octahedral shear strain marker for peak strength.
-            - frictionAng: Friction angle in degrees. Defaults to ``0`` when omitted.
-            - refPress: Positive reference mean stress. Defaults to ``100``.
-            - pressDependCoe: Non-negative confinement scaling coefficient.
-            - noYieldSurf: Surface count or negative backbone selector.
-            - pairs: Mandatory custom backbone list when ``noYieldSurf < 0``.
+            user_name: Comment annotation and manager registry key.
+            nd: ``2`` or ``3`` dimensional analysis flag.
+            rho: Saturated density, strictly positive.
+            refShearModul: Reference small-strain shear modulus, strictly positive.
+            refBulkModul: Reference bulk modulus, strictly positive.
+            cohesi: Apparent cohesion intercept, non-negative.
+            peakShearStra: Octahedral shear strain marker for peak strength.
+            frictionAng: Friction angle in degrees. Defaults to ``0`` when omitted.
+            refPress: Positive reference mean stress. Defaults to ``100``.
+            pressDependCoe: Non-negative confinement scaling coefficient.
+            noYieldSurf: Surface count or negative backbone selector.
+            pairs: Mandatory custom backbone list when ``noYieldSurf < 0``.
 
         Raises:
             ValueError: If a required keyword argument is missing.
             ValueError: If a numeric value cannot be converted correctly.
             ValueError: If any validated value falls outside the supported range.
+            ValueError: If 'pairs' is malformed or invalid when required.
         """
         super().__init__("nDMaterial", "PressureIndependMultiYield", user_name)
         validated: Dict[str, Any] = {}
@@ -197,8 +205,8 @@ class PressureIndependMultiYieldMaterial(Material):
         """Construct Tcl for elastic/plastic modulus staging plus inline comment tag.
 
         Args:
-            - state: ``"elastic"`` maps to stage ``0`` and ``"plastic"``
-              maps to stage ``1``. Other tokens return blank output.
+            state: ``"elastic"`` maps to stage ``0`` and ``"plastic"``
+                maps to stage ``1``. Other tokens return blank output.
 
         Returns:
             str: Tcl with `` ;# user_name`` suffix when a stage matched.
@@ -227,11 +235,11 @@ class PressureIndependMultiYieldMaterial(Material):
         """Build Tcl that updates material parameters element-by-element.
 
         Args:
-            - parameter_name: One of ``shearModulus``, ``bulkModulus``,
-              ``cohesion``, ``frictionAngle``, or ``stressCorrection``.
-            - new_value: Scalar passed to ``-val`` for non-stress-correction
-              modes. Ignored for ``stressCorrection``.
-            - element_tags: OpenSees element IDs to touch.
+            parameter_name: One of ``shearModulus``, ``bulkModulus``,
+                ``cohesion``, ``frictionAngle``, or ``stressCorrection``.
+            new_value: Scalar passed to ``-val`` for non-stress-correction
+                modes. Ignored for ``stressCorrection``.
+            element_tags: OpenSees element IDs to touch.
 
         Returns:
             str: Multi-line Tcl script suitable for appending to staged analyses.
