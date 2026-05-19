@@ -142,4 +142,4 @@ class GhostNodeElement(Element):
 
 
 
-# Register so it can be created through ElementManager.create_element()
+# Created through SpecialElementManager.ghost_node(...)

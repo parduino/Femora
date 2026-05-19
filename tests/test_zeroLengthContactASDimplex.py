@@ -21,7 +21,7 @@ def test_zeroLengthContactASDimplex():
     from femora.components.MeshMaker import MeshMaker
     mm = MeshMaker()
     mm.clear_model()
-    ele1 = mm.element.create_element('ZeroLengthContactASDimplex', ndof=3, Kn=Kn, Kt=Kt, mu=mu)
+    ele1 = mm.element.special.zero_length_contact(ndof=3, Kn=Kn, Kt=Kt, mu=mu)
     tcl1 = ele1.to_tcl(tag=100, nodes=[10, 20])
     print(f"Minimal TCL: {tcl1}")
 
@@ -32,7 +32,7 @@ def test_zeroLengthContactASDimplex():
     # 2. Create element with all params
     intType = 1
     orient = [0.0, 1.0, 0.0]
-    ele2 = mm.element.create_element('ZeroLengthContactASDimplex', ndof=3, Kn=Kn, Kt=Kt, mu=mu, intType=intType, orient=orient)
+    ele2 = mm.element.special.zero_length_contact(ndof=3, Kn=Kn, Kt=Kt, mu=mu, intType=intType, orient=orient)
     tcl2 = ele2.to_tcl(tag=200, nodes=[30, 40])
     print(f"Full TCL: {tcl2}")
     
@@ -47,12 +47,6 @@ def test_zeroLengthContactASDimplex():
         print("Error: -orient flag missing or incorrect")
         sys.exit(1)
 
-    # 3. Test registration
-    print(f"Available elements: {Element.get_element_types()}")
-    if 'ZeroLengthContactASDimplex' not in Element.get_element_types():
-        print("Error: ZeroLengthContactASDimplex not registered in ElementManager")
-        sys.exit(1)
-    
     print("All tests passed!")
 
 if __name__ == "__main__":

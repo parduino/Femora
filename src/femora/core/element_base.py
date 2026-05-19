@@ -148,20 +148,6 @@ class Element(ABC):
         return 0.0
 
     @classmethod
-    def create_element(cls, *args, **kwargs):
-        """Create and manage an element through the active model context."""
-        from femora.components.MeshMaker import MeshMaker
-
-        return MeshMaker.get_instance().element.create_element(*args, **kwargs)
-
-    @classmethod
-    def get_element_types(cls):
-        """Return registered element type names."""
-        from femora.core.element_manager import ElementManager
-
-        return ElementManager.get_element_types()
-
-    @classmethod
     def get_all_elements(cls) -> Dict[int, "Element"]:
         """Return all managed elements in the active model context."""
         from femora.components.MeshMaker import MeshMaker

@@ -338,19 +338,19 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
                 node_tag = offset + i + start_node_tag
             orientation_map[node_tag] = selected_normals[i].tolist()
             
-        embededd_ele = MeshMaker().element.create_element("ASDEmbeddedNodeElement3D",
-                                           ndof = ndf, 
-                                           rot = self._rot,
-                                           p = self._p, 
-                                           K = self._K,
-                                           KP = self._KP,
-                                           contact = self._friction_interface,
-                                           Kn = self._friction_interface_kn,
-                                           Kt = self._friction_interface_kt,
-                                           mu = self._friction_interface_mu,
-                                           int_type = self._friction_interface_int_type,
-                                           orient_map = orientation_map,
-                                           )
+        embededd_ele = MeshMaker().element.special.asd_embedded_node(
+            ndof=ndf,
+            rot=self._rot,
+            p=self._p,
+            K=self._K,
+            KP=self._KP,
+            contact=self._friction_interface,
+            Kn=self._friction_interface_kn,
+            Kt=self._friction_interface_kt,
+            mu=self._friction_interface_mu,
+            int_type=self._friction_interface_int_type,
+            orient_map=orientation_map,
+        )
 
         # Assembler().AssembeledMesh.merge(embedded_mesh, merge_points=True, inplace=True)
         old_cells = base_mesh.cells

@@ -45,7 +45,7 @@ def femora_clean_state():
 def _make_two_adjacent_brick_meshparts():
     mm = MeshMaker.get_instance()
     mat = mm.material.add(ElasticIsotropicMaterial(user_name="mat", E=200e3, nu=0.3, rho=0.0))
-    ele = stdBrickElement(ndof=3, material=mat)
+    ele = MeshMaker.get_instance().element.brick.std(ndof=3, material=mat)
 
     # Two cubes that share the x=1 face (4 coincident points)
     StructuredRectangular3D(

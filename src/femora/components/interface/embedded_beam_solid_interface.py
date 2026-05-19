@@ -666,12 +666,12 @@ if __name__ == "__main__":
     # 1. Create materials and elements
     # ------------------------------------------------------------------
     soil_mat = fm.material.nd.elastic_isotropic(user_name="Soil", E=30e6, nu=0.3, rho=2000)
-    brick_ele = fm.element.create_element("stdBrick", ndof=3, material=soil_mat)
+    brick_ele = fm.element.brick.std(ndof=3, material=soil_mat)
 
     # Beam – needs section + transformation
     beam_sec = fm.section.create_section("Elastic", user_name="PileSection", E=2e11, A=0.05, Iz=1e-4, Iy=1e-4)
     transf = fm.transformation.transformation3d("Linear", 0, 1, 0)  # Local y-axis as vecXZ
-    beam_ele = fm.element.create_element("DispBeamColumn", ndof=6, section=beam_sec, transformation=transf)
+    beam_ele = fm.element.beam.disp(ndof=6, section=beam_sec, transformation=transf)
 
     # ------------------------------------------------------------------
     # 2. Create mesh parts

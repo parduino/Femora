@@ -16,7 +16,7 @@ import femora as fm
 material = fm.material.nd.elastic_isotropic(user_name="soil", E=30e6, nu=0.3, rho=2000)
 
 # Create elements
-element = fm.element.create_element(...)
+element = fm.element.beam.elastic(...)
 
 # Create mesh parts
 fm.meshPart.create_mesh_part(...)

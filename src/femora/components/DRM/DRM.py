@@ -621,8 +621,7 @@ class DRM:
                 if mat.material_name != "ElasticIsotropic" or mat.material_type != "nDMaterial":
                     raise ValueError(f"boundary elements should have an ElasticIsotropic material not {mat.material_name} {mat.material_type}")
 
-                PMLele = self.meshmaker.element.create_element(
-                    element_type="PML3D",
+                PMLele = self.meshmaker.element.brick.pml3d(
                     ndof=ndof,
                     material=mat,
                     gamma=0.5,
