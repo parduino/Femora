@@ -267,7 +267,7 @@ def _hilbert_c2i(p: int, x: List[int]) -> int:
     # Inverse undo excess work
     Q = M
     while Q > 1:
-        P = Q - 1
+        P = np.uint64(Q - 1)
         for i in range(n - 1, -1, -1):
             if x[i] & Q:
                 x[0] ^= P
@@ -324,8 +324,7 @@ def _hilbert_keys_3d(q: np.ndarray, p: int) -> np.ndarray:
     # Inverse undo excess work (Skilling)
     Q = M
     while Q > 1:
-        P = Q - 1
-
+        P = np.uint64(Q - 1)
         # i = 2
         mask = (x2 & Q) != 0
         np.bitwise_xor(x0, P, out=x0, where=mask)
@@ -355,7 +354,7 @@ def _hilbert_keys_3d(q: np.ndarray, p: int) -> np.ndarray:
     t = np.zeros_like(x0)
     Q = M
     while Q > 1:
-        P = Q - 1
+        P = np.uint64(Q - 1)
         mask = (x2 & Q) != 0
         np.bitwise_xor(t, P, out=t, where=mask)
         Q >>= 1

@@ -1,5 +1,5 @@
 from typing import Dict, List, Union
-from femora.core.element_base import Element, ElementRegistry
+from femora.core.element_base import Element
 
 
 class GhostNodeElement(Element):
@@ -140,69 +140,6 @@ class GhostNodeElement(Element):
         """
         return f"# GhostNode Element number {tag} nodes({', '.join(str(n) for n in nodes)}) with {self.real_ndof} DOFs — no structural element generated"
 
-    # ------------------------------------------------------------------
-    # Abstract-method implementations
-    # ------------------------------------------------------------------
-    @classmethod
-    def get_parameters(cls) -> List[str]:
-        """GhostNodeElement has no configurable parameters.
-
-        Returns:
-            An empty list.
-        """
-        return []
-
-    @classmethod
-    def get_possible_dofs(cls) -> List[str]:
-        """Allowed DOF counts per node.
-
-        Returns:
-            ``['3', '6']``.
-        """
-        return ["3", "6"]
-
-    @classmethod
-    def get_description(cls) -> List[str]:
-        """Parameter descriptions (none for this element).
-
-        Returns:
-            An empty list.
-        """
-        return []
-
-    @classmethod
-    def validate_element_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
-        """No parameters to validate — returns *kwargs* unchanged.
-
-        Args:
-            **kwargs: (ignored).
-
-        Returns:
-            The unchanged *kwargs* dictionary.
-        """
-        return kwargs
-
-    def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
-        """Retrieve values for the given parameter keys.
-
-        Since GhostNodeElement has no parameters, all values are ``None``.
-
-        Args:
-            keys: Parameter names to look up.
-
-        Returns:
-            Dictionary mapping each key to ``None``.
-        """
-        return {k: None for k in keys}
-
-    def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
-        """Update parameters (no-op for GhostNodeElement).
-
-        Args:
-            values: Parameter mapping (ignored).
-        """
-        pass
 
 
-# Register so it can be created through ElementRegistry.create_element()
-ElementRegistry.register_element_type("GhostNode", GhostNodeElement)
+# Register so it can be created through ElementManager.create_element()

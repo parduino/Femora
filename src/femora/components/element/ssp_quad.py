@@ -1,6 +1,6 @@
 from typing import Dict, List, Union, Optional
 from femora.core.material_base import Material
-from femora.core.element_base import Element, ElementRegistry
+from femora.core.element_base import Element
 
 class SSPQuadElement(Element):
     """OpenSees 4-node stabilized single-point integration quadrilateral (SSPquad).
@@ -42,17 +42,16 @@ class SSPQuadElement(Element):
         if ndof != 2:
             raise ValueError(f"SSPQuadElement requires 2 DOFs, but got {ndof}")
         
-        # Validate element parameters
-        params = {"Type": Type, "Thickness": Thickness, "b1": b1, "b2": b2}
-        validated = self.validate_element_parameters(**params)
+        # Validate and store parameters
+        if Type not in ['PlaneStrain', 'PlaneStress']:
+            raise ValueError("Element type must be either 'PlaneStrain' or 'PlaneStress'")
+        self.Type = Type
+        
+        self.Thickness = float(Thickness)
+        self.b1 = float(b1)
+        self.b2 = float(b2)
             
         super().__init__('SSPQuad', ndof, material, **kwargs)
-        
-        self.Type = validated["Type"]
-        self.Thickness = validated["Thickness"]
-        self.b1 = validated.get("b1", 0.0)
-        self.b2 = validated.get("b2", 0.0)
-
 
     def __str__(self):
         """Return a compact string with material tag and parameters.
@@ -97,101 +96,6 @@ class SSPQuadElement(Element):
             
         return cmd
     
-    @classmethod 
-    def get_parameters(cls) -> List[str]:
-        """List the supported parameter names for SSPQuad.
-        
-        Returns:
-            List[str]: ``["Type", "Thickness", "b1", "b2"]``.
-        """
-        return ["Type", "Thickness", "b1", "b2"]
-
-    def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
-        """Retrieve current values for the given parameters.
-        
-        Args:
-            keys: Parameter names to retrieve; see :meth:`get_parameters`.
-        
-        Returns:
-            Dict: standard key-value pairs.
-        """
-        values = {}
-        for key in keys:
-            if key == "Type": values[key] = self.Type
-            elif key == "Thickness": values[key] = self.Thickness
-            elif key == "b1": values[key] = self.b1
-            elif key == "b2": values[key] = self.b2
-        return values
-
-    def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
-        """Replace all stored parameters with the provided mapping.
-        
-        Args:
-            values: New parameter mapping.
-        """
-        # We need to preserve existing values if not provided
-        current_params = {
-            "Type": self.Type, 
-            "Thickness": self.Thickness, 
-            "b1": self.b1, 
-            "b2": self.b2
-        }
-        current_params.update(values)
-        
-        validated = self.validate_element_parameters(**current_params)
-        
-        self.Type = validated["Type"]
-        self.Thickness = validated["Thickness"]
-        if "b1" in validated: self.b1 = validated["b1"]
-        if "b2" in validated: self.b2 = validated["b2"]
-
-    @classmethod
-    def validate_element_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
-        """Validate and coerce SSPQuad parameters.
-
-        The following rules apply:
-        - ``Type`` must be ``'PlaneStrain'`` or ``'PlaneStress'`` (required).
-        - ``Thickness`` must be convertible to ``float`` (required).
-        - ``b1`` and ``b2`` are optional but, if provided, must be ``float``.
-
-        Args:
-            **kwargs: Raw parameter mapping.
-
-        Returns:
-            Dict[str, Union[int, float, str]]: Validated and coerced parameters.
-
-        Raises:
-            ValueError: If a required parameter is missing or a value cannot be
-                coerced/validated.
-        """
-        if 'Type' not in kwargs:
-            raise ValueError("Type of element must be specified")
-        elif kwargs['Type'] not in ['PlaneStrain', 'PlaneStress']:
-            raise ValueError("Element type must be either 'PlaneStrain' or 'PlaneStress'")
-        
-        if "Thickness" not in kwargs:
-            raise ValueError("Thickness must be specified")
-        else:
-            try:
-                kwargs['Thickness'] = float(kwargs['Thickness'])
-            except ValueError:
-                raise ValueError("Thickness must be a float number")
-        
-        if "b1" in kwargs:
-            try:
-                kwargs['b1'] = float(kwargs['b1'])
-            except ValueError:
-                raise ValueError("b1 must be a float number")
-        
-        if "b2" in kwargs:
-            try:
-                kwargs['b2'] = float(kwargs['b2'])
-            except ValueError:
-                raise ValueError("b2 must be a float number")
-            
-        return kwargs
-
-
     @classmethod
     def _is_material_compatible(cls, material: Material) -> bool:
         """Check whether the provided material can be used with SSPQuad.
@@ -205,27 +109,4 @@ class SSPQuadElement(Element):
             bool: ``True`` if ``material.material_type == 'nDMaterial'``.
         """
         return material.material_type == 'nDMaterial'
-    
-    @classmethod
-    def get_possible_dofs(cls) -> List[str]:
-        """Get the allowed number of DOFs per node for this element.
-        
-        Returns:
-            List[str]: ``['2']``.
-        """
-        return ['2']
-    
-    @classmethod
-    def get_description(cls) -> List[str]:
-        """Describe each parameter expected by this element.
-        
-        Returns:
-            List[str]: Human-readable descriptions in the same order as
-            :meth:`get_parameters`.
-        """
-        return ['Type of element can be either "PlaneStrain" or "PlaneStress" ', 
-                'Thickness of the element in out-of-plane direction ',
-                'Constant body forces in global x direction',
-                'Constant body forces in global y direction'] 
 
-ElementRegistry.register_element_type('SSPQuad', SSPQuadElement)

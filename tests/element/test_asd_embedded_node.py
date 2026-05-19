@@ -8,7 +8,6 @@ sys.path.append(src_dir)
 
 # Mock Material if needed, but ASDEmbeddedNodeElement3D doesn't use it
 from femora.components.element import ASDEmbeddedNodeElement3D
-from femora.core.element_base import ElementRegistry
 
 def test_asd_embedded_node_3d():
     print("Testing ASDEmbeddedNodeElement3D...")

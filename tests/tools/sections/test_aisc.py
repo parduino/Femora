@@ -15,7 +15,7 @@ class TestAISCTool(unittest.TestCase):
         # Initialize MeshMaker (singleton)
         self.model = MeshMaker()
         # Ensure clean state
-        self.model.section.clear_all_sections()
+        self.model.section.clear()
         self.model.material.clear()
 
         # Create and manage a material for testing
@@ -23,7 +23,7 @@ class TestAISCTool(unittest.TestCase):
         self.material = self.model.material.add(mat)
 
     def tearDown(self):
-        self.model.section.clear_all_sections()
+        self.model.section.clear()
         self.model.material.clear()
 
     def test_create_valid_section(self):

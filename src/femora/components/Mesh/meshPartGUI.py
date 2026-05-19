@@ -33,11 +33,13 @@ from qtpy.QtWidgets import (
 from qtpy.QtCore import Qt
 
 from femora.components.Mesh.meshPartBase import MeshPart, MeshPartRegistry
-from femora.core.element_base import ElementRegistry
+from femora.core.element_base import Element
+from femora.core.element_manager import ElementManager
 from femora.gui.components.element.element_gui import ElementCreationDialog
 from femora.gui.components.element.beam_gui import BeamElementCreationDialog, is_beam_element
 from femora.gui.plotter import PlotterManager
 from femora.components.Mesh.meshPartInstance import *
+from femora.components.MeshMaker import MeshMaker
 
 
 class MeshPartManagerTab(QWidget):
@@ -428,7 +430,7 @@ class MeshPartCreationDialog(QDialog):
         # Element selection
         self.create_element_btn = QPushButton("Create Element")
         self.element_combo = QComboBox()
-        self.element_combo.addItems(ElementRegistry.get_element_types())
+        self.element_combo.addItems(ElementManager.get_element_types())
         user_element_layout.addWidget(QLabel("Element:"), 1, 0)
         user_element_layout.addWidget(self.element_combo, 1, 1)
         user_element_layout.addWidget(self.create_element_btn, 1, 2)
@@ -611,9 +613,8 @@ class MeshPartCreationDialog(QDialog):
             if self.created_element:
                 # Remove the element from the registry if it exists
                 try:
-                    from femora.core.element_base import ElementRegistry
-                    if hasattr(ElementRegistry, 'delete_element'):
-                        ElementRegistry.delete_element(self.created_element.user_name)
+                    if self.created_element.tag is not None:
+                        Element.delete_element(self.created_element.tag)
                 except:
                     pass  # Ignore if delete_element doesn't exist
             QMessageBox.warning(self, "Error", str(e))

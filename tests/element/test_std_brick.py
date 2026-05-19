@@ -40,11 +40,10 @@ def setup_teardown():
 def test_std_brick_initialization():
     """Test valid initialization of stdBrickElement."""
     mat = DummyMaterial(1, "nDMaterial")
-    
+
     # Valid init
     ele = stdBrickElement(ndof=3, material=mat)
-    assert ele.tag is not None
-    assert ele.tag > 0
+    assert ele.tag is None
     assert ele._material == mat
     assert ele.b1 == 0.0
     assert ele.b2 == 0.0

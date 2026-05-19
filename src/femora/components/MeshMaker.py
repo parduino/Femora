@@ -1,5 +1,6 @@
 from femora.core.material_manager import MaterialManager
-from femora.core.element_base import Element, ElementRegistry
+from femora.core.element_base import Element
+from femora.core.element_manager import ElementManager
 from femora.core.ground_motion_manager import GroundMotionManager
 from femora.components.Assemble.Assembler import Assembler
 from femora.components.Damping.dampingBase import DampingManager
@@ -67,7 +68,7 @@ class MeshMaker:
         self.model_path = kwargs.get('model_path')
         self.assembler = Assembler()
         self.material = MaterialManager(mesh_maker=self)
-        self.element = ElementRegistry(mesh_maker=self)
+        self.element = ElementManager(mesh_maker=self)
         self.time_series = TimeSeriesManager(mesh_maker=self)
         self.ground_motion = GroundMotionManager(mesh_maker=self, time_series_manager=self.time_series)
         self.damping = DampingManager()
@@ -420,7 +421,7 @@ class MeshMaker:
                             # write them mass for that node
                             wroted[pid][core] = True
                     
-                    eleclass = Element._elements[elementClassTag[i]]
+                    eleclass = self.element.get(elementClassTag[i])
                     nodeTag = [nodeTags[pid] for pid in pids]
                     eleTag = eleTags[i]
                     f.write("\t"+eleclass.to_tcl(eleTag, nodeTag) + "\n")
@@ -823,4 +824,3 @@ class MeshMaker:
         self._start_nodetag = 1
         self._start_ele_tag = 1
         self._start_core_tag = 0
-        

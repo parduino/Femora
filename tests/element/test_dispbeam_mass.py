@@ -88,5 +88,3 @@ def test_structured_line_mass(dummy_setup):
     for i in range(4):
         np.testing.assert_allclose(mass_array[i, :3], [2.5, 2.5, 2.5])
 
-    mesh_part.export_tcl("test_structured_line_mass.tcl")
-

@@ -46,8 +46,7 @@ def test_ssp_quad_initialization():
 
     # Valid init
     ele = SSPQuadElement(ndof=2, material=mat, Type="PlaneStrain", Thickness=0.1)
-    assert ele.tag is not None
-    assert ele.tag > 0
+    assert ele.tag is None
     assert ele._material == mat
     assert ele.Type == "PlaneStrain"
     assert ele.Thickness == 0.1

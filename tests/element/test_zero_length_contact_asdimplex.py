@@ -21,14 +21,13 @@ def setup_teardown():
 def test_zl_contact_initialization():
     """Test valid initialization."""
     ele = ZeroLengthContactASDimplex(ndof=3, Kn=1e8, Kt=2e8, mu=0.5)
-    
-    assert ele.tag is not None
-    assert ele.params['Kn'] == 1e8
-    assert ele.params['Kt'] == 2e8
-    assert ele.params['mu'] == 0.5
-    assert 'intType' not in ele.params # Default 0 is not stored if not explicit? 
-    # Logic: if intType != 0: self.params['intType']...
-    # So if 0, not in params.
+
+    assert ele.tag is None
+    assert ele.Kn == 1e8
+    assert ele.Kt == 2e8
+    assert ele.mu == 0.5
+    assert ele.intType == 0
+    assert ele.orient is None
 
 def test_zl_contact_options():
     """Test optional parameters."""
@@ -36,8 +35,8 @@ def test_zl_contact_options():
     ele = ZeroLengthContactASDimplex(ndof=3, Kn=1e8, Kt=1e8, mu=0.5, 
                                      orient=[1, 0, 0], intType=1)
     
-    assert ele.params['orient'] == [1.0, 0.0, 0.0]
-    assert ele.params['intType'] == 1
+    assert ele.orient == [1.0, 0.0, 0.0]
+    assert ele.intType == 1
 
 def test_zl_contact_invalid_inputs():
     """Test invalid inputs."""
@@ -47,17 +46,16 @@ def test_zl_contact_invalid_inputs():
 
     with pytest.raises(ValueError, match="orient must be a list"):
         ZeroLengthContactASDimplex(ndof=3, Kn=1e8, Kt=1e8, mu=0.5, orient=[1, 2])
-
-    # NOTE: intType validation is in validate_element_parameters but constructor logic 
-    # for intType is inline: if intType != 0: self.params['intType'] = int(intType)
-    # It doesn't seem to call validate_element_parameters in __init__.
-    # Let's verify if explicit intType validation is enforced in init.
-    # The code says:
-    # if intType != 0: self.params['intType'] = int(intType)
-    # It casts to int. If I pass "invalid", it might raise ValueError from float/int conversion?
-    # But it doesn't check if it's 0 or 1 in init, only in validate_element_parameters.
-    # But validate_element_parameters is NOT called in __init__ for this element!
-    # This might be another bug or design choice.
+    with pytest.raises(ValueError, match="requires 2, 3, 4, or 6 DOFs"):
+        ZeroLengthContactASDimplex(ndof=5, Kn=1e8, Kt=1e8, mu=0.5)
+    with pytest.raises(ValueError, match="Kn must be positive"):
+        ZeroLengthContactASDimplex(ndof=3, Kn=0.0, Kt=1e8, mu=0.5)
+    with pytest.raises(ValueError, match="Kt must be positive"):
+        ZeroLengthContactASDimplex(ndof=3, Kn=1e8, Kt=0.0, mu=0.5)
+    with pytest.raises(ValueError, match="mu must be non-negative"):
+        ZeroLengthContactASDimplex(ndof=3, Kn=1e8, Kt=1e8, mu=-0.1)
+    with pytest.raises(ValueError, match="intType must be 0 or 1"):
+        ZeroLengthContactASDimplex(ndof=3, Kn=1e8, Kt=1e8, mu=0.5, intType=2)
 
 def test_zl_contact_to_tcl():
     """Test TCL generation."""

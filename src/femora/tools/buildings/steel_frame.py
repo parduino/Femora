@@ -415,16 +415,7 @@ class FEMA_SAC_SteelFrame:
         print("-" * 60)
         
         # Coordinates
-        x_coords = [0.0]
-        for b in self.x_bays: x_coords.append(x_coords[-1] + b)
-        x_coords = np.cumsum([0] + self.x_bays)
-        y_coords = np.cumsum([0] + self.y_bays)
-        z_coords = np.cumsum([0] + self.story_heights)
-        
-        # Apply Origin Offset
-        x_coords += self.origin[0]
-        y_coords += self.origin[1]
-        z_coords += self.origin[2]
+        x_coords, y_coords, z_coords = self.get_coordinates()
         
         # --- Geometry Collection ---
         elements_cache = {}
@@ -460,12 +451,9 @@ class FEMA_SAC_SteelFrame:
                     fm_section = aisc.create_section('W14X90', model, material, type="Elastic", unit_system=self.section_unit_system)
     
             transf = cat_transf_map.get(category, transf_col_x)
-            element = ElasticBeamColumnElement(ndof=6, section=fm_section, transformation=transf)
+            element = model.element.beam.elastic(ndof=6, section=fm_section, transformation=transf)
             elements_cache[key] = element
-            return element
-    
-            return element
-    
+            return element    
         def add_element_segment(category, section_name, p1, p2):
             nonlocal current_point_id
             element = get_or_create_element(category, section_name)
@@ -798,7 +786,7 @@ class FEMA_SAC_SteelFrame:
             z_floor = z_coords[story_idx]
 
             # One GhostNodeElement per floor (unique sentinel ndf each)
-            com_elem = GhostNodeElement(ndof=6)
+            com_elem = model.element.special.ghost_node(ndof=6)
 
             com_coords.append([x_center, y_center, z_floor])
             com_element_tags.append(com_elem.tag)
@@ -813,7 +801,7 @@ class FEMA_SAC_SteelFrame:
             # --- Fix: Ensure Ghost Nodes have their unique 'ndf' sentinels ---
             # This prevents them from being merged with structural nodes or each other
             # during the Assembler's cleaning step.
-            com_ndfs = [Element.get_element_by_tag(tag).get_ndof() for tag in com_element_tags]
+            com_ndfs = [model.element.get(tag).get_ndof() for tag in com_element_tags]
             com_grid.point_data["ndf"] = np.array(com_ndfs, dtype=np.uint16)
 
             # Initialize center-of-mass Mass array

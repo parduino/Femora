@@ -9,7 +9,7 @@ Modules:
     pyvista (pv): A 3D plotting and mesh analysis library for Python.
     abc: A module that provides tools for defining abstract base classes.
     typing: A module that provides runtime support for type hints.
-    femora.components.Element.elementBase: A module that defines the Element and ElementRegistry classes.
+    femora.core.element_base: A module that defines the manager-owned Element base class.
     femora.core.material_base: Abstract Material base used by MeshPart tagging.
     femora.components.Region.regionBase: A module that defines the RegionBase and GlobalRegion classes.
 Usage:

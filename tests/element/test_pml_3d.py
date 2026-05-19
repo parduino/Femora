@@ -58,12 +58,12 @@ def test_pml_3d_initialization_valid():
     """Test valid initialization of PML3DElement."""
     mat = ElasticIsotropicMaterial(1)
     # Defaults for some params
-    ele = PML3DElement(ndof=9, material=mat, 
-                       PML_Thickness=1.0, 
-                       meshType='box', 
+    ele = PML3DElement(ndof=9, material=mat,
+                       PML_Thickness=1.0,
+                       meshType='box',
                        meshTypeParameters=[1.0, 2.0, 3.0, 4, 5, 6])
-    
-    assert ele.tag is not None
+
+    assert ele.tag is None
     assert ele.PML_Thickness == 1.0
     assert ele.meshType == "box"
     assert ele.m == 2.0 # Default checked

@@ -1,4 +1,4 @@
-from femora.core.element_base import Element, ElementRegistry
+from femora.core.element_base import Element
 from .ssp_brick import SSPbrickElement
 from .ssp_quad import SSPQuadElement
 from .std_brick import stdBrickElement

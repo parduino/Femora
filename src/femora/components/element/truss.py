@@ -1,7 +1,7 @@
 from typing import Dict, List, Union
 
 from femora.core.section_base import Section
-from femora.core.element_base import Element, ElementRegistry
+from femora.core.element_base import Element
 
 
 class TrussElement(Element):
@@ -44,15 +44,16 @@ class TrussElement(Element):
             raise ValueError("TrussElement requires a section")
         resolved_section = self._resolve_section(section)
 
-        rho = float(rho)
-        if rho < 0.0:
+        self.rho = float(rho)
+        if self.rho < 0.0:
             raise ValueError("TrussElement rho must be non-negative")
 
-        cMass = int(cMass)
-        doRayleigh = int(doRayleigh)
-        if cMass not in (0, 1):
+        self.cMass = int(cMass)
+        if self.cMass not in (0, 1):
             raise ValueError("cMass must be 0 or 1")
-        if doRayleigh not in (0, 1):
+
+        self.doRayleigh = int(doRayleigh)
+        if self.doRayleigh not in (0, 1):
             raise ValueError("doRayleigh must be 0 or 1")
 
         super().__init__(
@@ -60,27 +61,18 @@ class TrussElement(Element):
             ndof,
             material=None,
             section=resolved_section,
-            rho=rho,
-            cMass=cMass,
-            doRayleigh=doRayleigh,
+            rho=self.rho,
+            cMass=self.cMass,
+            doRayleigh=self.doRayleigh,
             **kwargs,
         )
-        self.rho = rho
-        self.cMass = cMass
-        self.doRayleigh = doRayleigh
 
     @staticmethod
     def _resolve_section(section_input: Union[Section, int, str]) -> Section:
-        """Resolve a section object, tag, or user name."""
+        """Resolve a section object."""
         if isinstance(section_input, Section):
             return section_input
-        if isinstance(section_input, (int, str)):
-            from femora.components.MeshMaker import MeshMaker
-            resolved = MeshMaker.get_instance().section.get(section_input)
-            if resolved is None:
-                raise ValueError(f"Section {section_input!r} not found")
-            return resolved
-        raise ValueError(f"Invalid section input type: {type(section_input)}")
+        raise ValueError(f"Cannot resolve section '{section_input}' in unmanaged element creation. Pass a managed Section object directly or use model.element.beam.truss(...)")
 
     def to_tcl(self, tag: int, nodes: List[int]) -> str:
         """Generate the OpenSees TCL command for this truss element."""
@@ -105,50 +97,6 @@ class TrussElement(Element):
             cmd.extend(["-doRayleigh", str(self.doRayleigh)])
         return " ".join(cmd)
 
-    @classmethod
-    def get_parameters(cls) -> List[str]:
-        return ["rho", "cMass", "doRayleigh"]
-
-    @classmethod
-    def get_description(cls) -> List[str]:
-        return [
-            "Mass per unit length",
-            "Consistent mass flag, 0 or 1",
-            "Rayleigh damping flag, 0 or 1",
-        ]
-
-    @staticmethod
-    def get_possible_dofs() -> List[str]:
-        return ["2", "3", "6"]
-
-    @classmethod
-    def validate_element_parameters(cls, **kwargs) -> Dict[str, Union[float, int]]:
-        validated: Dict[str, Union[float, int]] = {}
-        if "rho" in kwargs:
-            rho = float(kwargs["rho"])
-            if rho < 0.0:
-                raise ValueError("rho must be non-negative")
-            validated["rho"] = rho
-        for key in ("cMass", "doRayleigh"):
-            if key in kwargs:
-                value = int(kwargs[key])
-                if value not in (0, 1):
-                    raise ValueError(f"{key} must be 0 or 1")
-                validated[key] = value
-        return validated
-
-    def get_values(self, keys: List[str]) -> Dict[str, Union[float, int]]:
-        return {key: getattr(self, key) for key in keys if hasattr(self, key)}
-
-    def update_values(self, values: Dict[str, Union[float, int]]) -> None:
-        validated = self.validate_element_parameters(**values)
-        for key, value in validated.items():
-            setattr(self, key, value)
-
     def get_mass_per_length(self) -> float:
         return self.rho
 
-
-ElementRegistry.register_element_type("Truss", TrussElement)
-ElementRegistry.register_element_type("truss", TrussElement)
-ElementRegistry.register_element_type("trussSection", TrussElement)

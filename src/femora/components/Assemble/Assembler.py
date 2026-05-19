@@ -1201,7 +1201,8 @@ class AssemblySection:
         unique_tags = np.unique(element_tags)
         
         for tag in unique_tags:
-            element = Element.get_element_by_tag(tag)
+            from femora.components.MeshMaker import MeshMaker
+            element = MeshMaker.get_instance().element.get(tag)
             if element:
                 ele_ndof = element.get_ndof()
                 if ele_ndof != default_ndf:

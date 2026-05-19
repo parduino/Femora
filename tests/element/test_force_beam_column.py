@@ -55,7 +55,7 @@ def test_force_beam_init_valid():
     transf = MockTransformation(1)
     
     ele = ForceBeamColumnElement(ndof=3, section=sec, transformation=transf)
-    assert ele.tag is not None
+    assert ele.tag is None
     assert ele._section == sec
     assert ele._transformation == transf
     assert ele.numIntgrPts == 5

@@ -5,9 +5,11 @@ from qtpy.QtWidgets import (
     QDialog, QFormLayout, QMessageBox, QHeaderView, QGridLayout
 )
 
-from femora.core.element_base import Element, ElementRegistry
+from femora.core.element_base import Element
+from femora.core.element_manager import ElementManager
 from femora.components.element import *
 from femora.core.material_base import Material
+from femora.components.MeshMaker import MeshMaker
 
 # Import beam element GUI components
 from femora.gui.components.element.beam_gui import (
@@ -27,7 +29,7 @@ class ElementManagerTab(QWidget):
         
         # Element type dropdown
         self.element_type_combo = QComboBox()
-        self.element_type_combo.addItems(ElementRegistry.get_element_types())
+        self.element_type_combo.addItems(ElementManager.get_element_types())
         
         create_element_btn = QPushButton("Create New Element")
         create_element_btn.clicked.connect(self.open_element_creation_dialog)
@@ -156,7 +158,7 @@ class ElementCreationDialog(QDialog):
         form_layout = QFormLayout()
 
         # Get the element class
-        self.element_class = ElementRegistry._element_types[element_type]
+        self.element_class = ElementManager._element_types[element_type]
 
         # Parameter inputs
         self.param_inputs = {}
@@ -234,7 +236,7 @@ class ElementCreationDialog(QDialog):
 
             params = self.element_class.validate_element_parameters(**params)
             # Create element
-            self.created_element = ElementRegistry.create_element(
+            self.created_element = MeshMaker.get_instance().element.create_element(
                 element_type=self.element_type, 
                 ndof=dof,
                 material=material,

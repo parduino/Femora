@@ -1,6 +1,6 @@
 from typing import Dict, List, Union, Optional
 from femora.core.material_base import Material
-from femora.core.element_base import Element, ElementRegistry
+from femora.core.element_base import Element
 
 class ASDEmbeddedNodeElement3D(Element):
     """
@@ -68,27 +68,35 @@ class ASDEmbeddedNodeElement3D(Element):
         if ndof not in [3, 4, 6]:
             raise ValueError(f"ASDEmbeddedNodeElement3D requires 3, 4, or 6 DOFs, but got {ndof}")
         
-        # Validate and coerce parameters
-        params = {
-            "rot": rot, "p": p, "K": K, "KP": KP, "contact": contact,
-            "Kn": Kn, "Kt": Kt, "mu": mu, "orient": orient,
-            "orient_map": orient_map, "int_type": int_type
-        }
-        validated = self.validate_element_parameters(**params)
+        # Store and validate parameters
+        self.rot = bool(rot)
+        self.p = bool(p)
+        self.K = float(K) if K is not None else None
+        self.KP = float(KP) if KP is not None else None
+        self.contact = bool(contact)
+        self.Kn = float(Kn)
+        self.Kt = float(Kt)
+        self.mu = float(mu)
+        
+        if orient is not None:
+            if not isinstance(orient, (list, tuple)) or len(orient) != 3:
+                raise ValueError("orient must be a list/tuple of 3 floats")
+            self.orient = [float(x) for x in orient]
+        else:
+            self.orient = None
+            
+        if orient_map is not None:
+            if not isinstance(orient_map, dict):
+                raise ValueError("orient_map must be a dictionary")
+            self.orient_map = {k: [float(x) for x in v] for k, v in orient_map.items()}
+        else:
+            self.orient_map = None
+            
+        self.int_type = int(int_type)
+        if self.int_type not in [0, 1]:
+            raise ValueError("int_type must be 0 or 1")
         
         super().__init__('ASDEmbeddedNodeElement', ndof, material=None, **kwargs)
-        
-        self.rot = validated.get("rot", False)
-        self.p = validated.get("p", False)
-        self.K = validated.get("K")
-        self.KP = validated.get("KP")
-        self.contact = validated.get("contact", False)
-        self.Kn = validated.get("Kn", 1.0e8)
-        self.Kt = validated.get("Kt", 1.0e8)
-        self.mu = validated.get("mu", 0.5)
-        self.orient = validated.get("orient")
-        self.orient_map = validated.get("orient_map")
-        self.int_type = validated.get("int_type", 1)
 
     def to_tcl(self, tag: int, nodes: List[int]) -> str:
         """Generate the OpenSees TCL command.
@@ -132,95 +140,3 @@ class ASDEmbeddedNodeElement3D(Element):
             
         return cmd
 
-    @classmethod
-    def get_parameters(cls) -> List[str]:
-        """List the supported parameter names."""
-        return ["rot", "p", "K", "KP", "contact", "Kn", "Kt", "mu", "orient", "orient_map", "int_type"]
-
-    @classmethod
-    def get_description(cls) -> List[str]:
-        """Describe each parameter expected by this element."""
-        return [
-            "Constrain rotational DOFs",
-            "Constrain pressure DOFs",
-            "Penalty stiffness",
-            "Penalty stiffness for pressure",
-            "Enable frictional contact",
-            "Penalty stiffness for normal contact",
-            "Penalty stiffness for tangential contact",
-            "Friction coefficient",
-            "Orientation vector [nx, ny, nz]",
-            "Orientation mapping {nodeTag: [nx, ny, nz]}",
-            "Integration type (0: Implicit, 1: IMPL-EX)"
-        ]
-
-    @classmethod
-    def get_possible_dofs(cls) -> List[str]:
-        """Get the allowed number of DOFs per node."""
-        return ["3", "4", "6"]
-
-    def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
-        """Retrieve current values for the given parameters."""
-        return {key: getattr(self, key) for key in keys if hasattr(self, key)}
-
-    def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
-        """Update element parameters."""
-        for key, value in values.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
-
-    @classmethod
-    def validate_element_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
-        """Validate and coerce parameters."""
-        if "rot" in kwargs:
-            kwargs["rot"] = bool(kwargs["rot"])
-        if "p" in kwargs:
-            kwargs["p"] = bool(kwargs["p"])
-        if "K" in kwargs:
-            # if K is None skip
-            if kwargs["K"] is not None:
-                try:
-                    kwargs["K"] = float(kwargs["K"])
-                except (ValueError, TypeError):
-                    raise ValueError("K must be a float number")
-            else:
-                del kwargs["K"]
-        if "KP" in kwargs:
-            if kwargs["KP"] is not None:
-                try:
-                    kwargs["KP"] = float(kwargs["KP"])
-                except (ValueError, TypeError):
-                    raise ValueError("KP must be a float number")
-            else:
-                del kwargs["KP"]
-        if "contact" in kwargs:
-            kwargs["contact"] = bool(kwargs["contact"])
-        if "Kn" in kwargs:
-            kwargs["Kn"] = float(kwargs["Kn"])
-        if "Kt" in kwargs:
-            kwargs["Kt"] = float(kwargs["Kt"])
-        if "mu" in kwargs:
-            kwargs["mu"] = float(kwargs["mu"])
-        if "orient" in kwargs and kwargs["orient"] is not None:
-            if not isinstance(kwargs["orient"], (list, tuple)) or len(kwargs["orient"]) != 3:
-                raise ValueError("orient must be a list/tuple of 3 floats")
-            kwargs["orient"] = [float(x) for x in kwargs["orient"]]
-        if "orient_map" in kwargs and kwargs["orient_map"] is not None:
-            if not isinstance(kwargs["orient_map"], dict):
-                raise ValueError("orient_map must be a dictionary")
-            # Minimal validation for orient_map
-            new_map = {}
-            for k, v in kwargs["orient_map"].items():
-                if not isinstance(v, (list, tuple)) or len(v) != 3:
-                     raise ValueError(f"orient_map value for node {k} must be a list/tuple of 3 floats")
-                new_map[k] = [float(x) for x in v]
-            kwargs["orient_map"] = new_map
-        if "int_type" in kwargs:
-            kwargs["int_type"] = int(kwargs["int_type"])
-            if kwargs["int_type"] not in [0, 1]:
-                raise ValueError("int_type must be 0 or 1")
-        elif kwargs.get("contact"):
-            kwargs["int_type"] = 1
-        return kwargs
-
-ElementRegistry.register_element_type('ASDEmbeddedNodeElement3D', ASDEmbeddedNodeElement3D)

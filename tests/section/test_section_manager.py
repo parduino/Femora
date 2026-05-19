@@ -110,8 +110,8 @@ def test_section_dependent_elements(mesh_maker):
     
     # Need a transformation too
     transf = mesh_maker.transformation.transformation3d("Linear", 0, 0, 1)
-    
-    element = ElasticBeamColumnElement(ndof=6, section='sec1', transformation=transf)
+
+    element = mesh_maker.element.beam.elastic(ndof=6, section='sec1', transformation=transf)
     
     assert element._section is sec
     assert element.get_section_tag() == sec.tag

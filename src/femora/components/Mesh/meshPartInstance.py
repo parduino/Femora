@@ -1220,6 +1220,82 @@ class StructuredLineMesh(MeshPart):
         else:
             # Create empty mesh if no points
             self.mesh = pv.PolyData().cast_to_unstructured_grid()
+
+        mass_per_length = self.element.get_mass_per_length()
+        Mass = np.zeros((self.mesh.n_points, FEMORA_MAX_NDF), dtype=np.float32)
+
+        if mass_per_length > 0.0 and self.mesh.n_cells > 0:
+            section = getattr(self.element, '_section', None)
+            transf = getattr(self.element, '_transformation', None)
+
+            for cell_idx in range(self.mesh.n_cells):
+                start = self.mesh.offset[cell_idx]
+                end = self.mesh.offset[cell_idx + 1]
+                point_ids = self.mesh.cell_connectivity[start:end]
+                if len(point_ids) != 2:
+                    continue
+
+                pid1, pid2 = int(point_ids[0]), int(point_ids[1])
+                p1 = self.mesh.points[pid1]
+                p2 = self.mesh.points[pid2]
+                direction = p2 - p1
+                L = float(np.linalg.norm(direction))
+                if L <= 0.0:
+                    continue
+
+                m = mass_per_length * L / 2.0
+                Mass[pid1, :3] += m
+                Mass[pid2, :3] += m
+
+                m_rot = m * (L**2) / 4.0
+                m_rx, m_ry, m_rz = m_rot, m_rot, m_rot
+
+                if section and hasattr(section, 'get_area') and hasattr(section, 'get_Iy') and hasattr(section, 'get_Iz'):
+                    A = section.get_area()
+                    if A > 0:
+                        rho = mass_per_length / A
+                        Iy = section.get_Iy()
+                        Iz = section.get_Iz()
+                        J = section.get_J() if hasattr(section, 'get_J') and section.get_J() is not None else (Iy + Iz)
+
+                        m_rot_torsion = rho * J * L / 2.0
+                        m_rot_iy = rho * Iy * L / 2.0
+                        m_rot_iz = rho * Iz * L / 2.0
+
+                        dir_norm = direction / L
+                        if transf and hasattr(transf, 'vecxz_x'):
+                            x_axis = dir_norm
+                            vecxz = np.array([transf.vecxz_x, transf.vecxz_y, transf.vecxz_z], dtype=float)
+                            vecxz_norm = np.linalg.norm(vecxz)
+                            vecxz = vecxz / vecxz_norm if vecxz_norm > 1e-12 else np.array([0.0, 0.0, 1.0])
+
+                            y_axis = np.cross(vecxz, x_axis)
+                            y_axis_norm = np.linalg.norm(y_axis)
+                            y_axis = y_axis / y_axis_norm if y_axis_norm > 1e-12 else np.array([0.0, 1.0, 0.0])
+
+                            z_axis = np.cross(x_axis, y_axis)
+                            z_axis_norm = np.linalg.norm(z_axis)
+                            z_axis = z_axis / z_axis_norm if z_axis_norm > 1e-12 else np.array([0.0, 0.0, 1.0])
+
+                            m_rx = (x_axis[0]**2)*m_rot_torsion + (y_axis[0]**2)*m_rot_iy + (z_axis[0]**2)*m_rot_iz
+                            m_ry = (x_axis[1]**2)*m_rot_torsion + (y_axis[1]**2)*m_rot_iy + (z_axis[1]**2)*m_rot_iz
+                            m_rz = (x_axis[2]**2)*m_rot_torsion + (y_axis[2]**2)*m_rot_iy + (z_axis[2]**2)*m_rot_iz
+                        else:
+                            if abs(dir_norm[2]) >= max(abs(dir_norm[0]), abs(dir_norm[1])):
+                                m_rx, m_ry, m_rz = m_rot_iz, m_rot_iy, m_rot_torsion
+                            elif abs(dir_norm[0]) >= max(abs(dir_norm[1]), abs(dir_norm[2])):
+                                m_rx, m_ry, m_rz = m_rot_torsion, m_rot_iy, m_rot_iz
+                            else:
+                                m_rx, m_ry, m_rz = m_rot_iy, m_rot_torsion, m_rot_iz
+
+                Mass[pid1, 3] += m_rx
+                Mass[pid1, 4] += m_ry
+                Mass[pid1, 5] += m_rz
+                Mass[pid2, 3] += m_rx
+                Mass[pid2, 4] += m_ry
+                Mass[pid2, 5] += m_rz
+
+        self.mesh.point_data['Mass'] = Mass
         
         return self.mesh
 

@@ -10,9 +10,10 @@ from qtpy.QtWidgets import (
 )
 from qtpy.QtCore import Qt
 
-from femora.core.element_base import ElementRegistry
-from femora.components.section.section_base import Section, SectionManager
-from femora.components.transformation.transformation import GeometricTransformation, GeometricTransformationManager
+from femora.core.element_manager import ElementManager
+from femora.core.section_base import Section
+from femora.core.transformation_base import GeometricTransformation
+from femora.components.MeshMaker import MeshMaker
 from femora.gui.transformation_gui import TransformationWidget3D
 
 
@@ -141,7 +142,7 @@ class BeamElementCreationDialog(QDialog):
         self.created_element = None
         
         # Get element class
-        self.element_class = ElementRegistry._element_types[element_type]
+        self.element_class = ElementManager._element_types[element_type]
         
         self.setup_ui()
     
@@ -237,7 +238,7 @@ class BeamElementCreationDialog(QDialog):
         """Creates the beam element based on the user inputs in the dialog.
 
         This method validates all user inputs (DOF, section, transformation,
-        and element-specific parameters), then uses the `ElementRegistry`
+        and element-specific parameters), then uses the active element manager
         to instantiate the element. Upon successful creation, an information
         message is displayed, and the dialog is accepted.
         If any input is invalid or an error occurs during element creation,
@@ -280,7 +281,7 @@ class BeamElementCreationDialog(QDialog):
                 params = self.element_class.validate_element_parameters(**params)
             
             # Create element
-            self.created_element = ElementRegistry.create_element(
+            self.created_element = MeshMaker.get_instance().element.create_element(
                 element_type=self.element_type,
                 ndof=dof,
                 section=section,
@@ -307,7 +308,7 @@ class BeamElementEditDialog(QDialog):
 
     Attributes:
         element (object): The existing element object to be edited. Expected to be
-            an instance of a class registered in `ElementRegistry`, with attributes
+            an instance of a manager-owned element class, with attributes
             like `element_type`, `tag`, `_ndof`, `_section`, `_transformation`,
             and methods like `get_values`, `update_values`, etc.
         dof_combo (QComboBox): Dropdown for selecting the degrees of freedom (e.g., 3D or 6D).

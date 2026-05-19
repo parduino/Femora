@@ -1,6 +1,6 @@
 from typing import Dict, List, Union, Optional
 from femora.core.material_base import Material
-from femora.core.element_base import Element, ElementRegistry
+from femora.core.element_base import Element
 
 class SSPbrickElement(Element):
     """OpenSees 8-node stabilized single-point integration brick (SSPbrick).
@@ -56,16 +56,12 @@ class SSPbrickElement(Element):
         if ndof != 3:
             raise ValueError(f"SSPbrickElement requires 3 DOFs, but got {ndof}")
         
-        # Validate parameters
-        params = {"b1": b1, "b2": b2, "b3": b3}
-        validated = self.validate_element_parameters(**params)
+        # Store parameters
+        self.b1 = float(b1)
+        self.b2 = float(b2)
+        self.b3 = float(b3)
         
         super().__init__('SSPbrick', ndof, material, **kwargs)
-        
-        # specific attributes
-        self.b1 = validated.get("b1", 0.0)
-        self.b2 = validated.get("b2", 0.0)
-        self.b3 = validated.get("b3", 0.0)
 
     def to_tcl(self, tag: int, nodes: List[int]) -> str:
         """Generate the OpenSees TCL command for this SSPbrick element.
@@ -97,85 +93,6 @@ class SSPbrickElement(Element):
         return cmd
 
     @classmethod
-    def get_parameters(cls) -> List[str]:
-        """List the supported parameter names for SSPbrick.
-
-        Returns:
-            List[str]: ``["b1", "b2", "b3"]``.
-        """
-        return ["b1", "b2", "b3"]
-
-    @classmethod
-    def get_description(cls) -> List[str]:
-        """Describe each parameter expected by this element.
-
-        Returns:
-            List[str]: Descriptions aligned with :meth:`get_parameters`.
-        """
-        return [
-            'Constant body force in global x direction',
-            'Constant body force in global y direction',
-            'Constant body force in global z direction'
-        ]
-
-    @classmethod
-    def get_possible_dofs(cls) -> List[str]:
-        """Get the allowed number of DOFs per node for this element.
-
-        Returns:
-            List[str]: ``['3']``.
-        """
-        return ['3']
-
-    def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
-        """Retrieve current values for the given parameters.
-
-        Args:
-            keys: Parameter names to retrieve.
-
-        Returns:
-            Dict: standard key-value pairs.
-        """
-        values = {}
-        for key in keys:
-            if key == "b1": values[key] = self.b1
-            elif key == "b2": values[key] = self.b2
-            elif key == "b3": values[key] = self.b3
-        return values
-    
-    def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
-        """Update element parameters."""
-        sanitized = self.validate_element_parameters(**values)
-        if "b1" in sanitized: self.b1 = sanitized["b1"]
-        if "b2" in sanitized: self.b2 = sanitized["b2"]
-        if "b3" in sanitized: self.b3 = sanitized["b3"]
-
-    @classmethod
-    def validate_element_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
-        """Validate and coerce SSPbrick parameters.
-
-        Optional parameters ``b1``, ``b2`` and ``b3`` are converted to ``float``
-        if provided.
-
-        Args:
-            **kwargs: Raw parameter mapping.
-
-        Returns:
-            Dict[str, Union[int, float, str]]: Validated parameter mapping.
-
-        Raises:
-            ValueError: If any provided body force cannot be converted to
-                ``float``.
-        """
-        for key in ["b1", "b2", "b3"]:
-            if key in kwargs:
-                try:
-                    kwargs[key] = float(kwargs.get(key, 0.0))
-                except (ValueError, TypeError):
-                    raise ValueError(f"{key} must be a float number")
-        return kwargs
-
-    @classmethod
     def _is_material_compatible(cls, material: Material) -> bool:
         """Check whether the provided material can be used with SSPbrick.
 
@@ -189,4 +106,3 @@ class SSPbrickElement(Element):
         """
         return material.material_type == 'nDMaterial'
 
-ElementRegistry.register_element_type('SSPbrick', SSPbrickElement)

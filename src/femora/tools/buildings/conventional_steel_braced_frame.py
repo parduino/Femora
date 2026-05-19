@@ -217,12 +217,12 @@ class ConventionalSteelBracedFrame:
                 transformation = transf_col_y
             else:
                 raise ValueError(f"Unknown frame member category: {category}")
-            element = ElasticBeamColumnElement(ndof=6, section=section, transformation=transformation)
+            element = model.element.beam.elastic(ndof=6, section=section, transformation=transformation)
             elements_cache[key] = element
             return element
 
         brace_section = self._get_or_create_brace_section(model, material)
-        brace_element = TrussElement(ndof=6, section=brace_section, rho=0.0)
+        brace_element = model.element.beam.truss(ndof=6, section=brace_section, rho=0.0)
         self._brace_elements.append(brace_element)
 
         def add_element_segment(element: Element, p1: Sequence[float], p2: Sequence[float]) -> None:
@@ -304,7 +304,7 @@ class ConventionalSteelBracedFrame:
         if "ndf" not in grid.point_data:
             grid.point_data["ndf"] = np.full(grid.n_points, 6, dtype=np.uint16)
         self._add_member_self_mass(grid, model, material_density)
-        grid = self._add_center_of_mass_nodes(grid)
+        grid = self._add_center_of_mass_nodes(grid, model)
 
         self.building_region = model.region.create_region("ElementRegion")
         return CompositeMesh(user_name=self.name_prefix, mesh=grid, region=self.building_region)
@@ -791,7 +791,7 @@ class ConventionalSteelBracedFrame:
                     grid, pid, M_rot_torsion, M_rot_iy, M_rot_iz, kind
                 )
 
-    def _add_center_of_mass_nodes(self, grid: pv.UnstructuredGrid) -> pv.UnstructuredGrid:
+    def _add_center_of_mass_nodes(self, grid: pv.UnstructuredGrid, model) -> pv.UnstructuredGrid:
         x_coords, y_coords, z_coords = self.get_coordinates()
         x_center = (x_coords[0] + x_coords[-1]) / 2.0
         y_center = (y_coords[0] + y_coords[-1]) / 2.0
@@ -801,7 +801,7 @@ class ConventionalSteelBracedFrame:
         com_coords = []
         com_tags = []
         for story in range(1, self.num_stories + 1):
-            com_element = GhostNodeElement(ndof=6)
+            com_element = model.element.special.ghost_node(ndof=6)
             com_coords.append([x_center, y_center, z_coords[story]])
             com_tags.append(com_element.tag)
 
