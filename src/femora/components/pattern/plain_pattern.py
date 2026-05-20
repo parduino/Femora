@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import List
 
-from femora.components.load.load_base import Load, LoadManager
+from femora.core.load_base import Load
+from femora.core.load_manager import LoadManager
 from femora.core.pattern_base import Pattern
 from femora.core.time_series_base import TimeSeries
 
@@ -150,7 +151,12 @@ class PlainPattern(Pattern):
                 pattern: The ``PlainPattern`` instance to which loads will be attached.
             """
             self._pattern = pattern
-            self._manager = LoadManager()
+
+        def _load_manager(self) -> LoadManager:
+            pattern_owner = self._pattern._owner
+            if pattern_owner is None:
+                raise ValueError("Pattern must be managed before adding loads")
+            return pattern_owner._mesh_maker.load
 
         def node(self, **kwargs) -> Load:
             """Create a nodal load and attach it to the owning pattern.
@@ -161,7 +167,7 @@ class PlainPattern(Pattern):
             Returns:
                 Created and attached load instance.
             """
-            load = self._manager.node(**kwargs)
+            load = self._load_manager().node(**kwargs)
             self._pattern.add_load_instance(load)
             return load
 
@@ -174,7 +180,7 @@ class PlainPattern(Pattern):
             Returns:
                 Created and attached load instance.
             """
-            load = self._manager.element(**kwargs)
+            load = self._load_manager().element(**kwargs)
             self._pattern.add_load_instance(load)
             return load
 
@@ -200,7 +206,7 @@ class PlainPattern(Pattern):
             Returns:
                 Created and attached load instance.
             """
-            load = self._manager.sp(**kwargs)
+            load = self._load_manager().sp(**kwargs)
             self._pattern.add_load_instance(load)
             return load
 

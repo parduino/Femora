@@ -1,117 +1,21 @@
-from typing import List, Dict, Optional, Union, Type
+from typing import Dict, List, Type, Union
+
+from femora.core.tagged_component_manager import TaggedComponentManager
 from .base import AnalysisComponent
-from abc import abstractmethod
+
 
 class Algorithm(AnalysisComponent):
-    """
-    Base abstract class for algorithms, which determine how the constraint equations are enforced
-    in the system of equations
-    """
-    _algorithms = {}  # Class-level dictionary to store algorithm types
-    _created_algorithms = {}  # Class-level dictionary to track all created algorithms
-    _next_tag = 1  # Class variable to track the next tag to assign
-    
-    def __init__(self, algorithm_type: str):
-        """
-        Initialize an algorithm
-        
-        Args:
-            algorithm_type (str): Type of the algorithm
-        """
-        self.tag = Algorithm._next_tag
-        Algorithm._next_tag += 1
+    """Base class for OpenSees solution algorithms."""
+
+    _algorithms: Dict[str, Type["Algorithm"]] = {}
+
+    def __init__(self, algorithm_type: str) -> None:
+        super().__init__()
         self.algorithm_type = algorithm_type
-        
-        # Register this algorithm in the class-level tracking dictionary
-        Algorithm._created_algorithms[self.tag] = self
-    
+
     @staticmethod
-    def register_algorithm(name: str, algorithm_class: Type['Algorithm']):
-        """Register an algorithm type"""
+    def register_algorithm(name: str, algorithm_class: Type["Algorithm"]) -> None:
         Algorithm._algorithms[name.lower()] = algorithm_class
-    
-    @staticmethod
-    def create_algorithm(algorithm_type: str, **kwargs) -> 'Algorithm':
-        """Create an algorithm of the specified type"""
-        algorithm_type = algorithm_type.lower()
-        if algorithm_type not in Algorithm._algorithms:
-            raise ValueError(f"Unknown algorithm type: {algorithm_type}")
-        return Algorithm._algorithms[algorithm_type](**kwargs)
-    
-    @staticmethod
-    def get_available_types() -> List[str]:
-        """Get available algorithm types"""
-        return list(Algorithm._algorithms.keys())
-    
-    @classmethod
-    def get_algorithm(cls, tag: int) -> 'Algorithm':
-        """
-        Retrieve a specific algorithm by its tag.
-        
-        Args:
-            tag (int): The tag of the algorithm
-        
-        Returns:
-            Algorithm: The algorithm with the specified tag
-        
-        Raises:
-            KeyError: If no algorithm with the given tag exists
-        """
-        if tag not in cls._created_algorithms:
-            raise KeyError(f"No algorithm found with tag {tag}")
-        return cls._created_algorithms[tag]
-
-    @classmethod
-    def get_all_algorithms(cls) -> Dict[int, 'Algorithm']:
-        """
-        Retrieve all created algorithms.
-        
-        Returns:
-            Dict[int, Algorithm]: A dictionary of all algorithms, keyed by their unique tags
-        """
-        return cls._created_algorithms
-    
-    @classmethod
-    def clear_all(cls) -> None:
-        """
-        Clear all algorithms and reset tags.
-        """
-        cls._created_algorithms.clear()
-        cls._next_tag = 1
-    
-    @abstractmethod
-    def get_values(self) -> Dict[str, Union[str, int, float, bool]]:
-        """
-        Get the parameters defining this algorithm
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool]]: Dictionary of parameter values
-        """
-        pass
-
-    @classmethod
-    def _reassign_tags(cls) -> None:
-        """
-        Reassign tags to all algorithms sequentially starting from 1.
-        """
-        new_algorithms = {}
-        for idx, algorithm in enumerate(sorted(cls._created_algorithms.values(), key=lambda h: h.tag), start=1):
-            algorithm.tag = idx
-            new_algorithms[idx] = algorithm
-        cls._created_algorithms = new_algorithms
-        cls._next_tag = len(cls._created_algorithms) + 1
-
-    @classmethod
-    def remove_algorithm(cls, tag: int) -> None:
-        """
-        Delete an algorithm by its tag and re-tag all remaining algorithms sequentially.
-        
-        Args:
-            tag (int): The tag of the algorithm to delete
-        """
-        if tag in cls._created_algorithms:
-            del cls._created_algorithms[tag]
-            cls._reassign_tags()
 
 
 class LinearAlgorithm(Algorithm):
@@ -144,17 +48,6 @@ class LinearAlgorithm(Algorithm):
             cmd += " -factorOnce"
         return cmd
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool]]:
-        """
-        Get the parameters defining this algorithm
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool]]: Dictionary of parameter values
-        """
-        return {
-            "initial": self.initial,
-            "factor_once": self.factor_once
-        }
 
 
 class NewtonAlgorithm(Algorithm):
@@ -191,17 +84,6 @@ class NewtonAlgorithm(Algorithm):
             cmd += " -initialThenCurrent"
         return cmd
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool]]:
-        """
-        Get the parameters defining this algorithm
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool]]: Dictionary of parameter values
-        """
-        return {
-            "initial": self.initial,
-            "initial_then_current": self.initial_then_current
-        }
 
 
 class ModifiedNewtonAlgorithm(Algorithm):
@@ -234,17 +116,6 @@ class ModifiedNewtonAlgorithm(Algorithm):
             cmd += " -factoronce"
         return cmd
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool]]:
-        """
-        Get the parameters defining this algorithm
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool]]: Dictionary of parameter values
-        """
-        return {
-            "initial": self.initial,
-            "factor_once": self.factor_once
-        }
 
 
 class NewtonLineSearchAlgorithm(Algorithm):
@@ -297,20 +168,6 @@ class NewtonLineSearchAlgorithm(Algorithm):
             
         return cmd
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool]]:
-        """
-        Get the parameters defining this algorithm
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool]]: Dictionary of parameter values
-        """
-        return {
-            "type_search": self.type_search,
-            "tol": self.tol,
-            "max_iter": self.max_iter,
-            "min_eta": self.min_eta,
-            "max_eta": self.max_eta
-        }
 
 
 class KrylovNewtonAlgorithm(Algorithm):
@@ -359,18 +216,6 @@ class KrylovNewtonAlgorithm(Algorithm):
             
         return cmd
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool]]:
-        """
-        Get the parameters defining this algorithm
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool]]: Dictionary of parameter values
-        """
-        return {
-            "tang_iter": self.tang_iter,
-            "tang_incr": self.tang_incr,
-            "max_dim": self.max_dim
-        }
 
 
 class SecantNewtonAlgorithm(Algorithm):
@@ -419,18 +264,6 @@ class SecantNewtonAlgorithm(Algorithm):
             
         return cmd
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool]]:
-        """
-        Get the parameters defining this algorithm
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool]]: Dictionary of parameter values
-        """
-        return {
-            "tang_iter": self.tang_iter,
-            "tang_incr": self.tang_incr,
-            "max_dim": self.max_dim
-        }
 
 
 class BFGSAlgorithm(Algorithm):
@@ -460,16 +293,6 @@ class BFGSAlgorithm(Algorithm):
         """
         return f"algorithm BFGS {self.count}"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool]]:
-        """
-        Get the parameters defining this algorithm
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool]]: Dictionary of parameter values
-        """
-        return {
-            "count": self.count
-        }
 
 
 class BroydenAlgorithm(Algorithm):
@@ -499,16 +322,6 @@ class BroydenAlgorithm(Algorithm):
         """
         return f"algorithm Broyden {self.count}"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool]]:
-        """
-        Get the parameters defining this algorithm
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool]]: Dictionary of parameter values
-        """
-        return {
-            "count": self.count
-        }
 
 
 class ExpressNewtonAlgorithm(Algorithm):
@@ -562,56 +375,39 @@ class ExpressNewtonAlgorithm(Algorithm):
             
         return cmd
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool]]:
-        """
-        Get the parameters defining this algorithm
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool]]: Dictionary of parameter values
-        """
-        return {
-            "iter_count": self.iter_count,
-            "k_multiplier": self.k_multiplier,
-            "initial_tangent": self.initial_tangent,
-            "current_tangent": self.current_tangent,
-            "factor_once": self.factor_once
-        }
 
 
-class AlgorithmManager:
-    """
-    Singleton class for managing algorithms
-    """
-    _instance = None
+class AlgorithmManager(TaggedComponentManager[Algorithm]):
+    def __init__(self, analysis_manager) -> None:
+        super().__init__(analysis_manager, Algorithm, "_algorithms")
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(AlgorithmManager, cls).__new__(cls)
-        return cls._instance
+    def linear(self, **kwargs) -> Algorithm:
+        return self.add(LinearAlgorithm(**kwargs))
 
-    def create_algorithm(self, algorithm_type: str, **kwargs) -> Algorithm:
-        """Create a new algorithm"""
-        return Algorithm.create_algorithm(algorithm_type, **kwargs)
+    def newton(self, **kwargs) -> Algorithm:
+        return self.add(NewtonAlgorithm(**kwargs))
 
-    def get_algorithm(self, tag: int) -> Algorithm:
-        """Get algorithm by tag"""
-        return Algorithm.get_algorithm(tag)
+    def modifiednewton(self, **kwargs) -> Algorithm:
+        return self.add(ModifiedNewtonAlgorithm(**kwargs))
 
-    def remove_algorithm(self, tag: int) -> None:
-        """Remove algorithm by tag"""
-        Algorithm.remove_algorithm(tag)
+    def newtonlinesearch(self, **kwargs) -> Algorithm:
+        return self.add(NewtonLineSearchAlgorithm(**kwargs))
 
-    def get_all_algorithms(self) -> Dict[int, Algorithm]:
-        """Get all algorithms"""
-        return Algorithm.get_all_algorithms()
+    def krylovnewton(self, **kwargs) -> Algorithm:
+        return self.add(KrylovNewtonAlgorithm(**kwargs))
 
-    def get_available_types(self) -> List[str]:
-        """Get list of available algorithm types"""
-        return Algorithm.get_available_types()
-    
-    def clear_all(self):
-        """Clear all algorithms"""  
-        Algorithm.clear_all()
+    def secantnewton(self, **kwargs) -> Algorithm:
+        return self.add(SecantNewtonAlgorithm(**kwargs))
+
+    def bfgs(self, **kwargs) -> Algorithm:
+        return self.add(BFGSAlgorithm(**kwargs))
+
+    def broyden(self, **kwargs) -> Algorithm:
+        return self.add(BroydenAlgorithm(**kwargs))
+
+    def expressnewton(self, **kwargs) -> Algorithm:
+        return self.add(ExpressNewtonAlgorithm(**kwargs))
+
 
 
 # Register all algorithms

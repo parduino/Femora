@@ -1,119 +1,21 @@
-from typing import List, Dict, Optional, Union, Type
+from typing import Dict, List, Optional, Type, Union
+
+from femora.core.tagged_component_manager import TaggedComponentManager
 from .base import AnalysisComponent
-from abc import ABC, abstractmethod
 
 
 class ConstraintHandler(AnalysisComponent):
-    """
-    Base abstract class for constraint handlers, which determine how the constraint equations are enforced
-    in the system of equations
-    """
-    _handlers = {}  # Class-level dictionary to store handler types
-    _created_handlers = {}  # Class-level dictionary to track all created handlers
-    _next_tag = 1  # Class variable to track the next tag to assign
-    
-    def __init__(self, handler_type: str):
-        """
-        Initialize a constraint handler
-        
-        Args:
-            handler_type (str): Type of the constraint handler
-        """
-        self.tag = ConstraintHandler._next_tag
-        ConstraintHandler._next_tag += 1
+    """Base class for OpenSees constraint handlers."""
+
+    _handlers: Dict[str, Type["ConstraintHandler"]] = {}
+
+    def __init__(self, handler_type: str) -> None:
+        super().__init__()
         self.handler_type = handler_type
-        
-        # Register this handler in the class-level tracking dictionary
-        ConstraintHandler._created_handlers[self.tag] = self
-    
+
     @staticmethod
-    def register_handler(name: str, handler_class: Type['ConstraintHandler']):
-        """Register a constraint handler type"""
+    def register_handler(name: str, handler_class: Type["ConstraintHandler"]) -> None:
         ConstraintHandler._handlers[name.lower()] = handler_class
-    
-    @staticmethod
-    def create_handler(handler_type: str, **kwargs) -> 'ConstraintHandler':
-        """Create a constraint handler of the specified type"""
-        handler_type = handler_type.lower()
-        if handler_type not in ConstraintHandler._handlers:
-            raise ValueError(f"Unknown constraint handler type: {handler_type}")
-        return ConstraintHandler._handlers[handler_type](**kwargs)
-    
-    @staticmethod
-    def get_available_types() -> List[str]:
-        """Get available constraint handler types"""
-        return list(ConstraintHandler._handlers.keys())
-    
-    @classmethod
-    def get_handler(cls, tag: int) -> 'ConstraintHandler':
-        """
-        Retrieve a specific handler by its tag.
-        
-        Args:
-            tag (int): The tag of the handler
-        
-        Returns:
-            ConstraintHandler: The handler with the specified tag
-        
-        Raises:
-            KeyError: If no handler with the given tag exists
-        """
-        if tag not in cls._created_handlers:
-            raise KeyError(f"No constraint handler found with tag {tag}")
-        return cls._created_handlers[tag]
-
-
-    @classmethod
-    def get_all_handlers(cls) -> Dict[int, 'ConstraintHandler']:
-        """
-        Retrieve all created handlers.
-        
-        Returns:
-            Dict[int, ConstraintHandler]: A dictionary of all handlers, keyed by their unique tags
-        """
-        return cls._created_handlers
-    
-    @classmethod
-    def clear_all(cls) -> None:
-        """
-        Clear all handlers and reset tags.
-        """
-        cls._created_handlers.clear()
-        cls._next_tag = 1
-    
-    @abstractmethod
-    def get_values(self) -> Dict[str, Union[str, int, float, bool]]:
-        """
-        Get the parameters defining this handler
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool]]: Dictionary of parameter values
-        """
-        pass
-
-    @classmethod
-    def _reassign_tags(cls) -> None:
-        """
-        Reassign tags to all handlers sequentially starting from 1.
-        """
-        new_handlers = {}
-        for idx, handler in enumerate(sorted(cls._created_handlers.values(), key=lambda h: h.tag), start=1):
-            handler.tag = idx
-            new_handlers[idx] = handler
-        cls._created_handlers = new_handlers
-        cls._next_tag = len(cls._created_handlers) + 1
-
-    @classmethod
-    def remove_handler(cls, tag: int) -> None:
-        """
-        Delete a handler by its tag and re-tag all remaining handlers sequentially.
-        
-        Args:
-            tag (int): The tag of the handler to delete
-        """
-        if tag in cls._created_handlers:
-            del cls._created_handlers[tag]
-            cls._reassign_tags()
 
 
 class PlainConstraintHandler(ConstraintHandler):
@@ -126,8 +28,6 @@ class PlainConstraintHandler(ConstraintHandler):
     def to_tcl(self) -> str:
         return "constraints Plain"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool]]:
-        return {}
 
 
 class TransformationConstraintHandler(ConstraintHandler):
@@ -140,8 +40,6 @@ class TransformationConstraintHandler(ConstraintHandler):
     def to_tcl(self) -> str:
         return "constraints Transformation"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool]]:
-        return {}
 
 
 class PenaltyConstraintHandler(ConstraintHandler):
@@ -156,11 +54,6 @@ class PenaltyConstraintHandler(ConstraintHandler):
     def to_tcl(self) -> str:
         return f"constraints Penalty {self.alpha_s} {self.alpha_m}"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool]]:
-        return {
-            "alpha_s": self.alpha_s,
-            "alpha_m": self.alpha_m
-        }
 
 
 class LagrangeConstraintHandler(ConstraintHandler):
@@ -175,11 +68,6 @@ class LagrangeConstraintHandler(ConstraintHandler):
     def to_tcl(self) -> str:
         return f"constraints Lagrange {self.alpha_s} {self.alpha_m}"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool]]:
-        return {
-            "alpha_s": self.alpha_s,
-            "alpha_m": self.alpha_m
-        }
 
 
 class AutoConstraintHandler(ConstraintHandler):
@@ -203,54 +91,26 @@ class AutoConstraintHandler(ConstraintHandler):
             cmd += f" -userPenalty {self.user_penalty}"
         return cmd
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool]]:
-        return {
-            "verbose": self.verbose,
-            "auto_penalty": self.auto_penalty,
-            "user_penalty": self.user_penalty
-        }
 
 
-class ConstraintHandlerManager:
-    """
-    Singleton class for managing constraint handlers
-    """
-    _instance = None
-    transformation = TransformationConstraintHandler
-    plain = PlainConstraintHandler
-    penalty = PenaltyConstraintHandler
-    lagrange = LagrangeConstraintHandler
-    auto = AutoConstraintHandler
+class ConstraintHandlerManager(TaggedComponentManager[ConstraintHandler]):
+    def __init__(self, analysis_manager) -> None:
+        super().__init__(analysis_manager, ConstraintHandler, "_handlers")
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(ConstraintHandlerManager, cls).__new__(cls)
-        return cls._instance
-        
+    def plain(self, **kwargs) -> ConstraintHandler:
+        return self.add(PlainConstraintHandler(**kwargs))
 
-    def create_handler(self, handler_type: str, **kwargs) -> ConstraintHandler:
-        """Create a new constraint handler"""
-        return ConstraintHandler.create_handler(handler_type, **kwargs)
+    def transformation(self, **kwargs) -> ConstraintHandler:
+        return self.add(TransformationConstraintHandler(**kwargs))
 
-    def get_handler(self, tag: int) -> ConstraintHandler:
-        """Get constraint handler by tag"""
-        return ConstraintHandler.get_handler(tag)
+    def penalty(self, **kwargs) -> ConstraintHandler:
+        return self.add(PenaltyConstraintHandler(**kwargs))
 
-    def remove_handler(self, tag: int) -> None:
-        """Remove constraint handler by tag"""
-        ConstraintHandler.remove_handler(tag)
+    def lagrange(self, **kwargs) -> ConstraintHandler:
+        return self.add(LagrangeConstraintHandler(**kwargs))
 
-    def get_all_handlers(self) -> Dict[int, ConstraintHandler]:
-        """Get all constraint handlers"""
-        return ConstraintHandler.get_all_handlers()
-
-    def get_available_types(self) -> List[str]:
-        """Get list of available constraint handler types"""
-        return ConstraintHandler.get_available_types()
-    
-    def clear_all(self):
-        """Clear all constraint handlers"""  
-        ConstraintHandler.clear_all()
+    def auto(self, **kwargs) -> ConstraintHandler:
+        return self.add(AutoConstraintHandler(**kwargs))
 
 
 # Register all constraint handlers

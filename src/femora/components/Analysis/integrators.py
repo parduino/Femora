@@ -1,118 +1,21 @@
-from typing import List, Dict, Optional, Union, Type
+from typing import Dict, List, Optional, Type, Union
+
+from femora.core.tagged_component_manager import TaggedComponentManager
 from .base import AnalysisComponent
-from abc import ABC, abstractmethod
 
 
 class Integrator(AnalysisComponent):
-    """
-    Base abstract class for integrators, which determine how displacement and resistance are updated
-    in the nonlinear solution algorithms.
-    """
-    _integrators = {}  # Class-level dictionary to store integrator types
-    _created_integrators = {}  # Class-level dictionary to track all created integrators
-    _next_tag = 1  # Class variable to track the next tag to assign
-    
-    def __init__(self, integrator_type: str):
-        """
-        Initialize an integrator
-        
-        Args:
-            integrator_type (str): Type of the integrator
-        """
-        self.tag = Integrator._next_tag
-        Integrator._next_tag += 1
+    """Base class for OpenSees integrators."""
+
+    _integrators: Dict[str, Type["Integrator"]] = {}
+
+    def __init__(self, integrator_type: str) -> None:
+        super().__init__()
         self.integrator_type = integrator_type
-        
-        # Register this integrator in the class-level tracking dictionary
-        Integrator._created_integrators[self.tag] = self
-    
+
     @staticmethod
-    def register_integrator(name: str, integrator_class: Type['Integrator']):
-        """Register an integrator type"""
+    def register_integrator(name: str, integrator_class: Type["Integrator"]) -> None:
         Integrator._integrators[name.lower()] = integrator_class
-    
-    @staticmethod
-    def create_integrator(integrator_type: str, **kwargs) -> 'Integrator':
-        """Create an integrator of the specified type"""
-        integrator_type = integrator_type.lower()
-        if integrator_type not in Integrator._integrators:
-            raise ValueError(f"Unknown integrator type: {integrator_type}")
-        return Integrator._integrators[integrator_type](**kwargs)
-    
-    @staticmethod
-    def get_available_types() -> List[str]:
-        """Get available integrator types"""
-        return list(Integrator._integrators.keys())
-    
-    @classmethod
-    def get_integrator(cls, tag: int) -> 'Integrator':
-        """
-        Retrieve a specific integrator by its tag.
-        
-        Args:
-            tag (int): The tag of the integrator
-        
-        Returns:
-            Integrator: The integrator with the specified tag
-        
-        Raises:
-            KeyError: If no integrator with the given tag exists
-        """
-        if tag not in cls._created_integrators:
-            raise KeyError(f"No integrator found with tag {tag}")
-        return cls._created_integrators[tag]
-
-    @classmethod
-    def get_all_integrators(cls) -> Dict[int, 'Integrator']:
-        """
-        Retrieve all created integrators.
-        
-        Returns:
-            Dict[int, Integrator]: A dictionary of all integrators, keyed by their unique tags
-        """
-        return cls._created_integrators
-    
-    @classmethod
-    def clear_all(cls) -> None:
-        """
-        Clear all integrators and reset tags.
-        """
-        cls._created_integrators.clear()
-        cls._next_tag = 1
-    
-    @abstractmethod
-    def get_values(self) -> Dict[str, Union[str, int, float, bool, list]]:
-        """
-        Get the parameters defining this integrator
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool, list]]: Dictionary of parameter values
-        """
-        pass
-
-    @classmethod
-    def _reassign_tags(cls) -> None:
-        """
-        Reassign tags to all integrators sequentially starting from 1.
-        """
-        new_integrators = {}
-        for idx, integrator in enumerate(sorted(cls._created_integrators.values(), key=lambda i: i.tag), start=1):
-            integrator.tag = idx
-            new_integrators[idx] = integrator
-        cls._created_integrators = new_integrators
-        cls._next_tag = len(cls._created_integrators) + 1
-
-    @classmethod
-    def remove_integrator(cls, tag: int) -> None:
-        """
-        Delete an integrator by its tag and re-tag all remaining integrators sequentially.
-        
-        Args:
-            tag (int): The tag of the integrator to delete
-        """
-        if tag in cls._created_integrators:
-            del cls._created_integrators[tag]
-            cls._reassign_tags()
 
 
 class StaticIntegrator(Integrator):
@@ -176,19 +79,6 @@ class LoadControlIntegrator(StaticIntegrator):
         """
         return f"integrator LoadControl {self.incr} {self.num_iter} {self.min_incr} {self.max_incr}"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool, list]]:
-        """
-        Get the parameters defining this integrator
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool, list]]: Dictionary of parameter values
-        """
-        return {
-            "incr": self.incr,
-            "num_iter": self.num_iter,
-            "min_incr": self.min_incr,
-            "max_incr": self.max_incr
-        }
 
 
 class DisplacementControlIntegrator(StaticIntegrator):
@@ -225,21 +115,6 @@ class DisplacementControlIntegrator(StaticIntegrator):
         """
         return f"integrator DisplacementControl {self.node_tag} {self.dof} {self.incr} {self.num_iter} {self.min_incr} {self.max_incr}"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool, list]]:
-        """
-        Get the parameters defining this integrator
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool, list]]: Dictionary of parameter values
-        """
-        return {
-            "node_tag": self.node_tag,
-            "dof": self.dof,
-            "incr": self.incr,
-            "num_iter": self.num_iter,
-            "min_incr": self.min_incr,
-            "max_incr": self.max_incr
-        }
 
 
 class ParallelDisplacementControlIntegrator(StaticIntegrator):
@@ -276,21 +151,6 @@ class ParallelDisplacementControlIntegrator(StaticIntegrator):
         """
         return f"integrator ParallelDisplacementControl {self.node_tag} {self.dof} {self.incr} {self.num_iter} {self.min_incr} {self.max_incr}"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool, list]]:
-        """
-        Get the parameters defining this integrator
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool, list]]: Dictionary of parameter values
-        """
-        return {
-            "node_tag": self.node_tag,
-            "dof": self.dof,
-            "incr": self.incr,
-            "num_iter": self.num_iter,
-            "min_incr": self.min_incr,
-            "max_incr": self.max_incr
-        }
 
 
 class MinUnbalDispNormIntegrator(StaticIntegrator):
@@ -326,20 +186,6 @@ class MinUnbalDispNormIntegrator(StaticIntegrator):
         det_str = " -det" if self.det else ""
         return f"integrator MinUnbalDispNorm {self.dlambda1} {self.jd} {self.min_lambda} {self.max_lambda}{det_str}"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool, list]]:
-        """
-        Get the parameters defining this integrator
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool, list]]: Dictionary of parameter values
-        """
-        return {
-            "dlambda1": self.dlambda1,
-            "jd": self.jd,
-            "min_lambda": self.min_lambda,
-            "max_lambda": self.max_lambda,
-            "det": self.det
-        }
 
 
 class ArcLengthIntegrator(StaticIntegrator):
@@ -367,17 +213,6 @@ class ArcLengthIntegrator(StaticIntegrator):
         """
         return f"integrator ArcLength {self.s} {self.alpha}"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool, list]]:
-        """
-        Get the parameters defining this integrator
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool, list]]: Dictionary of parameter values
-        """
-        return {
-            "s": self.s,
-            "alpha": self.alpha
-        }
 
 
 #------------------------------------------------------
@@ -403,14 +238,6 @@ class CentralDifferenceIntegrator(TransientIntegrator):
         """
         return "integrator CentralDifference"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool, list]]:
-        """
-        Get the parameters defining this integrator
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool, list]]: Dictionary of parameter values
-        """
-        return {}
 
 
 class NewmarkIntegrator(TransientIntegrator):
@@ -446,18 +273,6 @@ class NewmarkIntegrator(TransientIntegrator):
         else:
             return f"integrator Newmark {self.gamma} {self.beta} -form {self.form}"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool, list]]:
-        """
-        Get the parameters defining this integrator
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool, list]]: Dictionary of parameter values
-        """
-        return {
-            "gamma": self.gamma,
-            "beta": self.beta,
-            "form": self.form
-        }
 
 
 class HHTIntegrator(TransientIntegrator):
@@ -495,18 +310,6 @@ class HHTIntegrator(TransientIntegrator):
         """
         return f"integrator HHT {self.alpha} {self.gamma} {self.beta}"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool, list]]:
-        """
-        Get the parameters defining this integrator
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool, list]]: Dictionary of parameter values
-        """
-        return {
-            "alpha": self.alpha,
-            "gamma": self.gamma,
-            "beta": self.beta
-        }
 
 
 class GeneralizedAlphaIntegrator(TransientIntegrator):
@@ -548,19 +351,6 @@ class GeneralizedAlphaIntegrator(TransientIntegrator):
         """
         return f"integrator GeneralizedAlpha {self.alpha_m} {self.alpha_f} {self.gamma} {self.beta}"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool, list]]:
-        """
-        Get the parameters defining this integrator
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool, list]]: Dictionary of parameter values
-        """
-        return {
-            "alpha_m": self.alpha_m,
-            "alpha_f": self.alpha_f,
-            "gamma": self.gamma,
-            "beta": self.beta
-        }
 
 
 class TRBDF2Integrator(TransientIntegrator):
@@ -582,14 +372,6 @@ class TRBDF2Integrator(TransientIntegrator):
         """
         return "integrator TRBDF2"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool, list]]:
-        """
-        Get the parameters defining this integrator
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool, list]]: Dictionary of parameter values
-        """
-        return {}
 
 
 class ExplicitDifferenceIntegrator(TransientIntegrator):
@@ -611,14 +393,6 @@ class ExplicitDifferenceIntegrator(TransientIntegrator):
         """
         return "integrator ExplicitDifference"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool, list]]:
-        """
-        Get the parameters defining this integrator
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool, list]]: Dictionary of parameter values
-        """
-        return {}
 
 
 class PFEMIntegrator(TransientIntegrator):
@@ -646,76 +420,53 @@ class PFEMIntegrator(TransientIntegrator):
         """
         return f"integrator PFEM {self.gamma} {self.beta}"
     
-    def get_values(self) -> Dict[str, Union[str, int, float, bool, list]]:
-        """
-        Get the parameters defining this integrator
-        
-        Returns:
-            Dict[str, Union[str, int, float, bool, list]]: Dictionary of parameter values
-        """
-        return {
-            "gamma": self.gamma,
-            "beta": self.beta
-        }
 
 
-class IntegratorManager:
-    """
-    Singleton class for managing integrators
-    """
-    _instance = None
-    
+class IntegratorManager(TaggedComponentManager[Integrator]):
+    def __init__(self, analysis_manager) -> None:
+        super().__init__(analysis_manager, Integrator, "_integrators")
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(IntegratorManager, cls).__new__(cls)
-        return cls._instance
-    
-    def __init__(self):
-        self.newmark = NewmarkIntegrator
-        self.hht = HHTIntegrator
-        self.generalizedAlpha = GeneralizedAlphaIntegrator
-        self.trbdf2 = TRBDF2Integrator
-        self.centralDifference = CentralDifferenceIntegrator
-        self.explicitDifference = ExplicitDifferenceIntegrator
-        self.pfem = PFEMIntegrator
-        self.loadControl = LoadControlIntegrator
-        self.displacementControl = DisplacementControlIntegrator
-        self.parallelDisplacementControl = ParallelDisplacementControlIntegrator
-        self.minUnbalDispNorm = MinUnbalDispNormIntegrator
-        self.arcLength = ArcLengthIntegrator
+    def loadcontrol(self, **kwargs) -> Integrator:
+        return self.add(LoadControlIntegrator(**kwargs))
 
-    def create_integrator(self, integrator_type: str, **kwargs) -> Integrator:
-        """Create a new integrator"""
-        return Integrator.create_integrator(integrator_type, **kwargs)
+    def displacementcontrol(self, **kwargs) -> Integrator:
+        return self.add(DisplacementControlIntegrator(**kwargs))
 
-    def get_integrator(self, tag: int) -> Integrator:
-        """Get integrator by tag"""
-        return Integrator.get_integrator(tag)
+    def paralleldisplacementcontrol(self, **kwargs) -> Integrator:
+        return self.add(ParallelDisplacementControlIntegrator(**kwargs))
 
-    def remove_integrator(self, tag: int) -> None:
-        """Remove integrator by tag"""
-        Integrator.remove_integrator(tag)
+    def minunbaldispnorm(self, **kwargs) -> Integrator:
+        return self.add(MinUnbalDispNormIntegrator(**kwargs))
 
-    def get_all_integrators(self) -> Dict[int, Integrator]:
-        """Get all integrators"""
-        return Integrator.get_all_integrators()
+    def arclength(self, **kwargs) -> Integrator:
+        return self.add(ArcLengthIntegrator(**kwargs))
 
-    def get_available_types(self) -> List[str]:
-        """Get list of available integrator types"""
-        return Integrator.get_available_types()
-    
+    def centraldifference(self, **kwargs) -> Integrator:
+        return self.add(CentralDifferenceIntegrator(**kwargs))
+
+    def newmark(self, **kwargs) -> Integrator:
+        return self.add(NewmarkIntegrator(**kwargs))
+
+    def hht(self, **kwargs) -> Integrator:
+        return self.add(HHTIntegrator(**kwargs))
+
+    def generalizedalpha(self, **kwargs) -> Integrator:
+        return self.add(GeneralizedAlphaIntegrator(**kwargs))
+
+    def trbdf2(self, **kwargs) -> Integrator:
+        return self.add(TRBDF2Integrator(**kwargs))
+
+    def explicitdifference(self, **kwargs) -> Integrator:
+        return self.add(ExplicitDifferenceIntegrator(**kwargs))
+
+    def pfem(self, **kwargs) -> Integrator:
+        return self.add(PFEMIntegrator(**kwargs))
+
     def get_static_types(self) -> List[str]:
-        """Get list of available static integrator types"""
         return StaticIntegrator.get_static_types()
-    
+
     def get_transient_types(self) -> List[str]:
-        """Get list of available transient integrator types"""
         return TransientIntegrator.get_transient_types()
-    
-    def clear_all(self):
-        """Clear all integrators"""  
-        Integrator.clear_all()
 
 
 # Register all integrators

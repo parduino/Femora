@@ -6,11 +6,12 @@ from femora.components.Assemble.Assembler import Assembler
 from femora.core.damping_manager import DampingManager
 from femora.core.region_manager import RegionManager
 from femora.core.constraint_manager import ConstraintManager
+from femora.core.load_manager import LoadManager
 from femora.components.Mesh.meshPartBase import MeshPartManager
 from femora.components.Mesh.meshPartInstance import *
 from femora.components.element.ghost_node import GhostNodeElement
 from femora.core.time_series_manager import TimeSeriesManager
-from femora.components.Analysis.analysis import AnalysisManager
+from femora.core.analysis_manager import AnalysisManager
 from femora.core.pattern_manager import PatternManager
 from femora.components.Recorder.recorderBase import RecorderManager
 from femora.components.Process.process import ProcessManager
@@ -75,8 +76,9 @@ class MeshMaker:
         self.mass = MassManager()
         self.region = RegionManager(mesh_maker=self)
         self.constraint = ConstraintManager(mesh_maker=self)
+        self.load = LoadManager(mesh_maker=self)
         self.meshPart = MeshPartManager()
-        self.analysis = AnalysisManager()
+        self.analysis = AnalysisManager(mesh_maker=self)
         self.pattern = PatternManager(
             mesh_maker=self,
             time_series_manager=self.time_series,
@@ -806,6 +808,8 @@ class MeshMaker:
         self.region.clear()
         self.constraint.clear()
         self.constraint.set_tag_start(1)
+        self.load.clear()
+        self.load.set_tag_start(1)
         self.meshPart.clear()
         self.time_series.clear()
         self.ground_motion.clear()

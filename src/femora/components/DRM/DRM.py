@@ -5,6 +5,7 @@ import tqdm
 from pykdtree.kdtree import KDTree as pykdtree
 from femora.components.pattern.h5drm_pattern import H5DRMPattern
 from femora.components.Actions.action import ActionManager
+from femora.components.Analysis.analysis import Analysis
 from femora.constants import FEMORA_MAX_NDF
 
 class DRM:
@@ -118,13 +119,9 @@ class DRM:
         
         # Clear all previous process components
         self.meshmaker.process.clear_steps()
-        self.meshmaker.analysis.clear_all()
+        self.meshmaker.analysis.clear()
         self.meshmaker.recorder.clear_all()
-        self.meshmaker.constraint.sp.clear_all()
-        self.meshmaker.analysis.system.clear_all()
-        self.meshmaker.analysis.algorithm.clear_all()
-        self.meshmaker.analysis.test.clear_all()
-        self.meshmaker.analysis.integrator.clear_all()
+        self.meshmaker.constraint.sp.clear()
 
         # Create boundary conditions (fixities)
         dofsVals = [1,1,1,1,1,1,1,1,1]
@@ -152,22 +149,20 @@ class DRM:
         if not isinstance(GravityElasticOptions, dict):
             raise ValueError("The GravityElasticOptions should be a dictionary")
             
-        tmpconstraint = GravityElasticOptions.get("constraint_handler", 
-                                                 self.meshmaker.analysis.constraint.create_handler("plain"))
-        tmpnumberer = GravityElasticOptions.get("numberer", 
-                                               self.meshmaker.analysis.numberer.get_numberer("ParallelRCM"))
-        tmpsystem = GravityElasticOptions.get("system", 
-                                             self.meshmaker.analysis.system.create_system(
-                                                 system_type="mumps", icntl14=200, icntl7=7))
-        tmpalgorithm = GravityElasticOptions.get("algorithm", 
-                                                self.meshmaker.analysis.algorithm.create_algorithm(
-                                                    algorithm_type="modifiednewton", factor_once=True))
-        tmptest = GravityElasticOptions.get("test", 
-                                           self.meshmaker.analysis.test.create_test(
-                                               "energyincr", tol=1e-4, max_iter=10, print_flag=5))
-        tmpintegrator = GravityElasticOptions.get("integrator", 
-                                                 self.meshmaker.analysis.integrator.create_integrator(
-                                                     integrator_type="newmark", gamma=0.5, beta=0.25, form="D"))
+        tmpconstraint = GravityElasticOptions.get("constraint_handler",
+                                                 self.meshmaker.analysis.constraint.plain())
+        tmpnumberer = GravityElasticOptions.get("numberer",
+                                               self.meshmaker.analysis.numberer.parallelrcm())
+        tmpsystem = GravityElasticOptions.get("system",
+                                             self.meshmaker.analysis.system.mumps(icntl14=200, icntl7=7))
+        tmpalgorithm = GravityElasticOptions.get("algorithm",
+                                                self.meshmaker.analysis.algorithm.modifiednewton(factor_once=True))
+        tmptest = GravityElasticOptions.get("test",
+                                           self.meshmaker.analysis.test.energyincr(
+                                               tol=1e-4, max_iter=10, print_flag=5))
+        tmpintegrator = GravityElasticOptions.get("integrator",
+                                                 self.meshmaker.analysis.integrator.newmark(
+                                                     gamma=0.5, beta=0.25, form="D"))
         tmpdT = GravityElasticOptions.get("dt", dT)
         tmpnumSteps = GravityElasticOptions.get("num_steps", 20)
         
@@ -182,39 +177,39 @@ class DRM:
             raise ValueError("The number of steps should be greater than 0")
 
         # Create the elastic gravity analysis
-        GravityElastic = self.meshmaker.analysis.create_analysis(
-            name="Gravity-Elastic",
-            analysis_type="Transient",
-            constraint_handler=tmpconstraint,
-            numberer=tmpnumberer,
-            system=tmpsystem,
-            algorithm=tmpalgorithm,
-            test=tmptest,
-            integrator=tmpintegrator,
-            dt=tmpdT,
-            num_steps=tmpnumSteps,
+        GravityElastic = self.meshmaker.analysis.add(
+            Analysis(
+                "Gravity-Elastic",
+                "Transient",
+                tmpconstraint,
+                tmpnumberer,
+                tmpsystem,
+                tmpalgorithm,
+                tmptest,
+                tmpintegrator,
+                num_steps=tmpnumSteps,
+                dt=tmpdT,
+            )
         )
         
         # Set up the plastic gravity analysis
         if not isinstance(GravityPlasticOptions, dict):
             raise ValueError("The GravityPlasticOptions should be a dictionary")
             
-        tmpconstraint = GravityPlasticOptions.get("constraint_handler", 
-                                                 self.meshmaker.analysis.constraint.create_handler("plain"))
-        tmpnumberer = GravityPlasticOptions.get("numberer", 
-                                               self.meshmaker.analysis.numberer.get_numberer("ParallelRCM"))
-        tmpsystem = GravityPlasticOptions.get("system", 
-                                             self.meshmaker.analysis.system.create_system(
-                                                 system_type="mumps", icntl14=200, icntl7=7))
-        tmpalgorithm = GravityPlasticOptions.get("algorithm", 
-                                                self.meshmaker.analysis.algorithm.create_algorithm(
-                                                    algorithm_type="modifiednewton", factor_once=True))
-        tmptest = GravityPlasticOptions.get("test", 
-                                           self.meshmaker.analysis.test.create_test(
-                                               "energyincr", tol=1e-4, max_iter=10, print_flag=5))
-        tmpintegrator = GravityPlasticOptions.get("integrator", 
-                                                 self.meshmaker.analysis.integrator.create_integrator(
-                                                     integrator_type="newmark", gamma=0.5, beta=0.25, form="D"))
+        tmpconstraint = GravityPlasticOptions.get("constraint_handler",
+                                                 self.meshmaker.analysis.constraint.plain())
+        tmpnumberer = GravityPlasticOptions.get("numberer",
+                                               self.meshmaker.analysis.numberer.parallelrcm())
+        tmpsystem = GravityPlasticOptions.get("system",
+                                             self.meshmaker.analysis.system.mumps(icntl14=200, icntl7=7))
+        tmpalgorithm = GravityPlasticOptions.get("algorithm",
+                                                self.meshmaker.analysis.algorithm.modifiednewton(factor_once=True))
+        tmptest = GravityPlasticOptions.get("test",
+                                           self.meshmaker.analysis.test.energyincr(
+                                               tol=1e-4, max_iter=10, print_flag=5))
+        tmpintegrator = GravityPlasticOptions.get("integrator",
+                                                 self.meshmaker.analysis.integrator.newmark(
+                                                     gamma=0.5, beta=0.25, form="D"))
         tmpdT = GravityPlasticOptions.get("dt", dT)
         tmpnumSteps = GravityPlasticOptions.get("num_steps", 50)
 
@@ -229,39 +224,39 @@ class DRM:
             raise ValueError("The number of steps should be greater than 0")
         
         # Create the plastic gravity analysis
-        GravityPlastic = self.meshmaker.analysis.create_analysis(
-            name="Gravity-Plastic",
-            analysis_type="Transient",
-            constraint_handler=tmpconstraint,
-            numberer=tmpnumberer,
-            system=tmpsystem,
-            algorithm=tmpalgorithm,
-            test=tmptest,
-            integrator=tmpintegrator,
-            dt=tmpdT,
-            num_steps=tmpnumSteps,
+        GravityPlastic = self.meshmaker.analysis.add(
+            Analysis(
+                "Gravity-Plastic",
+                "Transient",
+                tmpconstraint,
+                tmpnumberer,
+                tmpsystem,
+                tmpalgorithm,
+                tmptest,
+                tmpintegrator,
+                num_steps=tmpnumSteps,
+                dt=tmpdT,
+            )
         )
         
         # Set up the dynamic analysis
         if not isinstance(DynamicAnalysisOptions, dict):
             raise ValueError("The DynamicAnalysisOptions should be a dictionary")
             
-        tmpconstraint = DynamicAnalysisOptions.get("constraint_handler", 
-                                                  self.meshmaker.analysis.constraint.create_handler("plain"))
-        tmpnumberer = DynamicAnalysisOptions.get("numberer", 
-                                                self.meshmaker.analysis.numberer.get_numberer("ParallelRCM"))
-        tmpsystem = DynamicAnalysisOptions.get("system", 
-                                              self.meshmaker.analysis.system.create_system(
-                                                  system_type="mumps", icntl14=200, icntl7=7))
-        tmpalgorithm = DynamicAnalysisOptions.get("algorithm", 
-                                                 self.meshmaker.analysis.algorithm.create_algorithm(
-                                                     algorithm_type="modifiednewton", factor_once=True))
-        tmptest = DynamicAnalysisOptions.get("test", 
-                                            self.meshmaker.analysis.test.create_test(
-                                                "energyincr", tol=1e-4, max_iter=10, print_flag=5))
-        tmpintegrator = DynamicAnalysisOptions.get("integrator", 
-                                                  self.meshmaker.analysis.integrator.create_integrator(
-                                                      integrator_type="newmark", gamma=0.5, beta=0.25, form="D"))
+        tmpconstraint = DynamicAnalysisOptions.get("constraint_handler",
+                                                  self.meshmaker.analysis.constraint.plain())
+        tmpnumberer = DynamicAnalysisOptions.get("numberer",
+                                                self.meshmaker.analysis.numberer.parallelrcm())
+        tmpsystem = DynamicAnalysisOptions.get("system",
+                                              self.meshmaker.analysis.system.mumps(icntl14=200, icntl7=7))
+        tmpalgorithm = DynamicAnalysisOptions.get("algorithm",
+                                                 self.meshmaker.analysis.algorithm.modifiednewton(factor_once=True))
+        tmptest = DynamicAnalysisOptions.get("test",
+                                            self.meshmaker.analysis.test.energyincr(
+                                                tol=1e-4, max_iter=10, print_flag=5))
+        tmpintegrator = DynamicAnalysisOptions.get("integrator",
+                                                  self.meshmaker.analysis.integrator.newmark(
+                                                      gamma=0.5, beta=0.25, form="D"))
         tmpdT = DynamicAnalysisOptions.get("dt", dT)
         finalTime = DynamicAnalysisOptions.get("final_time", finalTime)
 
@@ -276,17 +271,19 @@ class DRM:
             raise ValueError("The time step should be greater than 0")
         
         # Create the dynamic analysis
-        DynamicAnalysis = self.meshmaker.analysis.create_analysis(
-            name="DynamicAnalysis",
-            analysis_type="Transient",
-            constraint_handler=tmpconstraint,
-            numberer=tmpnumberer,
-            system=tmpsystem,
-            algorithm=tmpalgorithm,
-            test=tmptest,
-            integrator=tmpintegrator,
-            dt=tmpdT,
-            final_time=finalTime,
+        DynamicAnalysis = self.meshmaker.analysis.add(
+            Analysis(
+                "DynamicAnalysis",
+                "Transient",
+                tmpconstraint,
+                tmpnumberer,
+                tmpsystem,
+                tmpalgorithm,
+                tmptest,
+                tmpintegrator,
+                final_time=finalTime,
+                dt=tmpdT,
+            )
         )
         
         # Create an action to reset time after gravity analysis
