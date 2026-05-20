@@ -200,12 +200,12 @@ class AbsorbingGUI(QWidget):
         absorbingLayerLayout.addWidget(self.absorbingLayerNumLayersLineEdit, 4, 1)
 
         absorbingLayerLayout.addWidget(QLabel("Damping Factor"), 5, 0)
-        self.dampingFactorSpinBox = QDoubleSpinBox()
-        self.dampingFactorSpinBox.setMinimum(0.0)
-        self.dampingFactorSpinBox.setMaximum(1.0)
-        self.dampingFactorSpinBox.setSingleStep(0.01)
-        self.dampingFactorSpinBox.setValue(0.95)
-        absorbingLayerLayout.addWidget(self.dampingFactorSpinBox, 5, 1)
+        self.damping_factorSpinBox = QDoubleSpinBox()
+        self.damping_factorSpinBox.setMinimum(0.0)
+        self.damping_factorSpinBox.setMaximum(1.0)
+        self.damping_factorSpinBox.setSingleStep(0.01)
+        self.damping_factorSpinBox.setValue(0.95)
+        absorbingLayerLayout.addWidget(self.damping_factorSpinBox, 5, 1)
 
         # Add match damping checkbox
         self.matchDampingCheckbox = QCheckBox("Match Damping with Regular Domain")
@@ -251,7 +251,7 @@ class AbsorbingGUI(QWidget):
         partition_algorithm = self.absorbingLayerPartitionCombox.currentText()
         num_partitions = self.absorbingLayerPartitionLineEdit.value()
         num_layers = self.absorbingLayerNumLayersLineEdit.value()
-        damping_factor = self.dampingFactorSpinBox.value()
+        damping_factor = self.damping_factorSpinBox.value()
         match_damping = self.matchDampingCheckbox.isChecked()
 
         # Create and configure progress dialog

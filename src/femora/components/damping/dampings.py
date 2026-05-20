@@ -48,8 +48,8 @@ class RayleighDamping(Damping):
             "betaKInit": betaKInit,
             "betaKComm": betaKComm,
         }.items():
-            if value < 0 or value > 1:
-                raise ValueError(f"{field} should be a float between 0 and 1")
+            if value < 0:
+                raise ValueError(f"{field} should be a non-negative float")
 
         if alphaM + betaK + betaKInit + betaKComm <= 1e-10:
             raise ValueError("At least one of the damping factors should be greater than 0")
@@ -83,7 +83,7 @@ class ModalDamping(Damping):
     def __init__(
         self,
         numberofModes: int,
-        dampingFactors: Iterable[float] | str,
+        damping_factors: Iterable[float] | str,
         user_name: Optional[str] = None,
     ):
         try:
@@ -93,35 +93,35 @@ class ModalDamping(Damping):
         if numberofModes <= 0:
             raise ValueError("numberofModes should be greater than 0")
 
-        if isinstance(dampingFactors, str):
-            dampingFactors = [part.strip() for part in dampingFactors.split(",")]
-        elif not isinstance(dampingFactors, Iterable):
-            raise ValueError("dampingFactors should be a list")
+        if isinstance(damping_factors, str):
+            damping_factors = [part.strip() for part in damping_factors.split(",")]
+        elif not isinstance(damping_factors, Iterable):
+            raise ValueError("damping_factors should be a list")
 
         values = []
-        for factor in dampingFactors:
-            value = _coerce_float(factor, "dampingFactors")
+        for factor in damping_factors:
+            value = _coerce_float(factor, "damping_factors")
             if value < 0 or value > 1:
                 raise ValueError(
-                    "dampingFactors should be greater than or equal to 0 and less than or equal to 1"
+                    "damping_factors should be greater than or equal to 0 and less than or equal to 1"
                 )
             values.append(value)
 
         if len(values) != numberofModes:
-            raise ValueError("dampingFactors should have the same length as numberofModes")
+            raise ValueError("damping_factors should have the same length as numberofModes")
 
         super().__init__(user_name=user_name)
         self.numberofModes = numberofModes
-        self.dampingFactors = values
+        self.damping_factors = values
 
     def __str__(self) -> str:
         res = super().__str__()
         res += f"\n\tNumber of Modes: {self.numberofModes}"
-        res += f"\n\tDamping Factors: {self.dampingFactors}"
+        res += f"\n\tDamping Factors: {self.damping_factors}"
         return res
 
     def to_tcl(self) -> str:
-        return f"-modalDamping {' '.join(str(x) for x in self.dampingFactors)}"
+        return f"-modalDamping {' '.join(str(x) for x in self.damping_factors)}"
 
     @staticmethod
     def get_type() -> str:
@@ -131,26 +131,26 @@ class ModalDamping(Damping):
 class FrequencyRayleighDamping(RayleighDamping):
     def __init__(
         self,
-        dampingFactor: float,
+        damping_factor: float,
         f1: float = 0.2,
         f2: float = 20.0,
         user_name: Optional[str] = None,
     ):
         f1 = _coerce_float(f1, "f1")
         f2 = _coerce_float(f2, "f2")
-        dampingFactor = _coerce_float(dampingFactor, "dampingFactor")
+        damping_factor = _coerce_float(damping_factor, "damping_factor")
 
         if f1 <= 0:
             raise ValueError("f1 should be greater than 0")
         if f2 <= 0:
             raise ValueError("f2 should be greater than 0")
-        if dampingFactor < 0 or dampingFactor > 1:
-            raise ValueError("dampingFactor should be greater than or equal to 0 and less than or equal to 1")
+        if damping_factor < 0 or damping_factor > 1:
+            raise ValueError("damping_factor should be greater than or equal to 0 and less than or equal to 1")
 
         omega1 = 2 * math.pi * f1
         omega2 = 2 * math.pi * f2
-        alphaM = 2 * dampingFactor * omega1 * omega2 / (omega1 + omega2)
-        betaK = (2 * dampingFactor) / (omega1 + omega2)
+        alphaM = 2 * damping_factor * omega1 * omega2 / (omega1 + omega2)
+        betaK = (2 * damping_factor) / (omega1 + omega2)
 
         super().__init__(
             alphaM=alphaM,
@@ -161,13 +161,13 @@ class FrequencyRayleighDamping(RayleighDamping):
         )
         self.f1 = f1
         self.f2 = f2
-        self.dampingFactor = dampingFactor
+        self.damping_factor = damping_factor
 
     def __str__(self) -> str:
         res = super().__str__()
         res += f"\n\tf1: {self.f1}"
         res += f"\n\tf2: {self.f2}"
-        res += f"\n\tDamping Factor: {self.dampingFactor}"
+        res += f"\n\tDamping Factor: {self.damping_factor}"
         return res
 
     @staticmethod
@@ -178,7 +178,7 @@ class FrequencyRayleighDamping(RayleighDamping):
         return (
             f"# damping rayleigh {self.tag} {self.alphaM} {self.betaK} {self.betaKInit} {self.betaKComm} "
             f"(frequency rayleigh damping with f1 = {self.f1} and f2 = {self.f2} "
-            f"and damping factor = {self.dampingFactor})"
+            f"and damping factor = {self.damping_factor})"
         )
 
 
@@ -248,31 +248,31 @@ class UniformDamping(Damping):
 class SecantStiffnessProportional(Damping):
     def __init__(
         self,
-        dampingFactor: float,
+        damping_factor: float,
         Ta: Optional[float] = None,
         Td: Optional[float] = None,
         tsTagScaleFactorVsTime: Optional[int] = None,
         user_name: Optional[str] = None,
     ):
-        dampingFactor = _coerce_float(dampingFactor, "dampingFactor")
+        damping_factor = _coerce_float(damping_factor, "damping_factor")
         Ta = _coerce_optional_float(Ta, "Ta")
         Td = _coerce_optional_float(Td, "Td")
         tsTagScaleFactorVsTime = _coerce_optional_int(
             tsTagScaleFactorVsTime, "tsTagScaleFactorVsTime"
         )
 
-        if dampingFactor < 0 or dampingFactor > 1:
-            raise ValueError("dampingFactor should be greater than or equal to 0 and less than or equal to 1")
+        if damping_factor < 0 or damping_factor > 1:
+            raise ValueError("damping_factor should be greater than or equal to 0 and less than or equal to 1")
 
         super().__init__(user_name=user_name)
-        self.dampingFactor = dampingFactor
+        self.damping_factor = damping_factor
         self.Ta = Ta
         self.Td = Td
         self.tsTagScaleFactorVsTime = tsTagScaleFactorVsTime
 
     def __str__(self) -> str:
         res = super().__str__()
-        res += f"\n\tDamping Factor: {self.dampingFactor}"
+        res += f"\n\tDamping Factor: {self.damping_factor}"
         res += f"\n\tTa: {self.Ta if self.Ta is not None else 'default'}"
         res += f"\n\tTd: {self.Td if self.Td is not None else 'default'}"
         res += (
@@ -282,7 +282,7 @@ class SecantStiffnessProportional(Damping):
         return res
 
     def to_tcl(self) -> str:
-        res = f"damping SecStiff {self.tag} {self.dampingFactor}"
+        res = f"damping SecStiff {self.tag} {self.damping_factor}"
         if self.Ta is not None:
             res += f" -activateTime  {self.Ta}"
         if self.Td is not None:

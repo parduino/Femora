@@ -15,7 +15,7 @@ class _ElementRegionFactory:
     def __init__(self, manager: "RegionManager"):
         self._manager = manager
 
-    def __call__(self, user_name: str = "Unnamed", damping=None, **kwargs):
+    def __call__(self, user_name: str | None = None, damping=None, **kwargs):
         from femora.components.region.regions import ElementRegion
 
         return self._manager.add(ElementRegion(user_name=user_name, damping=damping, **kwargs))
@@ -25,7 +25,7 @@ class _NodeRegionFactory:
     def __init__(self, manager: "RegionManager"):
         self._manager = manager
 
-    def __call__(self, user_name: str = "Unnamed", damping=None, **kwargs):
+    def __call__(self, user_name: str | None = None, damping=None, **kwargs):
         from femora.components.region.regions import NodeRegion
 
         return self._manager.add(NodeRegion(user_name=user_name, damping=damping, **kwargs))
@@ -64,6 +64,8 @@ class RegionManager:
             raise TypeError("region must be a RegionBase instance")
         if region._owner is not None and region._owner is not self:
             raise ValueError("Region already belongs to another manager")
+        if region.user_name == "Unnamed":
+            region.user_name = self._generate_default_name(region)
         if region.user_name in self._names and self._names[region.user_name] is not region:
             raise ValueError(f"Region name '{region.user_name}' already exists in this manager")
 
@@ -126,6 +128,18 @@ class RegionManager:
             region.tag = self._start_tag + i
             self._regions[region.tag] = region
         self._names = {r.user_name: r for r in self._regions.values()}
+
+    def _generate_default_name(self, region: RegionBase) -> str:
+        base_name = region.get_type()
+        if base_name not in self._names:
+            return base_name
+
+        index = 2
+        while True:
+            candidate = f"{base_name}_{index}"
+            if candidate not in self._names:
+                return candidate
+            index += 1
 
     def GlobalRegion(self):
         return self._global_region

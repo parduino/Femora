@@ -395,8 +395,8 @@ if __name__ == "__main__":
     from femora.components.damping.dampings import RayleighDamping, ModalDamping
     RayleighDamping1 = RayleighDamping(alphaM=0.1, betaK=0.2, betaKInit=0.3, betaKComm=0.4)
     RayleighDamping2 = RayleighDamping(alphaM=0.5, betaK=0.6, betaKInit=0.7, betaKComm=0.8)
-    ModalDamping1 = ModalDamping(numberofModes=2, dampingFactors="0.1,0.2")
-    ModalDamping2 = ModalDamping(numberofModes=3, dampingFactors="0.3,0.4,0.5")
+    ModalDamping1 = ModalDamping(numberofModes=2, damping_factors="0.1,0.2")
+    ModalDamping2 = ModalDamping(numberofModes=3, damping_factors="0.3,0.4,0.5")
     app = QApplication(sys.argv)
     window = DampingManagerTab()
     window.show()

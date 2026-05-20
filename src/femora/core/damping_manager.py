@@ -34,6 +34,8 @@ class DampingManager:
             damping._owner = self
         elif damping._owner is not self:
             raise ValueError("damping already belongs to another manager")
+        if damping.user_name == "UnnamedDamping":
+            damping.user_name = self._generate_default_name(damping)
         existing_by_name = self._names.get(damping.user_name)
         if existing_by_name is not None and existing_by_name is not damping:
             raise ValueError(f"Damping name '{damping.user_name}' already exists in this manager")
@@ -94,6 +96,18 @@ class DampingManager:
     def _reassign_tags(self) -> None:
         self._tagging.reassign_tags(self._dampings, self._start_tag)
         self._names = {d.user_name: d for d in self._dampings.values()}
+
+    def _generate_default_name(self, damping: Damping) -> str:
+        base_name = damping.__class__.__name__
+        if base_name not in self._names:
+            return base_name
+
+        index = 2
+        while True:
+            candidate = f"{base_name}_{index}"
+            if candidate not in self._names:
+                return candidate
+            index += 1
 
     def get_available_types(self) -> List[str]:
         return [

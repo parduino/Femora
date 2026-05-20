@@ -396,7 +396,7 @@ if __name__ == "__main__":
     # Create some sample dampings
     RayleighDamping1 = RayleighDamping(alphaM=0.1, betaK=0.2, betaKInit=0.3, betaKComm=0.4)
     RayleighDamping2 = RayleighDamping(alphaM=0.5, betaK=0.6, betaKInit=0.7, betaKComm=0.8)
-    ModalDamping1 = ModalDamping(numberofModes=2, dampingFactors="0.1,0.2")
+    ModalDamping1 = ModalDamping(numberofModes=2, damping_factors="0.1,0.2")
     
     # Initialize global region
     global_region = GlobalRegion(damping=RayleighDamping1)

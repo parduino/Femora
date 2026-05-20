@@ -848,7 +848,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             xi_s = damping_props[0]
             f1   = damping_props[1]
             f2   = damping_props[2]
-            damp = fm.damping.frequency_rayleigh(dampingFactor=xi_s, f1=f1, f2=f2)
+            damp = fm.damping.frequency_rayleigh(damping_factor=xi_s, f1=f1, f2=f2)
         reg = fm.region.element(damping=damp)
 
         fm.meshPart.create_mesh_part("General mesh", "External mesh",
@@ -895,7 +895,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             xi_s = damping_props[0]
             f1   = damping_props[1]
             f2   = damping_props[2]
-            damp = fm.damping.frequency_rayleigh(dampingFactor=xi_s, f1=f1, f2=f2)
+            damp = fm.damping.frequency_rayleigh(damping_factor=xi_s, f1=f1, f2=f2)
         else:
             print("Error: damping " + damping + " is not implemented yet for foundation index : " + str(foundation_index+1))
             sys.exit(1)
