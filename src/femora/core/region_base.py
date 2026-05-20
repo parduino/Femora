@@ -4,7 +4,7 @@ import weakref
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
-from femora.components.Damping.dampingBase import DampingBase
+from femora.core.damping_base import Damping
 
 class RegionBase(ABC):
     """
@@ -15,7 +15,7 @@ class RegionBase(ABC):
     and retagging for a local model context.
     """
 
-    def __init__(self, user_name: str = None, damping: DampingBase = None):
+    def __init__(self, user_name: str = None, damping: Damping = None):
         self.tag: Optional[int] = None
         self._owner: Optional[Any] = None
         self.user_name = user_name or "Unnamed"
@@ -39,16 +39,16 @@ class RegionBase(ABC):
         return self._damping() if self._damping else None
 
     @damping.setter
-    def damping(self, value: Optional[DampingBase]):
-        if value is not None and not isinstance(value, DampingBase):
-            raise TypeError("damping must be an instance of DampingBase")
+    def damping(self, value: Optional[Damping]):
+        if value is not None and not isinstance(value, Damping):
+            raise TypeError("damping must be an instance of Damping")
         self._damping = weakref.ref(value) if value else None
 
     @damping.deleter
     def damping(self):
         self._damping = None
 
-    def set_damping(self, damping_instance: DampingBase):
+    def set_damping(self, damping_instance: Damping):
         self.damping = damping_instance
 
     def __str__(self) -> str:

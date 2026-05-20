@@ -3,7 +3,7 @@ from femora.core.element_base import Element
 from femora.core.element_manager import ElementManager
 from femora.core.ground_motion_manager import GroundMotionManager
 from femora.components.Assemble.Assembler import Assembler
-from femora.components.Damping.dampingBase import DampingManager
+from femora.core.damping_manager import DampingManager
 from femora.core.region_manager import RegionManager
 from femora.components.Constraint.constraint import Constraint
 from femora.components.Mesh.meshPartBase import MeshPartManager
@@ -71,7 +71,7 @@ class MeshMaker:
         self.element = ElementManager(mesh_maker=self)
         self.time_series = TimeSeriesManager(mesh_maker=self)
         self.ground_motion = GroundMotionManager(mesh_maker=self, time_series_manager=self.time_series)
-        self.damping = DampingManager()
+        self.damping = DampingManager(mesh_maker=self)
         self.mass = MassManager()
         self.region = RegionManager(mesh_maker=self)
         self.constraint = Constraint()
@@ -438,8 +438,8 @@ class MeshMaker:
                     progress_callback(50, "writing dampings")
                 # writ the dampings 
                 f.write("\n# Dampings ======================================\n")
-                if self.damping.get_all_dampings() is not None:
-                    for tag,damp in self.damping.get_all_dampings().items():
+                if self.damping.get_all() is not None:
+                    for tag,damp in self.damping.get_all().items():
                         f.write(f"{damp.to_tcl()}\n")
                 else:
                     f.write("# No dampings found\n")
@@ -451,7 +451,7 @@ class MeshMaker:
                 f.write("\n# Regions ======================================\n")
                 Regions = unique(self.assembler.AssembeledMesh.cell_data["Region"])
                 for i,regionTag in enumerate(Regions):
-                    region = self.region.get_region(regionTag)
+                    region = self.region.get(regionTag)
                     if region.get_type().lower() == "noderegion":
                         raise ValueError(f"""Region {regionTag} is of type NodeTRegion which is not supported in yet""")
                     
@@ -801,6 +801,7 @@ class MeshMaker:
         self.material.clear()
         self.element.clear()
         self.damping.clear()
+        self.damping.set_tag_start(1)
         self.mass.clear()
         self.region.clear()
         self.constraint.clear()

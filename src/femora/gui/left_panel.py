@@ -4,7 +4,7 @@ from qtpy.QtCore import Qt
 from femora.gui.components.material.materialGUI import MaterialManagerTab
 from femora.components.Mesh.meshPartGUI import MeshPartManagerTab
 from femora.components.Assemble.AssemblerGUI import AssemblyManagerTab
-from femora.components.Damping.dampingGUI import DampingManagerTab
+from femora.components.damping.dampingGUI import DampingManagerTab
 from femora.gui.components.region.region_gui import RegionManagerTab
 from femora.components.Constraint.mpConstraintGUI import MPConstraintManagerTab
 from femora.components.TimeSeries.timeSeriesGUI import TimeSeriesManagerTab

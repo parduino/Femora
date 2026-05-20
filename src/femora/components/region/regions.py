@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 import numpy as np
 
-from femora.components.Damping.dampingBase import DampingBase
+from femora.core.damping_base import Damping
 from femora.core.region_base import RegionBase
 
 
@@ -16,14 +16,14 @@ class GlobalRegion(RegionBase):
     It is typically assigned tag 0.
     
     Args:
-        damping (DampingBase, optional): Damping behavior to assign to this region
+        damping (Damping, optional): Damping behavior to assign to this region
     """
-    def __init__(self, damping: DampingBase = None):
+    def __init__(self, damping: Damping = None):
         """
         Initialize the global region.
         
         Args:
-            damping (DampingBase, optional): Damping behavior to assign to this region
+            damping (Damping, optional): Damping behavior to assign to this region
         """
         super().__init__(user_name="GlobalRegion", damping=damping)
         self.elements = None
@@ -56,14 +56,14 @@ class ElementRegion(RegionBase):
     A region defined by a set of elements or an element range.
     
     Parameters:
-        damping (DampingBase, optional): Damping behavior to assign to this region
+        damping (Damping, optional): Damping behavior to assign to this region
         **kwargs: Additional parameters including:
             user_name (str, optional): Name of the region
             elements (list[int], optional): List of element IDs
             element_range (list[int], optional): Start and end of an element range [start, end]
             element_only (bool, optional): If True, includes only the specified elements
     """
-    def __init__(self, damping: DampingBase = None, **kwargs):
+    def __init__(self, damping: Damping = None, **kwargs):
         user_name = kwargs.pop("user_name", kwargs.pop("name", None))
         super().__init__(user_name=user_name, damping=damping)
         self.elements = []
@@ -106,7 +106,7 @@ class ElementRegion(RegionBase):
             cmd += " " + " ".join(str(e) for e in self.elements)
 
         if self.damping:
-            if self.damping.get_Type() in ["Rayleigh", "Frequency Rayleigh"]:
+            if self.damping.get_type() in ["Rayleigh", "Frequency Rayleigh"]:
                 cmd += f" -rayleigh {self.damping.alphaM} {self.damping.betaK} {self.damping.betaKInit} {self.damping.betaKComm}"
             else:
                 cmd += f" -damp {self.damping.tag}"
@@ -129,7 +129,7 @@ class NodeRegion(RegionBase):
     """
     A region defined by a set of nodes or a node range.
     """
-    def __init__(self, damping: DampingBase = None, **kwargs):
+    def __init__(self, damping: Damping = None, **kwargs):
         user_name = kwargs.pop("user_name", kwargs.pop("name", None))
         super().__init__(user_name=user_name, damping=damping)
         self.nodes = []
@@ -168,7 +168,7 @@ class NodeRegion(RegionBase):
             cmd += " " + " ".join(str(n) for n in self.nodes)
 
         if self.damping:
-            if self.damping.get_Type() in ["Rayleigh", "Frequency Rayleigh"]:
+            if self.damping.get_type() in ["Rayleigh", "Frequency Rayleigh"]:
                 cmd += f" -rayleigh {self.damping.alphaM} {self.damping.betaK} {self.damping.betaKInit} {self.damping.betaKComm}"
             else:
                 cmd += f" -damp {self.damping.tag}"

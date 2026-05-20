@@ -848,7 +848,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             xi_s = damping_props[0]
             f1   = damping_props[1]
             f2   = damping_props[2]
-            damp = fm.damping.create_damping("frequency rayleigh", dampingFactor=xi_s, f1=f1, f2=f2)
+            damp = fm.damping.frequency_rayleigh(dampingFactor=xi_s, f1=f1, f2=f2)
         reg = fm.region.element(damping=damp)
 
         fm.meshPart.create_mesh_part("General mesh", "External mesh",
@@ -895,7 +895,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             xi_s = damping_props[0]
             f1   = damping_props[1]
             f2   = damping_props[2]
-            damp = fm.damping.create_damping("frequency rayleigh", dampingFactor=xi_s, f1=f1, f2=f2)
+            damp = fm.damping.frequency_rayleigh(dampingFactor=xi_s, f1=f1, f2=f2)
         else:
             print("Error: damping " + damping + " is not implemented yet for foundation index : " + str(foundation_index+1))
             sys.exit(1)
@@ -1392,13 +1392,208 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         EventBus.emit(FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, 
                     file_handle=f, 
                     ele_start_tag=self._start_ele_tag) 
+        # print(f"Column {col_index+1}: z_min_point = {z_min_point}, z_max_point = {z_max_point}")
+        # print(f"Column {col_index+1}: column = {col}")
+
+        # verify that the z_max_point is close to the column coordinates by np allclose
+        if not np.allclose(z_max_point, col_coord, atol=1e-2):
+            print("Error: column " + str(col_index+1) + " top point is not close to the column coordinates.")
+            print("Column top point: ", z_max_point)
+            print("Column coordinates: ", col_coord)
+            sys.exit(1)
+
+
+        connection_core = fm.assembler.AssembeledMesh.cell_data["Core"][mesh_part_cell]
+        connection_core = np.unique(connection_core)
+        if len(connection_core) > 1:
+            print("Error: column " + str(col_index+1) + " is spanning multiple cores. This is not supported yet.")
+            sys.exit(1)
+
+        connection_core = np.unique(connection_core)[0]
+
+        tcl_command += f"""if {{$pid == {connection_core}}} """ + "{\n"
+        tcl_command += f"node {col_tag} {" ".join([str(coord) for coord in col_coord])} -ndf 6\n"
+        tcl_command += f"equalDOF {z_max_index} {col_tag} 1 2 3 4 5 6\n"
+        tcl_command += "}\n"
+        
+        tcl_command += "if {$pid < %d} {\n" % structure_info.get("num_partitions")
+        tcl_command += f"set tmpnodetags [getNodeTags]\n"
+        # check if the column node tag is in the tmpnodetags
+        tcl_command += f"if {{[lsearch -exact $tmpnodetags {col_tag}] >= 0}} {{\n"
+        tcl_command += f"    node {z_max_index} {" ".join([str(coord) for coord in z_max_point])} -ndf 6\n"
+        tcl_command += f"    equalDOF {z_max_index} {col_tag} 1 2 3 4 5 6\n"
+        tcl_command += "}\n"
+
+        
+    connection = fm.actions.tcl(tcl_command)
+
+    # =============================================================================
+    # process
+    # =============================================================================
+    fm.process.add_step(connection,      description="Create connections between base columns and foundation")
+    fm.process.add_step(elastic_update,  description="Update material to elastic")
+    fm.process.add_step(gravity_elastic, description="Gravity analysis in elastic regime")
+    fm.process.add_step(plastic_update,  description="Update material to plastic")
+    fm.process.add_step(gravity_plastic, description="Gravity analysis in plastic regime")
+
+
+
+
+
+    # =============================================================================
+    # exporting the model to tcl
+    # =============================================================================
+    model_filename = "tmpmodel.tcl"
+    import tqdm
+    bar = tqdm.tqdm(total=100, 
+                    desc="Exporting model to tcl", 
+                    bar_format="{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [" "{elapsed}<{remaining}] {postfix}",)
+
+    def progress_callback(progress, message):
+        value = int(progress)
+        bar.set_postfix_str(message)
+        bar.n = value
+        bar.refresh()
+        if value >= 100:
+            bar.close()
+            print("Model exported to " + model_filename)
+
+
+        
+
+
+    if fm.assembler.AssembeledMesh is None:
+        print("Error: Assembled mesh is None. Cannot export the model.")
+        sys.exit(1)
+    from femora.components.event.event_bus import EventBus, FemoraEvent
+    from femora.core.element_base import Element
+
+    self = fm._instance
+    with open(model_filename, 'w') as f:
+        # Inform interfaces that we are about to export
+        EventBus.emit(FemoraEvent.PRE_EXPORT, 
+                    file_handle=f, 
+                    assembled_mesh=fm.assembler.AssembeledMesh)
+
+        f.write("wipe\n")
+        f.write("model BasicBuilder -ndm 3\n")
+        f.write("set pid [getPID]\n")
+        f.write("set np [getNP]\n")
+
+        if self._results_folder != "":
+            f.write("if {$pid == 0} {" + f"file mkdir {self._results_folder}" + "} \n")
+
+        f.write("barrier\n")
+        f.write("\n# Helper functions ======================================\n")
+        f.write(self._get_tcl_helper_functions())
+
+        # Write the meshBounds
+        f.write("\n# Mesh Bounds ======================================\n")
+        bounds = self.assembler.AssembeledMesh.bounds
+        f.write(f"set X_MIN {bounds[0]}\n")
+        f.write(f"set X_MAX {bounds[1]}\n")
+        f.write(f"set Y_MIN {bounds[2]}\n")
+        f.write(f"set Y_MAX {bounds[3]}\n")
+        f.write(f"set Z_MIN {bounds[4]}\n")
+        f.write(f"set Z_MAX {bounds[5]}\n")
+
+        if progress_callback:
+            progress_callback(0, "writing materials")
+
+
+        # read the struture file and write in the tcl file
+        structure_file = structure_info.get("model_file", None)
+        structure_numpartitions = structure_info.get("num_partitions")
+        if structure_file is not None:
+            try:
+                with open(structure_file, 'r') as sf:
+                    structure_data = sf.read()
+                f.write("\n# Structure model ======================================\n")
+                f.write("if {$pid <%d} {\n" % structure_numpartitions)
+                f.write(structure_data)
+                f.write("}\n")
+            except Exception as e:
+                print(f"Error reading structure file {structure_file}: {e}")
+                sys.exit(1)
+        else:
+            f.write("\n# No structure file provided ======================================\n")
+            f.write("# Skipping structure model import\n")
+
+        # Write the materials
+        f.write("\n# Materials ======================================\n")
+        for tag,mat in self.material.get_all().items():
+            f.write(f"{mat.to_tcl()}\n")
+
+
+        # write the transformations
+        f.write("\n# Transformations ======================================\n")
+        for transf in self.transformation:
+            f.write(f"{transf.to_tcl()}\n")
+
+
+        # Write the sections
+        f.write("\n# Sections ======================================\n")
+        for tag, section in self.section.get_all().items():
+            f.write(f"{section.to_tcl()}\n")
+
+
+
+        # Write the nodes
+        f.write("\n# Nodes & Elements ======================================\n")
+        cores = self.assembler.AssembeledMesh.cell_data["Core"]
+        num_cores = np.unique(cores)
+        nodes     = self.assembler.AssembeledMesh.points
+        ndfs      = self.assembler.AssembeledMesh.point_data["ndf"]
+        mass      = self.assembler.AssembeledMesh.point_data["Mass"]
+        num_nodes = self.assembler.AssembeledMesh.n_points
+        wroted    = np.zeros((num_nodes, len(num_cores)), dtype=bool) # to keep track of the nodes that have been written
+        nodeTags  = np.arange(self._start_nodetag,
+                            self._start_nodetag + num_nodes,
+                            dtype=int)
+        eleTags   = np.arange(self._start_ele_tag,
+                            self._start_ele_tag + self.assembler.AssembeledMesh.n_cells,
+                            dtype=int)
+
+
+        elementClassTag = self.assembler.AssembeledMesh.cell_data["ElementTag"]
+
+
+        for i in range(self.assembler.AssembeledMesh.n_cells):
+            cell = self.assembler.AssembeledMesh.get_cell(i)
+            pids = cell.point_ids
+            core = cores[i]
+            f.write("if {$pid ==" + str(core + self._start_core_tag) + "} {\n")
+            # writing nodes
+            for pid in pids:
+                if not wroted[pid][core]:
+                    f.write(f"\tnode {nodeTags[pid]} {nodes[pid][0]} {nodes[pid][1]} {nodes[pid][2]} -ndf {ndfs[pid]}\n")
+                    mass_vec = mass[pid]
+                    mass_vec = mass_vec[:ndfs[pid]] 
+                    # if any of the mass vector is not zero then write it
+                    if abs(mass_vec).sum() > 1e-6:
+                        f.write(f"\tmass {nodeTags[pid]} {' '.join(map(str, mass_vec))}\n")
+                    # write them mass for that node
+                    wroted[pid][core] = True
+            
+            eleclass = Element._elements[elementClassTag[i]]
+            nodeTag = [nodeTags[pid] for pid in pids]
+            eleTag = eleTags[i]
+            f.write("\t"+eleclass.to_tcl(eleTag, nodeTag) + "\n")
+            f.write("}\n")     
+            if progress_callback:
+                progress_callback((i / self.assembler.AssembeledMesh.n_cells) * 45 + 5, "writing nodes and elements")
+        
+        # notify EmbbededBeamSolidInterface event
+        EventBus.emit(FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, 
+                    file_handle=f, 
+                    ele_start_tag=self._start_ele_tag) 
         
         if progress_callback:
             progress_callback(50, "writing dampings")
         # write the dampings 
         f.write("\n# Dampings ======================================\n")
-        if self.damping.get_all_dampings() is not None:
-            for tag,damp in self.damping.get_all_dampings().items():
+        if self.damping.get_all() is not None:
+            for tag,damp in self.damping.get_all().items():
                 f.write(f"{damp.to_tcl()}\n")
         else:
             f.write("# No dampings found\n")
@@ -1407,7 +1602,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         f.write("\n# Regions ======================================\n")
         Regions = np.unique(self.assembler.AssembeledMesh.cell_data["Region"])
         for i,regionTag in enumerate(Regions):
-            region = self.region.get_region(regionTag)
+            region = self.region.get(regionTag)
             if region.get_type().lower() == "noderegion":
                 raise ValueError(f"""Region {regionTag} is of type NodeTRegion which is not supported in yet""")
             

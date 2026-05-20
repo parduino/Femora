@@ -6,7 +6,66 @@ from qtpy.QtWidgets import (
 )
 
 from qtpy.QtCore import Qt
-from femora.components.Damping.dampingBase import DampingBase, DampingRegistry
+import inspect
+from femora.components.MeshMaker import MeshMaker
+from femora.components.damping.dampings import (
+    FrequencyRayleighDamping,
+    ModalDamping,
+    RayleighDamping,
+    SecantStiffnessProportional,
+    UniformDamping,
+)
+
+
+def _get_constructor_parameters(damping_class):
+    parameters = []
+    signature = inspect.signature(damping_class.__init__)
+    for name, param in signature.parameters.items():
+        if name in {"self", "user_name"}:
+            continue
+        if param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
+            continue
+        description = "required" if param.default is inspect.Parameter.empty else f"default={param.default}"
+        parameters.append((name, description))
+    return parameters
+
+
+def _get_current_values(damping):
+    return {
+        key: value
+        for key, value in damping.__dict__.items()
+        if key not in {"tag", "_owner", "user_name"}
+    }
+
+
+class DampingRegistry:
+    _damping_types = {
+        "rayleigh": RayleighDamping,
+        "modal": ModalDamping,
+        "frequency rayleigh": FrequencyRayleighDamping,
+        "uniform": UniformDamping,
+        "secant stiffness proportional": SecantStiffnessProportional,
+    }
+
+    @classmethod
+    def get_available_types(cls):
+        return list(cls._damping_types.keys())
+
+    @classmethod
+    def create_damping(cls, damping_type: str, **params):
+        manager = MeshMaker.get_instance().damping
+        normalized = damping_type.lower()
+        if normalized == "rayleigh":
+            return manager.rayleigh(**params)
+        if normalized == "modal":
+            return manager.modal(**params)
+        if normalized == "frequency rayleigh":
+            return manager.frequency_rayleigh(**params)
+        if normalized == "uniform":
+            return manager.uniform(**params)
+        if normalized == "secant stiffness proportional":
+            return manager.secant_stiffness_proportional(**params)
+        raise KeyError(f"Unknown damping type: {damping_type}")
 
 class DampingManagerTab(QDialog):
     def __init__(self, parent=None):
@@ -57,10 +116,10 @@ class DampingManagerTab(QDialog):
     def refresh_dampings_list(self):
         """Update the dampings table with current dampings"""
         self.dampings_table.setRowCount(0)
-        dampings = DampingBase._dampings
+        dampings = MeshMaker.get_instance().damping.get_all()
         
         self.dampings_table.setRowCount(len(dampings))
-        # print(DampingBase.print_dampings())
+        # print(Damping.print_dampings())
         for row, (tag, damping) in enumerate(dampings.items()):
             # Tag
             tag_item = QTableWidgetItem(str(tag))
@@ -102,7 +161,7 @@ class DampingManagerTab(QDialog):
         )
         
         if reply == QMessageBox.Yes:
-            DampingBase.remove_damping(tag)
+            MeshMaker.get_instance().damping.remove(tag)
             self.refresh_dampings_list()
 
 class DampingCreationDialog(QDialog):
@@ -123,7 +182,7 @@ class DampingCreationDialog(QDialog):
         
         # Parameter inputs
         self.param_inputs = {}
-        parameters = damping_class.get_Parameters()
+        parameters = _get_constructor_parameters(damping_class)
         
         # Create a grid layout for input fields
         params_group = QGridLayout()
@@ -178,23 +237,7 @@ class DampingCreationDialog(QDialog):
         notes_display.setOpenExternalLinks(True) 
         
         # Format notes content
-        infotxt = ""
-        infotxt += "<b>Notes:</b><br>"
-
-        info = damping_class.get_Notes()
-        notes = info.get("Notes", None)
-        if notes:
-            for i, note in enumerate(notes, 1):
-                infotxt += f"{i}. {note}<br><br>"
-        else:
-            infotxt += "No notes available for this damping type.<br>"
-
-        ref = info.get("References", None)
-        if ref:
-            infotxt += "<br><b>Reference:</b><br>"
-            # Convert reference to clickable link
-            for i, ref in enumerate(ref, 1):
-                infotxt += f"{i}. <a href='{ref}'>{ref}</a><br>"
+        infotxt = "<b>Notes:</b><br>No notes available for this damping type.<br>"
 
         notes_display.setHtml(infotxt)  # Use HTML formatting
 
@@ -246,8 +289,8 @@ class DampingEditDialog(QDialog):
         
         # Parameter inputs
         self.param_inputs = {}
-        parameters = damping.__class__.get_Parameters()
-        values = damping.get_values()
+        parameters = _get_constructor_parameters(damping.__class__)
+        values = _get_current_values(damping)
         
         # Create a grid layout for parameter inputs
         params_group = QGridLayout()
@@ -307,23 +350,7 @@ class DampingEditDialog(QDialog):
         notes_display.setOpenExternalLinks(True) 
         
         # Format notes content
-        infotxt = ""
-        infotxt += "<b>Notes:</b><br>"
-
-        info = damping.__class__.get_Notes()
-        notes = info.get("Notes", None)
-        if notes:
-            for i, note in enumerate(notes, 1):
-                infotxt += f"{i}. {note}<br><br>"
-        else:
-            infotxt += "No notes available for this damping type.<br>"
-
-        ref = info.get("References", None)
-        if ref:
-            infotxt += "<br><b>Reference:</b><br>"
-            # Convert reference to clickable link
-            for i, ref in enumerate(ref, 1):
-                infotxt += f"{i}. <a href='{ref}'>{ref}</a><br>"
+        infotxt = "<b>Notes:</b><br>No notes available for this damping type.<br>"
 
         notes_display.setHtml(infotxt)  # Use HTML formatting
 
@@ -348,8 +375,11 @@ class DampingEditDialog(QDialog):
                 value = input_field.text().strip()
                 params[param] = value
 
-            # Update damping
-            self.damping.update_values(**params)            
+            # Reconstruct to force validation in __init__, then copy validated state.
+            replacement = self.damping.__class__(**params)
+            for key, value in replacement.__dict__.items():
+                if key not in {"tag", "_owner", "user_name"}:
+                    setattr(self.damping, key, value)
 
             self.accept()
 
@@ -362,7 +392,7 @@ class DampingEditDialog(QDialog):
 if __name__ == "__main__":
     import sys
     from qtpy.QtWidgets import QApplication
-    from femora.components.Damping.dampingBase import RayleighDamping, ModalDamping
+    from femora.components.damping.dampings import RayleighDamping, ModalDamping
     RayleighDamping1 = RayleighDamping(alphaM=0.1, betaK=0.2, betaKInit=0.3, betaKComm=0.4)
     RayleighDamping2 = RayleighDamping(alphaM=0.5, betaK=0.6, betaKInit=0.7, betaKComm=0.8)
     ModalDamping1 = ModalDamping(numberofModes=2, dampingFactors="0.1,0.2")

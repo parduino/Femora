@@ -883,7 +883,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
             xi_s = damping_props[0]
             f1   = damping_props[1]
             f2   = damping_props[2]
-            damp = fm.damping.create_damping("frequency rayleigh", dampingFactor=xi_s, f1=f1, f2=f2)
+            damp = fm.damping.frequency_rayleigh(dampingFactor=xi_s, f1=f1, f2=f2)
         reg = fm.region.element(damping=damp)
 
         fm.meshPart.create_mesh_part("General mesh", "External mesh",
@@ -930,7 +930,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
             xi_s = damping_props[0]
             f1   = damping_props[1]
             f2   = damping_props[2]
-            damp = fm.damping.create_damping("frequency rayleigh", dampingFactor=xi_s, f1=f1, f2=f2)
+            damp = fm.damping.frequency_rayleigh(dampingFactor=xi_s, f1=f1, f2=f2)
         else:
             print("Error: damping " + damping + " is not implemented yet for foundation index : " + str(foundation_index+1))
             sys.exit(1)
@@ -1595,8 +1595,8 @@ while {[getTime] < $endTime} {
             progress_callback(50, "writing dampings")
         # write the dampings 
         f.write("\n# Dampings ======================================\n")
-        if self.damping.get_all_dampings() is not None:
-            for tag,damp in self.damping.get_all_dampings().items():
+        if self.damping.get_all() is not None:
+            for tag,damp in self.damping.get_all().items():
                 f.write(f"{damp.to_tcl()}\n")
         else:
             f.write("# No dampings found\n")
@@ -1605,7 +1605,7 @@ while {[getTime] < $endTime} {
         f.write("\n# Regions ======================================\n")
         Regions = np.unique(self.assembler.AssembeledMesh.cell_data["Region"])
         for i,regionTag in enumerate(Regions):
-            region = self.region.get_region(regionTag)
+            region = self.region.get(regionTag)
             if region.get_type().lower() == "noderegion":
                 raise ValueError(f"""Region {regionTag} is of type NodeTRegion which is not supported in yet""")
             

@@ -5,7 +5,8 @@ from qtpy.QtWidgets import (
     QFrame, QTextBrowser, QCheckBox
 )
 from qtpy.QtCore import Qt
-from femora.components.Damping.dampingBase import DampingBase
+from femora.components.MeshMaker import MeshMaker
+from femora.core.damping_base import Damping
 from femora.core.region_base import RegionBase
 from femora.components.region.regions import GlobalRegion, ElementRegion, NodeRegion
 
@@ -28,11 +29,11 @@ class DampingSelectorWidget(QWidget):
     def refresh_dampings(self):
         self.damping_combo.clear()
         self.damping_combo.addItem("None", None)
-        for tag, damping in DampingBase._dampings.items():
+        for tag, damping in MeshMaker.get_instance().damping.get_all().items():
             self.damping_combo.addItem(f"{damping.name} (Tag: {tag}, Type: {damping.get_Type()})", damping)
     
     def open_damping_dialog(self):
-        from femora.components.Damping.dampingGUI import DampingManagerTab
+        from femora.components.damping.dampingGUI import DampingManagerTab
         dialog = DampingManagerTab(self)
         dialog.exec()
         self.refresh_dampings()
@@ -390,7 +391,7 @@ class RegionEditDialog(QDialog):
 if __name__ == "__main__":
     import sys
     from qtpy.QtWidgets import QApplication
-    from femora.components.Damping.dampingBase import RayleighDamping, ModalDamping
+    from femora.components.damping.dampings import RayleighDamping, ModalDamping
     
     # Create some sample dampings
     RayleighDamping1 = RayleighDamping(alphaM=0.1, betaK=0.2, betaKInit=0.3, betaKComm=0.4)

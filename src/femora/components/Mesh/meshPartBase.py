@@ -27,7 +27,7 @@ from femora.core.material_base import Material
 from femora.core.region_base import RegionBase
 from femora.constants import FEMORA_MAX_NDF
 from femora.components.geometry_ops import MeshPartTransform
-from femora.components.Damping.dampingBase import DampingBase
+from femora.core.damping_base import Damping
 
 class MeshPart(ABC):
     """
@@ -229,12 +229,12 @@ class MeshPart(ABC):
         plotter.add_mesh(self.mesh, **kwargs)
         plotter.show(screenshot=screenshot)
 
-    def set_damping(self, damping_instance: Type[DampingBase]):
+    def set_damping(self, damping_instance: Type[Damping]):
         """
         Assign a damping to this mesh part's region by forwarding to Region.set_damping.
 
         Args:
-            damping_instance: Damping instance or class (Type[DampingBase]) to assign.
+            damping_instance: Damping instance or class (Type[Damping]) to assign.
 
         Returns:
             The passed `damping_instance`.
