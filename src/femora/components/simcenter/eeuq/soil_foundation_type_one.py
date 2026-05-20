@@ -884,7 +884,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
             f1   = damping_props[1]
             f2   = damping_props[2]
             damp = fm.damping.create_damping("frequency rayleigh", dampingFactor=xi_s, f1=f1, f2=f2)
-        reg = fm.region.create_region("elementRegion", damping=damp)
+        reg = fm.region.element(damping=damp)
 
         fm.meshPart.create_mesh_part("General mesh", "External mesh",
                             user_name=f"SoilLayer_{layer_index+1}",
@@ -934,7 +934,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
         else:
             print("Error: damping " + damping + " is not implemented yet for foundation index : " + str(foundation_index+1))
             sys.exit(1)
-        reg = fm.region.create_region("elementRegion", damping=damp)
+        reg = fm.region.element(damping=damp)
         fm.meshPart.create_mesh_part("General mesh", "External mesh",
                             user_name=f"Foundation_{foundation_index+1}",
                             element=elem,
@@ -1609,7 +1609,8 @@ while {[getTime] < $endTime} {
             if region.get_type().lower() == "noderegion":
                 raise ValueError(f"""Region {regionTag} is of type NodeTRegion which is not supported in yet""")
             
-            region.setComponent("element", eleTags[self.assembler.AssembeledMesh.cell_data["Region"] == regionTag])
+            region.elements = list(eleTags[self.assembler.AssembeledMesh.cell_data["Region"] == regionTag])
+            region.element_range = []
             f.write(f"{region.to_tcl()} \n")
             del region
             if progress_callback:

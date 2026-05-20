@@ -541,7 +541,7 @@ class MeshPartCreationDialog(QDialog):
             """
             Open the region management dialog and refresh regions when it closes
             """
-            from femora.components.Region.regionGUI import RegionManagerTab
+            from femora.gui.components.region.region_gui import RegionManagerTab
             dialog = RegionManagerTab(self)
             # Connect to the finished signal which is emitted regardless of how the dialog is closed
             dialog.finished.connect(self.refresh_regions)
@@ -788,7 +788,7 @@ class MeshPartEditDialog(QDialog):
         """
         Open the region management dialog and refresh regions when it closes
         """
-        from femora.components.Region.regionGUI import RegionManagerTab
+        from femora.gui.components.region.region_gui import RegionManagerTab
         dialog = RegionManagerTab(self)
         dialog.finished.connect(self.refresh_regions)
         dialog.exec()

@@ -1535,7 +1535,7 @@ class MPCORecorderCreationDialog(QDialog):
         opt_group = QGroupBox("Regions and Frequency")
         opt_form = QFormLayout(opt_group)
         # Region selection: dropdown populated from RegionBase registry
-        from femora.components.Region.regionBase import RegionBase
+        from femora.core.region_base import RegionBase
         regions = RegionBase.get_all_regions()
         self.region_combo = QComboBox()
         self.region_combo.addItem("<none>", None)
@@ -1681,7 +1681,7 @@ class MPCORecorderEditDialog(QDialog):
         # Regions and -T options
         opt_group = QGroupBox("Regions and Frequency")
         opt_form = QFormLayout(opt_group)
-        from femora.components.Region.regionBase import RegionBase
+        from femora.core.region_base import RegionBase
         regions = RegionBase.get_all_regions()
         self.region_combo = QComboBox()
         self.region_combo.addItem("<none>", None)

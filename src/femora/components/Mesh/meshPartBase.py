@@ -11,7 +11,7 @@ Modules:
     typing: A module that provides runtime support for type hints.
     femora.core.element_base: A module that defines the manager-owned Element base class.
     femora.core.material_base: Abstract Material base used by MeshPart tagging.
-    femora.components.Region.regionBase: A module that defines the RegionBase and GlobalRegion classes.
+    femora.core.region_base: A module that defines the RegionBase class.
 Usage:
     This module is intended to be used as part of a larger DRM analysis application. 
     The MeshPart class should be subclassed to create specific types of mesh parts, 
@@ -24,7 +24,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple, Type, Union, Optional
 from femora.core.element_base import Element
 from femora.core.material_base import Material
-from femora.components.Region.regionBase import RegionBase, GlobalRegion
+from femora.core.region_base import RegionBase
 from femora.constants import FEMORA_MAX_NDF
 from femora.components.geometry_ops import MeshPartTransform
 from femora.components.Damping.dampingBase import DampingBase
@@ -62,7 +62,10 @@ class MeshPart(ABC):
         self.mesh_type = mesh_type
         self.user_name = user_name
         self.element = element
-        self.region = region if region is not None else GlobalRegion()  # Use global region if none specified
+        if region is None:
+            from femora.components.MeshMaker import MeshMaker
+            region = MeshMaker.get_instance().region.GlobalRegion()
+        self.region = region
         
         # Initialize mesh attribute (to be populated by generate_mesh)
         self.mesh = None
@@ -426,7 +429,8 @@ class MeshPartManager:
         # Handle case where region is provided as tag number
         if isinstance(region, int):
             region_tag = region
-            region = RegionBase.get_region(region_tag)
+            from femora.components.MeshMaker import MeshMaker
+            region = MeshMaker.get_instance().region.get(region_tag)
             if not region:
                 self._last_operation_status = {
                     "success": False, 

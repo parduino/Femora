@@ -13,7 +13,7 @@ from femora.components.Mesh.meshPartBase import MeshPart
 from femora.components.Mesh.meshPartInstance import SingleLineMesh, StructuredLineMesh
 from femora.components.event.event_bus import EventBus, FemoraEvent
 from femora.components.interface.embedded_info import EmbeddedInfo
-from femora.components.Region.regionBase import RegionBase
+from femora.core.region_base import RegionBase
 
 
 

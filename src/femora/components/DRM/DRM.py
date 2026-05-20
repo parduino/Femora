@@ -661,13 +661,13 @@ class DRM:
         if kwargs['type'] == "Rayleigh":
             if not matchDamping:
                 damping = self.meshmaker.damping.create_damping("frequency rayleigh", dampingFactor=rayleighDamping)
-                region  = self.meshmaker.region.create_region("elementRegion", damping=damping)
+                region  = self.meshmaker.region.element(damping=damping)
                 Absorbing.cell_data["Region"]  = full(Absorbing.n_cells, region.tag, dtype=uint16)
         
         if kwargs['type'] == "PML":
             if not matchDamping:
                 damping = self.meshmaker.damping.create_damping("frequency rayleigh", dampingFactor=rayleighDamping)
-                region  = self.meshmaker.region.create_region("elementRegion", damping=damping)
+                region  = self.meshmaker.region.element(damping=damping)
                 Absorbing.cell_data["Region"]  = full(Absorbing.n_cells, region.tag, dtype=uint16)
 
         if kwargs['type'] == "ASDA":

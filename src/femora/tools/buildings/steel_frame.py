@@ -828,7 +828,7 @@ class FEMA_SAC_SteelFrame:
                   f"(x={x_center:.1f}, y={y_center:.1f}, "
                   f"z={z_coords[1]:.1f}..{z_coords[-1]:.1f})")
 
-        self.building_region = model.region.create_region("ElementRegion")
+        self.building_region = model.region.element()
         composite_mesh = CompositeMesh(user_name=f"{self.name_prefix}", mesh=grid, region=self.building_region)
         return composite_mesh
 

@@ -4,7 +4,7 @@ from femora.core.element_manager import ElementManager
 from femora.core.ground_motion_manager import GroundMotionManager
 from femora.components.Assemble.Assembler import Assembler
 from femora.components.Damping.dampingBase import DampingManager
-from femora.components.Region.regionBase import RegionManager
+from femora.core.region_manager import RegionManager
 from femora.components.Constraint.constraint import Constraint
 from femora.components.Mesh.meshPartBase import MeshPartManager
 from femora.components.Mesh.meshPartInstance import *
@@ -73,7 +73,7 @@ class MeshMaker:
         self.ground_motion = GroundMotionManager(mesh_maker=self, time_series_manager=self.time_series)
         self.damping = DampingManager()
         self.mass = MassManager()
-        self.region = RegionManager()
+        self.region = RegionManager(mesh_maker=self)
         self.constraint = Constraint()
         self.meshPart = MeshPartManager()
         self.analysis = AnalysisManager()
@@ -455,7 +455,8 @@ class MeshMaker:
                     if region.get_type().lower() == "noderegion":
                         raise ValueError(f"""Region {regionTag} is of type NodeTRegion which is not supported in yet""")
                     
-                    region.setComponent("element", eleTags[self.assembler.AssembeledMesh.cell_data["Region"] == regionTag])
+                    region.elements = list(eleTags[self.assembler.AssembeledMesh.cell_data["Region"] == regionTag])
+                    region.element_range = []
                     f.write(f"{region.to_tcl()} \n")
                     del region
                     if progress_callback:
@@ -821,6 +822,7 @@ class MeshMaker:
         self.transformation.set_tag_start(1)
         self.material.set_tag_start(1)
         self.section.set_tag_start(1)
+        self.region.set_tag_start(1)
         self._start_nodetag = 1
         self._start_ele_tag = 1
         self._start_core_tag = 0

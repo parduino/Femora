@@ -16,7 +16,7 @@ from femora.components.element.elastic_beam_column import ElasticBeamColumnEleme
 from femora.components.element.ghost_node import GhostNodeElement
 from femora.components.element.truss import TrussElement
 from femora.components.section.beam import ElasticSection
-from femora.components.Region.regionBase import RegionBase
+from femora.core.region_base import RegionBase
 from femora.constants import FEMORA_MAX_NDF
 from femora.core.element_base import Element
 from femora.core.pattern_base import Pattern
@@ -306,7 +306,7 @@ class ConventionalSteelBracedFrame:
         self._add_member_self_mass(grid, model, material_density)
         grid = self._add_center_of_mass_nodes(grid, model)
 
-        self.building_region = model.region.create_region("ElementRegion")
+        self.building_region = model.region.element()
         return CompositeMesh(user_name=self.name_prefix, mesh=grid, region=self.building_region)
 
     def create_rigid_diaphragms(self, model) -> None:

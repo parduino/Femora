@@ -31,7 +31,7 @@ import pyvista as pv
 import os
 from femora.components.Mesh.meshPartBase import MeshPart, MeshPartRegistry
 from femora.core.element_base import Element
-from femora.components.Region.regionBase import RegionBase
+from femora.core.region_base import RegionBase
 from femora.core.material_base import Material
 from femora.constants import FEMORA_MAX_NDF
 

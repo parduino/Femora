@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Union, Type
-from femora.components.Region.regionBase import RegionBase
+from femora.core.region_base import RegionBase
 from femora.components.interface.embedded_beam_solid_interface import EmbeddedBeamSolidInterface
 from femora.components.interface.interface_base import InterfaceManager
 
@@ -167,7 +167,8 @@ class Recorder(ABC):
                 return item.tag
             if isinstance(item, str):
                 # Find by name
-                for tag, region in RegionBase.get_all_regions().items():
+                from femora.components.MeshMaker import MeshMaker
+                for tag, region in MeshMaker.get_instance().region.get_all().items():
                     if getattr(region, "name", None) == item:
                         return tag
                 raise ValueError(f"Region with name '{item}' not found")
@@ -1572,7 +1573,7 @@ class RecorderManager:
         if idxs.size == 0:
             raise ValueError("pile_mpco: no matching line-mesh cells for the given meshparts.")
 
-        pile_region = mm.region.create_region("ElementRegion")
+        pile_region = mm.region.element()
         pile_region._name = region_name
 
         rtag = int(pile_region.tag)

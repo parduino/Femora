@@ -6,7 +6,8 @@ from qtpy.QtWidgets import (
 )
 from qtpy.QtCore import Qt
 from femora.components.Damping.dampingBase import DampingBase
-from femora.components.Region.regionBase import RegionBase, GlobalRegion, ElementRegion, NodeRegion
+from femora.core.region_base import RegionBase
+from femora.components.region.regions import GlobalRegion, ElementRegion, NodeRegion
 
 class DampingSelectorWidget(QWidget):
     def __init__(self, parent=None):

@@ -1,5 +1,11 @@
-from .regionBase import initialize_region_base
+from femora.core.region_base import RegionBase
+from femora.core.region_manager import RegionManager
+from femora.components.region.regions import ElementRegion, GlobalRegion, NodeRegion
 
-# Ensure RegionBase is initialized before running any tests
-# RegionBase class should have a global region with tag 0
-initialize_region_base()
+__all__ = [
+    "RegionBase",
+    "RegionManager",
+    "GlobalRegion",
+    "ElementRegion",
+    "NodeRegion",
+]
