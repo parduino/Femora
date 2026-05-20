@@ -6,8 +6,8 @@ from qtpy.QtWidgets import (
     QStackedWidget, QRadioButton, QButtonGroup, QGroupBox, QCheckBox, QMenu,
     QScrollArea, QSlider
 )
-from femora.components.Constraint.spConstraint import (
-    SPConstraint, FixConstraint, FixXConstraint, FixYConstraint, FixZConstraint, SPConstraintManager,
+from femora.components.constraint.sp_constraints import (
+    SPConstraint, FixConstraint, FixXConstraint, FixYConstraint, FixZConstraint,
     FixMacroX_max, FixMacroX_min, FixMacroY_max, FixMacroY_min, FixMacroZ_max, FixMacroZ_min
 )
 from femora.utils.validator import DoubleValidator, IntValidator
@@ -79,7 +79,8 @@ class SPConstraintManagerTab(QDialog):
     def refresh_constraints_list(self):
         """Update constraints table with current data"""
         self.constraints_table.setRowCount(0)
-        constraints = SPConstraint._constraints.values()
+        sp = MeshMaker.get_instance().constraint.sp
+        constraints = sp._constraints.values()
         
         self.constraints_table.setRowCount(len(constraints))
         
@@ -129,7 +130,8 @@ class SPConstraintManagerTab(QDialog):
         tag_item = self.constraints_table.item(row, 0)
         if tag_item:
             tag = tag_item.data(Qt.UserRole)
-            constraint = SPConstraint._constraints.get(tag)
+            sp = MeshMaker.get_instance().constraint.sp
+            constraint = sp._constraints.get(tag)
             if constraint:
                 self.edit_constraint(constraint)
 
@@ -155,7 +157,8 @@ class SPConstraintManagerTab(QDialog):
         # Connect actions
         action = menu.exec_(self.constraints_table.mapToGlobal(position))
         if action == edit_action:
-            constraint = SPConstraint._constraints.get(tag)
+            sp = MeshMaker.get_instance().constraint.sp
+            constraint = sp._constraints.get(tag)
             if constraint:
                 self.edit_constraint(constraint)
         elif action == delete_action:
@@ -196,34 +199,7 @@ class SPConstraintManagerTab(QDialog):
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:
-            SPConstraintManager().remove_constraint(tag)
-            self.refresh_constraints_list()
-
-
-    def open_constraint_edit_dialog(self, constraint):
-        """Open dialog to edit existing constraint"""
-        dialog = None
-        if isinstance(constraint, FixConstraint):
-            dialog = SPConstraintEditDialog("fix", constraint, self)
-        elif isinstance(constraint, FixXConstraint):
-            dialog = SPConstraintEditDialog("fixX", constraint, self)
-        elif isinstance(constraint, FixYConstraint):
-            dialog = SPConstraintEditDialog("fixY", constraint, self)
-        elif isinstance(constraint, FixZConstraint):
-            dialog = SPConstraintEditDialog("fixZ", constraint, self)
-        
-        if dialog and dialog.exec() == QDialog.Accepted:
-            self.refresh_constraints_list()
-
-    def delete_constraint(self, tag):
-        """Delete constraint from system"""
-        reply = QMessageBox.question(
-            self, 'Delete SP Constraint',
-            f"Delete SP constraint with tag {tag}?",
-            QMessageBox.Yes | QMessageBox.No
-        )
-        if reply == QMessageBox.Yes:
-            SPConstraintManager().remove_constraint(tag)
+            MeshMaker.get_instance().constraint.sp.remove_constraint(tag)
             self.refresh_constraints_list()
 
 
@@ -333,7 +309,7 @@ class SPConstraintCreationDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(f"Create {constraint_type} SP Constraint")
         self.constraint_type = constraint_type
-        self.manager = SPConstraintManager()
+        self.manager = MeshMaker.get_instance().constraint.sp
         self.double_validator = DoubleValidator()
         self.int_validator = IntValidator()
         
@@ -717,7 +693,27 @@ class SPConstraintCreationDialog(QDialog):
                     QMessageBox.warning(self, "Input Error", "Tolerance must be a valid number")
                     return
             
-            self.manager.create_constraint(self.constraint_type, *args)
+            sp = self.manager
+            if self.constraint_type == "fix":
+                sp.fix(*args)
+            elif self.constraint_type == "fixX":
+                sp.fix_x(*args)
+            elif self.constraint_type == "fixY":
+                sp.fix_y(*args)
+            elif self.constraint_type == "fixZ":
+                sp.fix_z(*args)
+            elif self.constraint_type == "fixMacroXmax":
+                sp.fix_macro_x_max(*args)
+            elif self.constraint_type == "fixMacroXmin":
+                sp.fix_macro_x_min(*args)
+            elif self.constraint_type == "fixMacroYmax":
+                sp.fix_macro_y_max(*args)
+            elif self.constraint_type == "fixMacroYmin":
+                sp.fix_macro_y_min(*args)
+            elif self.constraint_type == "fixMacroZmax":
+                sp.fix_macro_z_max(*args)
+            elif self.constraint_type == "fixMacroZmin":
+                sp.fix_macro_z_min(*args)
             self.accept()
             
         except Exception as e:
@@ -730,7 +726,7 @@ class SPConstraintEditDialog(QDialog):
         self.setWindowTitle(f"Edit {constraint_type} SP Constraint")
         self.constraint_type = constraint_type
         self.constraint = constraint
-        self.manager = SPConstraintManager()
+        self.manager = MeshMaker.get_instance().constraint.sp
         self.double_validator = DoubleValidator()
         self.int_validator = IntValidator()
         
@@ -1091,7 +1087,27 @@ class SPConstraintEditDialog(QDialog):
                     QMessageBox.warning(self, "Input Error", "Tolerance must be a valid number")
                     return
             
-            self.manager.create_constraint(self.constraint_type, *args)
+            sp = self.manager
+            if self.constraint_type == "fix":
+                sp.fix(*args)
+            elif self.constraint_type == "fixX":
+                sp.fix_x(*args)
+            elif self.constraint_type == "fixY":
+                sp.fix_y(*args)
+            elif self.constraint_type == "fixZ":
+                sp.fix_z(*args)
+            elif self.constraint_type == "fixMacroXmax":
+                sp.fix_macro_x_max(*args)
+            elif self.constraint_type == "fixMacroXmin":
+                sp.fix_macro_x_min(*args)
+            elif self.constraint_type == "fixMacroYmax":
+                sp.fix_macro_y_max(*args)
+            elif self.constraint_type == "fixMacroYmin":
+                sp.fix_macro_y_min(*args)
+            elif self.constraint_type == "fixMacroZmax":
+                sp.fix_macro_z_max(*args)
+            elif self.constraint_type == "fixMacroZmin":
+                sp.fix_macro_z_min(*args)
             self.accept()
             
         except Exception as e:
@@ -1157,7 +1173,7 @@ class FixConstraintView(QWidget):
     def show_constraints(self):
         """Show all constraints in the 3D view"""
         # Get all constraints
-        constraints = SPConstraint._constraints.values()
+        constraints = MeshMaker.get_instance().constraint.sp._constraints.values()
         
         # Clear existing constraint actors
         self.hide_constraints()
@@ -1259,11 +1275,11 @@ if __name__ == '__main__':
     import sys
     
     # Create some sample constraints for testing
-    sp_manager = SPConstraintManager()
+    sp_manager = MeshMaker.get_instance().constraint.sp
     sp_manager.fix(1, [1, 1, 1, 0, 0, 0])
     sp_manager.fix(2, [0, 1, 0, 0, 1, 0])
-    sp_manager.fixX(0.0, [1, 1, 1, 0, 0, 0])
-    sp_manager.fixY(0.0, [0, 1, 0, 0, 0, 0])
+    sp_manager.fix_x(0.0, [1, 1, 1, 0, 0, 0])
+    sp_manager.fix_y(0.0, [0, 1, 0, 0, 0, 0])
     
     # Create the Qt Application
     app = QApplication(sys.argv)

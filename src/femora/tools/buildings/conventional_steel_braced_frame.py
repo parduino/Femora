@@ -361,7 +361,7 @@ class ConventionalSteelBracedFrame:
                     slave_tags.append(int(global_idx + start_node_tag))
 
             for slave_tag in slave_tags:
-                model.constraint.mp.create_rigid_diaphragm(
+                model.constraint.mp.rigid_diaphragm(
                     direction=3,
                     master_node=master_tag,
                     slave_nodes=[slave_tag],

@@ -5,9 +5,11 @@ from qtpy.QtWidgets import (
     QDialog, QFormLayout, QMessageBox, QHeaderView, QGridLayout, QMenu,
     QSizePolicy, QProgressDialog, QApplication, QSpinBox, QDoubleSpinBox
 )
-from femora.components.Constraint.mpConstraint import (
-    mpConstraint, equalDOF, rigidLink, rigidDiaphragm, mpConstraintManager
+from femora.core.constraint_base import MPConstraint
+from femora.components.constraint.mp_constraints import (
+    EqualDOF, RigidLink, RigidDiaphragm
 )
+from femora.components.MeshMaker import MeshMaker
 import time
 
 class MPConstraintManagerTab(QDialog):
@@ -123,7 +125,7 @@ class MPConstraintManagerTab(QDialog):
     def change_page_size(self, size_text):
         """Change the number of items loaded per page"""
         if size_text == "All":
-            self.page_size = len(mpConstraint._constraints)
+            self.page_size = len(MeshMaker.get_instance().constraint.mp._constraints)
         else:
             try:
                 self.page_size = int(size_text)
@@ -149,7 +151,7 @@ class MPConstraintManagerTab(QDialog):
     def refresh_constraints_list(self):
         """Update constraints table with current data for the current page"""
         # Show progress dialog for large constraint sets
-        count = len(mpConstraint._constraints)
+        count = len(MeshMaker.get_instance().constraint.mp._constraints)
         
         if count > 1000:
             progress = QProgressDialog("Loading constraints...", "Cancel", 0, 100, self)
@@ -181,7 +183,7 @@ class MPConstraintManagerTab(QDialog):
         self.constraints_table.setRowCount(0)
         
         # Get all constraints as a list for pagination
-        all_constraints = list(mpConstraint._constraints.values())
+        all_constraints = list(MeshMaker.get_instance().constraint.mp._constraints.values())
         
         # Calculate start and end indices for the current page
         start_idx = (self.current_page - 1) * self.page_size
@@ -229,11 +231,11 @@ class MPConstraintManagerTab(QDialog):
                 
                 # Parameters
                 params = ""
-                if isinstance(constraint, equalDOF):
+                if isinstance(constraint, EqualDOF):
                     params = f"DOFs: {', '.join(map(str, constraint.dofs))}"
-                elif isinstance(constraint, rigidLink):
+                elif isinstance(constraint, RigidLink):
                     params = f"Type: {constraint.type}"
-                elif isinstance(constraint, rigidDiaphragm):
+                elif isinstance(constraint, RigidDiaphragm):
                     params = f"Direction: {constraint.direction}"
                 params_item = QTableWidgetItem(params)
                 params_item.setFlags(params_item.flags() & ~Qt.ItemIsEditable)
@@ -268,7 +270,8 @@ class MPConstraintManagerTab(QDialog):
         tag_item = self.constraints_table.item(row, 0)
         if tag_item:
             tag = tag_item.data(Qt.UserRole)
-            constraint = mpConstraint._constraints.get(tag)
+            mp = MeshMaker.get_instance().constraint.mp
+            constraint = mp._constraints.get(tag)
             if constraint:
                 self.open_constraint_edit_dialog(constraint)
 
@@ -294,7 +297,8 @@ class MPConstraintManagerTab(QDialog):
         # Connect actions
         action = menu.exec_(self.constraints_table.mapToGlobal(position))
         if action == edit_action:
-            constraint = mpConstraint._constraints.get(tag)
+            mp = MeshMaker.get_instance().constraint.mp
+            constraint = mp._constraints.get(tag)
             if constraint:
                 self.open_constraint_edit_dialog(constraint)
         elif action == delete_action:
@@ -314,12 +318,12 @@ class MPConstraintManagerTab(QDialog):
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:
-            mpConstraintManager().remove_constraint(tag)
+            MeshMaker.get_instance().constraint.mp.remove_constraint(tag)
             self.refresh_constraints_list()
             
     def clear_all_constraints(self):
         """Delete all constraints from the system"""
-        count = len(mpConstraint._constraints)
+        count = len(MeshMaker.get_instance().constraint.mp._constraints)
         
         if count == 0:
             QMessageBox.information(self, "No Constraints", "There are no constraints to clear.")
@@ -340,8 +344,7 @@ class MPConstraintManagerTab(QDialog):
                 progress.show()
                 QApplication.processEvents()
             
-            # Clear the constraints dictionary directly
-            mpConstraint._constraints.clear()
+            MeshMaker.get_instance().constraint.mp.clear()
             
             # Close progress dialog if it was shown
             if count > 100:
@@ -357,7 +360,7 @@ class MPLaminarBoundaryDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Create Laminar Boundary Constraint")
-        self.manager = mpConstraintManager()
+        self.manager = MeshMaker.get_instance().constraint.mp
         
         layout = QVBoxLayout(self)
         form_layout = QFormLayout()
@@ -373,6 +376,19 @@ class MPLaminarBoundaryDialog(QDialog):
         self.direction_combo.setCurrentIndex(2)  # Default to Z direction (3)
         form_layout.addRow("Perpendicular Direction:", self.direction_combo)
         
+        # Layer bounds along the perpendicular direction
+        self.bounds_min_spin = QDoubleSpinBox()
+        self.bounds_min_spin.setRange(-1e6, 1e6)
+        self.bounds_min_spin.setValue(-17.9)
+        self.bounds_min_spin.setDecimals(4)
+        form_layout.addRow("Bound Min:", self.bounds_min_spin)
+
+        self.bounds_max_spin = QDoubleSpinBox()
+        self.bounds_max_spin.setRange(-1e6, 1e6)
+        self.bounds_max_spin.setValue(0.0)
+        self.bounds_max_spin.setDecimals(4)
+        form_layout.addRow("Bound Max:", self.bounds_max_spin)
+
         # Tolerance
         self.tolerance_spin = QDoubleSpinBox()
         self.tolerance_spin.setRange(1e-6, 1.0)
@@ -423,8 +439,13 @@ class MPLaminarBoundaryDialog(QDialog):
             
             # Create laminar boundary constraints
             try:
-                # Create the constraints
-                self.manager.create_laminar_boundary(dofs=dofs, direction=direction, tol=tolerance)
+                bounds = (self.bounds_min_spin.value(), self.bounds_max_spin.value())
+                self.manager.laminar_boundary(
+                    dofs=dofs,
+                    bounds=bounds,
+                    direction=direction,
+                    tol=tolerance,
+                )
                 progress.setValue(100)
                 QMessageBox.information(self, "Success", "Laminar boundary constraints created successfully.")
                 self.accept()
@@ -443,7 +464,7 @@ class MPConstraintCreationDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(f"Create {constraint_type} Constraint")
         self.constraint_type = constraint_type
-        self.manager = mpConstraintManager()
+        self.manager = MeshMaker.get_instance().constraint.mp
         
         layout = QVBoxLayout(self)
         form_layout = QFormLayout()
@@ -489,17 +510,15 @@ class MPConstraintCreationDialog(QDialog):
             master = int(self.master_input.text())
             slaves = [int(n.strip()) for n in self.slaves_input.text().split(",")]
             
-            args = [master, slaves]
-            
             if self.constraint_type == "equalDOF":
                 dofs = list(map(int, self.dofs_input.text().split()))
-                args.append(dofs)
+                self.manager.equal_dof(master, slaves, dofs)
             elif self.constraint_type == "rigidLink":
-                args.insert(0, self.type_combo.currentText())
+                self.manager.rigid_link(self.type_combo.currentText(), master, slaves)
             elif self.constraint_type == "rigidDiaphragm":
-                args.insert(0, int(self.direction_input.text()))
-            
-            self.manager.create_constraint(self.constraint_type, *args)
+                self.manager.rigid_diaphragm(int(self.direction_input.text()), master, slaves)
+            else:
+                raise ValueError(f"Unknown constraint type: {self.constraint_type}")
             self.accept()
             
         except ValueError as e:
@@ -510,7 +529,7 @@ class MPConstraintEditDialog(QDialog):
     def __init__(self, constraint, parent=None):
         super().__init__(parent)
         self.constraint = constraint
-        self.manager = mpConstraintManager()
+        self.manager = MeshMaker.get_instance().constraint.mp
         self.setWindowTitle(f"Edit {type(constraint).__name__} Constraint")
         
         layout = QVBoxLayout(self)
@@ -525,15 +544,15 @@ class MPConstraintEditDialog(QDialog):
         form_layout.addRow("Slave Nodes:", self.slaves_input)
         
         # Type-specific fields
-        if isinstance(constraint, equalDOF):
+        if isinstance(constraint, EqualDOF):
             self.dofs_input = QLineEdit(" ".join(map(str, constraint.dofs)))
             form_layout.addRow("DOFs:", self.dofs_input)
-        elif isinstance(constraint, rigidLink):
+        elif isinstance(constraint, RigidLink):
             self.type_combo = QComboBox()
             self.type_combo.addItems(["bar", "beam"])
             self.type_combo.setCurrentText(constraint.type)
             form_layout.addRow("Type:", self.type_combo)
-        elif isinstance(constraint, rigidDiaphragm):
+        elif isinstance(constraint, RigidDiaphragm):
             self.direction_input = QLineEdit(str(constraint.direction))
             form_layout.addRow("Direction:", self.direction_input)
         
@@ -559,15 +578,13 @@ class MPConstraintEditDialog(QDialog):
             self.manager.remove_constraint(self.constraint.tag)
             
             args = [new_master, new_slaves]
-            if isinstance(self.constraint, equalDOF):
+            if isinstance(self.constraint, EqualDOF):
                 new_dofs = list(map(int, self.dofs_input.text().split()))
-                args.append(new_dofs)
-            elif isinstance(self.constraint, rigidLink):
-                args.insert(0, self.type_combo.currentText())
-            elif isinstance(self.constraint, rigidDiaphragm):
-                args.insert(0, int(self.direction_input.text()))
-            
-            self.manager.create_constraint(type(self.constraint).__name__, *args)
+                self.manager.equal_dof(new_master, new_slaves, new_dofs)
+            elif isinstance(self.constraint, RigidLink):
+                self.manager.rigid_link(self.type_combo.currentText(), new_master, new_slaves)
+            elif isinstance(self.constraint, RigidDiaphragm):
+                self.manager.rigid_diaphragm(int(self.direction_input.text()), new_master, new_slaves)
             self.accept()
             
         except ValueError as e:
@@ -578,19 +595,19 @@ if __name__ == '__main__':
     import sys
     
     # Create some sample constraints for testing
-    mp_manager = mpConstraintManager()
+    mp_manager = MeshMaker.get_instance().constraint.mp
     
     # Create equalDOF constraints
-    mp_manager.create_equal_dof(master_node=1, slave_nodes=[2, 3], dofs=[1, 2, 3])
-    mp_manager.create_equal_dof(master_node=5, slave_nodes=[6], dofs=[4, 5, 6])
+    mp_manager.equal_dof(master_node=1, slave_nodes=[2, 3], dofs=[1, 2, 3])
+    mp_manager.equal_dof(master_node=5, slave_nodes=[6], dofs=[4, 5, 6])
     
     # Create rigidLink constraints
-    mp_manager.create_rigid_link(type_str="bar", master_node=10, slave_nodes=[11, 12, 13])
-    mp_manager.create_rigid_link(type_str="beam", master_node=20, slave_nodes=[21, 22])
+    mp_manager.rigid_link(type_str="bar", master_node=10, slave_nodes=[11, 12, 13])
+    mp_manager.rigid_link(type_str="beam", master_node=20, slave_nodes=[21, 22])
     
     # Create rigidDiaphragm constraints
-    mp_manager.create_rigid_diaphragm(direction=3, master_node=30, slave_nodes=[31, 32, 33, 34])
-    mp_manager.create_rigid_diaphragm(direction=2, master_node=40, slave_nodes=[41, 42, 43])
+    mp_manager.rigid_diaphragm(direction=3, master_node=30, slave_nodes=[31, 32, 33, 34])
+    mp_manager.rigid_diaphragm(direction=2, master_node=40, slave_nodes=[41, 42, 43])
     
     # Start the application
     app = QApplication(sys.argv)

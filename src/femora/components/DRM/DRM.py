@@ -778,9 +778,11 @@ class DRM:
                 else:
                     raise ValueError("The PML layer node should have 9 dof and the original mesh should have at least 3 dof")
                 
-                self.meshmaker.constraint.mp.create_equal_dof(masterNode, 
-                                                              [slaveNode],
-                                                              [1,2,3])
+                self.meshmaker.constraint.mp.equal_dof(
+                    masterNode,
+                    [slaveNode],
+                    [1, 2, 3],
+                )
 
         else:
             raise NotImplementedError("ASDA absorbing layer is not implemented yet")

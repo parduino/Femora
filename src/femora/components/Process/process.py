@@ -2,15 +2,14 @@ from typing import List, Dict, Union, Optional
 import weakref
 
 # Import your existing component classes
-from femora.components.Constraint.mpConstraint import mpConstraint
-from femora.components.Constraint.spConstraint import SPConstraint
+from femora.core.constraint_base import MPConstraint, SPConstraint
 from femora.components.Recorder.recorderBase import Recorder
 from femora.components.Analysis.analysis import Analysis
 from femora.components.Actions.action import Action
 from femora.core.pattern_base import Pattern
 
 # Define a union type for all components that can be used in the process
-ProcessComponent = Union[SPConstraint, mpConstraint, Pattern, Recorder, Analysis, Action]
+ProcessComponent = Union[SPConstraint, MPConstraint, Pattern, Recorder, Analysis, Action]
 
 class ProcessManager:
     """Singleton class to manage the sequence of operations in structural analysis.
@@ -84,7 +83,7 @@ class ProcessManager:
 
         Args:
             component: The component object (or list of components) to use in this step.
-                Must be one of the allowed component types (SPConstraint, mpConstraint,
+                Must be one of the allowed component types (SPConstraint, MPConstraint,
                 Pattern, Recorder, Analysis, or Action).
             description: Optional description of the step. Defaults to empty string.
 

@@ -6,9 +6,9 @@ from femora.components.Mesh.meshPartGUI import MeshPartManagerTab
 from femora.components.Assemble.AssemblerGUI import AssemblyManagerTab
 from femora.components.damping.dampingGUI import DampingManagerTab
 from femora.gui.components.region.region_gui import RegionManagerTab
-from femora.components.Constraint.mpConstraintGUI import MPConstraintManagerTab
+from femora.gui.components.constraint.mp_constraint_gui import MPConstraintManagerTab
 from femora.components.TimeSeries.timeSeriesGUI import TimeSeriesManagerTab
-from femora.components.Constraint.spConstraintGUI import SPConstraintManagerTab
+from femora.gui.components.constraint.sp_constraint_gui import SPConstraintManagerTab
 from femora.components.Pattern.patternGUI import PatternManagerTab
 from femora.components.Recorder.recorderGUI import RecorderManagerTab
 from femora.components.Analysis.analysisGUI import AnalysisManagerTab

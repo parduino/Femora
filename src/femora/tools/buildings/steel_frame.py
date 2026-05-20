@@ -918,7 +918,7 @@ class FEMA_SAC_SteelFrame:
                 #     slave_nodes=slave_tags
                 # )
                 for slave_tag in slave_tags:
-                    model.constraint.mp.create_rigid_diaphragm(
+                    model.constraint.mp.rigid_diaphragm(
                         direction=3, # Normal to XY plane
                         master_node=master_tag,
                         slave_nodes=[slave_tag]
