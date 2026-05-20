@@ -1,190 +1,20 @@
-from abc import ABC, abstractmethod
 from typing import List, Dict, Optional, Union, Type
-from femora.core.region_base import RegionBase
+
+from femora.core.recorder_base import Recorder
 from femora.components.interface.embedded_beam_solid_interface import EmbeddedBeamSolidInterface
 from femora.components.interface.interface_base import InterfaceManager
 
-class Recorder(ABC):
-    """Base abstract class for all recorder types in OpenSees.
 
-    Recorders are used to monitor what is happening during the analysis
-    and generate output for the user. The output may go to the screen,
-    files, databases, or to remote processes through TCP/IP options.
-
-    Attributes:
-        tag: The unique sequential identifier for this recorder.
-        recorder_type: The type of recorder (e.g., 'Node', 'Element', 'VTKHDF').
-
-    Example:
-        >>> from femora.components.Recorder.recorderBase import RecorderManager
-        >>> # Create a recorder through the manager
-        >>> # manager = RecorderManager()
-        >>> # recorder = manager.create_recorder('node', file_name='output.txt', ...)
-        >>> # print(recorder.tag)
-    """
-    _recorders = {}  # Class-level dictionary to track all recorders
-    _next_tag = 1   # Class variable to track the next tag to assign
-
-    def __init__(self, recorder_type: str, cores: Optional[Union[int, List[int]]] = None):
-        """Initializes the Recorder with a sequential tag.
-
-        Args:
-            recorder_type: The type of recorder (e.g., 'Node', 'Element', 'VTKHDF').
-            cores: List of CPU cores (PIDs) that should execute this recorder.
-        """
-        self.tag = Recorder._next_tag
-        Recorder._next_tag += 1
-        
-        self.recorder_type = recorder_type
-        self.cores = cores
-        
-        # Register this recorder in the class-level tracking dictionary
-        Recorder._recorders[self.tag] = self
-
-    @classmethod
-    def get_recorder(cls, tag: int) -> 'Recorder':
-        """Retrieves a specific recorder by its tag.
-
-        Args:
-            tag: The tag of the recorder.
-
-        Returns:
-            The recorder with the specified tag.
-
-        Raises:
-            KeyError: If no recorder with the given tag exists.
-        """
-        if tag not in cls._recorders:
-            raise KeyError(f"No recorder found with tag {tag}")
-        return cls._recorders[tag]
-
-    @classmethod
-    def remove_recorder(cls, tag: int) -> None:
-        """Deletes a recorder by its tag.
-
-        Args:
-            tag: The tag of the recorder to delete.
-        """
-        if tag in cls._recorders:
-            del cls._recorders[tag]
-            # Recalculate _next_tag if needed
-            if cls._recorders:
-                cls._next_tag = max(cls._recorders.keys()) + 1
-            else:
-                cls._next_tag = 1
-
-    @classmethod
-    def get_all_recorders(cls) -> Dict[int, 'Recorder']:
-        """Retrieves all created recorders.
-
-        Returns:
-            A dictionary of all recorders, keyed by their unique tags.
-        """
-        return cls._recorders
-    
-    @classmethod
-    def clear_all(cls) -> None:
-        """Clears all recorders and resets tags.
-
-        This method removes all registered recorders and resets the tag counter to 1.
-        """
-        cls._recorders.clear()
-        cls._next_tag = 1
-
-    @abstractmethod
-    def _to_tcl_impl(self) -> str:
-        """Internal method to generate the TCL command string.
-        Subclasses should implement this instead of to_tcl.
-        """
-        pass
-
-    def to_tcl(self) -> str:
-        """Converts the recorder to a TCL command string for OpenSees.
-
-        Wraps the command in a core-specific conditional if 'cores' is specified.
-
-        Returns:
-            TCL command string representation of the recorder.
-        """
-        cmd = self._to_tcl_impl()
-        
-        if self.cores is not None:
-            if isinstance(self.cores, int):
-                core_list = [self.cores]
-            else:
-                core_list = self.cores
-            
-            if len(core_list) == 1:
-                condition = f"$pid == {core_list[0]}"
-            else:
-                condition = f"$pid in {{{' '.join(map(str, core_list))}}}"
-            
-            # Indent the command lines
-            indented_cmd = "\n".join(["\t" + line for line in cmd.split("\n")])
-            return f"if {{{condition}}} {{\n{indented_cmd}\n}}"
-        
-        return cmd
-
-    @staticmethod
-    def get_parameters() -> List[tuple]:
-        """Gets the parameters defining this recorder.
-
-        Subclasses should implement this method to return parameter metadata.
-
-        Returns:
-            List of (parameter name, description) tuples.
-        """
-        pass
-
-    @abstractmethod
-    def get_values(self) -> Dict[str, Union[str, int, float, list]]:
-        """Gets the parameters defining this recorder.
-
-        Subclasses must implement this method to return current parameter values.
-
-        Returns:
-            Dictionary of parameter values.
-        """
-        pass
-
-    def _resolve_regions(self, regions_input: Union[int, str, RegionBase, List[Union[int, str, RegionBase]]]) -> List[int]:
-        """
-        Normalize provided regions to a list of integer tags.
-
-        Accepts:
-            - int tag
-            - str name (matched against existing RegionBase.name)
-            - RegionBase instance
-            - list/tuple of the above
-        """
-        if regions_input is None:
-            return []
-
-        def resolve_one(item) -> int:
-            if isinstance(item, int):
-                return item
-            if isinstance(item, RegionBase):
-                return item.tag
-            if isinstance(item, str):
-                # Find by name
-                from femora.components.MeshMaker import MeshMaker
-                for tag, region in MeshMaker.get_instance().region.get_all().items():
-                    if getattr(region, "name", None) == item:
-                        return tag
-                raise ValueError(f"Region with name '{item}' not found")
-            raise TypeError("regions must contain ints, names, or RegionBase instances")
-
-        tags: List[int] = []
-        if isinstance(regions_input, (list, tuple)):
-            for it in regions_input:
-                tag = resolve_one(it)
-                if tag not in tags:
-                    tags.append(tag)
-        else:
-            tags = [resolve_one(regions_input)]
-        return tags
-
-
+def _results_folder(recorder: Recorder) -> str:
+    mesh_maker = recorder._mesh_maker()
+    if mesh_maker is None:
+        raise ValueError(
+            "Recorder must belong to a MeshMaker recorder manager to resolve results paths"
+        )
+    folder = mesh_maker.get_results_folder()
+    if folder == "":
+        return "./"
+    return folder + "/"
 
 
 class EmbeddedBeamSolidInterfaceRecorder(Recorder):
@@ -280,34 +110,6 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
             
         self.dt = dt
 
-    
-    @staticmethod
-    def get_parameters() -> List[tuple]:
-        """
-        Get the parameters defining this recorder
-        Returns:
-            List[tuple]: List of (parameter name, description) tuples
-        """
-        return [
-            ("interface", "The interface to record (EmbeddedBeamSolidInterface instance or name)"),
-            ("resp_type", "Type of responses to record (string or list of strings)"),
-            ("dt", "Time interval for recording (optional)")
-        ]
-    
-
-    def get_values(self) -> Dict[str, Union[str, List[str], float]]:
-        """
-        Get the parameters defining this recorder
-        Returns:
-            Dict[str, Union[str, List[str], float]]: Dictionary of parameter values
-        """
-        return {
-            "interface": self.interfaces[0].name if self.interfaces else None,
-            "resp_type": self.resp_type,
-            "dt": self.dt
-        }
-    
-    
     def _to_tcl_impl(self) -> str:
         """
         Convert the EmbeddedBeamSolidInterfaceRecorder to a TCL command string for OpenSees
@@ -317,12 +119,7 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
         """
         # This recorder does not generate a TCL command, it writes directly to a file
         cmd = "# recorder EmbeddedBeamSolidInterface\n"
-        from femora import MeshMaker
-        results_folder = MeshMaker().get_results_folder()
-        if results_folder == "":
-            results_folder = "./"
-        else:
-            results_folder += "/"
+        results_folder = _results_folder(self)
 
         for interface in self.interfaces:
            cmd += interface._get_recorder(self.resp_type,
@@ -358,7 +155,7 @@ class NodeRecorder(Recorder):
         resp_type: String indicating response required.
 
     Example:
-        >>> from femora.components.Recorder.recorderBase import NodeRecorder
+        >>> from femora.components.Recorder.recorders import NodeRecorder
         >>> # recorder = NodeRecorder(
         >>> #     file_name="displacement.out",
         >>> #     time=True,
@@ -405,55 +202,37 @@ class NodeRecorder(Recorder):
         self.region = kwargs.get("region", None)
         self.dofs = kwargs.get("dofs", [])
         self.resp_type = kwargs.get("resp_type", "")
-        
-        # Validate the recorder parameters
-        self.validate()
 
-    def validate(self):
-        """
-        Validate recorder parameters
-        
-        Raises:
-            ValueError: If the parameters are invalid
-        """
-        # Check that only one output destination is specified
         output_options = [
             self.file_name is not None,
             self.xml_file is not None,
             self.binary_file is not None,
-            (self.inet_addr is not None and self.port is not None)
+            (self.inet_addr is not None and self.port is not None),
         ]
         if sum(output_options) > 1:
             raise ValueError("Only one of -file, -xml, -binary, or -tcp may be used")
-        
-        # Check that only one node selection method is specified
+
         node_options = [
             self.nodes is not None,
             self.node_range is not None,
-            self.region is not None
+            self.region is not None,
         ]
         if sum(node_options) > 1:
             raise ValueError("Only one of -node, -nodeRange, or -region may be used")
-        
-        # Check that at least one node selection method is specified
         if sum(node_options) == 0:
             raise ValueError("One of -node, -nodeRange, or -region must be specified")
-        
-        # Check that dofs and resp_type are specified
         if not self.dofs:
             raise ValueError("DOFs must be specified")
-        
         if not self.resp_type:
             raise ValueError("Response type must be specified")
-        
-        # Check that resp_type is valid
         valid_resp_types = [
-            "disp", "vel", "accel", "incrDisp", "reaction", "rayleighForces"
+            "disp", "vel", "accel", "incrDisp", "reaction", "rayleighForces",
         ]
-        # Allow "eigen $mode" format
         if not (self.resp_type in valid_resp_types or self.resp_type.startswith("eigen ")):
-            raise ValueError(f"Invalid response type: {self.resp_type}. " 
-                           f"Valid types are: {', '.join(valid_resp_types)}, or 'eigen $mode'")
+            raise ValueError(
+                f"Invalid response type: {self.resp_type}. "
+                f"Valid types are: {', '.join(valid_resp_types)}, or 'eigen $mode'"
+            )
 
     def _to_tcl_impl(self) -> str:
         """
@@ -502,57 +281,6 @@ class NodeRecorder(Recorder):
         cmd += f" -dof {' '.join(map(str, self.dofs))} {self.resp_type}"
         
         return cmd
-
-    @staticmethod
-    def get_parameters() -> List[tuple]:
-        """
-        Get the parameters defining this recorder
-        
-        Returns:
-            List[tuple]: List of (parameter name, description) tuples
-        """
-        return [
-            ("file_name", "Name of file to which output is sent"),
-            ("xml_file", "Name of XML file to which output is sent"),
-            ("binary_file", "Name of binary file to which output is sent"),
-            ("inet_addr", "IP address of remote machine"),
-            ("port", "Port on remote machine awaiting TCP"),
-            ("precision", "Number of significant digits (default: 6)"),
-            ("time_series", "Tag of previously constructed TimeSeries"),
-            ("time", "Places domain time in first output column"),
-            ("delta_t", "Time interval for recording"),
-            ("close_on_write", "Opens and closes file on each write"),
-            ("nodes", "Tags of nodes whose response is being recorded"),
-            ("node_range", "Start and end node tags"),
-            ("region", "Tag of previously defined region"),
-            ("dofs", "List of DOF at nodes whose response is requested"),
-            ("resp_type", "String indicating response required")
-        ]
-
-    def get_values(self) -> Dict[str, Union[str, int, float, list, bool]]:
-        """
-        Get the parameters defining this recorder
-        
-        Returns:
-            Dict[str, Union[str, int, float, list, bool]]: Dictionary of parameter values
-        """
-        return {
-            "file_name": self.file_name,
-            "xml_file": self.xml_file,
-            "binary_file": self.binary_file,
-            "inet_addr": self.inet_addr,
-            "port": self.port,
-            "precision": self.precision,
-            "time_series": self.time_series,
-            "time": self.time,
-            "delta_t": self.delta_t,
-            "close_on_write": self.close_on_write,
-            "nodes": self.nodes,
-            "node_range": self.node_range,
-            "region": self.region,
-            "dofs": self.dofs,
-            "resp_type": self.resp_type
-        }
 
 
 class DriftRecorder(Recorder):
@@ -604,7 +332,38 @@ class DriftRecorder(Recorder):
         self.time: bool = bool(kwargs.get("time", False))
         self.delta_t: Optional[float] = kwargs.get("delta_t", None)
         self.precision: Optional[int] = kwargs.get("precision", None)
-        self.validate()
+
+        if not self.file_name:
+            raise ValueError("file_name must be specified for DriftRecorder")
+        if not self.i_nodes or not self.j_nodes:
+            raise ValueError("Both i_nodes and j_nodes must be specified")
+        if len(self.i_nodes) != len(self.j_nodes):
+            raise ValueError("i_nodes and j_nodes must have the same length")
+        for n in self.i_nodes + self.j_nodes:
+            if not isinstance(n, int) or n <= 0:
+                raise ValueError("All node tags must be positive integers")
+        if self.dof not in (1, 2, 3, 4, 5, 6):
+            raise ValueError("dof must be an integer in [1..6]")
+        if self.perp_dirn not in (1, 2, 3):
+            raise ValueError("perp_dirn must be an integer in [1..3]")
+        if self.delta_t is not None:
+            self.delta_t = float(self.delta_t)
+            if self.delta_t <= 0:
+                raise ValueError("delta_t must be > 0 when provided")
+        if self.precision is not None:
+            self.precision = int(self.precision)
+            if self.precision <= 0:
+                raise ValueError("precision must be > 0 when provided")
+        if self.cores is not None:
+            if isinstance(self.cores, int):
+                if self.cores < 0:
+                    raise ValueError("cores must be >= 0 when provided")
+            elif isinstance(self.cores, (list, tuple)):
+                for c in self.cores:
+                    if not isinstance(c, int) or c < 0:
+                        raise ValueError("each entry in cores must be a non-negative integer")
+            else:
+                raise TypeError("cores must be an int or list/tuple of ints")
 
     @staticmethod
     def _normalize_nodes(value, name: str) -> List[int]:
@@ -625,75 +384,6 @@ class DriftRecorder(Recorder):
             pass
         raise TypeError(f"{name} must be an int or a list/tuple of ints")
 
-    def validate(self) -> None:
-        if not self.file_name:
-            raise ValueError("file_name must be specified for DriftRecorder")
-
-        if not self.i_nodes or not self.j_nodes:
-            raise ValueError("Both i_nodes and j_nodes must be specified")
-
-        if len(self.i_nodes) != len(self.j_nodes):
-            raise ValueError("i_nodes and j_nodes must have the same length")
-
-        for n in self.i_nodes + self.j_nodes:
-            if not isinstance(n, int) or n <= 0:
-                raise ValueError("All node tags must be positive integers")
-
-        if self.dof not in (1, 2, 3, 4, 5, 6):
-            raise ValueError("dof must be an integer in [1..6]")
-
-        if self.perp_dirn not in (1, 2, 3):
-            raise ValueError("perp_dirn must be an integer in [1..3]")
-
-        if self.delta_t is not None:
-            self.delta_t = float(self.delta_t)
-            if self.delta_t <= 0:
-                raise ValueError("delta_t must be > 0 when provided")
-
-        if self.precision is not None:
-            self.precision = int(self.precision)
-            if self.precision <= 0:
-                raise ValueError("precision must be > 0 when provided")
-
-        # Validate provided cores (int or list[int])
-        if self.cores is not None:
-            if isinstance(self.cores, int):
-                if self.cores < 0:
-                    raise ValueError("cores must be >= 0 when provided")
-            elif isinstance(self.cores, (list, tuple)):
-                for c in self.cores:
-                    if not isinstance(c, int) or c < 0:
-                        raise ValueError("each entry in cores must be a non-negative integer")
-            else:
-                raise TypeError("cores must be an int or list/tuple of ints")
-
-    @staticmethod
-    def get_parameters() -> List[tuple]:
-        return [
-            ("file_name", "Output filename (required)"),
-            ("i_nodes", "Lower nodes (int or list[int])"),
-            ("j_nodes", "Upper nodes (int or list[int])"),
-            ("dof", "Drift direction DOF (1..6)"),
-            ("perp_dirn", "Perpendicular direction for drift normalization (1..3)"),
-            ("time", "Include -time flag"),
-            ("delta_t", "Recording interval (-dT), optional"),
-            ("precision", "Significant digits (-precision), optional"),
-            ("cores", "Optional MPI core id or list of ids to guard recorder creation"),
-        ]
-
-    def get_values(self) -> Dict[str, Union[str, int, float, list, bool]]:
-        return {
-            "file_name": self.file_name,
-            "i_nodes": self.i_nodes,
-            "j_nodes": self.j_nodes,
-            "dof": self.dof,
-            "perp_dirn": self.perp_dirn,
-            "time": self.time,
-            "delta_t": self.delta_t,
-            "precision": self.precision,
-            "cores": self.cores,
-        }
-
     @staticmethod
     def _inject_pid_in_filename(file_name: str) -> str:
         parts = file_name.split(".")
@@ -703,12 +393,10 @@ class DriftRecorder(Recorder):
         return file_name + "$pid"
 
     def _to_tcl_impl(self) -> str:
-        from femora import MeshMaker
-
-        results_folder = MeshMaker().get_results_folder()
+        results_folder = _results_folder(self)
         file_path = DriftRecorder._inject_pid_in_filename(self.file_name)
-        if results_folder:
-            file_path = results_folder + "/" + file_path
+        if results_folder != "./":
+            file_path = results_folder + file_path
 
         cmd = f"recorder Drift -file {file_path}"
         if self.precision is not None:
@@ -761,33 +449,20 @@ class VTKHDFRecorder(Recorder):
         self.resp_types = kwargs.get("resp_types", [])
         self.delta_t = kwargs.get("delta_t", None)
         self.r_tol_dt = kwargs.get("r_tol_dt", None)
-        
-        # Validate the recorder parameters
-        self.validate()
 
-    def validate(self):
-        """
-        Validate recorder parameters
-        
-        Raises:
-            ValueError: If the parameters are invalid
-        """
-        # Check that file_base_name is specified
         if not self.file_base_name:
             raise ValueError("File base name must be specified")
-        
-        # Check that at least one response type is specified
         if not self.resp_types:
             raise ValueError("At least one response type must be specified")
-        
-        # Check that resp_types are valid
         valid_resp_types = [
-            "disp", "vel", "accel", "stress3D6", "strain3D6", "stress2D3", "strain2D3"
+            "disp", "vel", "accel", "stress3D6", "strain3D6", "stress2D3", "strain2D3",
         ]
         for resp_type in self.resp_types:
             if resp_type not in valid_resp_types:
-                raise ValueError(f"Invalid response type: {resp_type}. "
-                               f"Valid types are: {', '.join(valid_resp_types)}")
+                raise ValueError(
+                    f"Invalid response type: {resp_type}. "
+                    f"Valid types are: {', '.join(valid_resp_types)}"
+                )
 
     def _to_tcl_impl(self) -> str:
         """
@@ -805,10 +480,9 @@ class VTKHDFRecorder(Recorder):
             fileformat = name[-1]
         name = name[0]
         name = name + "$pid"
-        from femora import MeshMaker
-        results_folder = MeshMaker().get_results_folder()
-        if results_folder != "":
-            name = results_folder + "/" + name
+        results_folder = _results_folder(self)
+        if results_folder != "./":
+            name = results_folder + name
         file_base_name = name + "." + fileformat
 
         cmd = f"recorder vtkhdf {file_base_name}"
@@ -827,35 +501,6 @@ class VTKHDFRecorder(Recorder):
         
         
         return cmd
-
-    @staticmethod
-    def get_parameters() -> List[tuple]:
-        """
-        Get the parameters defining this recorder
-        
-        Returns:
-            List[tuple]: List of (parameter name, description) tuples
-        """
-        return [
-            ("file_base_name", "Base name of the file to which output is sent"),
-            ("resp_types", "List of strings indicating response types to record"),
-            ("delta_t", "Time interval for recording"),
-            ("r_tol_dt", "Relative tolerance for time step matching")
-        ]
-
-    def get_values(self) -> Dict[str, Union[str, list, float]]:
-        """
-        Get the parameters defining this recorder
-        
-        Returns:
-            Dict[str, Union[str, list, float]]: Dictionary of parameter values
-        """
-        return {
-            "file_base_name": self.file_base_name,
-            "resp_types": self.resp_types,
-            "delta_t": self.delta_t,
-            "r_tol_dt": self.r_tol_dt
-        }
 
 
 class MPCORecorder(Recorder):
@@ -894,16 +539,8 @@ class MPCORecorder(Recorder):
         self.delta_t = kwargs.get("delta_t", None)
         self.num_steps = kwargs.get("num_steps", None)
 
-        self.validate()
-
-    def validate(self):
-        """
-        Validate MPCO recorder parameters
-        """
         if not self.file_name:
             raise ValueError("File name must be specified for MPCO recorder")
-
-        # Validate node responses against documented options
         if self.node_responses is None:
             self.node_responses = []
         if not isinstance(self.node_responses, list):
@@ -927,8 +564,6 @@ class MPCORecorder(Recorder):
                 raise ValueError(
                     f"Invalid node response: {resp}. Valid: {', '.join(valid_node_responses)}"
                 )
-
-        # element_responses are model-dependent; accept strings if given
         if self.element_responses is None:
             self.element_responses = []
         if not isinstance(self.element_responses, list):
@@ -936,8 +571,6 @@ class MPCORecorder(Recorder):
         for er in self.element_responses:
             if not isinstance(er, str):
                 raise TypeError("Each element response must be a string")
-
-        # Validate node sensitivities: list of (name, param) pairs
         if self.node_sensitivities is None:
             self.node_sensitivities = []
         valid_sensitivity_names = [
@@ -964,8 +597,6 @@ class MPCORecorder(Recorder):
                 raise TypeError("Sensitivity parameter id must be an integer")
             normalized_pairs.append((name, par))
         self.node_sensitivities = normalized_pairs
-
-        # Regions must be list of ints
         if self.regions is None:
             self.regions = []
         if not isinstance(self.regions, list):
@@ -973,8 +604,6 @@ class MPCORecorder(Recorder):
         for r in self.regions:
             if not isinstance(r, int):
                 raise TypeError("Each region tag must be an integer")
-
-        # Mutually exclusive time options
         if self.delta_t is not None and self.num_steps is not None:
             raise ValueError("Only one of delta_t or num_steps may be specified")
 
@@ -985,19 +614,17 @@ class MPCORecorder(Recorder):
         Returns:
             str: The TCL command string
         """
-        from femora import MeshMaker
-        results_folder = MeshMaker().get_results_folder()
+        results_folder = _results_folder(self)
         file_path = self.file_name
-        
+
         file_ext = self.file_name.split(".")[-1]
-        # add $pid before the extension
-        if len(self.file_name.split(".")) >1:
+        if len(self.file_name.split(".")) > 1:
             file_path = self.file_name.replace("." + file_ext, "$pid." + file_ext)
         else:
             file_path = self.file_name + "$pid"
 
-        if results_folder:
-            file_path = results_folder + "/" + file_path
+        if results_folder != "./":
+            file_path = results_folder + file_path
 
         cmd = f'recorder mpco "{file_path}"'
 
@@ -1024,40 +651,6 @@ class MPCORecorder(Recorder):
 
         return cmd
 
-    @staticmethod
-    def get_parameters() -> List[tuple]:
-        """
-        Get the parameters defining this recorder
-
-        Returns:
-            List[tuple]: List of (parameter name, description) tuples
-        """
-        return [
-            ("file_name", "Output file name (e.g., results.mpco)"),
-            ("node_responses", "List of node responses to record (-N)"),
-            ("element_responses", "List of element responses to record (-E)"),
-            ("node_sensitivities", "List of (name,param) sensitivity pairs (-NS)"),
-            ("regions", "Regions to record: tags, names, or RegionBase instances (-R)"),
-            ("delta_t", "Recording time interval: -T dt <deltaTime> (mutually exclusive)"),
-            ("num_steps", "Recording step interval: -T nsteps <numSteps> (mutually exclusive)"),
-        ]
-
-    def get_values(self) -> Dict[str, Union[str, list, float, int]]:
-        """
-        Get the parameters defining this recorder
-
-        Returns:
-            Dict[str, Union[str, list, float, int]]: Dictionary of parameter values
-        """
-        return {
-            "file_name": self.file_name,
-            "node_responses": self.node_responses,
-            "element_responses": self.element_responses,
-            "node_sensitivities": self.node_sensitivities,
-            "regions": self.regions,
-            "delta_t": self.delta_t,
-            "num_steps": self.num_steps,
-        }
 
 class BeamForceRecorder(Recorder):
     """
@@ -1119,29 +712,6 @@ class BeamForceRecorder(Recorder):
         if self.output_format not in ("file", "xml", "binary"):
             raise ValueError("output_format must be one of 'file', 'xml', 'binary'")
 
-    @staticmethod
-    def get_parameters() -> List[tuple]:
-        return [
-            ("meshparts", "List of MeshPart names/instances to record (line meshes)"),
-            ("force_type", "'globalForce' or 'localForce'"),
-            ("file_prefix", "Output file prefix (default: 'Beam')"),
-            ("delta_t", "Time interval: -dT <deltaTime> (optional)"),
-            ("include_time", "Include -time flag (default: True)"),
-            ("output_format", "'file', 'xml', or 'binary' (-file/-xml/-binary)"),
-            ("precision", "Number of significant digits (-precision), optional"),
-        ]
-
-    def get_values(self) -> Dict[str, Union[str, list, float, bool]]:
-        return {
-            "meshparts": [mp if isinstance(mp, str) else getattr(mp, "user_name", str(mp)) for mp in (self.meshparts or [])],
-            "force_type": self.force_type,
-            "file_prefix": self.file_prefix,
-            "delta_t": self.delta_t,
-            "include_time": self.include_time,
-            "output_format": self.output_format,
-            "precision": self.precision,
-        }
-
     def _resolve_meshparts(self):
         from femora.components.Mesh.meshPartBase import MeshPart
         if not self.meshparts:
@@ -1184,21 +754,22 @@ class BeamForceRecorder(Recorder):
         return ranges
 
     def _to_tcl_impl(self) -> str:
-        from femora import MeshMaker
         import numpy as np
         try:
             import pyvista as pv
         except Exception:
             pv = None
 
-        mm = MeshMaker()
+        mm = self._mesh_maker()
+        if mm is None:
+            raise ValueError(
+                "BeamForceRecorder must belong to a MeshMaker recorder manager before export"
+            )
         assembled = mm.assembler.AssembeledMesh
         if assembled is None:
             raise ValueError("No assembled mesh found. Assemble the model before creating BeamForceRecorder.")
 
-        results_folder = MeshMaker().get_results_folder()
-        if results_folder != "":
-            results_folder = results_folder + "/"
+        results_folder = _results_folder(self)
 
         start_ele_tag = mm._start_ele_tag
 
@@ -1295,340 +866,28 @@ class BeamForceRecorder(Recorder):
 
 
 class RecorderRegistry:
-    """Registry for managing recorder types and their creation.
+    """Type registry for recorder classes (GUI metadata only)."""
 
-    This class provides a centralized system for registering recorder classes
-    and creating recorder instances dynamically by type name.
-
-    Attributes:
-        _recorder_types: Class-level dictionary mapping recorder type names
-            to their recorder classes.
-
-    Example:
-        >>> from femora.components.Recorder.recorderBase import RecorderRegistry
-        >>> # Register a custom recorder type
-        >>> # RecorderRegistry.register_recorder_type('custom', CustomRecorder)
-        >>> # Create a recorder
-        >>> # recorder = RecorderRegistry.create_recorder('node', file_name='out.txt', ...)
-        >>> types = RecorderRegistry.get_recorder_types()
-        >>> print('node' in types)
-        True
-    """
     _recorder_types = {
-        'node': NodeRecorder,
-        'drift': DriftRecorder,
-        'vtkhdf': VTKHDFRecorder,
-        'mpco': MPCORecorder,
-        'beam_force': BeamForceRecorder,
+        "node": NodeRecorder,
+        "drift": DriftRecorder,
+        "vtkhdf": VTKHDFRecorder,
+        "mpco": MPCORecorder,
+        "beam_force": BeamForceRecorder,
     }
 
     @classmethod
-    def register_recorder_type(cls, name: str, recorder_class: Type[Recorder]):
-        """Registers a new recorder type for easy creation.
-
-        Args:
-            name: The name of the recorder type (case-insensitive).
-            recorder_class: The class of the recorder to register.
-        """
+    def register_recorder_type(cls, name: str, recorder_class: Type[Recorder]) -> None:
         cls._recorder_types[name.lower()] = recorder_class
 
     @classmethod
-    def get_recorder_types(cls):
-        """Gets available recorder types.
-
-        Returns:
-            List of registered recorder type names.
-        """
+    def get_recorder_types(cls) -> List[str]:
         return list(cls._recorder_types.keys())
 
-    @classmethod
-    def create_recorder(cls, recorder_type: str, **kwargs) -> Recorder:
-        """Creates a new recorder of a specific type.
 
-        Args:
-            recorder_type: Type of recorder to create (case-insensitive).
-            **kwargs: Parameters for recorder initialization.
+def __getattr__(name: str):
+    if name == "RecorderManager":
+        from femora.core.recorder_manager import RecorderManager
 
-        Returns:
-            A new recorder instance.
-
-        Raises:
-            KeyError: If the recorder type is not registered.
-        """
-        if recorder_type.lower() not in cls._recorder_types:
-            raise KeyError(f"Recorder type {recorder_type} not registered")
-        
-        return cls._recorder_types[recorder_type.lower()](**kwargs)
-
-
-class RecorderManager:
-    """Singleton manager class for creating and managing recorders.
-
-    This class provides a unified interface for creating recorders with
-    convenient access to recorder types.
-
-    Attributes:
-        node: Reference to NodeRecorder class.
-        vtkhdf: Reference to VTKHDFRecorder class.
-        mpco: Reference to MPCORecorder class.
-        beam_force: Reference to BeamForceRecorder class.
-        embedded_beam_solid_interface: Reference to EmbeddedBeamSolidInterfaceRecorder class.
-        pile_mpco: Helper that builds an MPCO recorder for line-mesh piles after assembly.
-
-    Example:
-        >>> from femora.components.Recorder.recorderBase import RecorderManager
-        >>> # Get the singleton instance
-        >>> manager = RecorderManager()
-        >>> # Create a recorder
-        >>> # recorder = manager.create_recorder('node', file_name='output.txt', ...)
-        >>> # Get all recorders
-        >>> all_recorders = manager.get_all_recorders()
-        >>> types = manager.get_available_types()
-        >>> print('node' in types)
-        True
-    """
-    _instance = None
-
-    vtkhdf = VTKHDFRecorder
-    node = NodeRecorder
-    drift = DriftRecorder
-    mpco = MPCORecorder
-    beam_force = BeamForceRecorder
-    embedded_beam_solid_interface = EmbeddedBeamSolidInterfaceRecorder
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(RecorderManager, cls).__new__(cls)
-        return cls._instance
-
-
-
-    def create_recorder(self, recorder_type: str, **kwargs) -> Recorder:
-        """Creates a new recorder.
-
-        Args:
-            recorder_type: Type of recorder to create.
-            **kwargs: Parameters for recorder initialization.
-
-        Returns:
-            The created recorder instance.
-
-        Raises:
-            KeyError: If recorder type is not registered.
-        """
-        return RecorderRegistry.create_recorder(recorder_type, **kwargs)
-
-    def get_recorder(self, tag: int) -> Recorder:
-        """Gets recorder by tag.
-
-        Args:
-            tag: The tag of the recorder.
-
-        Returns:
-            The recorder with the specified tag.
-
-        Raises:
-            KeyError: If no recorder with the given tag exists.
-        """
-        return Recorder.get_recorder(tag)
-
-    def remove_recorder(self, tag: int) -> None:
-        """Removes recorder by tag.
-
-        Args:
-            tag: The tag of the recorder to remove.
-        """
-        Recorder.remove_recorder(tag)
-
-    def get_all_recorders(self) -> Dict[int, Recorder]:
-        """Gets all recorders.
-
-        Returns:
-            Dictionary of all recorders, keyed by their tags.
-        """
-        return Recorder.get_all_recorders()
-
-    def get_available_types(self) -> List[str]:
-        """Gets list of available recorder types.
-
-        Returns:
-            List of registered recorder type names.
-        """
-        return RecorderRegistry.get_recorder_types()
-
-    def clear_all(self):
-        """Clears all recorders.
-
-        This method removes all registered recorders and resets the tag counter.
-        """
-        Recorder.clear_all()
-
-    def clear(self):
-        """Clears all recorders (alias for clear_all)."""
-        self.clear_all()
-
-    def pile_mpco(
-        self,
-        meshparts,
-        file_name: str,
-        *,
-        delta_t: Optional[float] = None,
-        num_steps: Optional[int] = None,
-        node_responses: Optional[List[str]] = None,
-        element_responses: Optional[List[str]] = None,
-        node_sensitivities: Optional[List] = None,
-        line_cells_only: bool = True,
-        region_name: str = "pile_mpco_region",
-    ) -> MPCORecorder:
-        """Create an MPCO recorder for beam pile / line mesh parts (after assembly).
-
-        OpenSees ``recorder mpco`` scopes output with ``-R`` region tags. Export builds
-        each ``ElementRegion`` from ``AssembeledMesh.cell_data[\"Region\"]``, so this
-        method assigns a dedicated region tag to the selected pile cells before you
-        export TCL.
-
-        Args:
-            meshparts: Mesh part identifiers: ``user_name`` strings, :class:`~femora.components.Mesh.meshPartBase.MeshPart`
-                instances, or a mix (same as :class:`BeamForceRecorder`).
-            file_name: Output ``*.mpco`` path (``$pid`` is inserted before the extension on export).
-            delta_t: Optional ``-T dt`` interval (mutually exclusive with ``num_steps``).
-            num_steps: Optional ``-T nsteps`` interval (mutually exclusive with ``delta_t``).
-            node_responses: Passed to :class:`MPCORecorder` (default: displacement, velocity, acceleration).
-            element_responses: Passed to :class:`MPCORecorder` (default: ``[\"force\"]``).
-            node_sensitivities: Optional ``-NS`` pairs for :class:`MPCORecorder`.
-            line_cells_only: If True (default), only VTK line-like cells are included so
-                volume parts accidentally sharing a name are ignored.
-            region_name: ``ElementRegion`` display name (must be unique if you create several).
-
-        Returns:
-            Configured :class:`MPCORecorder` instance.
-
-        Note:
-            Call this **after** the assembled mesh is final (e.g. after DRM/PML layers
-            that merge into ``AssembeledMesh``). This updates ``cell_data[\"Region\"]``
-            for the selected cells to the new pile region tag so export emits a matching
-            ``region`` command.
-
-        Raises:
-            ValueError: If the mesh is not assembled, parts are missing, or mesh data is incomplete.
-        """
-        import numpy as np
-
-        from femora import MeshMaker
-        from femora.components.Mesh.meshPartBase import MeshPart
-
-        if node_responses is None:
-            node_responses = ["displacement", "velocity", "acceleration"]
-        if element_responses is None:
-            element_responses = ["force"]
-
-        mm = MeshMaker()
-        mesh = mm.assembler.AssembeledMesh
-        if mesh is None:
-            raise ValueError("pile_mpco requires an assembled mesh (call Assemble first).")
-
-        # Resolve mesh parts (aligned with BeamForceRecorder._resolve_meshparts)
-        resolved: Dict[str, object] = {}
-        if not meshparts:
-            raise ValueError("pile_mpco: meshparts list must not be empty.")
-        for mp in meshparts:
-            if isinstance(mp, str):
-                part = MeshPart.get_mesh_parts().get(mp)
-                if part is None:
-                    raise ValueError(f"MeshPart '{mp}' not found")
-                resolved[mp] = part
-            elif isinstance(mp, MeshPart):
-                resolved[mp.user_name] = mp
-            else:
-                raise TypeError("meshparts entries must be MeshPart instances or user_name strings")
-
-        tags = np.array([int(p.tag) for p in resolved.values()], dtype=np.int64)
-        mesh_tags = mesh.cell_data.get("MeshPartTag_celldata")
-        cores_arr = mesh.cell_data.get("Core")
-        region_arr = mesh.cell_data.get("Region")
-        if mesh_tags is None or cores_arr is None or region_arr is None:
-            raise ValueError(
-                "Assembled mesh missing MeshPartTag_celldata, Core, or Region cell_data."
-            )
-
-        mask = np.isin(mesh_tags.astype(np.int64, copy=False), tags)
-        if line_cells_only:
-            try:
-                import pyvista as pv
-            except Exception:
-                pv = None
-            if pv is not None:
-                celltypes = getattr(mesh, "celltypes", None)
-                if celltypes is not None:
-                    beam_types = set()
-                    if hasattr(pv, "CellType"):
-                        for name in ("LINE", "POLY_LINE"):
-                            if hasattr(pv.CellType, name):
-                                beam_types.add(getattr(pv.CellType, name))
-                    if beam_types:
-                        beam_mask = np.isin(celltypes, list(beam_types))
-                        mask = mask & beam_mask
-
-        idxs = np.where(mask)[0]
-        if idxs.size == 0:
-            raise ValueError("pile_mpco: no matching line-mesh cells for the given meshparts.")
-
-        pile_region = mm.region.element()
-        pile_region._name = region_name
-
-        rtag = int(pile_region.tag)
-        region_arr = np.asarray(region_arr)
-        region_arr[idxs] = rtag
-        mesh.cell_data["Region"] = region_arr
-
-        selected_cores = np.unique(cores_arr[idxs])
-        selected_cores = [
-            int(c)
-            for c in selected_cores
-            if isinstance(c, (int, np.integer)) and int(c) >= 0
-        ]
-        cores_arg: Optional[Union[int, List[int]]] = None
-        if selected_cores:
-            cores_arg = selected_cores[0] if len(selected_cores) == 1 else selected_cores
-
-        return MPCORecorder(
-            file_name=file_name,
-            node_responses=node_responses,
-            element_responses=element_responses,
-            node_sensitivities=node_sensitivities or [],
-            regions=[pile_region],
-            delta_t=delta_t,
-            num_steps=num_steps,
-            cores=cores_arg,
-        )
-
-
-# Example usage
-if __name__ == "__main__":
-    # Create a RecorderManager instance
-    recorder_manager = RecorderManager()
-    
-    # Create a Node recorder
-    node_recorder = recorder_manager.create_recorder(
-        "node",
-        file_name="nodesD.out",
-        time=True,
-        nodes=[1, 2, 3, 4],
-        dofs=[1, 2],
-        resp_type="disp"
-    )
-    
-    # Output the TCL command
-    print(node_recorder.to_tcl())
-    
-    # Create a VTKHDF recorder
-    vtkhdf_recorder = recorder_manager.create_recorder(
-        "vtkhdf",
-        file_base_name="results",
-        resp_types=["disp", "vel", "accel", "stress3D6", "strain3D6"],
-        delta_t=0.1,
-        r_tol_dt=0.00001
-    )
-    
-    # Output the TCL command
-    print(vtkhdf_recorder.to_tcl())
+        return RecorderManager
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

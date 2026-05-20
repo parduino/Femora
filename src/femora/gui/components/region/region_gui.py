@@ -33,7 +33,7 @@ class DampingSelectorWidget(QWidget):
             self.damping_combo.addItem(f"{damping.name} (Tag: {tag}, Type: {damping.get_Type()})", damping)
     
     def open_damping_dialog(self):
-        from femora.components.damping.dampingGUI import DampingManagerTab
+        from femora.gui.components.damping.damping_gui import DampingManagerTab
         dialog = DampingManagerTab(self)
         dialog.exec()
         self.refresh_dampings()

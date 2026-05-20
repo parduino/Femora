@@ -120,7 +120,7 @@ class DRM:
         # Clear all previous process components
         self.meshmaker.process.clear_steps()
         self.meshmaker.analysis.clear()
-        self.meshmaker.recorder.clear_all()
+        self.meshmaker.recorder.clear()
         self.meshmaker.constraint.sp.clear()
 
         # Create boundary conditions (fixities)
@@ -135,8 +135,7 @@ class DRM:
         vtkRecordr = None
         if vtkhdfrecorder:
             try:
-                vtkRecordr = self.meshmaker.recorder.create_recorder(
-                    recorder_type="vtkhdf",
+                vtkRecordr = self.meshmaker.recorder.vtkhdf(
                     file_base_name=vtkhdfrecorder_file,
                     resp_types=vtkhdfrecorder_resp_types,
                     delta_t=vtkhdfrecorder_delta_t,

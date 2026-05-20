@@ -7,12 +7,12 @@ from qtpy.QtWidgets import (
 )
 
 from femora.components.Analysis.analysis import Analysis, AnalysisManager
-from femora.components.Analysis.constraint_handlersGUI import ConstraintHandlerManagerTab
-from femora.components.Analysis.integratorsGUI import IntegratorManagerTab
-from femora.components.Analysis.algorithmsGUI import AlgorithmManagerTab
-from femora.components.Analysis.systemsGUI import SystemManagerTab
-from femora.components.Analysis.numberersGUI import NumbererManagerTab
-from femora.components.Analysis.convergenceTestsGUI import TestManagerTab
+from femora.gui.components.analysis.constraint_handlers_gui import ConstraintHandlerManagerTab
+from femora.gui.components.analysis.integrators_gui import IntegratorManagerTab
+from femora.gui.components.analysis.algorithms_gui import AlgorithmManagerTab
+from femora.gui.components.analysis.systems_gui import SystemManagerTab
+from femora.gui.components.analysis.numberers_gui import NumbererManagerTab
+from femora.gui.components.analysis.convergence_tests_gui import TestManagerTab
 
 from femora.components.Analysis.constraint_handlers import ConstraintHandlerManager
 from femora.components.Analysis.numberers import NumbererManager

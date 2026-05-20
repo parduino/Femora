@@ -3,7 +3,7 @@ import weakref
 
 # Import your existing component classes
 from femora.core.constraint_base import MPConstraint, SPConstraint
-from femora.components.Recorder.recorderBase import Recorder
+from femora.core.recorder_base import Recorder
 from femora.components.Analysis.analysis import Analysis
 from femora.components.Actions.action import Action
 from femora.core.pattern_base import Pattern

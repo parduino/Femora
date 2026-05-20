@@ -1395,7 +1395,7 @@ proc Femora_getNodeCoordFrom {structureCores embeddedCore nTag secTag eleTag enT
 
     # ============================================================================
     # recorder
-    recorder = fm.recorder.create_recorder("vtkhdf", file_base_name="result.vtkhdf",
+    recorder = fm.recorder.vtkhdf(file_base_name="result.vtkhdf",
                                             resp_types=["stress3D6", "disp"], 
                                             delta_t=0.001)
 

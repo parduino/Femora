@@ -13,7 +13,7 @@ from femora.components.element.ghost_node import GhostNodeElement
 from femora.core.time_series_manager import TimeSeriesManager
 from femora.core.analysis_manager import AnalysisManager
 from femora.core.pattern_manager import PatternManager
-from femora.components.Recorder.recorderBase import RecorderManager
+from femora.core.recorder_manager import RecorderManager
 from femora.components.Process.process import ProcessManager
 from femora.components.DRM.DRM import DRM
 from femora.core.transformation_manager import TransformationManager
@@ -84,7 +84,7 @@ class MeshMaker:
             time_series_manager=self.time_series,
             ground_motion_manager=self.ground_motion,
         )
-        self.recorder = RecorderManager()
+        self.recorder = RecorderManager(mesh_maker=self)
         self.process = ProcessManager()
         self.interface = InterfaceManager()
         self.transformation = TransformationManager(mesh_maker=self)
@@ -816,6 +816,7 @@ class MeshMaker:
         self.analysis.clear()
         self.pattern.clear()
         self.recorder.clear()
+        self.recorder.set_tag_start(1)
         self.process.clear()
         self.interface.clear()
         self.transformation.clear()
