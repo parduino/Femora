@@ -1,15 +1,12 @@
 import pytest
 
 from femora.components.Assemble.Assembler import Assembler
-from femora.components.Mesh.meshPartBase import MeshPart
 from femora.components.MeshMaker import MeshMaker
 from femora.core.element_base import Element
 from femora.components.event.event_bus import EventBus
 
 from femora.components.material.nd import ElasticIsotropicMaterial
 from femora.components.element.std_brick import stdBrickElement
-from femora.components.Mesh.meshPartInstance import StructuredRectangular3D
-
 
 @pytest.fixture()
 def femora_clean_state():
@@ -24,7 +21,6 @@ def femora_clean_state():
 
     mm = MeshMaker.get_instance()
     mm.clear_model()
-    MeshPart.clear_all_mesh_parts()
     Element.clear_all_elements()
 
     assembler = Assembler.get_instance()
@@ -36,7 +32,6 @@ def femora_clean_state():
     finally:
         assembler.clear_assembly_sections()
         assembler.delete_assembled_mesh()
-        MeshPart.clear_all_mesh_parts()
         mm.clear_model()
         Element.clear_all_elements()
         EventBus._subscribers = old_subscribers
@@ -48,36 +43,32 @@ def _make_two_adjacent_brick_meshparts():
     ele = MeshMaker.get_instance().element.brick.std(ndof=3, material=mat)
 
     # Two cubes that share the x=1 face (4 coincident points)
-    StructuredRectangular3D(
+    mm.meshpart.volume.uniform_rectangular_grid(
         user_name="part_a",
         element=ele,
-        **{
-            "X Min": 0.0,
-            "X Max": 1.0,
-            "Y Min": 0.0,
-            "Y Max": 1.0,
-            "Z Min": 0.0,
-            "Z Max": 1.0,
-            "Nx Cells": 1,
-            "Ny Cells": 1,
-            "Nz Cells": 1,
-        },
+        x_min=0.0,
+        x_max=1.0,
+        y_min=0.0,
+        y_max=1.0,
+        z_min=0.0,
+        z_max=1.0,
+        nx=1,
+        ny=1,
+        nz=1,
     )
 
-    StructuredRectangular3D(
+    mm.meshpart.volume.uniform_rectangular_grid(
         user_name="part_b",
         element=ele,
-        **{
-            "X Min": 1.0,
-            "X Max": 2.0,
-            "Y Min": 0.0,
-            "Y Max": 1.0,
-            "Z Min": 0.0,
-            "Z Max": 1.0,
-            "Nx Cells": 1,
-            "Ny Cells": 1,
-            "Nz Cells": 1,
-        },
+        x_min=1.0,
+        x_max=2.0,
+        y_min=0.0,
+        y_max=1.0,
+        z_min=0.0,
+        z_max=1.0,
+        nx=1,
+        ny=1,
+        nz=1,
     )
 
     return "part_a", "part_b"

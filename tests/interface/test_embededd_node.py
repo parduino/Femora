@@ -55,7 +55,7 @@ assert embedded_depth < (zmax - zmin), "Embedded region in z-direction is invali
 
 
 
-fm.meshPart.volume.uniform_rectangular_grid(user_name="part1", 
+fm.meshpart.volume.uniform_rectangular_grid(user_name="part1", 
                                             element=ele,
                                             region=None,
                                             x_min=xmin, x_max=xmax,
@@ -66,7 +66,7 @@ fm.meshPart.volume.uniform_rectangular_grid(user_name="part1",
                                             nz = int((zmax - zmin)/dz)
                                             )
 
-fm.meshPart.volume.uniform_rectangular_grid(user_name="part2", 
+fm.meshpart.volume.uniform_rectangular_grid(user_name="part2", 
                                                 element=ele,
                                                 region=None,
                                                 x_min=xmin, x_max=xmax, 
@@ -77,7 +77,7 @@ fm.meshPart.volume.uniform_rectangular_grid(user_name="part2",
                                                 nz = int((zmax - zmin)/dz)
                                                 )
 
-fm.meshPart.volume.uniform_rectangular_grid(user_name="part3",
+fm.meshpart.volume.uniform_rectangular_grid(user_name="part3",
                                             element=ele,
                                             region=None,
                                             x_min=xmin, x_max=embedded_xmin,
@@ -88,7 +88,7 @@ fm.meshPart.volume.uniform_rectangular_grid(user_name="part3",
                                             nz = int((zmax - zmin)/dz)
                                             )
 
-fm.meshPart.volume.uniform_rectangular_grid(user_name="part4",
+fm.meshpart.volume.uniform_rectangular_grid(user_name="part4",
                                             element=ele,
                                             region=None,
                                             x_min=embedded_xmax, x_max=xmax,
@@ -99,7 +99,7 @@ fm.meshPart.volume.uniform_rectangular_grid(user_name="part4",
                                             nz = int((zmax - zmin)/dz)
                                             )
 
-fm.meshPart.volume.uniform_rectangular_grid(user_name="part5",
+fm.meshpart.volume.uniform_rectangular_grid(user_name="part5",
                                             element=ele,
                                             region=None,
                                             x_min=embedded_xmin, x_max=embedded_xmax,   
@@ -110,7 +110,7 @@ fm.meshPart.volume.uniform_rectangular_grid(user_name="part5",
                                             nz = int((zmax - zmin - embedded_depth)/dz)
                                             )
 
-fm.meshPart.volume.uniform_rectangular_grid(user_name="foundation",
+fm.meshpart.volume.uniform_rectangular_grid(user_name="foundation",
                                             element=ele,
                                             region=None,
                                             x_min=embedded_xmin, x_max=embedded_xmax,
@@ -122,7 +122,7 @@ fm.meshPart.volume.uniform_rectangular_grid(user_name="foundation",
                                             nz = 2*int((embedded_depth)/dz) 
                                             )                                            
 
-# fm.meshPart.volume.uniform_rectangular_grid(user_name="foundation1",
+# fm.meshpart.volume.uniform_rectangular_grid(user_name="foundation1",
 #                                             element=ele,
 #                                             region=None,
 #                                             x_min=embedded_xmin, x_max=0,
@@ -133,7 +133,7 @@ fm.meshPart.volume.uniform_rectangular_grid(user_name="foundation",
 #                                             ny = 2*int((embedded_ymax - embedded_ymin)/dy),
 #                                             nz = 2*int((embedded_depth)/dz) 
 #                                             )
-# fm.meshPart.volume.uniform_rectangular_grid(user_name="foundation2",
+# fm.meshpart.volume.uniform_rectangular_grid(user_name="foundation2",
 #                                             element=ele,
 #                                             region=None,
 #                                             x_min=0, x_max=embedded_xmax,
@@ -146,7 +146,7 @@ fm.meshPart.volume.uniform_rectangular_grid(user_name="foundation",
 #                                             )
 
 
-# fm.mesh_part.volume.uniform_rectangular_grid(user_name="foundation3",
+# fm.meshpart.volume.uniform_rectangular_grid(user_name="foundation3",
 #                                             element=ele,
 #                                             region=None,
 #                                             x_min=0, x_max=embedded_xmax,
@@ -158,7 +158,7 @@ fm.meshPart.volume.uniform_rectangular_grid(user_name="foundation",
 #                                             nz = 4*int((embedded_depth)/dz) 
 #                                             )
 
-# fm.mesh_part.volume.uniform_rectangular_grid(user_name="foundation4",
+# fm.meshpart.volume.uniform_rectangular_grid(user_name="foundation4",
 #                                             element=ele,
 #                                             region=None,
 #                                             x_min=embedded_xmin, x_max=0,
@@ -174,7 +174,7 @@ fm.meshPart.volume.uniform_rectangular_grid(user_name="foundation",
                                 
 
 
-# part4 = fm.meshPart.volume.uniform_rectangular_grid(user_name="foundation4",
+# part4 = fm.meshpart.volume.uniform_rectangular_grid(user_name="foundation4",
 #                                             element=ele,
 #                                             region=None,
 #                                             x_min=embedded_xmin, x_max=embedded_xmax,

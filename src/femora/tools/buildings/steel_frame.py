@@ -3,8 +3,8 @@ import numpy as np
 import pyvista as pv
 from typing import List, Dict, Union, Optional, Tuple
 
-from femora.components.Mesh.meshPartBase import MeshPart
-from femora.components.Mesh.meshPartInstance import CompositeMesh
+from femora.core.meshpart_base import MeshPart
+from femora.components.mesh.general_meshparts import CompositeMesh
 from femora.components.element.elastic_beam_column import ElasticBeamColumnElement
 from femora.components.element.ghost_node import GhostNodeElement
 from femora.core.material_base import Material
@@ -561,7 +561,11 @@ class FEMA_SAC_SteelFrame:
             
         # --- Construct Composite Mesh ---
         if not all_points:
-            return CompositeMesh(f"{self.name_prefix}", pv.UnstructuredGrid())
+            return model.meshpart.general.composite(
+                user_name=f"{self.name_prefix}",
+                mesh=pv.UnstructuredGrid(),
+                region=model.region.element(),
+            )
     
         points_array = np.array(all_points)
         cells_array = np.array(all_cells)
@@ -829,8 +833,11 @@ class FEMA_SAC_SteelFrame:
                   f"z={z_coords[1]:.1f}..{z_coords[-1]:.1f})")
 
         self.building_region = model.region.element()
-        composite_mesh = CompositeMesh(user_name=f"{self.name_prefix}", mesh=grid, region=self.building_region)
-        return composite_mesh
+        return model.meshpart.general.composite(
+            user_name=f"{self.name_prefix}",
+            mesh=grid,
+            region=self.building_region,
+        )
 
     def create_rigid_diaphragms(self, model):
         """

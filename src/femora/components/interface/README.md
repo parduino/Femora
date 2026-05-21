@@ -105,7 +105,7 @@ class CohesiveInterface(InterfaceBase,
 ```
 
 ### 2.4  `InterfaceManager`
-* Thin singleton exposed as `fm.interface` (similar to `fm.meshPart`, `fm.element`, …).
+* Thin singleton exposed as `fm.interface` (similar to `fm.meshpart`, `fm.element`, …).
 * Utility factory / registry wrapper.
 
 ---

@@ -11,7 +11,7 @@ import numpy as np
 import pyvista as pv
 
 from femora.core.material_base import Material
-from femora.components.Mesh.meshPartInstance import CompositeMesh
+from femora.components.mesh.general_meshparts import CompositeMesh
 from femora.components.element.elastic_beam_column import ElasticBeamColumnElement
 from femora.components.element.ghost_node import GhostNodeElement
 from femora.components.element.truss import TrussElement
@@ -307,7 +307,11 @@ class ConventionalSteelBracedFrame:
         grid = self._add_center_of_mass_nodes(grid, model)
 
         self.building_region = model.region.element()
-        return CompositeMesh(user_name=self.name_prefix, mesh=grid, region=self.building_region)
+        return model.meshpart.general.composite(
+            user_name=self.name_prefix,
+            mesh=grid,
+            region=self.building_region,
+        )
 
     def create_rigid_diaphragms(self, model) -> None:
         """Create floor rigid diaphragms to COM nodes and fix COM vertical/rocking DOFs."""

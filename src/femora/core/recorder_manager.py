@@ -112,7 +112,6 @@ class RecorderManager:
     ) -> Recorder:
         import numpy as np
 
-        from femora.components.Mesh.meshPartBase import MeshPart
         from femora.components.Recorder.recorders import MPCORecorder
 
         if node_responses is None:
@@ -130,14 +129,17 @@ class RecorderManager:
             raise ValueError("pile_mpco: meshparts list must not be empty.")
         for mp in meshparts:
             if isinstance(mp, str):
-                part = MeshPart.get_mesh_parts().get(mp)
+                part = mm.meshpart.get(mp)
                 if part is None:
                     raise ValueError(f"MeshPart '{mp}' not found")
                 resolved[mp] = part
-            elif isinstance(mp, MeshPart):
-                resolved[mp.user_name] = mp
             else:
-                raise TypeError("meshparts entries must be MeshPart instances or user_name strings")
+                from femora.core.meshpart_base import MeshPart
+
+                if isinstance(mp, MeshPart):
+                    resolved[mp.user_name] = mp
+                else:
+                    raise TypeError("meshparts entries must be MeshPart instances or user_name strings")
 
         tags = np.array([int(p.tag) for p in resolved.values()], dtype=np.int64)
         mesh_tags = mesh.cell_data.get("MeshPartTag_celldata")

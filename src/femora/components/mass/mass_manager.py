@@ -6,7 +6,7 @@ from numpy.typing import ArrayLike
 from pykdtree.kdtree import KDTree
 
 from femora.constants import FEMORA_MAX_NDF
-from femora.components.Mesh.meshPartBase import MeshPart, MeshPartManager
+from femora.core.meshpart_base import MeshPart
 from femora.components.Assemble.Assembler import Assembler
 from femora.components.event.event_bus import EventBus, FemoraEvent
 
@@ -30,7 +30,9 @@ class MassManager:
         if getattr(self, "_initialised", False):
             return
 
-        self._mp_manager = MeshPartManager()
+        from femora.components.MeshMaker import MeshMaker
+
+        self._mesh_maker = MeshMaker.get_instance()
         # cache for region masks / KDTree per region to avoid rebuilding
         self._region_point_cache: dict[int, np.ndarray] = {}
         self._initialised = True
@@ -89,7 +91,7 @@ class MassManager:
 
         # remove Mass arrays from all mesh parts
         try:
-            for mp in MeshPartManager().get_all_mesh_parts().values():
+            for mp in self._mesh_maker.meshpart.get_all().values():
                 if "Mass" in mp.mesh.point_data:
                     del mp.mesh.point_data["Mass"]
         except Exception:
@@ -108,7 +110,7 @@ class MassManager:
     # Low-level getters exposed for export and tests
     # ------------------------------------------------------------------
     def get_meshpart_mass_array(self, meshpart_name: str) -> np.ndarray:
-        mp = self._mp_manager.get_mesh_part(meshpart_name)
+        mp = self._mesh_maker.meshpart.get(meshpart_name)
         if mp is None:
             raise KeyError(f"MeshPart '{meshpart_name}' not found")
         _ensure_mass_array(mp)
@@ -136,7 +138,9 @@ def _ensure_mass_array(meshpart: MeshPart):
 class _MeshPartMassHelper:
     def __init__(self, manager: MassManager):
         self._mgr = manager
-        self._mpm = MeshPartManager()
+        from femora.components.MeshMaker import MeshMaker
+
+        self._mesh_maker = MeshMaker.get_instance()
 
     # ------------- public API -------------
     def add_all(
@@ -209,7 +213,7 @@ class _MeshPartMassHelper:
 
     # ------------- internal helpers -------------
     def _get_mp(self, name: str) -> MeshPart:
-        mp = self._mpm.get_mesh_part(name)
+        mp = self._mesh_maker.meshpart.get(name)
         if mp is None:
             raise KeyError(f"MeshPart '{name}' not found")
         _ensure_mass_array(mp)

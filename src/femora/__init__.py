@@ -19,7 +19,19 @@ material = fm.material.nd.elastic_isotropic(user_name="soil", E=30e6, nu=0.3, rh
 element = fm.element.beam.elastic(...)
 
 # Create mesh parts
-fm.meshPart.create_mesh_part(...)
+fm.meshpart.volume.uniform_rectangular_grid(
+    user_name="block",
+    element=element,
+    x_min=0,
+    x_max=1,
+    y_min=0,
+    y_max=1,
+    z_min=0,
+    z_max=1,
+    nx=1,
+    ny=1,
+    nz=1,
+)
 
 # Assemble the mesh
 fm.assembler.Assemble()
@@ -49,7 +61,7 @@ material = _instance.material
 element = _instance.element
 ground_motion = _instance.ground_motion
 groundMotion = _instance.ground_motion
-meshPart = _instance.meshPart
+meshpart = _instance.meshpart
 assembler = _instance.assembler
 constraint = _instance.constraint
 damping = _instance.damping
@@ -60,7 +72,6 @@ pattern = _instance.pattern
 recorder = _instance.recorder
 process = _instance.process
 drm = _instance.drm
-mesh_part = _instance.meshPart
 transformation = _instance.transformation
 section = _instance.section
 interface = _instance.interface

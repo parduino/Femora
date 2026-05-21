@@ -32,13 +32,13 @@ from qtpy.QtWidgets import (
 )
 from qtpy.QtCore import Qt
 
-from femora.components.Mesh.meshPartBase import MeshPart, MeshPartRegistry
+from femora.components.mesh.meshpart_registry import MeshPart, MeshPartRegistry
 from femora.core.element_base import Element
 from femora.core.element_manager import ElementManager
 from femora.gui.components.element.element_gui import ElementCreationDialog
 from femora.gui.components.element.beam_gui import BeamElementCreationDialog, is_beam_element
 from femora.gui.plotter import PlotterManager
-from femora.components.Mesh.meshPartInstance import *
+from femora.components.mesh.meshparts import *
 from femora.components.MeshMaker import MeshMaker
 
 

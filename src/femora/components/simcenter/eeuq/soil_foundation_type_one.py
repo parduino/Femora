@@ -886,7 +886,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
             damp = fm.damping.frequency_rayleigh(damping_factor=xi_s, f1=f1, f2=f2)
         reg = fm.region.element(damping=damp)
 
-        fm.meshPart.create_mesh_part("General mesh", "External mesh",
+        fm.meshpart.general.external_mesh(
                             user_name=f"SoilLayer_{layer_index+1}",
                             element=elem,
                             region=reg,
@@ -935,7 +935,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
             print("Error: damping " + damping + " is not implemented yet for foundation index : " + str(foundation_index+1))
             sys.exit(1)
         reg = fm.region.element(damping=damp)
-        fm.meshPart.create_mesh_part("General mesh", "External mesh",
+        fm.meshpart.general.external_mesh(
                             user_name=f"Foundation_{foundation_index+1}",
                             element=elem,
                             region=reg,
@@ -1005,7 +1005,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
         transformation=transf,
         numIntgrPts=5,
         )
-        pile_mesh_part = fm.mesh_part.line.single_line(
+        pile_mesh_part = fm.meshpart.line.single_line(
         user_name="Pile_" + str(pile_index+1),
         element=pile_ele,
         region=None,
@@ -1077,7 +1077,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
             transformation=transf,
             numIntgrPts=3,
         )
-        column_mesh_part = fm.mesh_part.line.single_line(
+        column_mesh_part = fm.meshpart.line.single_line(
             user_name="BaseColumn_" + str(col_index+1),
             element=column_ele,
             region=None,
@@ -1186,9 +1186,9 @@ def soil_foundation_type_one(model_filename="model.tcl",
     # if plotting true retun the soil, foundation and pile mesh
     if plotting:
         mesh =fm.assembler.get_mesh()
-        pile_mesh_tags = [fm.meshPart.get_mesh_part(name).tag for name in pile_sections]
-        foundation_mesh_tags = [fm.meshPart.get_mesh_part(name).tag for name in foundation_sections]
-        soil_mesh_tags = [fm.meshPart.get_mesh_part(name).tag for name in soil_sections]
+        pile_mesh_tags = [fm.meshpart.get(name).tag for name in pile_sections]
+        foundation_mesh_tags = [fm.meshpart.get(name).tag for name in foundation_sections]
+        soil_mesh_tags = [fm.meshpart.get(name).tag for name in soil_sections]
         MeshTag = fm.assembler.AssembeledMesh.cell_data["MeshPartTag_celldata"]
         pile_mesh = mesh.extract_cells(np.isin(MeshTag, pile_mesh_tags))
         foundation_mesh = mesh.extract_cells(np.isin(MeshTag, foundation_mesh_tags))
@@ -1305,7 +1305,7 @@ proc Femora_getNodeCoordFrom {structureCores embeddedCore nTag secTag eleTag enT
         col_coord = np.array([col["x"], col["y"], col["z"]])
         col_tag = col["tag"]
         name = "BaseColumn_" + str(col_index+1)
-        mesh_part = fm.meshPart.get_mesh_part(name)
+        mesh_part = fm.meshpart.get(name)
         if mesh_part is None:
             print("Error: mesh part " + name + " not found.")
             sys.exit(1)

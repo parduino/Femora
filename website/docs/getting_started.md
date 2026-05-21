@@ -55,7 +55,7 @@ From there, you work through managers on the model:
 
 - `model.material`
 - `model.element`
-- `model.meshPart`
+- `model.meshpart`
 - `model.timeSeries`
 - `model.pattern`
 - `model.interface`

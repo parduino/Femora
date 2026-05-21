@@ -7,8 +7,8 @@ from femora.core.damping_manager import DampingManager
 from femora.core.region_manager import RegionManager
 from femora.core.constraint_manager import ConstraintManager
 from femora.core.load_manager import LoadManager
-from femora.components.Mesh.meshPartBase import MeshPartManager
-from femora.components.Mesh.meshPartInstance import *
+from femora.core.meshpart_manager import MeshPartManager
+from femora.components.mesh import *
 from femora.components.element.ghost_node import GhostNodeElement
 from femora.core.time_series_manager import TimeSeriesManager
 from femora.core.analysis_manager import AnalysisManager
@@ -77,7 +77,8 @@ class MeshMaker:
         self.region = RegionManager(mesh_maker=self)
         self.constraint = ConstraintManager(mesh_maker=self)
         self.load = LoadManager(mesh_maker=self)
-        self.meshPart = MeshPartManager()
+        self.meshpart = MeshPartManager(mesh_maker=self)
+        self.assembler.bind_mesh_maker(self)
         self.analysis = AnalysisManager(mesh_maker=self)
         self.pattern = PatternManager(
             mesh_maker=self,
@@ -86,7 +87,7 @@ class MeshMaker:
         )
         self.recorder = RecorderManager(mesh_maker=self)
         self.process = ProcessManager()
-        self.interface = InterfaceManager()
+        self.interface = InterfaceManager(mesh_maker=self)
         self.transformation = TransformationManager(mesh_maker=self)
         self.section = SectionManager(mesh_maker=self)
         self.spatial_transform = SpatialTransformManager()
@@ -97,14 +98,7 @@ class MeshMaker:
         self._start_nodetag: int = 1
         self._start_ele_tag: int = 1
         self._start_core_tag: int = 0
-        
-        @property
-        def mesh_part(self):
-            return self.meshPart
-        
-        
 
-        
         # Initialize DRMHelper with a reference to this MeshMaker instance
         self.drm = DRM()
         self.drm.set_meshmaker(self)
@@ -810,7 +804,8 @@ class MeshMaker:
         self.constraint.set_tag_start(1)
         self.load.clear()
         self.load.set_tag_start(1)
-        self.meshPart.clear()
+        self.meshpart.clear()
+        self.meshpart.set_tag_start(1)
         self.time_series.clear()
         self.ground_motion.clear()
         self.analysis.clear()

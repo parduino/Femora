@@ -2,7 +2,6 @@ from typing import List, Dict, Optional, Union, Type
 
 from femora.core.recorder_base import Recorder
 from femora.components.interface.embedded_beam_solid_interface import EmbeddedBeamSolidInterface
-from femora.components.interface.interface_base import InterfaceManager
 
 
 def _results_folder(recorder: Recorder) -> str:
@@ -52,7 +51,7 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
         
     """
     def __init__(self, 
-                 interface: Union[str, 'EmbeddedBeamSolidInterface', list['EmbeddedBeamSolidInterface']],
+                 interface: Union[str, 'EmbeddedBeamSolidInterface', List[Union[str, 'EmbeddedBeamSolidInterface']]],
                  resp_type: Union[str, List[str]] = ["displacement", "localDisplacement", "axialDisp", "radialDisp",
                             "tangentialDisp", "globalForce", "localForce", "axialForce",
                             "radialForce", "tangentialForce", "solidForce", "beamForce","beamLocalForce"],
@@ -69,37 +68,27 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
     
         """
         super().__init__("EmbeddedBeamSolidInterface", cores=cores)
-        interfaces = []
-        interface_manager = InterfaceManager()
         if isinstance(interface, list):
+            if not interface:
+                raise ValueError("interface list must not be empty")
             for iface in interface:
-                if isinstance(iface, str):
-                    resolved = interface_manager.get(iface)
-                    if resolved is None or not isinstance(resolved, EmbeddedBeamSolidInterface):
-                        raise ValueError(f"Interface '{iface}' is not a valid EmbeddedBeamSolidInterface name")
-                    interfaces.append(resolved)
-                elif isinstance(iface, EmbeddedBeamSolidInterface):
-                    interfaces.append(iface)
-                else:
-                    raise ValueError("All interfaces must be instances of EmbeddedBeamSolidInterface or valid names")
+                if not isinstance(iface, (str, EmbeddedBeamSolidInterface)):
+                    raise ValueError(
+                        "All interfaces must be instances of EmbeddedBeamSolidInterface or valid names"
+                    )
+            self._interface_input = interface
+        elif isinstance(interface, (str, EmbeddedBeamSolidInterface)):
+            self._interface_input = interface
         else:
-            if isinstance(interface, str):
-                resolved = interface_manager.get(interface)
-                if resolved is None or not isinstance(resolved, EmbeddedBeamSolidInterface):
-                    raise ValueError(f"Interface '{interface}' is not a valid EmbeddedBeamSolidInterface name")
-                interfaces.append(resolved)
-            elif isinstance(interface, EmbeddedBeamSolidInterface):
-                interfaces.append(interface)
-            else:
-                raise ValueError("interface must be an instance of EmbeddedBeamSolidInterface or a valid interface name")
-        self.interfaces = interfaces
-
+            raise ValueError(
+                "interface must be an instance of EmbeddedBeamSolidInterface or a valid interface name"
+            )
 
         if isinstance(resp_type, str):
             resp_type = [resp_type]
         elif not isinstance(resp_type, list):
             raise TypeError("resp_type must be a string or a list of strings")
-        
+
         self.resp_type = resp_type
 
         for resp in self.resp_type:
@@ -107,8 +96,30 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
                             "tangentialDisp", "globalForce", "localForce", "axialForce",
                             "radialForce", "tangentialForce", "solidForce", "beamForce","beamLocalForce"]:
                 raise ValueError(f"Invalid response type: {resp}. ")
-            
+
         self.dt = dt
+
+    def _resolve_interfaces(self) -> List[EmbeddedBeamSolidInterface]:
+        mesh_maker = self._mesh_maker()
+        if mesh_maker is None:
+            raise ValueError(
+                "EmbeddedBeamSolidInterfaceRecorder must belong to a MeshMaker recorder manager before export"
+            )
+        interface_manager = mesh_maker.interface
+
+        def resolve_one(item: Union[str, EmbeddedBeamSolidInterface]) -> EmbeddedBeamSolidInterface:
+            if isinstance(item, EmbeddedBeamSolidInterface):
+                return item
+            if isinstance(item, str):
+                resolved = interface_manager.get(item)
+                if resolved is None or not isinstance(resolved, EmbeddedBeamSolidInterface):
+                    raise ValueError(f"Interface '{item}' is not a valid EmbeddedBeamSolidInterface name")
+                return resolved
+            raise TypeError("interfaces must be EmbeddedBeamSolidInterface instances or valid names")
+
+        if isinstance(self._interface_input, list):
+            return [resolve_one(item) for item in self._interface_input]
+        return [resolve_one(self._interface_input)]
 
     def _to_tcl_impl(self) -> str:
         """
@@ -121,7 +132,7 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
         cmd = "# recorder EmbeddedBeamSolidInterface\n"
         results_folder = _results_folder(self)
 
-        for interface in self.interfaces:
+        for interface in self._resolve_interfaces():
            cmd += interface._get_recorder(self.resp_type,
                                           dt=self.dt,
                                           results_folder=results_folder)
@@ -713,14 +724,24 @@ class BeamForceRecorder(Recorder):
             raise ValueError("output_format must be one of 'file', 'xml', 'binary'")
 
     def _resolve_meshparts(self):
-        from femora.components.Mesh.meshPartBase import MeshPart
+        from femora.core.meshpart_base import MeshPart
+
+        mesh_maker = self._mesh_maker()
+        if mesh_maker is None:
+            raise ValueError(
+                "BeamForceRecorder must belong to a MeshMaker recorder manager before resolving meshparts"
+            )
+        manager = mesh_maker.meshpart
         if not self.meshparts:
-            # Default to all line mesh parts
-            return {name: part for name, part in MeshPart.get_mesh_parts().items() if part.category.lower() == "line mesh"}
+            return {
+                name: part
+                for name, part in manager.get_all().items()
+                if part.category.lower() == "line mesh"
+            }
         resolved: Dict[str, object] = {}
         for mp in self.meshparts:
             if isinstance(mp, str):
-                part = MeshPart.get_mesh_parts().get(mp)
+                part = manager.get(mp)
                 if part is None:
                     raise ValueError(f"MeshPart '{mp}' not found")
                 resolved[mp] = part

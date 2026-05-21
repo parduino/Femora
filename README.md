@@ -198,24 +198,20 @@ loose_elem = fm.element.create_element(
 )
 
 # --- Create mesh parts (layered soil column 20m x 20m x 18m) ---
-fm.meshPart.create_mesh_part(
-    category="Volume mesh",
-    mesh_part_type="Uniform Rectangular Grid",
+fm.meshpart.volume.uniform_rectangular_grid(
     user_name="Layer1",
     element=dense_elem,
-    region=fm.region.get_region(0),
-    **{"X Min": -10, "X Max": 10, "Y Min": -10, "Y Max": 10,
-       "Z Min": -18, "Z Max": -8, "Nx Cells": 20, "Ny Cells": 20, "Nz Cells": 10}
+    region=fm.region.get(0),
+    x_min= -10, x_max= 10, y_min= -10, y_max= 10,
+       z_min= -18, z_max= -8, nx= 20, ny= 20, nz= 10
 )
 
-fm.meshPart.create_mesh_part(
-    category="Volume mesh",
-    mesh_part_type="Uniform Rectangular Grid",
+fm.meshpart.volume.uniform_rectangular_grid(
     user_name="Layer2",
     element=loose_elem,
-    region=fm.region.get_region(0),
-    **{"X Min": -10, "X Max": 10, "Y Min": -10, "Y Max": 10,
-       "Z Min": -8, "Z Max": 0, "Nx Cells": 20, "Ny Cells": 20, "Nz Cells": 8}
+    region=fm.region.get(0),
+    x_min= -10, x_max= 10, y_min= -10, y_max= 10,
+       z_min= -8, z_max= 0, nx= 20, ny= 20, nz= 8
 )
 
 # --- Assemble the model ---
@@ -247,7 +243,7 @@ import femora as fm
 # Build model programmatically
 fm.material.create_material(...)
 fm.element.create_element(...)
-fm.meshPart.create_mesh_part(...)
+fm.meshpart.volume.uniform_rectangular_grid(...)
 fm.assembler.Assemble()
 fm.export_to_tcl("model.tcl")
 ```
@@ -380,3 +376,4 @@ If you use FEMORA in your research or projects, please cite it as:
 - **Discussions & questions**: [GitHub Discussions](https://github.com/amnp95/Femora/discussions)
 - **Documentation**: [amnp95.github.io/Femora](https://amnp95.github.io/Femora)
 - **Source code**: [github.com/amnp95/Femora](https://github.com/amnp95/Femora)
+

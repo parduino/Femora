@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import pyvista as pv
 from femora.components.element.disp_beam_column import DispBeamColumnElement
-from femora.components.Mesh.meshPartInstance import SingleLineMesh, StructuredLineMesh
+from femora.components.mesh.line_meshparts import SingleLineMesh, StructuredLineMesh
 from femora.core.section_base import Section  # We need a dummy section
 from femora.components.transformation.transformation import GeometricTransformation # And dummy transformation
 
@@ -67,7 +67,6 @@ def test_structured_line_mass(dummy_setup):
                                    grid_size_1=1, grid_size_2=0, 
                                    spacing_1=spacing, 
                                    length=length,
-                                   massDens=rho # wait, massDens is on element
                                    )
     
     # We have 2 grid points (0,0) and (1,0).

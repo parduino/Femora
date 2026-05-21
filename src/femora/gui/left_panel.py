@@ -2,7 +2,7 @@ from qtpy.QtWidgets import QFrame, QVBoxLayout, QWidget, QTabWidget, QLabel, QPu
 from qtpy.QtCore import Qt
 
 from femora.gui.components.material.materialGUI import MaterialManagerTab
-from femora.components.Mesh.meshPartGUI import MeshPartManagerTab
+from femora.gui.components.mesh.meshpart_gui import MeshPartManagerTab
 from femora.components.Assemble.AssemblerGUI import AssemblyManagerTab
 from femora.gui.components.damping.damping_gui import DampingManagerTab
 from femora.gui.components.region.region_gui import RegionManagerTab

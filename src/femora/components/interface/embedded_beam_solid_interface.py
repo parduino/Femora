@@ -9,8 +9,8 @@ import pyvista as pv
 
 from femora.components.interface.interface_base import InterfaceBase
 from femora.components.event.mixins import HandlesDecompositionMixin
-from femora.components.Mesh.meshPartBase import MeshPart
-from femora.components.Mesh.meshPartInstance import SingleLineMesh, StructuredLineMesh
+from femora.core.meshpart_base import MeshPart
+from femora.components.mesh.line_meshparts import SingleLineMesh, StructuredLineMesh
 from femora.components.event.event_bus import EventBus, FemoraEvent
 from femora.components.interface.embedded_info import EmbeddedInfo
 from femora.core.region_base import RegionBase
@@ -65,20 +65,10 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         region: 'RegionBase | None' = None,
         write_connectivity: bool = False,
         write_interface: bool = False,
+        *,
+        meshpart,
     ) -> None:
-        # Helper to resolve MeshPart from str, int, or instance
-        def resolve_meshpart(mp):
-            if isinstance(mp, MeshPart):
-                return mp
-            elif isinstance(mp, str):
-                return MeshPart.get_mesh_parts().get(mp)
-            elif isinstance(mp, int):
-                for part in MeshPart.get_mesh_parts().values():
-                    if getattr(part, 'tag', None) == mp:
-                        return part
-            return None
-
-        resolved_beam = resolve_meshpart(beam_part)
+        resolved_beam = meshpart.resolve(beam_part)
         if resolved_beam is None:
             raise ValueError(f"Could not retrieve beam_part '{beam_part}' to a MeshPart.")
         # Enforce beam_part is SingleLineMesh
@@ -90,7 +80,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
             if not isinstance(solid_parts, list):
                 raise TypeError("soild_parts must be a list of MeshPart instances or their user_names.")
             for part in solid_parts:
-                resolved_part = resolve_meshpart(part)
+                resolved_part = meshpart.resolve(part)
                 if resolved_part is None:
                     raise ValueError(f"Could not retrieve solid_part '{part}' to a MeshPart.")
                 resolved_soild_parts.append(resolved_part)
@@ -657,7 +647,7 @@ if __name__ == "__main__":
     # Clear previous global state (helpful when running repeatedly)
     # fm.material.clear_all_materials()
     # fm.element.clear_all_elements()
-    # fm.meshPart.clear_all_mesh_parts()
+    # fm.meshpart.clear()
     # fm.section.clear_all_sections()
     # fm.region.clear()
     # fm.assembler.clear_assembly_sections()
@@ -681,56 +671,56 @@ if __name__ == "__main__":
     Ny = Nx
     Nz = int((0 - (-20)) / dx)
 
-    fm.mesh_part.volume.uniform_rectangular_grid(
+    fm.meshpart.volume.uniform_rectangular_grid(
         user_name="soil",
         element=brick_ele,
         region=None,
-        **{ 'X Min': -10, 'X Max': 10, 'Y Min': -10, 'Y Max': 10, 'Z Min': -20, 'Z Max': 0,
-           'Nx Cells': Nx, 'Ny Cells': Ny, 'Nz Cells': Nz }
+        x_min= -10, x_max= 10, y_min= -10, y_max= 10, z_min= -20, z_max= 0,
+           nx= Nx, ny= Ny, nz= Nz
     )
 
-    fm.mesh_part.volume.uniform_rectangular_grid(
+    fm.meshpart.volume.uniform_rectangular_grid(
         user_name="cap",
         element=brick_ele,
         region=None,
-        **{ 'X Min': -5, 'X Max': 5, 'Y Min': -5, 'Y Max': 5, 'Z Min': 1, 'Z Max': 2,
-           'Nx Cells': 10//0.25, 'Ny Cells': 10//0.25, 'Nz Cells': 1//0.25 }
+        x_min= -5, x_max= 5, y_min= -5, y_max= 5, z_min= 1, z_max= 2,
+           nx= 10//0.25, ny= 10//0.25, nz= 1//0.25
     )
     
         
 
-    # pile1 = fm.mesh_part.line.single_line(
+    # pile1 = fm.meshpart.line.single_line(
     #     user_name="beam1",
     #     element=beam_ele,
     #     region=None,
     #     **{ 'x0': 0, 'y0': 0, 'z0': -10, 'x1': 0, 'y1': 0, 'z1': 3, "number_of_lines":30, }
     # )
-    # pile2 = fm.mesh_part.line.single_line(
+    # pile2 = fm.meshpart.line.single_line(
     #     user_name="beam2",
     #     element=beam_ele,
     #     region=None,
     #     **{ 'x0': 1, 'y0': 0, 'z0': -10, 'x1': 1, 'y1': 0, 'z1': 3, "number_of_lines":30, }
     # )
-    # pile3 = fm.mesh_part.line.single_line(
+    # pile3 = fm.meshpart.line.single_line(
     #     user_name="beam3",
     #     element=beam_ele,
     #     region=None,
     #     **{ 'x0': -1, 'y0': 0, 'z0': -10, 'x1': -1, 'y1': 0, 'z1': 3, "number_of_lines":30, }
     # )
-    # pile4 = fm.mesh_part.line.single_line(
+    # pile4 = fm.meshpart.line.single_line(
     #     user_name="beam4",
     #     element=beam_ele,
     #     region=None,
     #     **{ 'x0': 0, 'y0': 1, 'z0': -10, 'x1': 0, 'y1': 1, 'z1': 3, "number_of_lines":30, }
     # )
-    # pile5 = fm.mesh_part.line.single_line(
+    # pile5 = fm.meshpart.line.single_line(
     #     user_name="beam5",
     #     element=beam_ele,
     #     region=None,
     #     **{ 'x0': 0, 'y0': -1, 'z0': -10, 'x1': 0, 'y1': -1, 'z1': 3, "number_of_lines":30, }
     # )
 
-    piles = fm.mesh_part.line.structured_lines(
+    piles = fm.meshpart.line.structured_lines(
         user_name="piles",
         element=beam_ele,
         base_point_x = -4,
@@ -774,6 +764,7 @@ if __name__ == "__main__":
         n_long=5,
         penalty_param=1.0e12,
         g_penalty=True,
+        meshpart=fm.meshpart,
     )
     
     # EmbeddedBeamSolidInterface(

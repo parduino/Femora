@@ -5,7 +5,7 @@ import logging
 import sys
 from scipy.spatial import cKDTree
 
-from femora.components.Mesh.meshPartBase import MeshPart
+from femora.core.meshpart_base import MeshPart
 from femora.components.partitioner.partitioner import PartitionerRegistry
 from femora.core.element_base import Element
 from femora.core.material_base import Material
@@ -48,7 +48,15 @@ class Assembler:
         """
         if cls._instance is None:
             cls._instance = super().__new__(cls)
+            cls._instance._mesh_maker = None
         return cls._instance
+
+    def bind_mesh_maker(self, mesh_maker) -> None:
+        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+
+        if not isinstance(mesh_maker, MeshMakerClass):
+            raise TypeError("mesh_maker must be a MeshMaker instance")
+        self._mesh_maker = mesh_maker
 
     @classmethod
     def get_instance(cls):
@@ -123,8 +131,12 @@ class Assembler:
         if partitioner is not None:
             partition_algorithm = partitioner
 
+        if self._mesh_maker is None:
+            raise RuntimeError("Assembler is not bound to a MeshMaker model")
+
         # Create the AssemblySection 
         assembly_section = AssemblySection(
+            meshpart_manager=self._mesh_maker.meshpart,
             meshparts=meshparts,
             num_partitions=num_partitions,
             partition_algorithm=partition_algorithm,
@@ -1019,6 +1031,7 @@ class AssemblySection:
     """
     def __init__(
         self, 
+        meshpart_manager,
         meshparts: List[str], 
         num_partitions: int = 1, 
         partition_algorithm: str = "kd-tree", 
@@ -1063,6 +1076,7 @@ class AssemblySection:
                       is invalid, or if mesh assembly fails
         """
         # Validate and collect mesh parts
+        self._meshpart_manager = meshpart_manager
         self.meshparts_list = self._validate_mesh_parts(meshparts)
         
         # Configuration parameters
@@ -1143,7 +1157,7 @@ class AssemblySection:
         """
         validated_meshparts = []
         for name in meshpart_names:
-            meshpart = MeshPart._mesh_parts.get(name)
+            meshpart = self._meshpart_manager.get(name)
             if meshpart is None:
                 raise ValueError(f"Mesh with name '{name}' does not exist")
             validated_meshparts.append(meshpart)

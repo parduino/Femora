@@ -10,7 +10,7 @@ from pykdtree.kdtree import KDTree
 
 from femora.components.interface.interface_base import InterfaceBase
 from femora.components.event.mixins import GeneratesMeshMixin
-from femora.components.Mesh.meshPartBase import MeshPart
+from femora.core.meshpart_base import MeshPart
 from femora.components.event.event_bus import EventBus, FemoraEvent
 from femora.components.Assemble.Assembler import Assembler
 from femora.constants import FEMORA_MAX_NDF
@@ -42,29 +42,17 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
         friction_interface_kn: float = 1e8,
         friction_interface_kt: float = 1e8,
         friction_interface_mu: float = 0.5,
-        friction_interface_int_type: int = 1 
+        friction_interface_int_type: int = 1,
+        *,
+        meshpart,
 
     ) -> None:
         
-        # Helper to resolve MeshPart from str, int, or instance
-        def resolve_meshpart(mp):
-            if isinstance(mp, MeshPart):
-                return mp
-            elif isinstance(mp, str):
-                return MeshPart.get_mesh_parts().get(mp)
-            elif isinstance(mp, int):
-                for part in MeshPart.get_mesh_parts().values():
-                    if getattr(part, 'tag', None) == mp:
-                        return part
-            return None
-
-        # Resolve MeshParts
-        self.constrained_node = resolve_meshpart(constrained_node)
+        self.constrained_node = meshpart.resolve(constrained_node)
         if retained_nodes:
-            self.retained_nodes = [resolve_meshpart(mp) for mp in retained_nodes]
+            self.retained_nodes = [meshpart.resolve(mp) for mp in retained_nodes]
         else:
-            self.retained_nodes = list(MeshPart.get_mesh_parts().values())
-            # remove the constrained node from the list
+            self.retained_nodes = list(meshpart.get_all().values())
             self.retained_nodes.remove(self.constrained_node)
 
 

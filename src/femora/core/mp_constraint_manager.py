@@ -123,14 +123,12 @@ class MPConstraintManager:
                     self.equal_dof(master_node=group[0], slave_nodes=[slave], dofs=dofs)
 
     def equal_dof_between_meshparts(self, meshpart_master: str, meshpart_slave: str, dofs: List[int], tol: float = 1e-5) -> None:
-        from femora.components.Mesh.meshPartBase import MeshPart
-
         assembler = Assembler()
         if assembler.AssembeledMesh is None:
             raise ValueError("AssembeledMesh is not created yet")
 
-        master_part = MeshPart.get_mesh_parts().get(meshpart_master)
-        slave_part = MeshPart.get_mesh_parts().get(meshpart_slave)
+        master_part = self._mesh_maker.meshpart.get(meshpart_master)
+        slave_part = self._mesh_maker.meshpart.get(meshpart_slave)
         if master_part is None:
             raise ValueError(f"MeshPart '{meshpart_master}' not found")
         if slave_part is None:
