@@ -8,10 +8,10 @@ import numpy as np
 import pyvista as pv
 from pykdtree.kdtree import KDTree
 
-from femora.components.interface.interface_base import InterfaceBase
+from femora.core.interface_base import InterfaceBase
 from femora.components.event.mixins import GeneratesMeshMixin
 from femora.core.meshpart_base import MeshPart
-from femora.components.event.event_bus import EventBus, FemoraEvent
+from femora.core.event_bus import FemoraEvent
 from femora.components.Assemble.Assembler import Assembler
 from femora.constants import FEMORA_MAX_NDF
 
@@ -25,6 +25,13 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
 
     Using this interface in Femora all the complexities of the EmbeddedNodeElement are hidden from the user. The user only needs to provide two mesh parts: one for the constrained node and one for the retained nodes. The interface will handle the rest.
     """
+
+    def _subscribe_events(self) -> None:
+        self._model_events().subscribe(FemoraEvent.POST_ASSEMBLE, self._on_post_assemble)
+
+    def _unsubscribe_events(self) -> None:
+        self._model_events().unsubscribe(FemoraEvent.POST_ASSEMBLE, self._on_post_assemble)
+
     def __init__(
         self,
         name: str,
@@ -215,7 +222,6 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
 
     def _on_post_assemble(self, assembled_mesh: pv.UnstructuredGrid) -> None:
         """Detect the nodes from the offset mesh that are inside tetrahedra elements of the retained nodes."""
-
         # 1) get the asembelled mesh
         asembelled_mesh = assembled_mesh.copy()
 
@@ -305,17 +311,18 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
     
 
         # create a embedded node element
-        from femora import MeshMaker
+        mesh_maker = self._owner._mesh_maker
+        assembler = mesh_maker.assembler
         ndf = 3
 
 
         # 1. Get references to the existing assembled mesh data
-        base_mesh = Assembler().AssembeledMesh
+        base_mesh = assembler.AssembeledMesh
         old_points = base_mesh.points
         # 2. Offset the indices in the new mesh
         offset = old_points.shape[0]
 
-        start_node_tag = MeshMaker().get_start_node_tag()
+        start_node_tag = mesh_maker.get_start_node_tag()
 
         # create the element orientation map 
         orientation_map = {}
@@ -326,7 +333,7 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
                 node_tag = offset + i + start_node_tag
             orientation_map[node_tag] = selected_normals[i].tolist()
             
-        embededd_ele = MeshMaker().element.special.asd_embedded_node(
+        embededd_ele = mesh_maker.element.special.asd_embedded_node(
             ndof=ndf,
             rot=self._rot,
             p=self._p,
@@ -340,7 +347,7 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
             orient_map=orientation_map,
         )
 
-        # Assembler().AssembeledMesh.merge(embedded_mesh, merge_points=True, inplace=True)
+        # assembler.AssembeledMesh.merge(embedded_mesh, merge_points=True, inplace=True)
         old_cells = base_mesh.cells
         old_celltypes = base_mesh.celltypes
 
@@ -393,7 +400,7 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
                                                  
 
         # 6. Update your Assembler
-        Assembler().AssembeledMesh = final_mesh
+        assembler.AssembeledMesh = final_mesh
             
 
 

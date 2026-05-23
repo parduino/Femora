@@ -108,13 +108,16 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
         interface_manager = mesh_maker.interface
 
         def resolve_one(item: Union[str, EmbeddedBeamSolidInterface]) -> EmbeddedBeamSolidInterface:
-            if isinstance(item, EmbeddedBeamSolidInterface):
-                return item
             if isinstance(item, str):
-                resolved = interface_manager.get(item)
-                if resolved is None or not isinstance(resolved, EmbeddedBeamSolidInterface):
-                    raise ValueError(f"Interface '{item}' is not a valid EmbeddedBeamSolidInterface name")
+                resolved = interface_manager.require(item)
+                if not isinstance(resolved, EmbeddedBeamSolidInterface):
+                    raise ValueError(
+                        f"Interface '{item}' is registered but is not an EmbeddedBeamSolidInterface"
+                    )
                 return resolved
+            if isinstance(item, EmbeddedBeamSolidInterface):
+                interface_manager.require_registered(item)
+                return item
             raise TypeError("interfaces must be EmbeddedBeamSolidInterface instances or valid names")
 
         if isinstance(self._interface_input, list):

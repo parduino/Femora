@@ -9,7 +9,7 @@ from femora.core.meshpart_base import MeshPart
 from femora.components.partitioner.partitioner import PartitionerRegistry
 from femora.core.element_base import Element
 from femora.core.material_base import Material
-from femora.components.event.event_bus import EventBus, FemoraEvent
+from femora.core.event_bus import FemoraEvent
 from femora.utils.progress import Progress
 from femora.constants import FEMORA_MAX_NDF
 
@@ -57,6 +57,11 @@ class Assembler:
         if not isinstance(mesh_maker, MeshMakerClass):
             raise TypeError("mesh_maker must be a MeshMaker instance")
         self._mesh_maker = mesh_maker
+
+    def _emit_model_event(self, event: FemoraEvent, **payload) -> None:
+        if self._mesh_maker is None:
+            raise RuntimeError("Assembler is not bound to a MeshMaker model")
+        self._mesh_maker.events.emit(event, **payload)
 
     @classmethod
     def get_instance(cls):
@@ -399,7 +404,7 @@ class Assembler:
         progress_callback(0, "initialising")
 
         # Notify subscribers that assembly is starting
-        EventBus.emit(FemoraEvent.PRE_ASSEMBLE)
+        self._emit_model_event(FemoraEvent.PRE_ASSEMBLE)
         
         sorted_sections = sorted(self._assembly_sections.items(), key=lambda x: x[0])
         
@@ -493,9 +498,9 @@ class Assembler:
         
         # Notify any subscribers that the mesh has been assembled and partitioned
         progress_callback(70, "post-assemble")
-        EventBus.emit(FemoraEvent.POST_ASSEMBLE, assembled_mesh=self.AssembeledMesh)
+        self._emit_model_event(FemoraEvent.POST_ASSEMBLE, assembled_mesh=self.AssembeledMesh)
         progress_callback(90, "resolving core conflicts")
-        EventBus.emit(FemoraEvent.RESOLVE_CORE_CONFLICTS, assembled_mesh=self.AssembeledMesh)
+        self._emit_model_event(FemoraEvent.RESOLVE_CORE_CONFLICTS, assembled_mesh=self.AssembeledMesh)
 
         progress_callback(100, "done")
         # Announce the number of cores used for assembly

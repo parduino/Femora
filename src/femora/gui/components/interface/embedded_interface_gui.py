@@ -2,10 +2,10 @@ from qtpy.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QLineEdit,
     QComboBox, QListWidget, QListWidgetItem, QCheckBox, QPushButton, QMessageBox
 )
-from femora.components.Mesh.meshPartBase import MeshPart
-from femora.components.Mesh.meshPartInstance import SingleLineMesh, StructuredLineMesh
+from femora.core.meshpart_base import MeshPart
+from femora.components.mesh.line_meshparts import SingleLineMesh, StructuredLineMesh
 from femora.components.interface.embedded_beam_solid_interface import EmbeddedBeamSolidInterface
-from femora.components.interface.interface_base import InterfaceBase
+from femora.core.interface_base import InterfaceBase
 
 
 class EmbeddedInterfaceCreationDialog(QDialog):

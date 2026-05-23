@@ -10,7 +10,7 @@ except Exception:  # pragma: no cover
     pv = None  # type: ignore
 
 from femora.components.Assemble.Assembler import Assembler
-from femora.components.event.event_bus import EventBus, FemoraEvent
+from femora.core.event_bus import FemoraEvent
 from .mask_base import MeshIndex, NodeMask, ElementMask
 
 
@@ -32,6 +32,7 @@ class MaskManager:
     """
 
     _cached_index: MeshIndex | None = None
+    _events_subscribed: bool = False
 
     def __init__(self, mesh_index: MeshIndex):
         self._mesh = mesh_index
@@ -110,14 +111,28 @@ class MaskManager:
         """Return an ``ElementMask`` initialized with all elements."""
         return ElementMask(self._mesh, self._mesh.element_ids)
 
+    @classmethod
+    def register_events(cls, mesh_maker) -> None:
+        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
 
-def _mask_on_post_assemble(**kwargs):
-    assembler = Assembler.get_instance()
-    grid = kwargs.get('assembled_mesh', assembler.get_mesh())
-    if grid is not None:
-        MaskManager._cached_index = MaskManager._build_index_from_grid(grid)
+        if not isinstance(mesh_maker, MeshMakerClass):
+            raise TypeError("mesh_maker must be a MeshMaker instance")
+        if cls._events_subscribed:
+            return
+        mesh_maker.events.subscribe(FemoraEvent.POST_ASSEMBLE, cls._on_post_assemble)
+        cls._events_subscribed = True
 
+    @classmethod
+    def unregister_events(cls, mesh_maker) -> None:
+        if not cls._events_subscribed:
+            return
+        mesh_maker.events.unsubscribe(FemoraEvent.POST_ASSEMBLE, cls._on_post_assemble)
+        cls._events_subscribed = False
+        cls._cached_index = None
 
-EventBus.subscribe(FemoraEvent.POST_ASSEMBLE, _mask_on_post_assemble)
-
-
+    @classmethod
+    def _on_post_assemble(cls, **kwargs):
+        assembler = Assembler.get_instance()
+        grid = kwargs.get("assembled_mesh", assembler.get_mesh())
+        if grid is not None:
+            cls._cached_index = cls._build_index_from_grid(grid)

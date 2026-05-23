@@ -8,7 +8,7 @@ from pykdtree.kdtree import KDTree
 from femora.constants import FEMORA_MAX_NDF
 from femora.core.meshpart_base import MeshPart
 from femora.components.Assemble.Assembler import Assembler
-from femora.components.event.event_bus import EventBus, FemoraEvent
+from femora.core.event_bus import FemoraEvent
 
 
 class MassManager:
@@ -21,19 +21,17 @@ class MassManager:
 
     _instance = None
 
-    def __new__(cls):
+    def __new__(cls, mesh_maker=None):
         if cls._instance is None:
             cls._instance = super(MassManager, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self):
+    def __init__(self, mesh_maker=None):
         if getattr(self, "_initialised", False):
             return
 
-        from femora.components.MeshMaker import MeshMaker
-
-        self._mesh_maker = MeshMaker.get_instance()
-        # cache for region masks / KDTree per region to avoid rebuilding
+        self._mesh_maker = None
+        self._events_subscribed = False
         self._region_point_cache: dict[int, np.ndarray] = {}
         self._initialised = True
 
@@ -42,8 +40,31 @@ class MassManager:
         self.region = _RegionMassHelper(self)
         self.global_ = _GlobalMassHelper(self)
 
-        # Clear caches when assembly changes
-        EventBus.subscribe(FemoraEvent.PRE_ASSEMBLE, self._handle_pre_assemble)
+        if mesh_maker is not None:
+            self.bind_mesh_maker(mesh_maker)
+
+    def bind_mesh_maker(self, mesh_maker) -> None:
+        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+
+        if not isinstance(mesh_maker, MeshMakerClass):
+            raise TypeError("mesh_maker must be a MeshMaker instance")
+        self._mesh_maker = mesh_maker
+
+    def register_events(self) -> None:
+        if self._events_subscribed or self._mesh_maker is None:
+            return
+        self._mesh_maker.events.subscribe(
+            FemoraEvent.PRE_ASSEMBLE, self._handle_pre_assemble
+        )
+        self._events_subscribed = True
+
+    def unregister_events(self) -> None:
+        if not self._events_subscribed or self._mesh_maker is None:
+            return
+        self._mesh_maker.events.unsubscribe(
+            FemoraEvent.PRE_ASSEMBLE, self._handle_pre_assemble
+        )
+        self._events_subscribed = False
 
     # ------------------------------------------------------------------
     # Internal helpers

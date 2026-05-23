@@ -15,7 +15,7 @@ from femora.gui.components.analysis.analysis_gui import AnalysisManagerTab
 from femora.components.Process.processGUI import ProcessGUI
 from femora.components.DRM.combinedDRMGUI import CombinedDRMGUI
 from femora.components.section.section_gui import SectionManagerTab
-from femora.components.interface.interface_gui import InterfaceManagerTab
+from femora.gui.components.interface.interface_gui import InterfaceManagerTab
 
 class LeftPanel(QFrame):
     '''

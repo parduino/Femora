@@ -5,9 +5,9 @@ from qtpy.QtWidgets import (
 )
 from qtpy.QtCore import Qt
 
-from femora.components.interface.interface_base import InterfaceBase
+from femora.core.interface_base import InterfaceBase
 from femora.components.interface.embedded_beam_solid_interface import EmbeddedBeamSolidInterface  # Ensure class is imported
-from femora.components.interface.embedded_interface_gui import (
+from femora.gui.components.interface.embedded_interface_gui import (
     EmbeddedInterfaceCreationDialog,
     EmbeddedInterfaceEditDialog,
 )

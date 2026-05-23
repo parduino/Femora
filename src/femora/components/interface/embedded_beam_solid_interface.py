@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 from typing import List
-from collections import defaultdict
 # import time
 
 import numpy as np
 import pyvista as pv
 
-from femora.components.interface.interface_base import InterfaceBase
+from femora.core.interface_base import InterfaceBase
 from femora.components.event.mixins import HandlesDecompositionMixin
 from femora.core.meshpart_base import MeshPart
 from femora.components.mesh.line_meshparts import SingleLineMesh, StructuredLineMesh
-from femora.components.event.event_bus import EventBus, FemoraEvent
+from femora.core.event_bus import FemoraEvent
 from femora.components.interface.embedded_info import EmbeddedInfo
 from femora.core.region_base import RegionBase
 
@@ -19,37 +18,7 @@ from femora.core.region_base import RegionBase
 
 
 class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
-    """Create an *embedded beam–solid* contact interface.
-
-    Parameters
-    ----------
-    name : str
-        Unique interface name.
-    beam_part : str
-        *user_name* of the **line** `MeshPart` containing beam elements.
-    solid_parts : str
-        *user_name* of the **volume** `MeshPart` containing hexahedral elements.
-        Not implemented yet, please do not use this parameter for now.
-    radius : float
-        Cylinder radius used to pick surrounding solid cells.
-    n_peri, n_long : int
-        Discretisation for `generateInterfacePoints` TCL command.
-    penalty_param : float | None
-        Overrides default 1.0e12.
-    g_penalty : bool
-        Whether to add the "-gPenalty" flag.
-    region : RegionBase | None
-        Optional region to confine the interface to a specific region.
-        Not implemented yet, please do not use this parameter for now.
-    write_connectivity : bool
-        Whether to write connectivity information to the output file.
-    write_interface : bool
-        Whether to write interface information to the output file.
-    """
-
-    _embeddedinfo_list: List[EmbeddedInfo] = []  # Class-level list to store all instances
-    # Guard to ensure we register the class-level callback only once
-    _class_subscribed: bool = False
+    """Create an *embedded beam–solid* contact interface."""
 
     def __init__(
         self,
@@ -285,8 +254,12 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         ef = EmbeddedInfo(beams=beam_ind,
                      core_number= target_core,
                      beams_solids=beams_solids)
-        # add the embedded info to the class-level list
-        self._embeddedinfo_list.append(ef)
+        if self._owner is None:
+            raise RuntimeError(
+                f"EmbeddedBeamSolidInterface '{self.name}' must be managed by InterfaceManager "
+                "before recording EmbeddedInfo"
+            )
+        self._owner._embeddedinfo_list.append(ef)
         self._instance_embeddedinfo_list.append(ef)
 
 
@@ -299,7 +272,6 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
 
     def _on_post_assemble(self, assembled_mesh: pv.UnstructuredGrid, **kwargs):
         """Locate beam & solid element tags; enforce same core."""
-
         # shout  out that this is a post-assemble hook is called
         # print(f"[EmbeddedBeamSolidInterface:{self.name}] Post-assemble hook called.")
 
@@ -315,52 +287,57 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         elif isinstance(self.beam_part, StructuredLineMesh):
             # Type hint for IDE auto-complete
             beam_mesh: pv.UnstructuredGrid = self.beam_part.mesh.copy()
-            params = self.beam_part.params
-            norm_x = params.get("normal_x", None)
-            norm_y = params.get("normal_y", None)
-            norm_z = params.get("normal_z", None)
-            offset_1 = params.get("offset_1", 0.0)
-            offset_2 = params.get("offset_2", 0.0)
-            base_point_x = params.get("base_point_x", 0.0)
-            base_point_y = params.get("base_point_y", 0.0)
-            base_point_z = params.get("base_point_z", 0.0)
-            base_vector_1_x = params.get("base_vector_1_x", None)
-            base_vector_1_y = params.get("base_vector_1_y", None)
-            base_vector_1_z = params.get("base_vector_1_z", None)
-            base_vector_2_x = params.get("base_vector_2_x", None)
-            base_vector_2_y = params.get("base_vector_2_y", None)
-            base_vector_2_z = params.get("base_vector_2_z", None)
-            grid_size_1 = params.get("grid_size_1", None)
-            grid_size_2 = params.get("grid_size_2", None)
-            spacing_1 = params.get("spacing_1", None)
-            spacing_2 = params.get("spacing_2", None)
-            length = params.get("length", None)
+            norm_x = self.beam_part.normal_x
+            norm_y = self.beam_part.normal_y
+            norm_z = self.beam_part.normal_z
+            offset_1 = self.beam_part.offset_1
+            offset_2 = self.beam_part.offset_2
+            base_point_x = self.beam_part.base_point_x
+            base_point_y = self.beam_part.base_point_y
+            base_point_z = self.beam_part.base_point_z
+            base_vector_1_x = self.beam_part.base_vector_1_x
+            base_vector_1_y = self.beam_part.base_vector_1_y
+            base_vector_1_z = self.beam_part.base_vector_1_z
+            base_vector_2_x = self.beam_part.base_vector_2_x
+            base_vector_2_y = self.beam_part.base_vector_2_y
+            base_vector_2_z = self.beam_part.base_vector_2_z
+            grid_size_1 = self.beam_part.grid_size_1
+            grid_size_2 = self.beam_part.grid_size_2
+            spacing_1 = self.beam_part.spacing_1
+            spacing_2 = self.beam_part.spacing_2
+            length = self.beam_part.length
 
             if length is None:
-                raise ValueError("StructuredLineMesh must have length defined in params.")
+                raise ValueError("StructuredLineMesh must have length defined.")
 
             
 
             if grid_size_1 is None or grid_size_2 is None:
-                raise ValueError("StructuredLineMesh must have grid_size_1 and grid_size_2 defined in params.")
+                raise ValueError("StructuredLineMesh must have grid_size_1 and grid_size_2 defined.")
             
             if spacing_1 is None or spacing_2 is None:
-                raise ValueError("StructuredLineMesh must have spacing_1 and spacing_2 defined in params.")
+                raise ValueError("StructuredLineMesh must have spacing_1 and spacing_2 defined.")
 
             if base_vector_1_x is None or base_vector_1_y is None or base_vector_1_z is None:
-                raise ValueError("StructuredLineMesh must have base_vector_1_x, base_vector_1_y, and base_vector_1_z defined in params.")
+                raise ValueError(
+                    "StructuredLineMesh must have base_vector_1_x, base_vector_1_y, and base_vector_1_z defined."
+                )
             
             if base_vector_2_x is None or base_vector_2_y is None or base_vector_2_z is None:
-                raise ValueError("StructuredLineMesh must have base_vector_2_x, base_vector_2_y, and base_vector_2_z defined in params.")
+                raise ValueError(
+                    "StructuredLineMesh must have base_vector_2_x, base_vector_2_y, and base_vector_2_z defined."
+                )
 
             if base_point_x is None or base_point_y is None or base_point_z is None:
-                raise ValueError("StructuredLineMesh must have base_point_x, base_point_y, and base_point_z defined in params.")
+                raise ValueError(
+                    "StructuredLineMesh must have base_point_x, base_point_y, and base_point_z defined."
+                )
             
             if offset_1 is None or offset_2 is None:
-                raise ValueError("StructuredLineMesh must have offset_1 and offset_2 defined in params.")
+                raise ValueError("StructuredLineMesh must have offset_1 and offset_2 defined.")
 
             if norm_x is None or norm_y is None or norm_z is None:
-                raise ValueError("StructuredLineMesh must have normal_x, normal_y, and normal_z defined in params.")
+                raise ValueError("StructuredLineMesh must have normal_x, normal_y, and normal_z defined.")
 
             i_size = int(grid_size_1 * spacing_1 + 2*offset_1) * 1.2 # 1.2 to make sure the plane is larger than the mesh
             j_size = int(grid_size_2 * spacing_2 + 2*offset_2) * 1.2 # 1.2 to make sure the plane is larger than the mesh
@@ -401,124 +378,19 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
     # Event subscription
     # ------------------------------------------------------------------
     def _subscribe_events(self):  # type: ignore[override]
-        """Override default subscription so RESOLVE_CORE_CONFLICTS is handled once per class."""
-        # Per-instance hooks we still want
-        EventBus.subscribe(FemoraEvent.PRE_ASSEMBLE, self._on_pre_assemble)
-        EventBus.subscribe(FemoraEvent.POST_ASSEMBLE, self._on_post_assemble)
-        EventBus.subscribe(FemoraEvent.POST_EXPORT, self._on_post_export)
-        EventBus.subscribe(FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, self._on_embedded_beam_solid_tcl_export)
+        """Override default subscription; conflict resolution is manager-owned."""
+        events = self._model_events()
+        events.subscribe(FemoraEvent.PRE_ASSEMBLE, self._on_pre_assemble)
+        events.subscribe(FemoraEvent.POST_ASSEMBLE, self._on_post_assemble)
+        events.subscribe(FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, self._on_embedded_beam_solid_tcl_export)
 
-        # Register the collective callback only the first time a pile is created
-        if not self.__class__._class_subscribed:
-            EventBus.subscribe(
-                FemoraEvent.RESOLVE_CORE_CONFLICTS,
-                self.__class__._cls_resolve_core_conflicts,
-            )
-            self.__class__._class_subscribed = True
-
-
-    @classmethod
-    def _cls_resolve_core_conflicts(cls, assembled_mesh: pv.UnstructuredGrid, **kwargs):
-        """Resolve core conflicts across *all* EmbeddedInfo objects collected during assembly.
-
-        Steps:
-        1. Remove exact duplicates (equal EmbeddedInfo) – keep one.
-        2. Detect conflicts → raise error immediately.
-        3. Treat "similar" pairs as friends and build transitive groups.
-        4. For each group, set every solid cell’s Core to the **minimum** core_number
-           found in that group.
-        """
-
-        if not cls._embeddedinfo_list:
-            return  # nothing to do
-        # print("resolving core conflicts")
-        # ----------------------------------------------------------
-        # 1. Deduplicate identical EmbeddedInfo objects
-        # ----------------------------------------------------------
-        unique_infos: list[EmbeddedInfo] = []
-        for info in cls._embeddedinfo_list:
-            if all(info != u for u in unique_infos):
-                unique_infos.append(info)
-
-        infos = unique_infos
-        n = len(infos)
-
-        # ----------------------------------------------------------
-        # 2–3. Build similarity graph & detect conflicts
-        # ----------------------------------------------------------
-        parent = list(range(n))  # union-find structure
-
-        def find(i: int) -> int:
-            while parent[i] != i:
-                parent[i] = parent[parent[i]]
-                i = parent[i]
-            return i
-
-        def union(i: int, j: int):
-            pi, pj = find(i), find(j)
-            if pi != pj:
-                parent[pj] = pi
-
-        for i in range(n):
-            for j in range(i + 1, n):
-                relation = infos[i].compare(infos[j])
-                if relation == "conflict":
-                    raise ValueError(
-                        f"EmbeddedInfo conflict detected between {infos[i]} and {infos[j]}"
-                    )
-                elif relation == "similar":
-                    union(i, j)
-                # "equal" already handled via deduplication
-
-        # ----------------------------------------------------------
-        # 4. Apply lowest core number per connected component
-        # ----------------------------------------------------------
-        groups = defaultdict(list)  # root index → list[info index]
-        for idx in range(n):
-            groups[find(idx)].append(idx)
-
-        for idx_list in groups.values():
-            min_core = min(infos[i].core_number for i in idx_list)
-            for i in idx_list:
-                info = infos[i]
-                # Create a new EmbeddedInfo with updated core_number
-                new_info = EmbeddedInfo(
-                    beams=info.beams,
-                    core_number=min_core,
-                    beams_solids=info.beams_solids
-                )
-                infos[i] = new_info
-                # Also update the class-level list if present
-                for idx, orig in enumerate(cls._embeddedinfo_list):
-                    if orig == info:
-                        cls._embeddedinfo_list[idx] = new_info
-                # Update all instance-level lists in all instances
-                for obj in cls.__subclasses__() + [cls]:
-                    for inst in getattr(obj, "__dict__", {}).values():
-                        if hasattr(inst, "_instance_embeddedinfo_list"):
-                            inst_list = inst._instance_embeddedinfo_list
-                            for idx2, orig2 in enumerate(inst_list):
-                                if orig2 == info:
-                                    inst_list[idx2] = new_info
-                for _beams, solids in new_info.beams_solids:
-                    try:
-                        assembled_mesh.cell_data["Core"][solids] = min_core
-                    except Exception as exc:
-                        print(
-                            f"[EmbeddedBeamSolidInterface] Failed to set core for solids {solids}: {exc}"
-                        )
-                try:
-                    assembled_mesh.cell_data["Core"][list(new_info.beams)] = min_core
-                except Exception as exc:
-                    print(f"[EmbeddedBeamSolidInterface] Failed to set core for beams {new_info.beams}: {exc}")
-
-
-        # print("end of resolve core conflicts")
-        # pl = pv.Plotter()
-        # pl.add_mesh(assembled_mesh, color='blue', scalars="Core", opacity=1.0, show_edges=True)
-        # pl.show()
-
-
+    def _unsubscribe_events(self):  # type: ignore[override]
+        events = self._model_events()
+        events.unsubscribe(FemoraEvent.PRE_ASSEMBLE, self._on_pre_assemble)
+        events.unsubscribe(FemoraEvent.POST_ASSEMBLE, self._on_post_assemble)
+        events.unsubscribe(
+            FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, self._on_embedded_beam_solid_tcl_export
+        )
 
     def _on_embedded_beam_solid_tcl_export(self, file_handle, **kwargs):
         """Export TCL commands for the EmbeddedBeamSolidInterface.
@@ -528,11 +400,12 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         """
         # print(f"[EmbeddedBeamSolidInterface:{self.name}] Exporting TCL commands.")
         from femora import MeshMaker
+        mesh_maker = MeshMaker.get_instance()
         crd_transf_tag = self.beam_part.element.get_transformation().tag
         file_handle.write("set Femora_embeddedBeamSolidStartTag [getFemoraMax eleTag]\n")
         file_handle.write("set Femora_embeddedBeamSolidStartTag [expr $Femora_embeddedBeamSolidStartTag + 1]\n")
-        ele_start_tag = MeshMaker()._start_ele_tag
-        core_start_tag = MeshMaker()._start_core_tag
+        ele_start_tag = mesh_maker._start_ele_tag
+        core_start_tag = mesh_maker._start_core_tag
         for ii, info in enumerate(self._instance_embeddedinfo_list):
             core = info.core_number + core_start_tag
             file_handle.write("if {$pid == %d} {\n" % core)
@@ -543,8 +416,8 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
                 solids_str = " -solidEle ".join(str(s + ele_start_tag) for s in solids)
                 connect_file = f"EmbeddedBeamSolidConnect_{self.name}_beam{ii}_part{jj}.dat"
                 interface_file = f"EmbeddedBeamSolidInterface_{self.name}_beam{ii}_part{jj}.dat"
-                connect_file = MeshMaker().get_results_folder() + "/" + connect_file
-                interface_file = MeshMaker().get_results_folder() + "/" + interface_file
+                connect_file = mesh_maker.get_results_folder() + "/" + connect_file
+                interface_file = mesh_maker.get_results_folder() + "/" + interface_file
                 if self.write_connectivity:
                     file_handle.write("\tif {[file exists %s] == 1} {file delete %s}\n" % (connect_file, connect_file))
                 if self.write_interface:
@@ -604,8 +477,9 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         ValueError
             If the res_type is not supported.
         """
-        from femora import MeshMaker    
-        core_start_tag = MeshMaker()._start_core_tag
+        from femora import MeshMaker
+        mesh_maker = MeshMaker.get_instance()
+        core_start_tag = mesh_maker._start_core_tag
 
         cmd = ""
         for ii, info in enumerate(self._instance_embeddedinfo_list):
@@ -623,14 +497,14 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         return cmd
 
 
-    # Keep an instance-level no-op to avoid accidental per-instance registration elsewhere
-    def _on_resolve_core_conflicts(self, **payload):
-        pass
-
     def _on_pre_assemble(self, **payload):
-        # clear the class-level list
-        self._embeddedinfo_list.clear()
-        self._instance_embeddedinfo_list.clear()  # Clear instance-level list for this instance
+        if self._owner is None:
+            raise RuntimeError(
+                f"EmbeddedBeamSolidInterface '{self.name}' must be managed by InterfaceManager "
+                "before pre-assemble handling"
+            )
+        self._owner._embeddedinfo_list.clear()
+        self._instance_embeddedinfo_list.clear()
 
 
 
@@ -756,7 +630,7 @@ if __name__ == "__main__":
     # fm.assembler.create_section(["beam3", "beam4", "beam5"], num_partitions=4, merge_points=False)
     # fm.assembler.create_section(["beam1", "beam2", "beam3", "beam4", "beam5"], num_partitions=8, merge_points=False)
     interface_radius = 0.25  # Radius for the embedded beam-solid interface
-    EmbeddedBeamSolidInterface(
+    fm.interface.beam_solid_interface(
         name="EmbedTest",
         beam_part="piles",
         radius=interface_radius,
@@ -764,7 +638,6 @@ if __name__ == "__main__":
         n_long=5,
         penalty_param=1.0e12,
         g_penalty=True,
-        meshpart=fm.meshpart,
     )
     
     # EmbeddedBeamSolidInterface(

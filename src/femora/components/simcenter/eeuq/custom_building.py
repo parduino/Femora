@@ -1270,13 +1270,13 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
     if fm.assembler.AssembeledMesh is None:
         print("Error: Assembled mesh is None. Cannot export the model.")
         sys.exit(1)
-    from femora.components.event.event_bus import EventBus, FemoraEvent
+    from femora.components.event.event_bus import FemoraEvent
     from femora.core.element_base import Element
 
     self = fm._instance
     with open(model_filename, 'w') as f:
         # Inform interfaces that we are about to export
-        EventBus.emit(FemoraEvent.PRE_EXPORT, 
+        self.events.emit(FemoraEvent.PRE_EXPORT, 
                     file_handle=f, 
                     assembled_mesh=fm.assembler.AssembeledMesh)
 
@@ -1389,7 +1389,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
                 progress_callback((i / self.assembler.AssembeledMesh.n_cells) * 45 + 5, "writing nodes and elements")
         
         # notify EmbbededBeamSolidInterface event
-        EventBus.emit(FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, 
+        self.events.emit(FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, 
                     file_handle=f, 
                     ele_start_tag=self._start_ele_tag) 
         # print(f"Column {col_index+1}: z_min_point = {z_min_point}, z_max_point = {z_max_point}")
@@ -1465,13 +1465,13 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
     if fm.assembler.AssembeledMesh is None:
         print("Error: Assembled mesh is None. Cannot export the model.")
         sys.exit(1)
-    from femora.components.event.event_bus import EventBus, FemoraEvent
+    from femora.components.event.event_bus import FemoraEvent
     from femora.core.element_base import Element
 
     self = fm._instance
     with open(model_filename, 'w') as f:
         # Inform interfaces that we are about to export
-        EventBus.emit(FemoraEvent.PRE_EXPORT, 
+        self.events.emit(FemoraEvent.PRE_EXPORT, 
                     file_handle=f, 
                     assembled_mesh=fm.assembler.AssembeledMesh)
 
@@ -1584,7 +1584,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
                 progress_callback((i / self.assembler.AssembeledMesh.n_cells) * 45 + 5, "writing nodes and elements")
         
         # notify EmbbededBeamSolidInterface event
-        EventBus.emit(FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, 
+        self.events.emit(FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, 
                     file_handle=f, 
                     ele_start_tag=self._start_ele_tag) 
         

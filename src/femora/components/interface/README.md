@@ -39,7 +39,7 @@
 
 > **Introduced:** Femora vX.X (experimental)
 >
-> **Location:** `src/femora/components/Interface/`
+> **Location:** `src/femora/core/interface_base.py` (base/manager) and `src/femora/components/interface/` (implementations)
 
 This document explains **why** the new *Interface* layer exists, **how** it is wired into the Femora pipeline, and **how you can implement your own interfaces** (from a one-line equal-DOF constraint up to a full cohesive-zone element generator).
 
@@ -65,11 +65,13 @@ fm.assembler.Assemble()
 ## 2  Building Blocks
 
 ```
-Interface/
-├── event_bus.py          # tiny pub/sub hub
-├── interface_base.py     # common parent class
-├── mixins.py             # capability mix-ins
-└── interface_manager.py  # singleton helper
+interface runtime layout
+├── src/femora/core/interface_base.py          # InterfaceBase + InterfaceManager
+├── src/femora/components/interface/           # concrete interface implementations
+│   ├── embedded_beam_solid_interface.py
+│   ├── embedded_node_interface.py
+│   └── embedded_info.py
+└── src/femora/components/event/event_bus.py     # model-owned event bus (via mesh_maker.events)
 ```
 
 ### 2.1  EventBus & `FemoraEvent`
@@ -82,9 +84,9 @@ Interface/
 * Components emit – interfaces subscribe.
 
 ### 2.2  `InterfaceBase`
-* Registers itself in a global dict (`InterfaceBase.all()`).
-* Auto-subscribes to the three life-cycle events (2–4).
-* Default handlers are NO-OP; mix-ins or subclasses override them.
+* Manager-owned: created through `mesh_maker.interface` and bound to one model.
+* Subscribes only to the events each concrete class needs (via `_subscribe_events()`).
+* Conflict resolution for beam-solid interfaces is handled by `InterfaceManager`, not per-instance hooks.
 
 ### 2.3  Capability Mix-ins (`mixins.py`)
 | Mixin                       | Purpose                                    |
@@ -105,8 +107,9 @@ class CohesiveInterface(InterfaceBase,
 ```
 
 ### 2.4  `InterfaceManager`
-* Thin singleton exposed as `fm.interface` (similar to `fm.meshpart`, `fm.element`, …).
-* Utility factory / registry wrapper.
+* Model-owned registry exposed as `mesh_maker.interface`.
+* Factory helpers: `beam_solid_interface(...)`, `node_interface(...)`.
+* Registry access: `get(name)`, `get_all()`.
 
 ---
 
@@ -135,7 +138,7 @@ Below is a **minimal** node-only interface that constrains two mesh parts so tha
 
 ```python
 # my_laminar.py
-from femora.components.Interface.interface_base import InterfaceBase
+from femora.core.interface_base import InterfaceBase
 from femora.components.Interface.mixins import GeneratesConstraintsMixin
 from femora.components.Constraint.mpConstraint import mpConstraintManager
 
@@ -167,7 +170,8 @@ Usage:
 import femora as fm
 from my_laminar import LaminarBoundary
 
-LaminarBoundary("XFace", master_nodes=left_ids, slave_nodes=right_ids)
+fm = fm.MeshMaker()
+fm.interface.add(LaminarBoundary("XFace", master_nodes=left_ids, slave_nodes=right_ids))
 ```
 
 That’s all—no further calls necessary.  When you assemble ➜ partition ➜ export, the equal-DOF commands are written into the correct cores automatically.
@@ -177,10 +181,10 @@ That’s all—no further calls necessary.  When you assemble ➜ partition ➜ 
 ## 5  Accessing Interfaces
 
 ```python
->>> import femora as fm
->>> fm.interface.all().keys()
-dict_keys(['XFace', 'MyCohesiveZone'])
->>> ifc = fm.interface.get('XFace')
+>>> manager = fm.interface
+>>> manager.get_all().keys()
+dict_keys(['pile_ifc', 'node_ifc'])
+>>> ifc = manager.get('pile_ifc')
 ```
 
 ---
@@ -201,7 +205,7 @@ No other parts of Femora were modified.
 
 * **Decomposition safe IDs** – store `vtkGlobalCellIds` / point indices, not sequential tags.
 * **Performance** – reuse `pykdtree` (already a dependency) for nearest-point queries.
-* **GUI** – you can plug dialogs under `Interface/gui/` and call `InterfaceManager.create_interface()` directly.
+* **GUI** – interface dialogs live under `src/femora/gui/components/interface/` and use the same manager-owned API (`beam_solid_interface`, `node_interface`, `get_all()`).
 * **Custom events** – add your own `FemoraEvent.XYZ` and emit from anywhere; interfaces may subscribe.
 
 ---

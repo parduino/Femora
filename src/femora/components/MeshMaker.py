@@ -17,7 +17,7 @@ from femora.core.recorder_manager import RecorderManager
 from femora.components.Process.process import ProcessManager
 from femora.components.DRM.DRM import DRM
 from femora.core.transformation_manager import TransformationManager
-from femora.components.interface.interface_base import InterfaceManager
+from femora.core.interface_base import InterfaceManager
 from femora.core.section_manager import SectionManager
 from femora.components.mass.mass_manager import MassManager
 from femora.components.geometry_ops.spatial_transform_manager import SpatialTransformManager
@@ -27,7 +27,7 @@ import os
 from numpy import unique, zeros, arange, array, abs, concatenate, meshgrid, ones, full, uint16, repeat, where, isin
 from pyvista import Cube, MultiBlock, StructuredGrid
 from pykdtree.kdtree import KDTree as pykdtree
-from femora.components.event.event_bus import EventBus, FemoraEvent
+from femora.core.event_bus import FemoraEvent, ModelEventBus
 from femora.utils.progress import get_progress_callback, Progress
 import numpy as np
 
@@ -65,6 +65,7 @@ class MeshMaker:
             
         self._initialized = True
         self.model = None
+        self.events = ModelEventBus()
         self.model_name = kwargs.get('model_name')
         self.model_path = kwargs.get('model_path')
         self.assembler = Assembler()
@@ -73,7 +74,7 @@ class MeshMaker:
         self.time_series = TimeSeriesManager(mesh_maker=self)
         self.ground_motion = GroundMotionManager(mesh_maker=self, time_series_manager=self.time_series)
         self.damping = DampingManager(mesh_maker=self)
-        self.mass = MassManager()
+        self.mass = MassManager(mesh_maker=self)
         self.region = RegionManager(mesh_maker=self)
         self.constraint = ConstraintManager(mesh_maker=self)
         self.load = LoadManager(mesh_maker=self)
@@ -86,12 +87,12 @@ class MeshMaker:
             ground_motion_manager=self.ground_motion,
         )
         self.recorder = RecorderManager(mesh_maker=self)
-        self.process = ProcessManager()
         self.interface = InterfaceManager(mesh_maker=self)
         self.transformation = TransformationManager(mesh_maker=self)
         self.section = SectionManager(mesh_maker=self)
-        self.spatial_transform = SpatialTransformManager()
         self.actions = ActionManager()
+        self.spatial_transform = SpatialTransformManager()
+        self.process = ProcessManager()
         
         # Tag start controls for node and element IDs written to TCL
         # These control only exported OpenSees node/element tags (not Material/Element class tags)
@@ -102,6 +103,11 @@ class MeshMaker:
         # Initialize DRMHelper with a reference to this MeshMaker instance
         self.drm = DRM()
         self.drm.set_meshmaker(self)
+        self._register_model_event_subscribers()
+
+    def _register_model_event_subscribers(self) -> None:
+        self.mass.register_events()
+        MaskManager.register_events(self)
         
     # ------------------------------------------------------------------
     # Progress helpers
@@ -321,7 +327,7 @@ class MeshMaker:
                 f.write(self._get_tcl_file_header(required_np))
 
                 # Inform interfaces that we are about to export
-                EventBus.emit(FemoraEvent.PRE_EXPORT, file_handle=f, assembled_mesh=self.assembler.AssembeledMesh)
+                self.events.emit(FemoraEvent.PRE_EXPORT, file_handle=f, assembled_mesh=self.assembler.AssembeledMesh)
 
                 f.write("wipe\n")
                 f.write("set pid [getPID]\n")
@@ -426,8 +432,8 @@ class MeshMaker:
                         progress_callback((i / self.assembler.AssembeledMesh.n_cells) * 45 + 5, "writing nodes and elements")
 
                 # notify EmbbededBeamSolidInterface event
-                EventBus.emit(FemoraEvent.INTERFACE_ELEMENTS_TCL, file_handle=f)             
-                EventBus.emit(FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, file_handle=f)             
+                self.events.emit(FemoraEvent.INTERFACE_ELEMENTS_TCL, file_handle=f)
+                self.events.emit(FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, file_handle=f)
                 
                 
                 if progress_callback:
@@ -793,6 +799,9 @@ class MeshMaker:
         allowing you to start fresh without needing to create a new MeshMaker instance.
         """
         self.model = None
+        self.mass.unregister_events()
+        MaskManager.unregister_events(self)
+        self.events.clear()
         self.assembler.clear()
         self.material.clear()
         self.element.clear()
@@ -828,3 +837,4 @@ class MeshMaker:
         self._start_nodetag = 1
         self._start_ele_tag = 1
         self._start_core_tag = 0
+        self._register_model_event_subscribers()
