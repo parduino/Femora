@@ -315,7 +315,7 @@ class ConventionalSteelBracedFrame:
 
     def create_rigid_diaphragms(self, model) -> None:
         """Create floor rigid diaphragms to COM nodes and fix COM vertical/rocking DOFs."""
-        mesh = model.assembler.AssembeledMesh
+        mesh = model.assembled_mesh
         if mesh is None:
             raise ValueError("Mesh must be assembled before creating rigid diaphragms.")
 
@@ -375,7 +375,7 @@ class ConventionalSteelBracedFrame:
 
     def apply_fixed_base(self, model, tol: float = 1e-4) -> None:
         """Fix all base structural grid nodes for fixed-base period checks."""
-        mesh = model.assembler.AssembeledMesh
+        mesh = model.assembled_mesh
         if mesh is None:
             raise ValueError("Mesh must be assembled before fixing base nodes.")
         z_base = float(self.get_coordinates()[2][0])
@@ -387,7 +387,7 @@ class ConventionalSteelBracedFrame:
 
     def gravity_pattern(self, model, g: float) -> Pattern:
         """Create a plain gravity load pattern using true floor masses times ``g``."""
-        mesh = model.assembler.AssembeledMesh
+        mesh = model.assembled_mesh
         if mesh is None:
             raise ValueError("Mesh must be assembled before creating gravity loads.")
 
@@ -430,7 +430,7 @@ class ConventionalSteelBracedFrame:
         """Return an MPCO recorder scoped to this building region."""
         if self.building_region is None:
             raise ValueError("Building region not found. Call build() first.")
-        mesh = model.assembler.AssembeledMesh
+        mesh = model.assembled_mesh
         if mesh is None:
             raise ValueError("Mesh must be assembled before creating recorders")
         if file_name is None:
@@ -828,7 +828,7 @@ class ConventionalSteelBracedFrame:
         return grid.merge(com_grid, merge_points=False)
 
     def _find_com_node_tags(self, model) -> List[int]:
-        mesh = model.assembler.AssembeledMesh
+        mesh = model.assembled_mesh
         if mesh is None:
             return []
         tags: List[int] = []

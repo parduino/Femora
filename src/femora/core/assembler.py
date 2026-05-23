@@ -16,67 +16,35 @@ from femora.constants import FEMORA_MAX_NDF
 
 class Assembler:
     """
-    Singleton Assembler class to manage multiple AssemblySection instances.
-    
-    This class ensures only one Assembler instance exists in the program 
-    and keeps track of all created assembly sections with dynamic tag management.
-    It provides methods for creating, managing, and assembling mesh sections
-    into a complete structural model.
-    
-    The Assembler is responsible for:
-    - Creating and tracking AssemblySection instances
-    - Maintaining unique tags for each section
-    - Combining multiple sections into a unified mesh
-    - Managing the lifecycle of assembly sections
-    """
-    _instance = None
-    _assembly_sections: Dict[int, 'AssemblySection'] = {}
-    AssembeledMesh = None
-    AssembeledActor = None
-    # AbsorbingMesh = None
-    # AbsorbingMeshActor = None
-    
-    def __new__(cls):
-        """
-        Implement singleton pattern for the Assembler class.
-        
-        Ensures only one Assembler instance is created throughout the program's lifecycle.
-        If an instance already exists, returns that instance instead of creating a new one.
-        
-        Returns:
-            Assembler: The singleton Assembler instance
-        """
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._mesh_maker = None
-        return cls._instance
+    Assembler manages assembly sections for a MeshMaker model.
 
-    def bind_mesh_maker(self, mesh_maker) -> None:
+    Runtime API:
+    - ``create_section(...)``, ``get(...)``, ``get_all()``, ``remove(...)``, ``clear()``
+    - ``assemble(...)`` to build ``mesh_maker.assembled_mesh``
+    """
+
+    def __init__(self, mesh_maker=None):
         from femora.components.MeshMaker import MeshMaker as MeshMakerClass
 
-        if not isinstance(mesh_maker, MeshMakerClass):
+        if mesh_maker is not None and not isinstance(mesh_maker, MeshMakerClass):
             raise TypeError("mesh_maker must be a MeshMaker instance")
         self._mesh_maker = mesh_maker
+        self._assembly_sections: Dict[int, 'AssemblySection'] = {}
+
+    def _require_mesh_maker(self):
+        if self._mesh_maker is None:
+            raise RuntimeError("Assembler is not bound to a MeshMaker model")
+        return self._mesh_maker
+
+    def _model_assembled_mesh(self):
+        if self._mesh_maker is None:
+            return None
+        return self._mesh_maker.assembled_mesh
 
     def _emit_model_event(self, event: FemoraEvent, **payload) -> None:
         if self._mesh_maker is None:
             raise RuntimeError("Assembler is not bound to a MeshMaker model")
         self._mesh_maker.events.emit(event, **payload)
-
-    @classmethod
-    def get_instance(cls):
-        """
-        Class method to get the single Assembler instance.
-        
-        This method provides an alternative way to access the singleton instance,
-        creating it if it doesn't already exist.
-        
-        Returns:
-            Assembler: The singleton Assembler instance
-        """
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
 
     def create_section(
         self, 
@@ -113,7 +81,7 @@ class Assembler:
                                            tolerance distance when assembling mesh parts.
                                            Defaults to True.
             merge_in_final (bool, optional): If True, this section's points may be merged during
-                                           the *final* Assembler.Assemble(...)
+                                           the *final* assembler.assemble(...)
                                            merge pass (when merge_points=True). If False, this
                                            section is excluded from final point merging.
                                            Defaults to True.
@@ -151,38 +119,35 @@ class Assembler:
             tolerance=tolerance,
             **kwargs
         )
+        self._add_assembly_section(assembly_section)
         
         return assembly_section
 
-    def delete_section(self, tag: int) -> None:
-        """
-        Delete an AssemblySection by its tag.
-        
-        Removes the specified assembly section from the internal registry and
-        updates the tags of remaining sections to maintain sequential numbering.
-        
-        Args:
-            tag (int): Tag of the assembly section to delete
-        
-        Raises:
-            KeyError: If no assembly section with the given tag exists
-        """
-        # Retrieve the section to ensure it exists
-        section = self.get_assembly_section(tag)
-        
-        # Remove the section from the internal dictionary
+    def get(self, tag: int) -> 'AssemblySection':
+        """Return an assembly section by tag."""
+        return self._assembly_sections[tag]
+
+    def get_all(self) -> Dict[int, 'AssemblySection']:
+        """Return a copy of all assembly sections keyed by tag."""
+        return self._assembly_sections.copy()
+
+    def remove(self, tag: int) -> None:
+        """Remove an assembly section and retag remaining sections."""
+        _ = self.get(tag)
         del self._assembly_sections[tag]
-        
-        # Retag remaining sections
         self._retag_sections()
+
+    def clear(self) -> None:
+        """Clear all assembly sections."""
+        self._assembly_sections.clear()
 
     def _add_assembly_section(self, assembly_section: 'AssemblySection') -> int:
         """
-        Internally add an AssemblySection to the Assembler's tracked sections.
-        
-        This method is called by the AssemblySection constructor to register 
-        itself with the Assembler. It assigns a unique tag to the section and 
-        adds it to the internal registry.
+        Register an AssemblySection on this assembler and assign its tag.
+
+        Called by ``create_section(...)`` after the section mesh is built.
+        The assembler owns section registry lifecycle; sections do not register
+        themselves.
         
         Args:
             assembly_section (AssemblySection): The AssemblySection to add
@@ -197,30 +162,9 @@ class Assembler:
         
         # Store the assembly section with its tag
         self._assembly_sections[tag] = assembly_section
+        assembly_section._tag = tag
         
         return tag
-
-    def _remove_assembly_section(self, tag: int) -> None:
-        """
-        Remove an assembly section by its tag and retag remaining sections.
-        
-        Internal method to delete a section from the registry and update
-        tags of remaining sections to maintain sequential numbering.
-        
-        Args:
-            tag (int): Tag of the assembly section to remove
-        
-        Raises:
-            KeyError: If no assembly section with the given tag exists
-        """
-        if tag not in self._assembly_sections:
-            raise KeyError(f"No assembly section with tag {tag} exists")
-        
-        # Remove the specified tag
-        del self._assembly_sections[tag]
-        
-        # Retag all remaining sections to ensure continuous numbering
-        self._retag_sections()
 
     def _retag_sections(self):
         """
@@ -242,75 +186,6 @@ class Assembler:
         # Replace the old dictionary with the new one
         self._assembly_sections = new_assembly_sections
     
-    def get_assembly_section(self, tag: int) -> 'AssemblySection':
-        """
-        Retrieve an AssemblySection by its tag.
-        
-        Gets a specific assembly section from the internal registry using its unique tag.
-        
-        Args:
-            tag (int): Tag of the assembly section to retrieve
-        
-        Returns:
-            AssemblySection: The requested assembly section
-        
-        Raises:
-            KeyError: If no assembly section with the given tag exists
-        """
-        return self._assembly_sections[tag]
-    
-    def list_assembly_sections(self) -> List[int]:
-        """
-        List all tags of assembly sections.
-        
-        Returns a list of all tags that can be used to retrieve assembly sections.
-        The tags are sorted in ascending order.
-        
-        Returns:
-            List[int]: Tags of all added assembly sections
-        """
-        return list(self._assembly_sections.keys())
-    
-    def clear_assembly_sections(self) -> None:
-        """
-        Clear all tracked assembly sections.
-        
-        Removes all assembly sections from the internal registry, effectively
-        resetting the Assembler's state. This does not affect the assembled mesh
-        if one has already been created.
-        """
-        self._assembly_sections.clear()
-
-    def get_sections(self) -> Dict[int, 'AssemblySection']:
-        """
-        Get all assembly sections.
-        
-        Returns a copy of the internal dictionary containing all assembly sections.
-        This ensures that modifications to the returned dictionary don't affect
-        the Assembler's internal state.
-        
-        Returns:
-            Dict[int, AssemblySection]: Dictionary of all assembly sections, keyed by their tags
-        """
-        return self._assembly_sections.copy()
-    
-    def get_section(self, tag: int) -> 'AssemblySection':
-        """
-        Get an assembly section by its tag.
-        
-        Alias for get_assembly_section for backward compatibility.
-        
-        Args:
-            tag (int): Tag of the assembly section to retrieve
-        
-        Returns:
-            AssemblySection: The requested assembly section
-        
-        Raises:
-            KeyError: If no assembly section with the given tag exists
-        """
-        return self._assembly_sections[tag]
-
     @staticmethod
     def _snap_points(points: np.ndarray, tol: float = 1e-5) -> np.ndarray:
         """
@@ -344,9 +219,10 @@ class Assembler:
             positive int: total number of cells
             negative int: if assembled mesh is None
         """
-        if self.AssembeledMesh is None:
+        assembled = self._model_assembled_mesh()
+        if assembled is None:
             return -1
-        return self.AssembeledMesh.n_cells
+        return assembled.n_cells
     
     def get_num_points(self) -> int:
         """
@@ -358,13 +234,14 @@ class Assembler:
             positive int: total number of points
             negative int: if assembled mesh is None
         """
-        if self.AssembeledMesh is None:
+        assembled = self._model_assembled_mesh()
+        if assembled is None:
             return -1
-        return self.AssembeledMesh.n_points
+        return assembled.n_points
 
 
     
-    def Assemble(self, 
+    def assemble(self, 
                  merge_points: bool = True, 
                  mass_merging: str = "sum",
                  tolerance: float = 1e-5,
@@ -390,9 +267,9 @@ class Assembler:
             Exception: If any error occurs during the assembly process
         """
         
-        if self.AssembeledMesh is not None:
-            del self.AssembeledMesh
-            self.AssembeledMesh = None
+        mesh_maker = self._require_mesh_maker()
+        if mesh_maker.assembled_mesh is not None:
+            mesh_maker.assembled_mesh = None
         
         if not self._assembly_sections:
             raise ValueError("No assembly sections have been created")
@@ -414,14 +291,14 @@ class Assembler:
         if first_mesh is None:
             raise ValueError("There is no mesh to assemble. Please create an AssemblySection first.")
         
-        self.AssembeledMesh = pv.MultiBlock();
+        mesh_maker.assembled_mesh = pv.MultiBlock();
         first_block = first_mesh.copy()
         first_block.point_data["MergeInFinal"] = np.full(
             first_block.n_points,
             1 if getattr(first_section, "merge_in_final", True) else 0,
             dtype=np.uint8,
         )
-        self.AssembeledMesh.append(first_block)
+        mesh_maker.assembled_mesh.append(first_block)
         progress_callback(1 / len(sorted_sections) * 70, f"merged section 1/{len(sorted_sections)}")
         num_partitions = first_section.num_partitions
 
@@ -435,39 +312,39 @@ class Assembler:
                     1 if getattr(section, "merge_in_final", True) else 0,
                     dtype=np.uint8,
                 )
-                self.AssembeledMesh.append(second_mesh)
+                mesh_maker.assembled_mesh.append(second_mesh)
                 perc = idx / len(sorted_sections) * 70
                 progress_callback(perc, f"merged section {idx}/{len(sorted_sections)}")
-            self.AssembeledMesh = self.AssembeledMesh.combine(
+            mesh_maker.assembled_mesh = mesh_maker.assembled_mesh.combine(
                 merge_points=False,
                 tolerance=1e-5,
             )
             if merge_points:
-                number_of_points_before_cleaning = self.AssembeledMesh.n_points
+                number_of_points_before_cleaning = mesh_maker.assembled_mesh.n_points
 
                 # snap points within tolerance
-                self.AssembeledMesh.points = self._snap_points(self.AssembeledMesh.points, tolerance)
+                mesh_maker.assembled_mesh.points = self._snap_points(mesh_maker.assembled_mesh.points, tolerance)
 
                 # Build a per-point merge key so some sections can be excluded from
                 # the final merge pass.
-                if "MergeInFinal" in self.AssembeledMesh.point_data:
+                if "MergeInFinal" in mesh_maker.assembled_mesh.point_data:
                     participate = np.asarray(
-                        self.AssembeledMesh.point_data["MergeInFinal"],
+                        mesh_maker.assembled_mesh.point_data["MergeInFinal"],
                         dtype=np.uint8,
                     )
                 else:
-                    participate = np.ones(self.AssembeledMesh.n_points, dtype=np.uint8)
+                    participate = np.ones(mesh_maker.assembled_mesh.n_points, dtype=np.uint8)
 
-                ndf = np.asarray(self.AssembeledMesh.point_data["ndf"], dtype=np.int64)
+                ndf = np.asarray(mesh_maker.assembled_mesh.point_data["ndf"], dtype=np.int64)
                 merge_key = ndf.copy()
                 excluded = participate == 0
                 if np.any(excluded):
                     excluded_idx = np.nonzero(excluded)[0].astype(np.int64, copy=False)
                     merge_key[excluded] = -(excluded_idx + 1)
-                self.AssembeledMesh.point_data["FinalMergeKey"] = merge_key
+                mesh_maker.assembled_mesh.point_data["FinalMergeKey"] = merge_key
 
-                mass = self.AssembeledMesh.point_data["Mass"]
-                self.AssembeledMesh = self.AssembeledMesh.clean(
+                mass = mesh_maker.assembled_mesh.point_data["Mass"]
+                mesh_maker.assembled_mesh = mesh_maker.assembled_mesh.clean(
                     tolerance=tolerance,
                     remove_unused_points=False,
                     produce_merge_map=True,
@@ -476,21 +353,21 @@ class Assembler:
                     progress_bar=False,
                 )
                 # make the ndf array uint16
-                self.AssembeledMesh.point_data["ndf"] = self.AssembeledMesh.point_data["ndf"].astype(np.uint16)
+                mesh_maker.assembled_mesh.point_data["ndf"] = mesh_maker.assembled_mesh.point_data["ndf"].astype(np.uint16)
                 # make the MeshPartTag_pointdata array uint16
-                self.AssembeledMesh.point_data["MeshPartTag_pointdata"] = self.AssembeledMesh.point_data["MeshPartTag_pointdata"].astype(np.uint16)
+                mesh_maker.assembled_mesh.point_data["MeshPartTag_pointdata"] = mesh_maker.assembled_mesh.point_data["MeshPartTag_pointdata"].astype(np.uint16)
                 
-                number_of_points_after_cleaning = self.AssembeledMesh.n_points
+                number_of_points_after_cleaning = mesh_maker.assembled_mesh.n_points
 
                 if mass_merging == "sum":
                     if number_of_points_before_cleaning != number_of_points_after_cleaning:
                         Mass = np.zeros((number_of_points_after_cleaning, FEMORA_MAX_NDF), dtype=np.float32)
-                        for i in range(self.AssembeledMesh.field_data["PointMergeMap"].shape[0]):
-                            Mass[self.AssembeledMesh.field_data["PointMergeMap"][i],:] += mass[i,:]
+                        for i in range(mesh_maker.assembled_mesh.field_data["PointMergeMap"].shape[0]):
+                            Mass[mesh_maker.assembled_mesh.field_data["PointMergeMap"][i],:] += mass[i,:]
                 
-                        self.AssembeledMesh.point_data["Mass"] = Mass
+                        mesh_maker.assembled_mesh.point_data["Mass"] = Mass
 
-                del self.AssembeledMesh.field_data["PointMergeMap"]
+                del mesh_maker.assembled_mesh.field_data["PointMergeMap"]
 
 
         except Exception as e:
@@ -498,9 +375,9 @@ class Assembler:
         
         # Notify any subscribers that the mesh has been assembled and partitioned
         progress_callback(70, "post-assemble")
-        self._emit_model_event(FemoraEvent.POST_ASSEMBLE, assembled_mesh=self.AssembeledMesh)
+        self._emit_model_event(FemoraEvent.POST_ASSEMBLE, assembled_mesh=mesh_maker.assembled_mesh)
         progress_callback(90, "resolving core conflicts")
-        self._emit_model_event(FemoraEvent.RESOLVE_CORE_CONFLICTS, assembled_mesh=self.AssembeledMesh)
+        self._emit_model_event(FemoraEvent.RESOLVE_CORE_CONFLICTS, assembled_mesh=mesh_maker.assembled_mesh)
 
         progress_callback(100, "done")
         # Announce the number of cores used for assembly
@@ -514,9 +391,8 @@ class Assembler:
         This is useful when you want to clear resources or prepare for
         a new assembly operation without affecting the assembly sections.
         """
-        if self.AssembeledMesh is not None:
-            del self.AssembeledMesh
-            self.AssembeledMesh = None
+        if self._mesh_maker is not None:
+            self._mesh_maker.assembled_mesh = None
 
     def plot(
         self,
@@ -725,7 +601,8 @@ class Assembler:
         ValueError
             If no assembled mesh exists to plot.
         """
-        if self.AssembeledMesh is None:
+        assembled_mesh = self._model_assembled_mesh()
+        if assembled_mesh is None:
             raise ValueError("No assembled mesh exists to plot")
         
         # remove the options that are not part of pyvista
@@ -749,7 +626,7 @@ class Assembler:
         if show_cells_by_type:
             if cells_to_show is None:
                 raise ValueError("cells_to_show must be provided when show_cells_by_type is True")
-            mesh = self.AssembeledMesh.copy()
+            mesh = assembled_mesh.copy()
             mesh = pv.UnstructuredGrid(mesh)
             mesh = mesh.extract_cells_by_type(cells_to_show)
             pl = pv.Plotter(off_screen=off_screen)
@@ -765,7 +642,7 @@ class Assembler:
         
         # create a dict from all the inputs
         if sperate_beams_solid:
-            mesh = self.AssembeledMesh.copy()
+            mesh = assembled_mesh.copy()
             mesh = pv.UnstructuredGrid(mesh)
             beams = mesh.extract_cells_by_type([pv.CellType.LINE, pv.CellType.POLY_LINE])
             mesh_solids = mesh.extract_cells_by_type([pv.CellType.TETRA, 
@@ -800,7 +677,7 @@ class Assembler:
             
         if scalars=="Core":
             scalars = None
-            Mesh = self.AssembeledMesh.copy()
+            Mesh = assembled_mesh.copy()
 
             if explode:
                 Mesh = Mesh.explode(factor=explode_factor)
@@ -878,7 +755,7 @@ class Assembler:
 
         else:
             pl = pv.Plotter(off_screen=off_screen)
-            mesh = self.AssembeledMesh.copy()
+            mesh = assembled_mesh.copy()
             if explode:
                 mesh = mesh.explode(factor=explode_factor)
 
@@ -959,7 +836,10 @@ class Assembler:
         Returns:
             Optional[pv.UnstructuredGrid]: The assembled mesh, or None if not yet created
         """
-        return self.AssembeledMesh.copy() 
+        assembled_mesh = self._model_assembled_mesh()
+        if assembled_mesh is None:
+            return None
+        return assembled_mesh.copy() 
 
 
     # Big announcement box
@@ -973,10 +853,11 @@ class Assembler:
         )
         # this part should be gou through the Assembled Mesh and see how many cores are used to print
         # the number of cores used in the assembly
-        if self.AssembeledMesh is None:
+        assembled_mesh = self._model_assembled_mesh()
+        if assembled_mesh is None:
             logging.warning("No assembled mesh found. Cannot announce required cores.")
             return
-        cores = self.AssembeledMesh.cell_data["Core"]
+        cores = assembled_mesh.cell_data["Core"]
         unique_cores = np.unique(cores) 
         cores = len(unique_cores)
         RED = "\033[91m"
@@ -994,16 +875,10 @@ class Assembler:
 
         print(full_message)
 
-    def clear(self):
-        """
-        Clear the assembled mesh and reset the assembler state.
-        
-        This method deletes the currently assembled mesh and clears all assembly sections
-        from the Assembler. It effectively resets the Assembler to its initial state, allowing
-        for a fresh start without any previously created sections or meshes.
-        """
+    def reset(self):
+        """Clear the assembled mesh and all assembly sections."""
         self.delete_assembled_mesh()
-        self.clear_assembly_sections()
+        self.clear()
         
             
 
@@ -1012,9 +887,9 @@ class AssemblySection:
     A class representing a group of mesh parts combined into a single mesh.
     
     The AssemblySection class takes multiple mesh parts, combines them into a single
-    mesh, and optionally partitions the mesh for parallel computing. Each assembly 
-    section is automatically registered with the Assembler singleton and assigned
-    a unique tag for identification.
+    mesh, and optionally partitions the mesh for parallel computing. Section
+    registration with the assembler is performed by ``Assembler.create_section(...)``,
+    which assigns a unique tag for identification.
     
     This class is responsible for:
     - Validating mesh parts before assembly
@@ -1051,8 +926,8 @@ class AssemblySection:
         Initialize an AssemblySection by combining multiple mesh parts.
         
         This constructor takes a list of mesh part names, validates them, combines them
-        into a single mesh, and optionally partitions the result. The assembled section
-        is automatically registered with the Assembler singleton.
+        into a single mesh, and optionally partitions the result. Registration with
+        the assembler happens in ``Assembler.create_section(...)``.
         
         If the partition algorithm is "kd-tree" and num_partitions is not a power of 2,
         it will be automatically rounded up to the next power of 2.
@@ -1116,8 +991,6 @@ class AssemblySection:
         # Assemble the mesh first
         try:
             self._assemble_mesh(progress_callback=progress_callback)
-            # Only add to Assembler if mesh assembly is successful
-            self._tag = Assembler.get_instance()._add_assembly_section(self)
         except Exception as e:
             # If mesh assembly fails, raise the original exception
             raise
@@ -1129,9 +1002,9 @@ class AssemblySection:
         """
         Get the unique tag for this AssemblySection.
         
-        The tag is a unique identifier assigned by the Assembler when the 
-        AssemblySection is successfully created and registered. It can be
-        used to retrieve the section from the Assembler later.
+        The tag is a unique identifier assigned by the assembler when the section
+        is registered through ``Assembler.create_section(...)``. It can be used to
+        retrieve the section from the assembler later.
         
         Returns:
             int: Unique tag assigned by the Assembler
@@ -1255,8 +1128,14 @@ class AssemblySection:
                       assembly to fail, or if any other error occurs during assembly
         """
         if progress_callback is None:
+            assembler = self._meshpart_manager._mesh_maker.assembler
+
             def progress_callback(v, msg=""):
-                Progress.callback(v, msg, desc=f"Assembly Section: {len(Assembler._assembly_sections) + 1}")
+                Progress.callback(
+                    v,
+                    msg,
+                    desc=f"Assembly Section: {len(assembler._assembly_sections) + 1}",
+                )
 
 
             

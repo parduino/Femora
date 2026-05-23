@@ -31,8 +31,8 @@ class AbsorbingMeshViewOptionsDialog(QDialog):
         # Scalars dropdown
         scalar_label = QLabel("Scalars:")
         self.scalar_combobox = QComboBox()
-        self.scalar_combobox.addItems(self.meshmaker.assembler.AssembeledMesh.array_names)
-        active_scalar = self.meshmaker.assembler.AssembeledMesh.active_scalars_name
+        self.scalar_combobox.addItems(self.meshmaker.assembled_mesh.array_names)
+        active_scalar = self.meshmaker.assembled_mesh.active_scalars_name
         current_index = self.scalar_combobox.findText(active_scalar)
         self.scalar_combobox.setCurrentIndex(current_index)
         self.scalar_combobox.currentIndexChanged.connect(self.update_scalars)
@@ -87,10 +87,10 @@ class AbsorbingMeshViewOptionsDialog(QDialog):
     def update_scalars(self):
         """Update the scalars for the assembled mesh"""
         scalars_name = self.scalar_combobox.currentText()
-        self.meshmaker.assembler.AssembeledMesh.active_scalars_name = scalars_name
+        self.meshmaker.assembled_mesh.active_scalars_name = scalars_name
         
         # Determine if the selected scalar is point data or cell data
-        is_point_data = scalars_name in self.meshmaker.assembler.AssembeledMesh.point_data.keys()
+        is_point_data = scalars_name in self.meshmaker.assembled_mesh.point_data.keys()
         
         # Update the mapper with the correct scalar data type
         mapper = self.meshmaker.assembler.AssembeledActor.GetMapper()
@@ -101,13 +101,13 @@ class AbsorbingMeshViewOptionsDialog(QDialog):
         
         # Set the array name and range
         self.meshmaker.assembler.AssembeledActor.mapper.array_name = scalars_name
-        self.meshmaker.assembler.AssembeledActor.mapper.scalar_range = self.meshmaker.assembler.AssembeledMesh.get_data_range(scalars_name)
+        self.meshmaker.assembler.AssembeledActor.mapper.scalar_range = self.meshmaker.assembled_mesh.get_data_range(scalars_name)
         
         # Update the scalar bar title
         if self.plotter.scalar_bar is not None:
             self.plotter.scalar_bar.SetTitle(scalars_name)
         
-        self.plotter.update_scalar_bar_range(self.meshmaker.assembler.AssembeledMesh.get_data_range(scalars_name))
+        self.plotter.update_scalar_bar_range(self.meshmaker.assembled_mesh.get_data_range(scalars_name))
         self.plotter.update()
         self.plotter.render()
     
@@ -282,7 +282,7 @@ class AbsorbingGUI(QWidget):
 
             self.plotter.clear()
             self.meshmaker.assembler.AssembeledActor = self.plotter.add_mesh(
-                self.meshmaker.assembler.AssembeledMesh,
+                self.meshmaker.assembled_mesh,
                 opacity=1.0,
                 show_edges=True,
             )

@@ -443,7 +443,6 @@ def test_node_interface_post_assemble_uses_owner_bound_context(mesh_maker, monke
         constrained_node="constrained",
     )
     owner_mesh_maker = mesh_maker
-    owner_assembler = owner_mesh_maker.assembler
     retained_part = owner_mesh_maker.meshpart.get("retained")
 
     tet_points = np.array(
@@ -462,9 +461,9 @@ def test_node_interface_post_assemble_uses_owner_bound_context(mesh_maker, monke
     base_mesh.cell_data["ElementTag"] = np.zeros(base_mesh.n_cells, dtype=np.uint16)
     base_mesh.cell_data["MaterialTag"] = np.zeros(base_mesh.n_cells, dtype=np.uint16)
     base_mesh.cell_data["Region"] = np.zeros(base_mesh.n_cells, dtype=np.uint16)
-    owner_assembler.AssembeledMesh = base_mesh
+    owner_mesh_maker.assembled_mesh = base_mesh
 
-    owner_context = {"tag": False, "element": False, "read": False, "write": False}
+    owner_context = {"tag": False, "element": False}
     original_asd_embedded_node = owner_mesh_maker.element.special.asd_embedded_node
 
     def tracked_get_start_node_tag():
@@ -481,19 +480,6 @@ def test_node_interface_post_assemble_uses_owner_bound_context(mesh_maker, monke
         "asd_embedded_node",
         tracked_asd_embedded_node,
     )
-
-    class _AssemblerProxy:
-        @property
-        def AssembeledMesh(self):
-            owner_context["read"] = True
-            return owner_assembler.AssembeledMesh
-
-        @AssembeledMesh.setter
-        def AssembeledMesh(self, value):
-            owner_context["write"] = True
-            owner_assembler.AssembeledMesh = value
-
-    monkeypatch.setattr(owner_mesh_maker, "assembler", _AssemblerProxy())
 
     def fail_meshmaker_singleton(*args, **kwargs):
         raise AssertionError("MeshMaker() singleton must not be used in post-assemble block 11")
@@ -513,11 +499,9 @@ def test_node_interface_post_assemble_uses_owner_bound_context(mesh_maker, monke
     assert owner_context == {
         "tag": True,
         "element": True,
-        "read": True,
-        "write": True,
     }
-    assert owner_assembler.AssembeledMesh is not base_mesh
-    assert owner_assembler.AssembeledMesh.n_cells == base_mesh.n_cells + 1
+    assert owner_mesh_maker.assembled_mesh is not base_mesh
+    assert owner_mesh_maker.assembled_mesh.n_cells == base_mesh.n_cells + 1
 
 
 def test_interface_manager_owns_embeddedinfo_list(mesh_maker):

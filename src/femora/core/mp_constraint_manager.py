@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional, Tuple
 
-from femora.components.Assemble.Assembler import Assembler
 from femora.core.constraint_base import MPConstraint
 from femora.core.tagging import CompactRetagPolicy
 from pykdtree.kdtree import KDTree
@@ -62,11 +61,10 @@ class MPConstraintManager:
         return self.add(RigidDiaphragm(direction, master_node, slave_nodes))
 
     def laminar_boundary(self, dofs: List[int], bounds: Tuple[float, float], direction: int = 3, tol: float = 1e-2) -> None:
-        assembler = Assembler()
-        if assembler.AssembeledMesh is None:
-            raise ValueError("AssembeledMesh is not created yet")
+        if self._mesh_maker.assembled_mesh is None:
+            raise ValueError("Assembled mesh is not created yet")
 
-        mesh = assembler.AssembeledMesh.copy()
+        mesh = self._mesh_maker.assembled_mesh.copy()
         surface = mesh.extract_surface()
         xmin, xmax, ymin, ymax, zmin, zmax = surface.bounds
         eps = tol
@@ -123,9 +121,8 @@ class MPConstraintManager:
                     self.equal_dof(master_node=group[0], slave_nodes=[slave], dofs=dofs)
 
     def equal_dof_between_meshparts(self, meshpart_master: str, meshpart_slave: str, dofs: List[int], tol: float = 1e-5) -> None:
-        assembler = Assembler()
-        if assembler.AssembeledMesh is None:
-            raise ValueError("AssembeledMesh is not created yet")
+        if self._mesh_maker.assembled_mesh is None:
+            raise ValueError("Assembled mesh is not created yet")
 
         master_part = self._mesh_maker.meshpart.get(meshpart_master)
         slave_part = self._mesh_maker.meshpart.get(meshpart_slave)
@@ -140,7 +137,7 @@ class MPConstraintManager:
         if any((d < 1 or d > max_common) for d in dofs):
             raise ValueError(f"Requested DOFs {dofs} invalid for master ndf={ndf_master} and slave ndf={ndf_slave}")
 
-        assembled = assembler.get_mesh()
+        assembled = self._mesh_maker.assembled_mesh.copy()
         points = assembled.points
         master_idx = assembled.extract_values(values=master_part.tag, scalars="MeshPartTag_celldata", preference="cell")
         slave_idx = assembled.extract_values(values=slave_part.tag, scalars="MeshPartTag_celldata", preference="cell")

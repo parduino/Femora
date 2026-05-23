@@ -524,7 +524,7 @@ if __name__ == "__main__":
     # fm.meshpart.clear()
     # fm.section.clear_all_sections()
     # fm.region.clear()
-    # fm.assembler.clear_assembly_sections()
+    # fm.assembler.clear()
 
     # ------------------------------------------------------------------
     # 1. Create materials and elements
@@ -663,7 +663,7 @@ if __name__ == "__main__":
     # open the gui to visualize the mesh
     fm.gui()
     exit(0)
-    fm.assembler.Assemble()
+    fm.assembler.assemble()
     # fm.export_to_tcl("embedded_demo.tcl")
     # # fm.gui()
 
@@ -672,7 +672,7 @@ if __name__ == "__main__":
     # fm.export_to_tcl("embedded_demo.tcl")
 
     # pl = pv.Plotter()
-    # pl.add_mesh(fm.assembler.AssembeledMesh, color='blue', scalars="Core", opacity=1.0, show_edges=True)
+    # pl.add_mesh(fm.assembled_mesh, color='blue', scalars="Core", opacity=1.0, show_edges=True)
     # pl.show()
     # exit(0)
 

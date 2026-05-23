@@ -34,7 +34,7 @@ fm.meshpart.volume.uniform_rectangular_grid(
 )
 
 # Assemble the mesh
-fm.assembler.Assemble()
+fm.assembler.assemble()
 ```
 """
 

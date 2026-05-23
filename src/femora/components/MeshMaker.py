@@ -2,7 +2,7 @@ from femora.core.material_manager import MaterialManager
 from femora.core.element_base import Element
 from femora.core.element_manager import ElementManager
 from femora.core.ground_motion_manager import GroundMotionManager
-from femora.components.Assemble.Assembler import Assembler
+from femora.core.assembler import Assembler
 from femora.core.damping_manager import DampingManager
 from femora.core.region_manager import RegionManager
 from femora.core.constraint_manager import ConstraintManager
@@ -65,10 +65,11 @@ class MeshMaker:
             
         self._initialized = True
         self.model = None
+        # Primary public assembled-mesh path for runtime, export, and downstream consumers.
+        self.assembled_mesh = None
         self.events = ModelEventBus()
         self.model_name = kwargs.get('model_name')
         self.model_path = kwargs.get('model_path')
-        self.assembler = Assembler()
         self.material = MaterialManager(mesh_maker=self)
         self.element = ElementManager(mesh_maker=self)
         self.time_series = TimeSeriesManager(mesh_maker=self)
@@ -79,7 +80,7 @@ class MeshMaker:
         self.constraint = ConstraintManager(mesh_maker=self)
         self.load = LoadManager(mesh_maker=self)
         self.meshpart = MeshPartManager(mesh_maker=self)
-        self.assembler.bind_mesh_maker(self)
+        self.assembler = Assembler(mesh_maker=self)
         self.analysis = AnalysisManager(mesh_maker=self)
         self.pattern = PatternManager(
             mesh_maker=self,
@@ -307,7 +308,7 @@ class MeshMaker:
             os.makedirs(os.path.dirname(os.path.abspath(filename)), exist_ok=True)
             
             # Get the assembled content
-            if self.assembler.AssembeledMesh is None:
+            if self.assembled_mesh is None:
                 print("No mesh found")
                 raise ValueError("No mesh found\n Please assemble the mesh first")
             
@@ -317,7 +318,7 @@ class MeshMaker:
                 # Determine required MPI process count for this model export
                 required_np = 1
                 try:
-                    core_ids = np.asarray(self.assembler.AssembeledMesh.cell_data["Core"])
+                    core_ids = np.asarray(self.assembled_mesh.cell_data["Core"])
                     if core_ids.size:
                         required_np = int(np.max(np.unique(core_ids))) + 1
                 except Exception:
@@ -327,7 +328,7 @@ class MeshMaker:
                 f.write(self._get_tcl_file_header(required_np))
 
                 # Inform interfaces that we are about to export
-                self.events.emit(FemoraEvent.PRE_EXPORT, file_handle=f, assembled_mesh=self.assembler.AssembeledMesh)
+                self.events.emit(FemoraEvent.PRE_EXPORT, file_handle=f, assembled_mesh=self.assembled_mesh)
 
                 f.write("wipe\n")
                 f.write("set pid [getPID]\n")
@@ -352,7 +353,7 @@ class MeshMaker:
 
                 # Write the meshBounds
                 f.write("\n# Mesh Bounds ======================================\n")
-                bounds = self.assembler.AssembeledMesh.bounds
+                bounds = self.assembled_mesh.bounds
                 f.write(f"set X_MIN {bounds[0]}\n")
                 f.write(f"set X_MAX {bounds[1]}\n")
                 f.write(f"set Y_MIN {bounds[2]}\n")
@@ -384,26 +385,26 @@ class MeshMaker:
 
                 # Write the nodes
                 f.write("\n# Nodes & Elements ======================================\n")
-                cores = self.assembler.AssembeledMesh.cell_data["Core"]
+                cores = self.assembled_mesh.cell_data["Core"]
                 num_cores = unique(cores)
-                nodes     = self.assembler.AssembeledMesh.points
-                ndfs      = self.assembler.AssembeledMesh.point_data["ndf"]
-                mass      = self.assembler.AssembeledMesh.point_data["Mass"]
-                num_nodes = self.assembler.AssembeledMesh.n_points
+                nodes     = self.assembled_mesh.points
+                ndfs      = self.assembled_mesh.point_data["ndf"]
+                mass      = self.assembled_mesh.point_data["Mass"]
+                num_nodes = self.assembled_mesh.n_points
                 wroted    = zeros((num_nodes, len(num_cores)), dtype=bool) # to keep track of the nodes that have been written
                 nodeTags  = arange(self._start_nodetag,
                                    self._start_nodetag + num_nodes,
                                    dtype=int)
                 eleTags   = arange(self._start_ele_tag,
-                                   self._start_ele_tag + self.assembler.AssembeledMesh.n_cells,
+                                   self._start_ele_tag + self.assembled_mesh.n_cells,
                                    dtype=int)
 
 
-                elementClassTag = self.assembler.AssembeledMesh.cell_data["ElementTag"]
+                elementClassTag = self.assembled_mesh.cell_data["ElementTag"]
 
 
-                for i in range(self.assembler.AssembeledMesh.n_cells):
-                    cell = self.assembler.AssembeledMesh.get_cell(i)
+                for i in range(self.assembled_mesh.n_cells):
+                    cell = self.assembled_mesh.get_cell(i)
                     pids = cell.point_ids
                     core = cores[i]
                     f.write("if {$pid ==" + str(core) + "} {\n")
@@ -429,7 +430,7 @@ class MeshMaker:
                     f.write("\t"+eleclass.to_tcl(eleTag, nodeTag) + "\n")
                     f.write("}\n")     
                     if progress_callback:
-                        progress_callback((i / self.assembler.AssembeledMesh.n_cells) * 45 + 5, "writing nodes and elements")
+                        progress_callback((i / self.assembled_mesh.n_cells) * 45 + 5, "writing nodes and elements")
 
                 # notify EmbbededBeamSolidInterface event
                 self.events.emit(FemoraEvent.INTERFACE_ELEMENTS_TCL, file_handle=f)
@@ -451,13 +452,13 @@ class MeshMaker:
 
                 # write regions
                 f.write("\n# Regions ======================================\n")
-                Regions = unique(self.assembler.AssembeledMesh.cell_data["Region"])
+                Regions = unique(self.assembled_mesh.cell_data["Region"])
                 for i,regionTag in enumerate(Regions):
                     region = self.region.get(regionTag)
                     if region.get_type().lower() == "noderegion":
                         raise ValueError(f"""Region {regionTag} is of type NodeTRegion which is not supported in yet""")
                     
-                    region.elements = list(eleTags[self.assembler.AssembeledMesh.cell_data["Region"] == regionTag])
+                    region.elements = list(eleTags[self.assembled_mesh.cell_data["Region"] == regionTag])
                     region.element_range = []
                     f.write(f"{region.to_tcl()} \n")
                     del region
@@ -499,8 +500,8 @@ class MeshMaker:
                         constraint_map_rev[slave_id].append((master_id, constraint))
 
                 # Get mesh data
-                cells = self.assembler.AssembeledMesh.cell_connectivity
-                offsets = self.assembler.AssembeledMesh.offset
+                cells = self.assembled_mesh.cell_connectivity
+                offsets = self.assembled_mesh.offset
 
                 for core_idx, core in enumerate(num_cores):
                     # Get elements in current core
@@ -650,14 +651,14 @@ class MeshMaker:
             os.makedirs(os.path.dirname(os.path.abspath(filename)), exist_ok=True)
 
             # Get the assembled content
-            if self.assembler.AssembeledMesh is None:
+            if self.assembled_mesh is None:
                 print("No mesh found")
                 raise ValueError("No mesh found\n Please assemble the mesh first")
             
             # export to vtk
-            # self.assembler.AssembeledMesh.save(filename, binary=True)
+            # self.assembled_mesh.save(filename, binary=True)
             try:
-                self.assembler.AssembeledMesh.save(filename, binary=True)
+                self.assembled_mesh.save(filename, binary=True)
             except Exception as e:
                 raise e
         return True
@@ -722,11 +723,11 @@ class MeshMaker:
             None
         '''
 
-        if self.assembler.AssembeledMesh is None:
+        if self.assembled_mesh is None:
             print("No mesh found")
         else:
-            numpoints = self.assembler.AssembeledMesh.n_points
-            numcells = self.assembler.AssembeledMesh.n_cells
+            numpoints = self.assembled_mesh.n_points
+            numcells = self.assembled_mesh.n_cells
             print(f"Number of nodes: {numpoints}")
             print(f"Number of elements: {numcells}")    
         
@@ -802,7 +803,8 @@ class MeshMaker:
         self.mass.unregister_events()
         MaskManager.unregister_events(self)
         self.events.clear()
-        self.assembler.clear()
+        self.assembled_mesh = None
+        self.assembler.reset()
         self.material.clear()
         self.element.clear()
         self.damping.clear()

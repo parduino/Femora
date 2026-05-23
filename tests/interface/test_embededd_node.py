@@ -206,7 +206,7 @@ fm.interface.node_interface(
     offset=0.1,
     normal_filter=[1,0,0],
     filter_tolerance=0.98,)
-fm.assembler.Assemble(merge_points=False)
+fm.assembler.assemble(merge_points=False)
 # fm.assembler.plot(show_edges=True, scalars="MeshPartTag_celldata")
 fm.export_to_tcl("test_embededd_node.tcl")
 

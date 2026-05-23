@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from femora.core.material_base import Material
-from femora.components.Assemble.Assembler import Assembler
 from typing import Union
 
 class Action(ABC):
@@ -108,12 +107,13 @@ class SetMaterialParameter(Action):
 
         # create list of element tags if not provided
         if element_tags is None:
-            # print(Assembler().AssembeledMesh.cell_data )
-            mask = Assembler().AssembeledMesh.cell_data["MaterialTag"] == self.mat.tag
-            elements = np.arange(Assembler().AssembeledMesh.n_cells)[mask]
-            elements = elements + MeshMaker()._start_ele_tag
+            assembled_mesh = mm.assembled_mesh
+            if assembled_mesh is None:
+                raise ValueError("Assembled mesh is not available; assemble the model before setting material parameters.")
+            mask = assembled_mesh.cell_data["MaterialTag"] == self.mat.tag
+            elements = np.arange(assembled_mesh.n_cells)[mask]
+            elements = elements + mm._start_ele_tag
             self.element_tags = elements.tolist()
-            # self.element_tags = Assembler().AssembeledMesh.point_data 
         self.parameter_name = parameter_name
         self.parameter_value = parameter_value
 

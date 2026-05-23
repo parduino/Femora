@@ -11,7 +11,7 @@ classes that live under `components/transformation/`.
 
 Targets supported:
 - MeshPart: femora.components.mesh.meshpart_registry.MeshPart
-- AssemblySection: femora.components.Assemble.Assembler.AssemblySection
+- AssemblySection: femora.core.assembler.AssemblySection
 - PyVista datasets: pv.DataSet and subclasses
 - Collections of the above
 

@@ -789,7 +789,7 @@ class BeamForceRecorder(Recorder):
             raise ValueError(
                 "BeamForceRecorder must belong to a MeshMaker recorder manager before export"
             )
-        assembled = mm.assembler.AssembeledMesh
+        assembled = mm.assembled_mesh
         if assembled is None:
             raise ValueError("No assembled mesh found. Assemble the model before creating BeamForceRecorder.")
 

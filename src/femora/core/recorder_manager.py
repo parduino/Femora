@@ -120,7 +120,7 @@ class RecorderManager:
             element_responses = ["force"]
 
         mm = self._mesh_maker
-        mesh = mm.assembler.AssembeledMesh
+        mesh = self._mesh_maker.assembled_mesh
         if mesh is None:
             raise ValueError("pile_mpco requires an assembled mesh (call Assemble first).")
 

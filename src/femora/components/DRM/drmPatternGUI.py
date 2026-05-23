@@ -296,12 +296,12 @@ class DRMGUI(QWidget):
     
     def auto_set_origin_from_mesh(self):
         """Set origin coordinates from mesh center (preserves transform matrix)"""
-        if self.meshmaker.assembler.AssembeledMesh is None:
+        if self.meshmaker.assembled_mesh is None:
             QMessageBox.warning(self, "Warning", "No assembled mesh available. Please assemble a mesh first.")
             return False
         
         # Get mesh bounds
-        bounds = self.meshmaker.assembler.AssembeledMesh.bounds
+        bounds = self.meshmaker.assembled_mesh.bounds
         xmin, xmax, ymin, ymax, zmin, zmax = bounds
         
         # Calculate center for x and y, but use zmax for z

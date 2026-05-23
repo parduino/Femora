@@ -847,9 +847,9 @@ class FEMA_SAC_SteelFrame:
         connects it to all column endpoint nodes on that floor. It ensures
         that intermediate beam nodes (from subdivided beams) are excluded.
         
-        Must be called AFTER model.assembler.Assemble().
+        Must be called AFTER model.assembler.assemble().
         """
-        mesh = model.assembler.AssembeledMesh
+        mesh = model.assembled_mesh
         if mesh is None:
             raise ValueError("Mesh must be assembled before creating rigid diaphragms.")
         
@@ -962,7 +962,7 @@ class FEMA_SAC_SteelFrame:
             A ``Pattern`` instance (plain pattern with a constant time series and
             six-DOF nodal loads in global Z) ready to attach to a process or export.
         """
-        mesh = model.assembler.AssembeledMesh
+        mesh = model.assembled_mesh
         if mesh is None:
             raise ValueError("Mesh must be assembled before creating gravity loads.")
 
@@ -1053,7 +1053,7 @@ class FEMA_SAC_SteelFrame:
         if self.building_region is None:
             raise ValueError("Building region not found. Call build() first.")
 
-        mesh = model.assembler.AssembeledMesh
+        mesh = model.assembled_mesh
         if mesh is None:
             raise ValueError("Mesh must be assembled before creating recorders")
 

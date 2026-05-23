@@ -35,7 +35,7 @@ def test_steel_frame_story_drift_recorders_core_aware():
         num_partitions=2,
         merge_points=True,
     )
-    model.assembler.Assemble()
+    model.assembler.assemble()
 
     recorders = []
     for story in range(1, building.num_stories + 1):

@@ -12,7 +12,6 @@ from femora.core.interface_base import InterfaceBase
 from femora.components.event.mixins import GeneratesMeshMixin
 from femora.core.meshpart_base import MeshPart
 from femora.core.event_bus import FemoraEvent
-from femora.components.Assemble.Assembler import Assembler
 from femora.constants import FEMORA_MAX_NDF
 
 class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
@@ -312,12 +311,10 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
 
         # create a embedded node element
         mesh_maker = self._owner._mesh_maker
-        assembler = mesh_maker.assembler
         ndf = 3
 
-
         # 1. Get references to the existing assembled mesh data
-        base_mesh = assembler.AssembeledMesh
+        base_mesh = mesh_maker.assembled_mesh
         old_points = base_mesh.points
         # 2. Offset the indices in the new mesh
         offset = old_points.shape[0]
@@ -347,7 +344,7 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
             orient_map=orientation_map,
         )
 
-        # assembler.AssembeledMesh.merge(embedded_mesh, merge_points=True, inplace=True)
+        # mesh_maker.assembled_mesh.merge(embedded_mesh, merge_points=True, inplace=True)
         old_cells = base_mesh.cells
         old_celltypes = base_mesh.celltypes
 
@@ -399,8 +396,8 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
             final_mesh.point_data['ndf'] = base_mesh.point_data['ndf']
                                                  
 
-        # 6. Update your Assembler
-        assembler.AssembeledMesh = final_mesh
+        # 6. Update model-owned assembled mesh
+        mesh_maker.assembled_mesh = final_mesh
             
 
 

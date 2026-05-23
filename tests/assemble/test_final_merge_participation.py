@@ -1,6 +1,6 @@
 import pytest
 
-from femora.components.Assemble.Assembler import Assembler
+from femora.core.assembler import Assembler
 from femora.components.MeshMaker import MeshMaker
 from femora.core.element_base import Element
 from femora.components.event.event_bus import EventBus
@@ -13,8 +13,8 @@ def femora_clean_state():
     """Reset global Femora registries that impact assembly.
 
     Femora keeps several global registries (MeshParts, Materials, Elements,
-    Assembler singleton sections, EventBus subscribers). This fixture clears
-    them so tests stay deterministic and order-independent.
+    assembler sections, EventBus subscribers). This fixture clears them so
+    tests stay deterministic and order-independent.
     """
     old_subscribers = EventBus._subscribers.copy()
     EventBus._subscribers.clear()
@@ -23,14 +23,14 @@ def femora_clean_state():
     mm.clear_model()
     Element.clear_all_elements()
 
-    assembler = Assembler.get_instance()
-    assembler.clear_assembly_sections()
+    assembler = mm.assembler
+    assembler.clear()
     assembler.delete_assembled_mesh()
 
     try:
         yield assembler
     finally:
-        assembler.clear_assembly_sections()
+        assembler.clear()
         assembler.delete_assembled_mesh()
         mm.clear_model()
         Element.clear_all_elements()
@@ -102,7 +102,8 @@ def test_final_merge_participation_controls_cross_section_merging(
         merge_in_final=participate_b,
     )
 
-    assembler.Assemble(merge_points=True)
+    assembler.assemble(merge_points=True)
 
-    assert assembler.AssembeledMesh is not None
-    assert int(assembler.AssembeledMesh.n_points) == int(expected_points)
+    mesh_maker = MeshMaker.get_instance()
+    assert mesh_maker.assembled_mesh is not None
+    assert int(mesh_maker.assembled_mesh.n_points) == int(expected_points)

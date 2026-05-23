@@ -336,7 +336,7 @@ class DRM:
         Example:
             >>> addAbsorbingLayer(2, 2, "metis", "Rectangular", type="PML")
         """
-        if self.meshmaker.assembler.AssembeledMesh is None:
+        if self.meshmaker.assembled_mesh is None:
             print("No mesh found")
             raise ValueError("No mesh found\n Please assemble the mesh first")
         if numLayers < 1:
@@ -391,7 +391,7 @@ class DRM:
             >>> _addRectangularAbsorbingLayer(2, 2, "metis", type="PML")
         """
 
-        if self.meshmaker.assembler.AssembeledMesh is None:
+        if self.meshmaker.assembled_mesh is None:
             print("No mesh found")
             raise ValueError("No mesh found\n Please assemble the mesh first")
         if numLayers < 1:
@@ -421,7 +421,7 @@ class DRM:
                 raise NotImplementedError("ASDA absorbing layer is not implemented yet")
 
         
-        mesh = self.meshmaker.assembler.AssembeledMesh.copy()
+        mesh = self.meshmaker.assembled_mesh.copy()
         num_partitions  = mesh.cell_data["Core"].max() # previous number of partitions from the assembled mesh
         bounds = mesh.bounds
         eps = 1e-6
@@ -682,12 +682,12 @@ class DRM:
         # mesh.plot(show_edges=True)
         # Absorbing.plot(show_edges=True)
 
-        self.meshmaker.assembler.AssembeledMesh = mesh.merge(Absorbing, 
+        self.meshmaker.assembled_mesh = mesh.merge(Absorbing, 
                                                   merge_points = False, 
                                                   tolerance = 1e-6, 
                                                   inplace = False, 
                                                   progress_bar = True)
-        self.meshmaker.assembler.AssembeledMesh.set_active_scalars("AbsorbingRegion")
+        self.meshmaker.assembled_mesh.set_active_scalars("AbsorbingRegion")
 
         if kwargs['type'] == "Rayleigh":
             interfacepoints = mesh.points
@@ -708,21 +708,21 @@ class DRM:
             )
             mask = where(~mask)
             interfacepoints = interfacepoints[mask]
-            tree = pykdtree(self.meshmaker.assembler.AssembeledMesh.points)
+            tree = pykdtree(self.meshmaker.assembled_mesh.points)
             distances, indices = tree.query(interfacepoints, k=2)
 
-            self.meshmaker.assembler.AssembeledMesh.point_data["drm_absorbing_interface"] = arange(self.meshmaker.assembler.AssembeledMesh.n_points, dtype=int)
-            self.meshmaker.assembler.AssembeledMesh.point_data["drm_absorbing_interface"][indices.flatten()] = -1
-            n_points_before = self.meshmaker.assembler.AssembeledMesh.n_points
-            self.meshmaker.assembler.AssembeledMesh = self.meshmaker.assembler.AssembeledMesh.clean( tolerance = 0.0001,
+            self.meshmaker.assembled_mesh.point_data["drm_absorbing_interface"] = arange(self.meshmaker.assembled_mesh.n_points, dtype=int)
+            self.meshmaker.assembled_mesh.point_data["drm_absorbing_interface"][indices.flatten()] = -1
+            n_points_before = self.meshmaker.assembled_mesh.n_points
+            self.meshmaker.assembled_mesh = self.meshmaker.assembled_mesh.clean( tolerance = 0.0001,
                         remove_unused_points = False,
                         produce_merge_map = False,
                         average_point_data = False,
                         merging_array_name = "drm_absorbing_interface",
                         progress_bar = True)
-            n_points_after = self.meshmaker.assembler.AssembeledMesh.n_points
+            n_points_after = self.meshmaker.assembled_mesh.n_points
 
-            del self.meshmaker.assembler.AssembeledMesh.point_data["drm_absorbing_interface"]
+            del self.meshmaker.assembled_mesh.point_data["drm_absorbing_interface"]
 
         elif kwargs['type'] == "PML":
             # creating the mapping for the equal dof 
@@ -747,7 +747,7 @@ class DRM:
             interfacepoints = interfacepoints[mask]
 
             # create the kd-tree
-            tree = pykdtree(self.meshmaker.assembler.AssembeledMesh.points)
+            tree = pykdtree(self.meshmaker.assembled_mesh.points)
             distances, indices = tree.query(interfacepoints, k=2)
 
 
@@ -762,8 +762,8 @@ class DRM:
             start_node_tag = MeshMaker()._start_nodetag
             for i, index in enumerate(indices):
                 # check that the index 1 is always has 9 dof and index 0 has 3 dof
-                ndf1 = self.meshmaker.assembler.AssembeledMesh.point_data["ndf"][index[0]]
-                ndf2 = self.meshmaker.assembler.AssembeledMesh.point_data["ndf"][index[1]]
+                ndf1 = self.meshmaker.assembled_mesh.point_data["ndf"][index[0]]
+                ndf2 = self.meshmaker.assembled_mesh.point_data["ndf"][index[1]]
 
                 if ndf1 == 9 and ndf2 == 3:
                     masterNode = index[1] + start_node_tag

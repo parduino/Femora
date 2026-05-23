@@ -1090,7 +1090,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
                                 mass_merging="sum")
 
 
-    fm.assembler.Assemble()
+    fm.assembler.assemble()
 
 
     # %%
@@ -1177,14 +1177,14 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             print("Error: mesh part " + name + " not found.")
             sys.exit(1)
         mesh_part_tag = mesh_part.tag
-        mesh_part_cells = fm.assembler.AssembeledMesh.cell_data["MeshPartTag_celldata"] == mesh_part_tag
+        mesh_part_cells = fm.assembled_mesh.cell_data["MeshPartTag_celldata"] == mesh_part_tag
         mesh_part_cell  = np.where(mesh_part_cells)[0]
         mesh_part_points = []
         for cell_id in mesh_part_cell:
-            mesh_part_points.append(fm.assembler.AssembeledMesh.get_cell(cell_id).point_ids)
+            mesh_part_points.append(fm.assembled_mesh.get_cell(cell_id).point_ids)
         mesh_part_points = np.unique(np.hstack(mesh_part_points))
         # find the point with the minimum z value and maximum z value
-        points = fm.assembler.AssembeledMesh.points[mesh_part_points]
+        points = fm.assembled_mesh.points[mesh_part_points]
         z_min_index = np.argmin(points[:,2])
         z_max_index = np.argmax(points[:,2])
         z_min_point = points[z_min_index]
@@ -1208,7 +1208,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             sys.exit(1)
 
 
-        connection_core = fm.assembler.AssembeledMesh.cell_data["Core"][mesh_part_cell]
+        connection_core = fm.assembled_mesh.cell_data["Core"][mesh_part_cell]
         connection_core = np.unique(connection_core)
         if len(connection_core) > 1:
             print("Error: column " + str(col_index+1) + " is spanning multiple cores. This is not supported yet.")
@@ -1267,7 +1267,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         
 
 
-    if fm.assembler.AssembeledMesh is None:
+    if fm.assembled_mesh is None:
         print("Error: Assembled mesh is None. Cannot export the model.")
         sys.exit(1)
     from femora.components.event.event_bus import FemoraEvent
@@ -1278,7 +1278,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         # Inform interfaces that we are about to export
         self.events.emit(FemoraEvent.PRE_EXPORT, 
                     file_handle=f, 
-                    assembled_mesh=fm.assembler.AssembeledMesh)
+                    assembled_mesh=fm.assembled_mesh)
 
         f.write("wipe\n")
         f.write("model BasicBuilder -ndm 3\n")
@@ -1294,7 +1294,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
 
         # Write the meshBounds
         f.write("\n# Mesh Bounds ======================================\n")
-        bounds = self.assembler.AssembeledMesh.bounds
+        bounds = self.assembled_mesh.bounds
         f.write(f"set X_MIN {bounds[0]}\n")
         f.write(f"set X_MAX {bounds[1]}\n")
         f.write(f"set Y_MIN {bounds[2]}\n")
@@ -1345,26 +1345,26 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
 
         # Write the nodes
         f.write("\n# Nodes & Elements ======================================\n")
-        cores = self.assembler.AssembeledMesh.cell_data["Core"]
+        cores = self.assembled_mesh.cell_data["Core"]
         num_cores = np.unique(cores)
-        nodes     = self.assembler.AssembeledMesh.points
-        ndfs      = self.assembler.AssembeledMesh.point_data["ndf"]
-        mass      = self.assembler.AssembeledMesh.point_data["Mass"]
-        num_nodes = self.assembler.AssembeledMesh.n_points
+        nodes     = self.assembled_mesh.points
+        ndfs      = self.assembled_mesh.point_data["ndf"]
+        mass      = self.assembled_mesh.point_data["Mass"]
+        num_nodes = self.assembled_mesh.n_points
         wroted    = np.zeros((num_nodes, len(num_cores)), dtype=bool) # to keep track of the nodes that have been written
         nodeTags  = np.arange(self._start_nodetag,
                             self._start_nodetag + num_nodes,
                             dtype=int)
         eleTags   = np.arange(self._start_ele_tag,
-                            self._start_ele_tag + self.assembler.AssembeledMesh.n_cells,
+                            self._start_ele_tag + self.assembled_mesh.n_cells,
                             dtype=int)
 
 
-        elementClassTag = self.assembler.AssembeledMesh.cell_data["ElementTag"]
+        elementClassTag = self.assembled_mesh.cell_data["ElementTag"]
 
 
-        for i in range(self.assembler.AssembeledMesh.n_cells):
-            cell = self.assembler.AssembeledMesh.get_cell(i)
+        for i in range(self.assembled_mesh.n_cells):
+            cell = self.assembled_mesh.get_cell(i)
             pids = cell.point_ids
             core = cores[i]
             f.write("if {$pid ==" + str(core + self._start_core_tag) + "} {\n")
@@ -1386,7 +1386,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             f.write("\t"+eleclass.to_tcl(eleTag, nodeTag) + "\n")
             f.write("}\n")     
             if progress_callback:
-                progress_callback((i / self.assembler.AssembeledMesh.n_cells) * 45 + 5, "writing nodes and elements")
+                progress_callback((i / self.assembled_mesh.n_cells) * 45 + 5, "writing nodes and elements")
         
         # notify EmbbededBeamSolidInterface event
         self.events.emit(FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, 
@@ -1403,7 +1403,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             sys.exit(1)
 
 
-        connection_core = fm.assembler.AssembeledMesh.cell_data["Core"][mesh_part_cell]
+        connection_core = fm.assembled_mesh.cell_data["Core"][mesh_part_cell]
         connection_core = np.unique(connection_core)
         if len(connection_core) > 1:
             print("Error: column " + str(col_index+1) + " is spanning multiple cores. This is not supported yet.")
@@ -1462,7 +1462,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         
 
 
-    if fm.assembler.AssembeledMesh is None:
+    if fm.assembled_mesh is None:
         print("Error: Assembled mesh is None. Cannot export the model.")
         sys.exit(1)
     from femora.components.event.event_bus import FemoraEvent
@@ -1473,7 +1473,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         # Inform interfaces that we are about to export
         self.events.emit(FemoraEvent.PRE_EXPORT, 
                     file_handle=f, 
-                    assembled_mesh=fm.assembler.AssembeledMesh)
+                    assembled_mesh=fm.assembled_mesh)
 
         f.write("wipe\n")
         f.write("model BasicBuilder -ndm 3\n")
@@ -1489,7 +1489,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
 
         # Write the meshBounds
         f.write("\n# Mesh Bounds ======================================\n")
-        bounds = self.assembler.AssembeledMesh.bounds
+        bounds = self.assembled_mesh.bounds
         f.write(f"set X_MIN {bounds[0]}\n")
         f.write(f"set X_MAX {bounds[1]}\n")
         f.write(f"set Y_MIN {bounds[2]}\n")
@@ -1540,26 +1540,26 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
 
         # Write the nodes
         f.write("\n# Nodes & Elements ======================================\n")
-        cores = self.assembler.AssembeledMesh.cell_data["Core"]
+        cores = self.assembled_mesh.cell_data["Core"]
         num_cores = np.unique(cores)
-        nodes     = self.assembler.AssembeledMesh.points
-        ndfs      = self.assembler.AssembeledMesh.point_data["ndf"]
-        mass      = self.assembler.AssembeledMesh.point_data["Mass"]
-        num_nodes = self.assembler.AssembeledMesh.n_points
+        nodes     = self.assembled_mesh.points
+        ndfs      = self.assembled_mesh.point_data["ndf"]
+        mass      = self.assembled_mesh.point_data["Mass"]
+        num_nodes = self.assembled_mesh.n_points
         wroted    = np.zeros((num_nodes, len(num_cores)), dtype=bool) # to keep track of the nodes that have been written
         nodeTags  = np.arange(self._start_nodetag,
                             self._start_nodetag + num_nodes,
                             dtype=int)
         eleTags   = np.arange(self._start_ele_tag,
-                            self._start_ele_tag + self.assembler.AssembeledMesh.n_cells,
+                            self._start_ele_tag + self.assembled_mesh.n_cells,
                             dtype=int)
 
 
-        elementClassTag = self.assembler.AssembeledMesh.cell_data["ElementTag"]
+        elementClassTag = self.assembled_mesh.cell_data["ElementTag"]
 
 
-        for i in range(self.assembler.AssembeledMesh.n_cells):
-            cell = self.assembler.AssembeledMesh.get_cell(i)
+        for i in range(self.assembled_mesh.n_cells):
+            cell = self.assembled_mesh.get_cell(i)
             pids = cell.point_ids
             core = cores[i]
             f.write("if {$pid ==" + str(core + self._start_core_tag) + "} {\n")
@@ -1581,7 +1581,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             f.write("\t"+eleclass.to_tcl(eleTag, nodeTag) + "\n")
             f.write("}\n")     
             if progress_callback:
-                progress_callback((i / self.assembler.AssembeledMesh.n_cells) * 45 + 5, "writing nodes and elements")
+                progress_callback((i / self.assembled_mesh.n_cells) * 45 + 5, "writing nodes and elements")
         
         # notify EmbbededBeamSolidInterface event
         self.events.emit(FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, 
@@ -1600,13 +1600,13 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
 
         # write regions
         f.write("\n# Regions ======================================\n")
-        Regions = np.unique(self.assembler.AssembeledMesh.cell_data["Region"])
+        Regions = np.unique(self.assembled_mesh.cell_data["Region"])
         for i,regionTag in enumerate(Regions):
             region = self.region.get(regionTag)
             if region.get_type().lower() == "noderegion":
                 raise ValueError(f"""Region {regionTag} is of type NodeTRegion which is not supported in yet""")
             
-            region.elements = list(eleTags[self.assembler.AssembeledMesh.cell_data["Region"] == regionTag])
+            region.elements = list(eleTags[self.assembled_mesh.cell_data["Region"] == regionTag])
             region.element_range = []
             f.write(f"{region.to_tcl()} \n")
             del region
@@ -1645,8 +1645,8 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
                 constraint_map_rev[slave_id].append((master_id, constraint))
 
         # Get mesh data
-        cells = self.assembler.AssembeledMesh.cell_connectivity
-        offsets = self.assembler.AssembeledMesh.offset
+        cells = self.assembled_mesh.cell_connectivity
+        offsets = self.assembled_mesh.offset
 
         for core_idx, core in enumerate(num_cores):
             # Get elements in current core
@@ -1799,7 +1799,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         structure_part = pv.read(strucure_mesh)
         pl = pv.Plotter()
         pl.add_mesh(structure_part, style='wireframe', color="black", line_width=3, opacity=1.0)
-        pl.add_mesh(fm.assembler.AssembeledMesh, show_edges=True, opacity=1.0, scalars="Core", multi_colors=True)
+        pl.add_mesh(fm.assembled_mesh, show_edges=True, opacity=1.0, scalars="Core", multi_colors=True)
         pl.show(title="Structure and Soil")
     
 

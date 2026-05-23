@@ -9,7 +9,6 @@ try:
 except Exception:  # pragma: no cover
     pv = None  # type: ignore
 
-from femora.components.Assemble.Assembler import Assembler
 from femora.core.event_bus import FemoraEvent
 from .mask_base import MeshIndex, NodeMask, ElementMask
 
@@ -39,10 +38,13 @@ class MaskManager:
 
     @classmethod
     def from_assembled(cls) -> 'MaskManager':
-        assembler = Assembler.get_instance()
-        grid = assembler.get_mesh()
+        from femora.components.MeshMaker import MeshMaker
+
+        mesh_maker = MeshMaker.get_instance()
+        grid = mesh_maker.assembled_mesh
         if grid is None:
-            raise RuntimeError("MaskManager requires an assembled mesh; call Assembler.Assemble() first")
+            raise RuntimeError("MaskManager requires an assembled mesh; call assembler.assemble() first")
+        grid = grid.copy()
         if cls._cached_index is None:
             cls._cached_index = cls._build_index_from_grid(grid)
         return cls(cls._cached_index)
@@ -132,7 +134,10 @@ class MaskManager:
 
     @classmethod
     def _on_post_assemble(cls, **kwargs):
-        assembler = Assembler.get_instance()
-        grid = kwargs.get("assembled_mesh", assembler.get_mesh())
+        grid = kwargs.get("assembled_mesh")
+        if grid is None:
+            from femora.components.MeshMaker import MeshMaker
+
+            grid = MeshMaker.get_instance().assembled_mesh
         if grid is not None:
             cls._cached_index = cls._build_index_from_grid(grid)

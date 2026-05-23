@@ -442,19 +442,19 @@ class SPConstraintCreationDialog(QDialog):
             node_tag = int(self.node_tag_input.text())
             
             # Check if mesh is assembled
-            if not self.meshmaker.assembler.AssembeledMesh:
+            if not self.meshmaker.assembled_mesh:
                 QMessageBox.warning(self, "Error", "No assembled mesh found. Please assemble the mesh first.")
                 return
             
             # Node tags in GUI are 1-based, but in the internal model are 0-based
             node_idx = node_tag - 1
             
-            if node_idx < 0 or node_idx >= self.meshmaker.assembler.AssembeledMesh.n_points:
+            if node_idx < 0 or node_idx >= self.meshmaker.assembled_mesh.n_points:
                 QMessageBox.warning(self, "Error", f"Node {node_tag} is out of range.")
                 return
             
             # Get the DOF from the mesh
-            ndf = self.meshmaker.assembler.AssembeledMesh.point_data["ndf"][node_idx]
+            ndf = self.meshmaker.assembled_mesh.point_data["ndf"][node_idx]
             
             # # Update DOF selection
             # self.dof_count_input.setText(str(ndf))
@@ -829,19 +829,19 @@ class SPConstraintEditDialog(QDialog):
             node_tag = int(self.node_tag_input.text())
             
             # Check if mesh is assembled
-            if not self.meshmaker.assembler.AssembeledMesh:
+            if not self.meshmaker.assembled_mesh:
                 QMessageBox.warning(self, "Error", "No assembled mesh found. Please assemble the mesh first.")
                 return
             
             # Node tags in GUI are 1-based, but in the internal model are 0-based
             node_idx = node_tag - 1
             
-            if node_idx < 0 or node_idx >= self.meshmaker.assembler.AssembeledMesh.n_points:
+            if node_idx < 0 or node_idx >= self.meshmaker.assembled_mesh.n_points:
                 QMessageBox.warning(self, "Error", f"Node {node_tag} is out of range.")
                 return
             
             # Get the DOF from the mesh
-            ndf = self.meshmaker.assembler.AssembeledMesh.point_data["ndf"][node_idx]
+            ndf = self.meshmaker.assembled_mesh.point_data["ndf"][node_idx]
             
             # Recreate DOF widget with new DOF count
             old_layout = self.layout()
@@ -1178,11 +1178,11 @@ class FixConstraintView(QWidget):
         # Clear existing constraint actors
         self.hide_constraints()
         
-        if not self.meshmaker.assembler.AssembeledMesh:
+        if not self.meshmaker.assembled_mesh:
             QMessageBox.warning(self, "Error", "No assembled mesh found. Please assemble the mesh first.")
             return
         
-        mesh = self.meshmaker.assembler.AssembeledMesh
+        mesh = self.meshmaker.assembled_mesh
         scale = self.scale_slider.value() / 10.0
         
         # Define colors for different constraint types

@@ -18,7 +18,7 @@
    #     name        master-side nodes   slave-side nodes
    LaminarBoundary("ZeroSlip",     [1,2,3],           [101,102,103])
 
-   fm.assembler.Assemble()  # interface hooks in automatically
+fm.assembler.assemble()  # interface hooks in automatically
    fm.export_to_tcl("model.tcl")
    ```
    You never call a special "apply" method—the event system does that for you.
@@ -56,7 +56,7 @@ An **Interface** is the logical “glue” between two (or more) parts of a Femo
 The key requirement is **resilience to domain decomposition changes**: after you call
 
 ```python
-fm.assembler.Assemble()
+fm.assembler.assemble()
 ```
 …or later repartition the mesh, the interface must still be valid.
 
@@ -193,7 +193,7 @@ dict_keys(['pile_ifc', 'node_ifc'])
 
 | Component | Change | Purpose |
 |-----------|--------|---------|
-| `Assembler.Assemble()` | Emits `POST_ASSEMBLE`, `RESOLVE_CORE_CONFLICTS` | Triggers interface build / core sync |
+| `Assembler.assemble()` | Emits `POST_ASSEMBLE`, `RESOLVE_CORE_CONFLICTS` | Triggers interface build / core sync |
 | `MeshMaker.export_to_tcl()` | Emits `PRE_EXPORT` | Gives interfaces a chance to write TCL |
 | `MeshMaker` | Exposes `self.interface` | Convenience access for users and GUI |
 

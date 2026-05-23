@@ -7,7 +7,6 @@ from pykdtree.kdtree import KDTree
 
 from femora.constants import FEMORA_MAX_NDF
 from femora.core.meshpart_base import MeshPart
-from femora.components.Assemble.Assembler import Assembler
 from femora.core.event_bus import FemoraEvent
 
 
@@ -121,7 +120,7 @@ class MassManager:
 
         # remove Mass array from assembled mesh if present
         try:
-            asm = Assembler().AssembeledMesh
+            asm = self._mesh_maker.assembled_mesh
             if asm is not None and "Mass" in asm.point_data:
                 del asm.point_data["Mass"]
         except Exception:
@@ -138,7 +137,7 @@ class MassManager:
         return mp.mesh.point_data["Mass"]
 
     def get_assembled_mass_array(self) -> Optional[np.ndarray]:
-        asm = Assembler().AssembeledMesh
+        asm = self._mesh_maker.assembled_mesh
         if asm is None:
             return None
         if "Mass" not in asm.point_data:
@@ -241,7 +240,7 @@ class _MeshPartMassHelper:
         return mp
 
     def _sync_to_assembled(self, mp: MeshPart):
-        asm = Assembler().AssembeledMesh
+        asm = self._mgr._mesh_maker.assembled_mesh
         if asm is None:
             return  # not assembled yet → nothing to sync
         if "MeshPartTag_pointdata" not in asm.point_data:
@@ -290,7 +289,7 @@ class _RegionMassHelper:
 
     # -------- internal helpers --------
     def _require_assembled(self):
-        asm = Assembler().AssembeledMesh
+        asm = self._mgr._mesh_maker.assembled_mesh
         if asm is None:
             raise RuntimeError("Model must be assembled before using region mass helpers")
         if "Mass" not in asm.point_data:
@@ -352,7 +351,7 @@ class _GlobalMassHelper:
 
     # internal helpers reuse region helper ones
     def _require_assembled(self):
-        asm = Assembler().AssembeledMesh
+        asm = self._mgr._mesh_maker.assembled_mesh
         if asm is None:
             raise RuntimeError("Model must be assembled before using global mass helpers")
         if "Mass" not in asm.point_data:

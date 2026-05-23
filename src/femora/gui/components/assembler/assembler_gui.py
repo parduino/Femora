@@ -12,7 +12,7 @@ from qtpy.QtWidgets import (
 
 
 from femora.components.Mesh.meshPartBase import MeshPart
-from femora.components.Assemble.Assembler import Assembler
+from femora.components.MeshMaker import MeshMaker
 from femora.gui.plotter import PlotterManager
 from femora.components.partitioner.partitioner import PartitionerRegistry
 
@@ -134,12 +134,12 @@ class AssemblyManagerTab(QWidget):
         """
         Delete the assembled model
         """
-        assembler = Assembler.get_instance()
+        assembler = MeshMaker.get_instance().assembler
         plotter = PlotterManager.get_plotter()
         if assembler.AssembeledActor is not None:
             plotter.remove_actor(assembler.AssembeledActor)
             assembler.AssembeledActor = None
-            assembler.AssembeledMesh = None
+            MeshMaker.get_instance().assembled_mesh = None
             plotter.clear()
             plotter.update()
             plotter.render()
@@ -155,20 +155,20 @@ class AssemblyManagerTab(QWidget):
             self.refresh_assembly_sections_list()
             from femora.gui.progress_gui import get_progress_callback_gui
 
-            assembler = Assembler.get_instance()
+            assembler = MeshMaker.get_instance().assembler
 
             # GUI progress bar callback (mirrors console-based Progress)
             progress_cb = get_progress_callback_gui("Assembling")
 
-            assembler.Assemble(
+            assembler.assemble(
                 merge_points=self.merge_points_checkbox.isChecked(),
                 progress_callback=progress_cb,
             )
             
-            if assembler.AssembeledMesh is not None:
+            if MeshMaker.get_instance().assembled_mesh is not None:
                 self.plotter = PlotterManager.get_plotter()
                 self.plotter.clear()
-                assembler.AssembeledActor = self.plotter.add_mesh(  assembler.AssembeledMesh, 
+                assembler.AssembeledActor = self.plotter.add_mesh(  MeshMaker.get_instance().assembled_mesh, 
                                         opacity=1.0,
                                         scalars = "Core",
                                         style='surface',
@@ -187,11 +187,11 @@ class AssemblyManagerTab(QWidget):
         Show only the selected section by hiding all other sections
         """
         try:
-            assembler = Assembler.get_instance()
+            assembler = MeshMaker.get_instance().assembler
             plotter = PlotterManager.get_plotter()
             
             # Get all assembly sections
-            sections = assembler.get_sections()
+            sections = assembler.get_all()
             
             # Iterate through all sections
             for tag, section in sections.items():
@@ -210,13 +210,13 @@ class AssemblyManagerTab(QWidget):
         Update the assembly sections table with current sections
         """
         # Get the Assembler instance
-        assembler = Assembler.get_instance()
+        assembler = MeshMaker.get_instance().assembler
         
         # Clear existing rows
         self.assembly_sections_table.setRowCount(0)
         
         # Get all assembly sections
-        assembly_sections = assembler.get_sections()
+        assembly_sections = assembler.get_all()
         
         # Set row count
         self.assembly_sections_table.setRowCount(len(assembly_sections))
@@ -279,7 +279,7 @@ class AssemblyManagerTab(QWidget):
         Handle the view action from the context menu
         """
         try:
-            section = Assembler.get_instance().get_section(tag)
+            section = MeshMaker.get_instance().assembler.get(tag)
             
             # Check if section is plotted (has an actor)
             if section.actor is None:
@@ -299,7 +299,7 @@ class AssemblyManagerTab(QWidget):
         Handle the solo view action from the context menu
         """
         try:
-            section = Assembler.get_instance().get_section(tag)
+            section = MeshMaker.get_instance().assembler.get(tag)
             
             # Check if section is plotted (has an actor)
             if section.actor is None:
@@ -342,11 +342,11 @@ class AssemblyManagerTab(QWidget):
         
         if reply == QMessageBox.Yes:
             try:
-                assembler = Assembler.get_instance()
+                assembler = MeshMaker.get_instance().assembler
                 # remove the actor from the plotter
                 plotter = PlotterManager.get_plotter()
-                plotter.remove_actor(assembler.get_section(tag).actor)
-                assembler.delete_section(tag)
+                plotter.remove_actor(assembler.get(tag).actor)
+                assembler.remove(tag)
                 self.refresh_assembly_sections_list()
             except KeyError:
                 QMessageBox.warning(self, "Error", f"Assembly section with tag '{tag}' not found")
@@ -357,7 +357,7 @@ class AssemblyManagerTab(QWidget):
         """
         Open dialog to create a new assembly section
         """
-        from femora.components.Assemble.AssemblerGUI import AssemblySectionCreationDialog
+        from femora.gui.components.assembler.assembler_gui import AssemblySectionCreationDialog
         
         dialog = AssemblySectionCreationDialog(self)
         
@@ -369,10 +369,10 @@ class AssemblyManagerTab(QWidget):
         """
         Plot all assembly parts in the plotter
         """
-        assembler = Assembler.get_instance()
+        assembler = MeshMaker.get_instance().assembler
         plotter = PlotterManager.get_plotter()
         plotter.clear()
-        for section in assembler.get_sections().values():
+        for section in assembler.get_all().values():
             actor = plotter.add_mesh(section.mesh,
                                         show_edges=True,
                                      opacity=1.0,
@@ -397,16 +397,16 @@ class AssemblyManagerTab(QWidget):
         )
         
         if reply == QMessageBox.Yes:
-            assembler = Assembler.get_instance()
+            assembler = MeshMaker.get_instance().assembler
             plotter = PlotterManager.get_plotter()
             
             # Remove all actors from the plotter
-            for section in assembler.get_sections().values():
+            for section in assembler.get_all().values():
                 if section.actor is not None:
                     plotter.remove_actor(section.actor)
             
-            # Clear all assembly sections from the Assembler
-            assembler.clear_assembly_sections()
+            # Clear all assembly sections from the assembler
+            assembler.clear()
             
             # Refresh the table to reflect the changes
             self.refresh_assembly_sections_list()
@@ -538,7 +538,8 @@ class AssembledMeshViewOptionsDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("View Options for Assembled Mesh")
         self.plotter = PlotterManager.get_plotter()
-        self.assembler = Assembler.get_instance()
+        self.mesh_maker = MeshMaker.get_instance()
+        self.assembler = self.mesh_maker.assembler
         
         # Main layout
         layout = QVBoxLayout(self)
@@ -552,8 +553,8 @@ class AssembledMeshViewOptionsDialog(QDialog):
         # scalars dropdown
         scalar_label = QLabel("Scalars:")
         self.scalar_combobox = QComboBox()
-        self.scalar_combobox.addItems(self.assembler.AssembeledMesh.array_names)
-        active_scalar = self.assembler.AssembeledMesh.active_scalars_name
+        self.scalar_combobox.addItems(self.mesh_maker.assembled_mesh.array_names)
+        active_scalar = self.mesh_maker.assembled_mesh.active_scalars_name
         current_index = self.scalar_combobox.findText(active_scalar)
         self.scalar_combobox.currentIndexChanged.connect(self.update_scalars)
 
@@ -608,10 +609,10 @@ class AssembledMeshViewOptionsDialog(QDialog):
     def update_scalars(self):
         """Update the scalars for the assembled mesh"""
         scalars_name = self.scalar_combobox.currentText()
-        self.assembler.AssembeledMesh.active_scalars_name = scalars_name
+        self.mesh_maker.assembled_mesh.active_scalars_name = scalars_name
         
         # Determine if the selected scalar is point data or cell data
-        is_point_data = scalars_name in self.assembler.AssembeledMesh.point_data.keys()
+        is_point_data = scalars_name in self.mesh_maker.assembled_mesh.point_data.keys()
         
         # Update the mapper with the correct scalar data type
         mapper = self.assembler.AssembeledActor.GetMapper()
@@ -622,13 +623,13 @@ class AssembledMeshViewOptionsDialog(QDialog):
         
         # Set the array name and range
         self.assembler.AssembeledActor.mapper.array_name = scalars_name
-        self.assembler.AssembeledActor.mapper.scalar_range = self.assembler.AssembeledMesh.get_data_range(scalars_name)
+        self.assembler.AssembeledActor.mapper.scalar_range = self.mesh_maker.assembled_mesh.get_data_range(scalars_name)
         
         # Update the scalar bar title
         if self.plotter.scalar_bar is not None:
             self.plotter.scalar_bar.SetTitle(scalars_name)
         
-        self.plotter.update_scalar_bar_range(self.assembler.AssembeledMesh.get_data_range(scalars_name))
+        self.plotter.update_scalar_bar_range(self.mesh_maker.assembled_mesh.get_data_range(scalars_name))
         self.plotter.update()
         self.plotter.render()
     
@@ -671,7 +672,7 @@ class AssemblySectionCreationDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Add Assembly Section")
         self.setModal(True)
-        self.Assembler = Assembler.get_instance()
+        self.Assembler = MeshMaker.get_instance().assembler
         self.plotter = PlotterManager.get_plotter()
         
         # Main layout
