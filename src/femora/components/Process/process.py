@@ -5,7 +5,7 @@ import weakref
 from femora.core.constraint_base import MPConstraint, SPConstraint
 from femora.core.recorder_base import Recorder
 from femora.components.analysis.analysis import Analysis
-from femora.components.Actions.action import Action
+from femora.core.action_base import Action
 from femora.core.pattern_base import Pattern
 
 # Define a union type for all components that can be used in the process

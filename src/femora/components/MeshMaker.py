@@ -22,7 +22,7 @@ from femora.core.section_manager import SectionManager
 from femora.components.mass.mass_manager import MassManager
 from femora.components.geometry_ops.spatial_transform_manager import SpatialTransformManager
 from femora.components.mask.mask_manager import MaskManager
-from femora.components.Actions.action import ActionManager
+from femora.core.action_manager import ActionManager
 import os
 from numpy import unique, zeros, arange, array, abs, concatenate, meshgrid, ones, full, uint16, repeat, where, isin
 from pyvista import Cube, MultiBlock, StructuredGrid
@@ -91,7 +91,7 @@ class MeshMaker:
         self.interface = InterfaceManager(mesh_maker=self)
         self.transformation = TransformationManager(mesh_maker=self)
         self.section = SectionManager(mesh_maker=self)
-        self.actions = ActionManager()
+        self.actions = ActionManager(mesh_maker=self)
         self.spatial_transform = SpatialTransformManager()
         self.process = ProcessManager()
         

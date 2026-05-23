@@ -4,7 +4,6 @@ from pyvista import Cube, MultiBlock, StructuredGrid
 import tqdm
 from pykdtree.kdtree import KDTree as pykdtree
 from femora.components.pattern.h5drm_pattern import H5DRMPattern
-from femora.components.Actions.action import ActionManager
 from femora.components.analysis.analysis import Analysis
 from femora.constants import FEMORA_MAX_NDF
 
@@ -286,7 +285,7 @@ class DRM:
         )
         
         # Create an action to reset time after gravity analysis
-        setTime = ActionManager().seTime(pseudo_time=0.0)
+        setTime = self.meshmaker.actions.set_time(pseudo_time=0.0)
         
         # Add all steps to the process flow
         # self.meshmaker.process.add_step(component=c1, description="Fixing Xmax")

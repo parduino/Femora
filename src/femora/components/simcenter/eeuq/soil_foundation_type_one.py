@@ -1202,7 +1202,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
     # gravity analysis
     newmark_gamma = 0.6
     newnark_beta = (newmark_gamma + 0.5)**2 / 4
-    elastic_update = fm.actions.updateMaterialStageToElastic()
+    elastic_update = fm.actions.update_material_stage_to_elastic()
     dampNewmark = fm.analysis.integrator.newmark(gamma=newmark_gamma, beta=newnark_beta)
     gravity_elastic = fm.actions.tcl("""
 if {$pid == 0} {puts [string repeat "=" 120] }
@@ -1224,7 +1224,7 @@ while { $AnalysisStep < 30} {
 wipeAnalysis"""
 )
 
-    plastic_update = fm.actions.updateMaterialStageToPlastic()
+    plastic_update = fm.actions.update_material_stage_to_plastic()
     gravity_plastic = fm.actions.tcl("""
 if {$pid == 0} {puts [string repeat "=" 120] }
 if {$pid == 0} {puts "Starting analysis : defualtTransient_gravity_plastic"}

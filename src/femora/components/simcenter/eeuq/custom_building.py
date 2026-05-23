@@ -1150,13 +1150,13 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
     # gravity analysis
     newmark_gamma = 0.6
     newnark_beta = (newmark_gamma + 0.5)**2 / 4
-    elastic_update = fm.actions.updateMaterialStageToElastic()
+    elastic_update = fm.actions.update_material_stage_to_elastic()
     dampNewmark = fm.analysis.integrator.newmark(gamma=newmark_gamma, beta=newnark_beta)
     gravity_elastic = fm.analysis.default_transient(username="gravity_elastic",
                                                             dt=1.0, num_steps=30,
                                                             options={"integrator": dampNewmark})
 
-    plastic_update = fm.actions.updateMaterialStageToPlastic()
+    plastic_update = fm.actions.update_material_stage_to_plastic()
     gravity_plastic = fm.analysis.default_transient(username="gravity_plastic",
                                                             dt=0.01, num_steps=100,
                                                             options={"integrator": dampNewmark})

@@ -186,9 +186,7 @@ def test_set_material_parameter_uses_model_owned_assembled_mesh(mesh_maker):
     mesh_maker.assembler.create_section(meshparts=["block"], num_partitions=1, merge_points=False)
     mesh_maker.assembler.assemble(merge_points=False)
 
-    from femora.components.Actions.action import SetMaterialParameter
-
-    action = SetMaterialParameter(mat, "E", 2.0)
+    action = mesh_maker.actions.set_material_parameter(mat, "E", 2.0)
     assert len(action.element_tags) == mesh_maker.assembled_mesh.n_cells
 
 
