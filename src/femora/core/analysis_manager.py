@@ -8,7 +8,7 @@ from femora.components.analysis.constraint_handlers import ConstraintHandler, Co
 from femora.components.analysis.integrators import Integrator, IntegratorManager, StaticIntegrator, TransientIntegrator
 from femora.components.analysis.numberers import Numberer
 from femora.components.analysis.systems import System, SystemManager
-from femora.components.analysis.convergenceTests import Test, TestManager
+from femora.components.analysis.convergence_tests import Test, TestManager
 from femora.core.numberer_manager import NumbererManager
 from femora.core.tagging import CompactRetagPolicy
 

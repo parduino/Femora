@@ -5,7 +5,7 @@ from .integrators import Integrator, StaticIntegrator, TransientIntegrator
 from .algorithms import Algorithm
 from .systems import System
 from .constraint_handlers import ConstraintHandler
-from .convergenceTests import Test
+from .convergence_tests import Test
 
 
 class Analysis(AnalysisComponent):

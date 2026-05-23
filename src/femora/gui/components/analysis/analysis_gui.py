@@ -18,7 +18,7 @@ from femora.components.analysis.constraint_handlers import ConstraintHandlerMana
 from femora.components.analysis.numberers import NumbererManager
 from femora.components.analysis.systems import SystemManager
 from femora.components.analysis.algorithms import AlgorithmManager
-from femora.components.analysis.convergenceTests import TestManager
+from femora.components.analysis.convergence_tests import TestManager
 from femora.components.analysis.integrators import IntegratorManager, StaticIntegrator, TransientIntegrator
 
 

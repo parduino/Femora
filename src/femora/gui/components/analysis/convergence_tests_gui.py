@@ -7,7 +7,7 @@ from qtpy.QtWidgets import (
 )
 
 from femora.utils.validator import DoubleValidator, IntValidator
-from femora.components.analysis.convergenceTests import (
+from femora.components.analysis.convergence_tests import (
     Test, TestManager, 
     NormUnbalanceTest, NormDispIncrTest,
     EnergyIncrTest, RelativeNormUnbalanceTest,

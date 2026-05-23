@@ -428,7 +428,7 @@ if __name__ == "__main__":
         from femora.components.analysis.numberers import NumbererManager
         from femora.components.analysis.systems import SystemManager
         from femora.components.analysis.algorithms import AlgorithmManager
-        from femora.components.analysis.convergenceTests import TestManager
+        from femora.components.analysis.convergence_tests import TestManager
         from femora.components.analysis.integrators import IntegratorManager
         
         # Create components for analysis
