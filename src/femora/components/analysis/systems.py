@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Type, Union
 
 from femora.core.tagged_component_manager import TaggedComponentManager
-from .base import AnalysisComponent
+from femora.core.analysis_component_base import AnalysisComponent
 
 
 class System(AnalysisComponent):

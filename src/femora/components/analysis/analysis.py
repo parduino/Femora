@@ -1,5 +1,5 @@
 from typing import Optional
-from .base import AnalysisComponent
+from femora.core.analysis_component_base import AnalysisComponent
 from .numberers import Numberer
 from .integrators import Integrator, StaticIntegrator, TransientIntegrator
 from .algorithms import Algorithm

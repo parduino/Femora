@@ -1,6 +1,6 @@
 from typing import Dict, List, Type
 
-from .base import AnalysisComponent
+from femora.core.analysis_component_base import AnalysisComponent
 
 
 class Numberer(AnalysisComponent):
