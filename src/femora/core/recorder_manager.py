@@ -42,32 +42,32 @@ class RecorderManager:
         return recorder
 
     def node(self, **kwargs) -> Recorder:
-        from femora.components.Recorder.recorders import NodeRecorder
+        from femora.components.recorder.recorders import NodeRecorder
 
         return self.add(NodeRecorder(**kwargs))
 
     def drift(self, **kwargs) -> Recorder:
-        from femora.components.Recorder.recorders import DriftRecorder
+        from femora.components.recorder.recorders import DriftRecorder
 
         return self.add(DriftRecorder(**kwargs))
 
     def vtkhdf(self, **kwargs) -> Recorder:
-        from femora.components.Recorder.recorders import VTKHDFRecorder
+        from femora.components.recorder.recorders import VTKHDFRecorder
 
         return self.add(VTKHDFRecorder(**kwargs))
 
     def mpco(self, **kwargs) -> Recorder:
-        from femora.components.Recorder.recorders import MPCORecorder
+        from femora.components.recorder.recorders import MPCORecorder
 
         return self.add(MPCORecorder(**kwargs))
 
     def beam_force(self, **kwargs) -> Recorder:
-        from femora.components.Recorder.recorders import BeamForceRecorder
+        from femora.components.recorder.recorders import BeamForceRecorder
 
         return self.add(BeamForceRecorder(**kwargs))
 
     def embedded_beam_solid_interface(self, **kwargs) -> Recorder:
-        from femora.components.Recorder.recorders import EmbeddedBeamSolidInterfaceRecorder
+        from femora.components.recorder.recorders import EmbeddedBeamSolidInterfaceRecorder
 
         return self.add(EmbeddedBeamSolidInterfaceRecorder(**kwargs))
 
@@ -112,7 +112,7 @@ class RecorderManager:
     ) -> Recorder:
         import numpy as np
 
-        from femora.components.Recorder.recorders import MPCORecorder
+        from femora.components.recorder.recorders import MPCORecorder
 
         if node_responses is None:
             node_responses = ["displacement", "velocity", "acceleration"]

@@ -1,7 +1,7 @@
 import pytest
 
 from femora.components.MeshMaker import MeshMaker
-from femora.components.Recorder.recorderBase import (
+from femora.components.recorder.recorders import (
     DriftRecorder,
     MPCORecorder,
     NodeRecorder,
@@ -29,6 +29,9 @@ def test_duplicate_recorder_manager_rejected(mesh_maker):
 
 
 def test_runtime_surface_has_no_editor_helpers():
+    from femora.components.recorder import recorders
+
+    assert not hasattr(recorders, "RecorderRegistry")
     for name in ("get_values", "get_parameters", "validate"):
         assert not hasattr(Recorder, name)
     for cls in (NodeRecorder, DriftRecorder, VTKHDFRecorder, MPCORecorder):

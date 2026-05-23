@@ -1,4 +1,4 @@
-from typing import List, Dict, Optional, Union, Type
+from typing import List, Dict, Optional, Union
 
 from femora.core.recorder_base import Recorder
 from femora.components.interface.embedded_beam_solid_interface import EmbeddedBeamSolidInterface
@@ -169,7 +169,7 @@ class NodeRecorder(Recorder):
         resp_type: String indicating response required.
 
     Example:
-        >>> from femora.components.Recorder.recorders import NodeRecorder
+        >>> from femora.components.recorder.recorders import NodeRecorder
         >>> # recorder = NodeRecorder(
         >>> #     file_name="displacement.out",
         >>> #     time=True,
@@ -888,30 +888,3 @@ class BeamForceRecorder(Recorder):
 
         return "\n".join(lines)
 
-
-class RecorderRegistry:
-    """Type registry for recorder classes (GUI metadata only)."""
-
-    _recorder_types = {
-        "node": NodeRecorder,
-        "drift": DriftRecorder,
-        "vtkhdf": VTKHDFRecorder,
-        "mpco": MPCORecorder,
-        "beam_force": BeamForceRecorder,
-    }
-
-    @classmethod
-    def register_recorder_type(cls, name: str, recorder_class: Type[Recorder]) -> None:
-        cls._recorder_types[name.lower()] = recorder_class
-
-    @classmethod
-    def get_recorder_types(cls) -> List[str]:
-        return list(cls._recorder_types.keys())
-
-
-def __getattr__(name: str):
-    if name == "RecorderManager":
-        from femora.core.recorder_manager import RecorderManager
-
-        return RecorderManager
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

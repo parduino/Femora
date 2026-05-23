@@ -11,7 +11,9 @@ from qtpy.QtWidgets import (
 from qtpy.QtCore import Qt, QMimeData, QPoint
 
 from femora.components.Process.process import ProcessManager
-from femora.components.Recorder.recorders import Recorder, RecorderManager
+from femora.core.recorder_base import Recorder
+from femora.core.recorder_manager import RecorderManager
+from femora.components.recorder.recorders import NodeRecorder, VTKHDFRecorder
 from femora.components.Analysis.analysis import Analysis, AnalysisManager
 from femora.components.Pattern.patternBase import Pattern, PatternManager
 from femora.components.MeshMaker import MeshMaker
@@ -388,7 +390,7 @@ if __name__ == "__main__":
     pattern_manager = PatternManager(mesh_maker=mesh_maker)
     
     # Create sample recorders
-    from femora.components.Recorder.recorders import NodeRecorder, VTKHDFRecorder
+    from femora.components.recorder.recorders import NodeRecorder, VTKHDFRecorder
     recorder1 = NodeRecorder(file_name="disp.out", nodes=[1, 2, 3], dofs=[1, 2], resp_type="disp")
     recorder2 = VTKHDFRecorder(file_base_name="results", resp_types=["disp", "vel"])
     

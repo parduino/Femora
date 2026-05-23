@@ -10,7 +10,7 @@ from femora.components.interface.embedded_beam_solid_interface import EmbeddedBe
 from femora.components.interface.embedded_node_interface import EmbeddedNodeInterface
 from femora.components.interface.embedded_info import EmbeddedInfo
 from femora.core.interface_base import InterfaceManager
-from femora.components.Recorder.recorders import EmbeddedBeamSolidInterfaceRecorder
+from femora.components.recorder.recorders import EmbeddedBeamSolidInterfaceRecorder
 from femora.components.mesh.line_meshparts import StructuredLineMesh
 
 

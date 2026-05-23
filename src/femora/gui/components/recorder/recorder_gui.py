@@ -7,8 +7,9 @@ from qtpy.QtWidgets import (
     QFileDialog, QGroupBox
 )
 
-from femora.components.Recorder.recorders import (
-    Recorder, RecorderManager, RecorderRegistry,
+from femora.core.recorder_base import Recorder
+from femora.core.recorder_manager import RecorderManager
+from femora.components.recorder.recorders import (
     NodeRecorder, VTKHDFRecorder, MPCORecorder
 )
 from femora.utils.validator import DoubleValidator, IntValidator
