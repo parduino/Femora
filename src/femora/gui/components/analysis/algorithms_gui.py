@@ -7,7 +7,7 @@ from qtpy.QtWidgets import (
 )
 
 from femora.utils.validator import DoubleValidator, IntValidator
-from femora.components.Analysis.algorithms import (
+from femora.components.analysis.algorithms import (
     Algorithm, AlgorithmManager, 
     LinearAlgorithm, NewtonAlgorithm, ModifiedNewtonAlgorithm,
     NewtonLineSearchAlgorithm, KrylovNewtonAlgorithm, SecantNewtonAlgorithm,

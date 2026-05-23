@@ -14,7 +14,7 @@ from femora.components.Process.process import ProcessManager
 from femora.core.recorder_base import Recorder
 from femora.core.recorder_manager import RecorderManager
 from femora.components.recorder.recorders import NodeRecorder, VTKHDFRecorder
-from femora.components.Analysis.analysis import Analysis, AnalysisManager
+from femora.components.analysis.analysis import Analysis, AnalysisManager
 from femora.components.Pattern.patternBase import Pattern, PatternManager
 from femora.components.MeshMaker import MeshMaker
 
@@ -424,12 +424,12 @@ if __name__ == "__main__":
     # Create sample analyses (Note: This is simplified as actual Analysis objects require many components)
     # In a real implementation, you would create proper Analysis objects with all required components
     try:
-        from femora.components.Analysis.constraint_handlers import ConstraintHandlerManager
-        from femora.components.Analysis.numberers import NumbererManager
-        from femora.components.Analysis.systems import SystemManager
-        from femora.components.Analysis.algorithms import AlgorithmManager
-        from femora.components.Analysis.convergenceTests import TestManager
-        from femora.components.Analysis.integrators import IntegratorManager
+        from femora.components.analysis.constraint_handlers import ConstraintHandlerManager
+        from femora.components.analysis.numberers import NumbererManager
+        from femora.components.analysis.systems import SystemManager
+        from femora.components.analysis.algorithms import AlgorithmManager
+        from femora.components.analysis.convergenceTests import TestManager
+        from femora.components.analysis.integrators import IntegratorManager
         
         # Create components for analysis
         constraint_handler = ConstraintHandlerManager().create_handler("transformation")

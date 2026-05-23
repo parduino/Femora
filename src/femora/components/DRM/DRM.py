@@ -5,7 +5,7 @@ import tqdm
 from pykdtree.kdtree import KDTree as pykdtree
 from femora.components.pattern.h5drm_pattern import H5DRMPattern
 from femora.components.Actions.action import ActionManager
-from femora.components.Analysis.analysis import Analysis
+from femora.components.analysis.analysis import Analysis
 from femora.constants import FEMORA_MAX_NDF
 
 class DRM:

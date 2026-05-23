@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
-from femora.components.Analysis.algorithms import Algorithm, AlgorithmManager
-from femora.components.Analysis.analysis import Analysis
-from femora.components.Analysis.constraint_handlers import ConstraintHandler, ConstraintHandlerManager
-from femora.components.Analysis.integrators import Integrator, IntegratorManager, StaticIntegrator, TransientIntegrator
-from femora.components.Analysis.numberers import Numberer
-from femora.components.Analysis.systems import System, SystemManager
-from femora.components.Analysis.convergenceTests import Test, TestManager
+from femora.components.analysis.algorithms import Algorithm, AlgorithmManager
+from femora.components.analysis.analysis import Analysis
+from femora.components.analysis.constraint_handlers import ConstraintHandler, ConstraintHandlerManager
+from femora.components.analysis.integrators import Integrator, IntegratorManager, StaticIntegrator, TransientIntegrator
+from femora.components.analysis.numberers import Numberer
+from femora.components.analysis.systems import System, SystemManager
+from femora.components.analysis.convergenceTests import Test, TestManager
 from femora.core.numberer_manager import NumbererManager
 from femora.core.tagging import CompactRetagPolicy
 

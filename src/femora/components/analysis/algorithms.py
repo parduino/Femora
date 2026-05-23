@@ -131,8 +131,8 @@ class NewtonLineSearchAlgorithm(Algorithm):
             type_search (str): Line search algorithm type
             tol (float): Tolerance for search
             max_iter (int): Maximum number of iterations to try
-            min_eta (float): Minimum η value
-            max_eta (float): Maximum η value
+            min_eta (float): Minimum ? value
+            max_eta (float): Maximum ? value
         """
         super().__init__("NewtonLineSearch")
         self.type_search = type_search

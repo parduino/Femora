@@ -6,7 +6,7 @@ from qtpy.QtWidgets import (
     QGroupBox, QSpinBox, QDoubleSpinBox, QRadioButton, QCheckBox
 )
 
-from femora.components.Analysis.analysis import Analysis, AnalysisManager
+from femora.components.analysis.analysis import Analysis, AnalysisManager
 from femora.gui.components.analysis.constraint_handlers_gui import ConstraintHandlerManagerTab
 from femora.gui.components.analysis.integrators_gui import IntegratorManagerTab
 from femora.gui.components.analysis.algorithms_gui import AlgorithmManagerTab
@@ -14,12 +14,12 @@ from femora.gui.components.analysis.systems_gui import SystemManagerTab
 from femora.gui.components.analysis.numberers_gui import NumbererManagerTab
 from femora.gui.components.analysis.convergence_tests_gui import TestManagerTab
 
-from femora.components.Analysis.constraint_handlers import ConstraintHandlerManager
-from femora.components.Analysis.numberers import NumbererManager
-from femora.components.Analysis.systems import SystemManager
-from femora.components.Analysis.algorithms import AlgorithmManager
-from femora.components.Analysis.convergenceTests import TestManager
-from femora.components.Analysis.integrators import IntegratorManager, StaticIntegrator, TransientIntegrator
+from femora.components.analysis.constraint_handlers import ConstraintHandlerManager
+from femora.components.analysis.numberers import NumbererManager
+from femora.components.analysis.systems import SystemManager
+from femora.components.analysis.algorithms import AlgorithmManager
+from femora.components.analysis.convergenceTests import TestManager
+from femora.components.analysis.integrators import IntegratorManager, StaticIntegrator, TransientIntegrator
 
 
 class AnalysisManagerTab(QDialog):

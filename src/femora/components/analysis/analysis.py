@@ -36,7 +36,7 @@ class Analysis(AnalysisComponent):
         num_substeps: Number of substeps to try at each sublevel.
 
     Example:
-        >>> from femora.components.Analysis.analysis import Analysis
+        >>> from femora.components.analysis.analysis import Analysis
         >>> # Create analysis components first
         >>> # handler = analysis_manager.constraint.transformation()
         >>> # numberer = analysis_manager.numberer.rcm()

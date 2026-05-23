@@ -7,7 +7,7 @@ from qtpy.QtWidgets import (
 )
 
 from femora.utils.validator import DoubleValidator
-from femora.components.Analysis.constraint_handlers import (
+from femora.components.analysis.constraint_handlers import (
     ConstraintHandler, ConstraintHandlerManager, 
     PlainConstraintHandler, TransformationConstraintHandler,
     PenaltyConstraintHandler, LagrangeConstraintHandler, 

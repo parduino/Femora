@@ -1,6 +1,6 @@
 import pytest
 
-from femora.components.Analysis.analysis import Analysis
+from femora.components.analysis.analysis import Analysis
 from femora.components.MeshMaker import MeshMaker
 from femora.core.analysis_manager import AnalysisManager
 

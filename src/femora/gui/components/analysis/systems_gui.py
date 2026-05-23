@@ -7,7 +7,7 @@ from qtpy.QtWidgets import (
 )
 
 from femora.utils.validator import DoubleValidator, IntValidator
-from femora.components.Analysis.systems import (
+from femora.components.analysis.systems import (
     System, SystemManager, 
     FullGeneralSystem, BandGeneralSystem,
     BandSPDSystem, ProfileSPDSystem,

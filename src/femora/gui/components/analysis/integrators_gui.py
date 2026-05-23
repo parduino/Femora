@@ -8,7 +8,7 @@ from qtpy.QtWidgets import (
 )
 
 from femora.utils.validator import DoubleValidator, IntValidator
-from femora.components.Analysis.integrators import (
+from femora.components.analysis.integrators import (
     IntegratorManager, Integrator, StaticIntegrator, TransientIntegrator,
     LoadControlIntegrator, DisplacementControlIntegrator, ParallelDisplacementControlIntegrator,
     MinUnbalDispNormIntegrator, ArcLengthIntegrator, CentralDifferenceIntegrator,
