@@ -319,7 +319,8 @@ def _hilbert_keys_3d(q: np.ndarray, p: int) -> np.ndarray:
     x1 = q[:, 1].astype(np.uint64, copy=True)
     x2 = q[:, 2].astype(np.uint64, copy=True)
 
-    M = np.uint64(1) << np.uint64(p - 1)
+    # Use Python int for loop counters; NumPy uint64 scalars reject in-place >>=.
+    M = 1 << (p - 1)
 
     # Inverse undo excess work (Skilling)
     Q = M
