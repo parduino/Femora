@@ -30,7 +30,7 @@ class PlateFiberSection(Section):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         # Create an nD material for the section
         mat = model.material.nd.elastic_isotropic(user_name="ConcreteND", E=3600.0, nu=0.2)
 

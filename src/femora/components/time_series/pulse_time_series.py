@@ -20,7 +20,7 @@ class PulseTimeSeries(TimeSeries):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         # Create a pulse time series for a load with a 0.5s period, 0.2 width
         # starting at 0.1s and ending at 10.0s
         pulse_ts = model.timeSeries.pulse(

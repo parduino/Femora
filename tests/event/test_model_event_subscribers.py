@@ -1,11 +1,11 @@
 import numpy as np
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.core.event_bus import EventBus, FemoraEvent
 
 
 def test_mass_manager_subscribes_to_model_event_bus():
-    mesh_maker = MeshMaker()
+    mesh_maker = Model()
     mesh_maker.clear_model()
     EventBus._subscribers.clear()
 
@@ -17,7 +17,7 @@ def test_mass_manager_subscribes_to_model_event_bus():
 
 
 def test_mask_manager_subscribes_to_model_event_bus():
-    mesh_maker = MeshMaker()
+    mesh_maker = Model()
     mesh_maker.clear_model()
     EventBus._subscribers.clear()
 
@@ -30,7 +30,7 @@ def test_mask_manager_subscribes_to_model_event_bus():
 
 
 def test_mass_manager_clears_cache_on_model_pre_assemble():
-    mesh_maker = MeshMaker()
+    mesh_maker = Model()
     mesh_maker.clear_model()
 
     mass = mesh_maker.mass
@@ -41,7 +41,7 @@ def test_mass_manager_clears_cache_on_model_pre_assemble():
 
 
 def test_clear_model_reregisters_mass_and_mask_subscribers():
-    mesh_maker = MeshMaker()
+    mesh_maker = Model()
     mesh_maker.clear_model()
     EventBus._subscribers.clear()
 

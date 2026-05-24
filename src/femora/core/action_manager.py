@@ -19,17 +19,17 @@ from femora.components.actions.action import (
 from femora.core.material_base import Material
 
 if TYPE_CHECKING:
-    from femora.components.MeshMaker import MeshMaker
+    from femora.core.model import Model
 
 
 class ActionManager:
-    """MeshMaker-owned factory for lightweight TCL-emitting actions."""
+    """Model-owned factory for lightweight TCL-emitting actions."""
 
-    def __init__(self, mesh_maker: "MeshMaker"):
-        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+    def __init__(self, mesh_maker: "Model"):
+        from femora.core.model import Model as ModelClass
 
-        if not isinstance(mesh_maker, MeshMakerClass):
-            raise TypeError("mesh_maker must be a MeshMaker instance")
+        if not isinstance(mesh_maker, ModelClass):
+            raise TypeError("mesh_maker must be a Model instance")
         self._mesh_maker = mesh_maker
 
     def wipe(self) -> WipeAction:

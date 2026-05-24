@@ -1,5 +1,5 @@
 import pytest
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.core.transformation_base import GeometricTransformation
 from femora.core.transformation_manager import TransformationManager
 
@@ -13,7 +13,7 @@ class DummyTransformation(GeometricTransformation):
 
 @pytest.fixture(autouse=True)
 def manager():
-    mesh_maker = MeshMaker.get_instance()
+    mesh_maker = Model()
     mesh_maker.clear_model()
     transformation_manager = mesh_maker.transformation
     yield transformation_manager
@@ -99,5 +99,5 @@ def test_unmanaged_transformation_to_tcl_fails(manager):
 def test_adding_to_another_manager_fails(manager):
     transformation = manager.add(DummyTransformation('Linear', 2))
     with pytest.raises(ValueError, match="already owns a transformation manager"):
-        TransformationManager(mesh_maker=MeshMaker.get_instance())
+        TransformationManager(mesh_maker=Model())
     assert transformation._owner is manager

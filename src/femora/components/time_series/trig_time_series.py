@@ -23,7 +23,7 @@ class TrigTimeSeries(TimeSeries):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         ts = model.timeSeries.trig(
             tStart=0.0,
             tEnd=10.0,

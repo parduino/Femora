@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import time
 from contextlib import contextmanager
+from types import SimpleNamespace
 
 import numpy as np
 import pyvista as pv
@@ -30,33 +31,27 @@ if importlib.util.find_spec("numba") is not None:
 else:
     HAVE_NUMBA = False
 
-import femora as fm
-from femora.components.Assemble.Assembler import Assembler, AssemblySection
-from femora.components.Material.materialBase import Material
-from femora.components.Mesh.meshPartBase import MeshPart
+from femora.core.model import Model
+from femora.core.assembler import Assembler, AssemblySection
 from femora.components.partitioner.partitioner import PartitionerRegistry
-from femora.core.element_base import Element
 from femora.constants import FEMORA_MAX_NDF
 from femora.utils.progress import Progress
 
+model = Model()
+
 
 def reset_state() -> None:
-    assembler = Assembler.get_instance()
-    assembler.clear_assembly_sections()
-    assembler.delete_assembled_mesh()
-    MeshPart.clear_all_mesh_parts()
-    Element.clear_all_elements()
-    Material.clear_all_materials()
+    model.clear_model()
 
 
 def build_workflow_meshparts(num_parts: int, cells_per_axis: int) -> list[str]:
-    material = fm.material.nd.elastic_isotropic(
+    material = model.material.nd.elastic_isotropic(
         user_name="bench_material",
         E=20_000.0,
         nu=0.30,
         rho=1.9,
     )
-    element = fm.element.brick.std(
+    element = model.element.brick.std(
         ndof=3,
         material=material,
         b1=0.0,
@@ -75,7 +70,7 @@ def build_workflow_meshparts(num_parts: int, cells_per_axis: int) -> list[str]:
         user_name = f"bench_part_{idx}"
         x_min = float(idx * cells_per_axis)
         x_max = float((idx + 1) * cells_per_axis)
-        fm.meshPart.volume.uniform_rectangular_grid(
+        model.meshpart.volume.uniform_rectangular_grid(
             user_name=user_name,
             element=element,
             region=None,
@@ -92,6 +87,196 @@ def build_workflow_meshparts(num_parts: int, cells_per_axis: int) -> list[str]:
         names.append(user_name)
 
     return names
+
+
+def _ensure_ndf_array_demo(mesh: pv.UnstructuredGrid, default_ndf: int, element_manager) -> None:
+    if "ndf" in mesh.point_data:
+        return
+
+    n_points = mesh.n_points
+    if "ElementTag" not in mesh.cell_data:
+        mesh.point_data["ndf"] = np.full(n_points, default_ndf, dtype=np.uint16)
+        return
+
+    ndf_values = np.full(n_points, default_ndf, dtype=np.uint16)
+    element_tags = mesh.cell_data["ElementTag"]
+    unique_tags = np.unique(element_tags)
+
+    for tag in unique_tags:
+        element = element_manager.get(int(tag))
+        if element is None:
+            continue
+        ele_ndof = element.get_ndof()
+        if ele_ndof == default_ndf:
+            continue
+        cell_indices = np.where(element_tags == tag)[0]
+        for cell_idx in cell_indices:
+            start = mesh.offset[cell_idx]
+            end = mesh.offset[cell_idx + 1]
+            pids = mesh.cell_connectivity[start:end]
+            ndf_values[pids] = ele_ndof
+
+    mesh.point_data["ndf"] = ndf_values
+
+
+def _prepare_meshpart_for_demo(meshpart) -> pv.UnstructuredGrid:
+    mesh = meshpart.mesh.copy()
+
+    if meshpart.element:
+        ndf = meshpart.element._ndof
+        mat_tag = meshpart.element.get_material_tag()
+        ele_tag = meshpart.element.tag
+        section_tag = meshpart.element.get_section_tag()
+    elif hasattr(meshpart, "ndof"):
+        ndf = meshpart.ndof
+        mat_tag = getattr(meshpart, "material_tag", 0)
+        ele_tag = getattr(meshpart, "element_tag", 0)
+        section_tag = getattr(meshpart, "section_tag", 0)
+    else:
+        ndf = FEMORA_MAX_NDF
+        mat_tag = getattr(meshpart, "material_tag", 0)
+        ele_tag = getattr(meshpart, "element_tag", 0)
+        section_tag = getattr(meshpart, "section_tag", 0)
+
+    region_tag = meshpart.region.tag
+    mesh_tag = meshpart.tag
+
+    n_cells = mesh.n_cells
+    n_points = mesh.n_points
+
+    if "Mass" not in mesh.point_data:
+        mesh.point_data["Mass"] = np.zeros((n_points, FEMORA_MAX_NDF), dtype=np.float32)
+    if "ElementTag" not in mesh.cell_data:
+        mesh.cell_data["ElementTag"] = np.full(n_cells, ele_tag, dtype=np.uint16)
+    if "MaterialTag" not in mesh.cell_data:
+        mesh.cell_data["MaterialTag"] = np.full(n_cells, mat_tag, dtype=np.uint16)
+    if "SectionTag" not in mesh.cell_data:
+        mesh.cell_data["SectionTag"] = np.full(n_cells, section_tag, dtype=np.uint16)
+
+    element_manager = meshpart._owner._mesh_maker.element if meshpart._owner else None
+    if element_manager is not None:
+        _ensure_ndf_array_demo(mesh, ndf, element_manager)
+    else:
+        mesh.point_data["ndf"] = np.full(mesh.n_points, ndf, dtype=np.uint16)
+
+    mesh.cell_data["Region"] = np.full(n_cells, region_tag, dtype=np.uint16)
+    mesh.cell_data["MeshPartTag_celldata"] = np.full(n_cells, mesh_tag, dtype=np.uint16)
+    mesh.point_data["MeshPartTag_pointdata"] = np.full(n_points, mesh_tag, dtype=np.uint16)
+    return mesh
+
+
+def _concatenate_prepared_meshes(meshes: list[pv.UnstructuredGrid]) -> pv.UnstructuredGrid:
+    if not meshes:
+        raise ValueError("No meshes to concatenate")
+
+    point_arrays = list(meshes[0].point_data.keys())
+    cell_arrays = list(meshes[0].cell_data.keys())
+
+    total_points = sum(mesh.n_points for mesh in meshes)
+    total_cells = sum(mesh.n_cells for mesh in meshes)
+    total_connectivity = sum(np.asarray(mesh.cell_connectivity).shape[0] for mesh in meshes)
+
+    points = np.empty((total_points, 3), dtype=np.float64)
+    celltypes = np.empty(total_cells, dtype=np.uint8)
+    connectivity = np.empty(total_connectivity, dtype=np.int64)
+    offsets = np.empty(total_cells + 1, dtype=np.int64)
+    offsets[0] = 0
+
+    point_data = {}
+    for name in point_arrays:
+        arr = np.asarray(meshes[0].point_data[name])
+        shape = (total_points,) + arr.shape[1:]
+        point_data[name] = np.empty(shape, dtype=arr.dtype)
+
+    cell_data = {}
+    for name in cell_arrays:
+        arr = np.asarray(meshes[0].cell_data[name])
+        shape = (total_cells,) + arr.shape[1:]
+        cell_data[name] = np.empty(shape, dtype=arr.dtype)
+
+    point_cursor = 0
+    cell_cursor = 0
+    conn_cursor = 0
+
+    for mesh in meshes:
+        n_points = mesh.n_points
+        n_cells = mesh.n_cells
+        conn = np.asarray(mesh.cell_connectivity, dtype=np.int64)
+        offs = np.asarray(mesh.offset, dtype=np.int64)
+
+        points[point_cursor:point_cursor + n_points] = np.asarray(mesh.points, dtype=np.float64)
+        celltypes[cell_cursor:cell_cursor + n_cells] = np.asarray(mesh.celltypes, dtype=np.uint8)
+        connectivity[conn_cursor:conn_cursor + conn.shape[0]] = conn + point_cursor
+        offsets[cell_cursor + 1:cell_cursor + n_cells + 1] = offs[1:] + conn_cursor
+
+        for name in point_arrays:
+            point_data[name][point_cursor:point_cursor + n_points] = np.asarray(mesh.point_data[name])
+        for name in cell_arrays:
+            cell_data[name][cell_cursor:cell_cursor + n_cells] = np.asarray(mesh.cell_data[name])
+
+        point_cursor += n_points
+        cell_cursor += n_cells
+        conn_cursor += conn.shape[0]
+
+    cell_array = pv.CellArray.from_arrays(offsets, connectivity)
+    combined = pv.UnstructuredGrid(cell_array.cells, celltypes, points)
+    for name, arr in point_data.items():
+        combined.point_data[name] = arr
+    for name, arr in cell_data.items():
+        combined.cell_data[name] = arr
+    return combined
+
+
+def femora_assemble_demo(
+    meshpart_names: list[str],
+    *,
+    merge_points: bool,
+    tolerance: float,
+    mass_merging: str = "sum",
+    num_partitions: int = 1,
+    partition_algorithm: str = "kd-tree",
+):
+    meshpart_manager = model.meshpart
+    prepared_meshes = [
+        _prepare_meshpart_for_demo(meshpart_manager.get(name)) for name in meshpart_names
+    ]
+    mesh = _concatenate_prepared_meshes(prepared_meshes)
+
+    if merge_points:
+        mass = None
+        if mass_merging == "sum":
+            mass = np.asarray(mesh.point_data.pop("Mass"), dtype=np.float32)
+
+        mesh = manual_clean_demo_jit(
+            mesh,
+            tolerance=tolerance,
+            produce_merge_map=True,
+            average_point_data=True,
+        )
+        mesh.point_data["ndf"] = mesh.point_data["ndf"].astype(np.uint16, copy=False)
+        mesh.point_data["MeshPartTag_pointdata"] = mesh.point_data["MeshPartTag_pointdata"].astype(np.uint16, copy=False)
+
+        if mass_merging == "sum":
+            merge_map = np.asarray(mesh.field_data["PointMergeMap"]).reshape(-1)
+            Mass = np.zeros((mesh.number_of_points, FEMORA_MAX_NDF), dtype=np.float32)
+            if mass is not None:
+                nonzero_rows = np.any(mass != 0.0, axis=1)
+                if np.any(nonzero_rows):
+                    np.add.at(Mass, merge_map[nonzero_rows], mass[nonzero_rows])
+            mesh.point_data["Mass"] = Mass
+
+        del mesh.field_data["PointMergeMap"]
+
+    mesh.cell_data["Core"] = np.zeros(mesh.n_cells, dtype=int)
+    if num_partitions > 1:
+        core_ids = PartitionerRegistry.partition(
+            mesh,
+            num_partitions,
+            partitioner=partition_algorithm,
+        )
+        mesh.cell_data["Core"] = core_ids.astype(int)
+
+    return SimpleNamespace(mesh=mesh)
 
 
 def manual_clean_demo(
@@ -348,8 +533,14 @@ def profile_merge_breakdown():
 
     def instrumented_assemble_mesh(self, progress_callback=None):
         if progress_callback is None:
+            assembler = self._meshpart_manager._mesh_maker.assembler
+
             def progress_callback(v, msg=""):
-                Progress.callback(v, msg, desc=f"Assembly Section: {len(Assembler._assembly_sections) + 1}")
+                Progress.callback(
+                    v,
+                    msg,
+                    desc=f"Assembly Section: {len(assembler._assembly_sections) + 1}",
+                )
 
         first_meshpart = self.meshparts_list[0]
         first_mesh = first_meshpart.mesh.copy()
@@ -554,7 +745,7 @@ def run_case(
         if merge_backend == "vtk":
             with profile_merge_breakdown() as merge_stats:
                 t0 = time.perf_counter()
-                section = fm.assembler.create_section(
+                section = model.assembler.create_section(
                     meshparts=part_names,
                     num_partitions=1,
                     merge_points=merge_points,
@@ -563,7 +754,7 @@ def run_case(
                 t1 = time.perf_counter()
         elif merge_backend in {"manual", "manual_jit"}:
             t0 = time.perf_counter()
-            section = fm.assembler.create_section(
+                section = model.assembler.create_section(
                 meshparts=part_names,
                 num_partitions=1,
                 merge_points=False,
@@ -608,6 +799,28 @@ def run_case(
                     "clean_calls": 0,
                     "mass_calls": 0,
                 }
+            t1 = time.perf_counter()
+        elif merge_backend == "femora_demo":
+            t0 = time.perf_counter()
+            section = femora_assemble_demo(
+                part_names,
+                merge_points=merge_points,
+                tolerance=1e-5,
+                mass_merging="sum",
+                num_partitions=1,
+                partition_algorithm="kd-tree",
+            )
+            merge_stats = {
+                "snap_time": 0.0,
+                "snap_tree_time": 0.0,
+                "snap_query_time": 0.0,
+                "snap_assign_time": 0.0,
+                "clean_time": time.perf_counter() - t0 if merge_points else 0.0,
+                "mass_time": 0.0,
+                "snap_calls": 0,
+                "clean_calls": 1 if merge_points else 0,
+                "mass_calls": 1 if merge_points else 0,
+            }
             t1 = time.perf_counter()
         else:
             raise ValueError(f"Unsupported merge backend: {merge_backend}")
@@ -673,7 +886,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--repeat", type=int, default=3, help="Number of repeats for each benchmark case.")
     parser.add_argument(
         "--merge-backend",
-        choices=["vtk", "manual", "manual_jit", "both", "all"],
+        choices=["vtk", "manual", "manual_jit", "femora_demo", "both", "all"],
         default="vtk",
         help="Merge backend to benchmark when merge_points=True.",
     )
@@ -688,7 +901,7 @@ def main() -> int:
     if args.merge_backend == "both":
         backends = ["vtk", "manual"]
     elif args.merge_backend == "all":
-        backends = ["vtk", "manual", "manual_jit"]
+        backends = ["vtk", "manual", "manual_jit", "femora_demo"]
     else:
         backends = [args.merge_backend]
 

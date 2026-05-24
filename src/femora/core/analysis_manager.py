@@ -13,17 +13,17 @@ from femora.core.numberer_manager import NumbererManager
 from femora.core.tagging import CompactRetagPolicy
 
 if TYPE_CHECKING:
-    from femora.components.MeshMaker import MeshMaker
+    from femora.core.model import Model
 
 
 class AnalysisManager:
-    """Manager-owned analysis stack for one MeshMaker model."""
+    """Manager-owned analysis stack for one Model model."""
 
-    def __init__(self, mesh_maker: MeshMaker):
-        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+    def __init__(self, mesh_maker: Model):
+        from femora.core.model import Model as ModelClass
 
-        if not isinstance(mesh_maker, MeshMakerClass):
-            raise TypeError("mesh_maker must be a MeshMaker instance")
+        if not isinstance(mesh_maker, ModelClass):
+            raise TypeError("mesh_maker must be a Model instance")
         existing_manager = getattr(mesh_maker, "analysis", None)
         if isinstance(existing_manager, AnalysisManager):
             raise ValueError("mesh_maker already owns an analysis manager")

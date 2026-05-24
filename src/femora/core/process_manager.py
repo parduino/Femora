@@ -10,19 +10,19 @@ from femora.core.pattern_base import Pattern
 from femora.core.recorder_base import Recorder
 
 if TYPE_CHECKING:
-    from femora.components.MeshMaker import MeshMaker
+    from femora.core.model import Model
 
 ProcessComponent = Union[SPConstraint, MPConstraint, Pattern, Recorder, Analysis, Action]
 
 
 class ProcessManager:
-    """MeshMaker-owned manager for ordered analysis/process steps."""
+    """Model-owned manager for ordered analysis/process steps."""
 
-    def __init__(self, mesh_maker: "MeshMaker"):
-        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+    def __init__(self, mesh_maker: "Model"):
+        from femora.core.model import Model as ModelClass
 
-        if not isinstance(mesh_maker, MeshMakerClass):
-            raise TypeError("mesh_maker must be a MeshMaker instance")
+        if not isinstance(mesh_maker, ModelClass):
+            raise TypeError("mesh_maker must be a Model instance")
         self._mesh_maker = mesh_maker
         self.steps: List[Dict] = []
         self.current_step = -1

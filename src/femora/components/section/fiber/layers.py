@@ -30,7 +30,7 @@ class StraightLayer(LayerBase):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         mat = model.material.create_material("Uniaxial", "Steel01", user_name="S", Fy=50.0, E=29000.0, b=0.01)
         
         # FiberSection uses StraightLayer internally via add_straight_layer
@@ -149,7 +149,7 @@ class CircularLayer(LayerBase):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         mat = model.material.create_material("Uniaxial", "Steel01", user_name="S", Fy=50.0, E=29000.0, b=0.01)
         
         # FiberSection uses CircularLayer internally via add_circular_layer

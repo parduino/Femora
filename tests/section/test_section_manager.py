@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock
 from femora.core.section_base import Section
 from femora.core.section_manager import SectionManager
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.components.section.beam import ElasticSection
 from femora.components.element.elastic_beam_column import ElasticBeamColumnElement
 from femora.core.transformation_base import GeometricTransformation
@@ -20,8 +20,8 @@ class DummySection(Section):
 
 @pytest.fixture
 def mesh_maker():
-    # Use the real singleton MeshMaker for integration tests
-    mm = MeshMaker()
+    # Use an explicit local Model instance for integration tests
+    mm = Model()
     mm.clear_model()
     return mm
 
@@ -76,13 +76,13 @@ def test_clear_clears_owner_and_tags(manager):
     assert len(manager.get_all()) == 0
 
 def test_adding_to_another_manager_fails():
-    # Use mocks to simulate two different MeshMakers and Managers
-    mm1 = MagicMock(spec=MeshMaker)
+    # Use mocks to simulate two different Models and Managers
+    mm1 = MagicMock(spec=Model)
     mm1.section = None
     manager1 = SectionManager(mesh_maker=mm1)
     mm1.section = manager1
     
-    mm2 = MagicMock(spec=MeshMaker)
+    mm2 = MagicMock(spec=Model)
     mm2.section = None
     manager2 = SectionManager(mesh_maker=mm2)
     mm2.section = manager2
@@ -96,7 +96,7 @@ def test_adding_to_another_manager_fails():
 def test_manager_already_exists(mesh_maker):
     # mesh_maker fixture already has a .section manager.
     # Creating another one for the same mesh_maker should fail.
-    with pytest.raises(RuntimeError, match="MeshMaker already owns a SectionManager"):
+    with pytest.raises(RuntimeError, match="Model already owns a SectionManager"):
         SectionManager(mesh_maker=mesh_maker)
 
 def test_duplicate_user_name_fails(manager):

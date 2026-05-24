@@ -36,7 +36,7 @@ class ElasticUniaxialMaterial(Material):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         mat = model.material.uniaxial.elastic(
             user_name="rebar_truss",
             E=200000.0,

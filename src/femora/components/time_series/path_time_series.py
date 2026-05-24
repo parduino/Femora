@@ -26,7 +26,7 @@ class PathTimeSeries(TimeSeries):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         ts = model.timeSeries.path(
             dt=0.01,
             values=[0.0, 0.1, -0.05, 0.0],

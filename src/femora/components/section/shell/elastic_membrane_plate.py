@@ -25,7 +25,7 @@ class ElasticMembranePlateSection(Section):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         # Create an elastic shell section for a 8-inch slab
         sec = model.section.shell.elastic_membrane_plate(
             user_name="SlabSection",

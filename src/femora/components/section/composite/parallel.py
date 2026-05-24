@@ -29,7 +29,7 @@ class ParallelSection(Section):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         # Create two different sections
         sec1 = model.section.beam.elastic(user_name="Primary", E=29000.0, A=10.0, Iz=100.0)
         sec2 = model.section.beam.elastic(user_name="Secondary", E=29000.0, A=2.0, Iz=20.0)

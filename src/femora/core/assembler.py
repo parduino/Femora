@@ -16,7 +16,7 @@ from femora.constants import FEMORA_MAX_NDF
 
 class Assembler:
     """
-    Assembler manages assembly sections for a MeshMaker model.
+    Assembler manages assembly sections for a Model.
 
     Runtime API:
     - ``create_section(...)``, ``get(...)``, ``get_all()``, ``remove(...)``, ``clear()``
@@ -24,16 +24,16 @@ class Assembler:
     """
 
     def __init__(self, mesh_maker=None):
-        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+        from femora.core.model import Model as ModelClass
 
-        if mesh_maker is not None and not isinstance(mesh_maker, MeshMakerClass):
-            raise TypeError("mesh_maker must be a MeshMaker instance")
+        if mesh_maker is not None and not isinstance(mesh_maker, ModelClass):
+            raise TypeError("mesh_maker must be a Model instance")
         self._mesh_maker = mesh_maker
         self._assembly_sections: Dict[int, 'AssemblySection'] = {}
 
     def _require_mesh_maker(self):
         if self._mesh_maker is None:
-            raise RuntimeError("Assembler is not bound to a MeshMaker model")
+            raise RuntimeError("Assembler is not bound to a Model")
         return self._mesh_maker
 
     def _model_assembled_mesh(self):
@@ -43,7 +43,7 @@ class Assembler:
 
     def _emit_model_event(self, event: FemoraEvent, **payload) -> None:
         if self._mesh_maker is None:
-            raise RuntimeError("Assembler is not bound to a MeshMaker model")
+            raise RuntimeError("Assembler is not bound to a Model")
         self._mesh_maker.events.emit(event, **payload)
 
     def create_section(
@@ -105,7 +105,7 @@ class Assembler:
             partition_algorithm = partitioner
 
         if self._mesh_maker is None:
-            raise RuntimeError("Assembler is not bound to a MeshMaker model")
+            raise RuntimeError("Assembler is not bound to a Model")
 
         # Create the AssemblySection 
         assembly_section = AssemblySection(
@@ -1092,9 +1092,9 @@ class AssemblySection:
         element_tags = mesh.cell_data["ElementTag"]
         unique_tags = np.unique(element_tags)
         
+        mesh_maker = self._meshpart_manager._mesh_maker
         for tag in unique_tags:
-            from femora.components.MeshMaker import MeshMaker
-            element = MeshMaker.get_instance().element.get(tag)
+            element = mesh_maker.element.get(tag)
             if element:
                 ele_ndof = element.get_ndof()
                 if ele_ndof != default_ndf:

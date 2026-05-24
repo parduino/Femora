@@ -6,7 +6,7 @@ from femora.core.tagging import CompactRetagPolicy
 from femora.core.section_base import Section
 
 if TYPE_CHECKING:
-    from femora.components.MeshMaker import MeshMaker
+    from femora.core.model import Model
     from femora.core.material_base import Material
 
 
@@ -86,29 +86,29 @@ class SectionManager:
     """Local manager for ``Section`` lifecycle and tag assignment.
 
     The manager is intentionally not a singleton. Each instance owns an
-    independent tag space so future model or ``MeshMaker`` instances can keep
+    independent tag space so future model or ``Model`` instances can keep
     their own section collections.
     """
     _section_types: Dict[str, Type[Section]] = {}
 
-    def __init__(self, mesh_maker: MeshMaker):
+    def __init__(self, mesh_maker: Model):
         """Create an empty manager with tags starting at ``1``.
 
         Args:
-            mesh_maker: The owning MeshMaker instance.
+            mesh_maker: The owning Model instance.
 
         Raises:
-            TypeError: If mesh_maker is not a MeshMaker instance.
-            RuntimeError: If the MeshMaker already owns a SectionManager.
+            TypeError: If mesh_maker is not a Model instance.
+            RuntimeError: If the Model already owns a SectionManager.
         """
-        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+        from femora.core.model import Model as ModelClass
 
-        if not isinstance(mesh_maker, MeshMakerClass):
-            raise TypeError("mesh_maker must be a MeshMaker instance")
+        if not isinstance(mesh_maker, ModelClass):
+            raise TypeError("mesh_maker must be a Model instance")
         
         if hasattr(mesh_maker, "section") and mesh_maker.section is not None:
              if mesh_maker.section is not self:
-                raise RuntimeError("MeshMaker already owns a SectionManager")
+                raise RuntimeError("Model already owns a SectionManager")
 
         self._mesh_maker = mesh_maker
         self._sections: Dict[int, Section] = {}
@@ -239,7 +239,7 @@ class SectionManager:
         return self.add(section)
 
     def resolve_material(self, material_input: Union[int, str, Material, None]) -> Optional[Material]:
-        """Resolve a material using the manager's MeshMaker context."""
+        """Resolve a material using the manager's Model context."""
         from femora.core.material_base import Material as MaterialClass
         if material_input is None:
             return None

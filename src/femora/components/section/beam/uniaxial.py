@@ -33,7 +33,7 @@ class UniaxialSection(Section):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         # Create a material for the section
         mat = model.material.uniaxial.elastic(user_name="SteelMat", E=29000.0)
 

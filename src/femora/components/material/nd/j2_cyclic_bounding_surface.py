@@ -39,7 +39,7 @@ class J2CyclicBoundingSurfaceMaterial(Material):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         mat = model.material.nd.j2_cyclic_bounding_surface(
             user_name="clay_cyclic",
             G=12000.0,

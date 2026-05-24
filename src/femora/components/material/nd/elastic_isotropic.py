@@ -33,7 +33,7 @@ class ElasticIsotropicMaterial(Material):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         mat = model.material.nd.elastic_isotropic(
             user_name="sand",
             E=3.0e7,

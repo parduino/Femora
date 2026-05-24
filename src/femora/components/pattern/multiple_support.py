@@ -25,7 +25,7 @@ class ImposedMotion:
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         ts = model.timeSeries.path(dt=0.01, filePath="support.acc")
         gm = model.groundMotion.plain(accel=ts)
         pattern = model.pattern.multiple_support()
@@ -98,7 +98,7 @@ class MultipleSupportPattern(Pattern):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         ts = model.timeSeries.path(dt=0.01, filePath="support.acc")
         gm = model.groundMotion.plain(accel=ts)
         pattern = model.pattern.multiple_support()
@@ -135,7 +135,7 @@ class MultipleSupportPattern(Pattern):
         expected_mesh_maker = getattr(owner, "_mesh_maker", None)
         ground_motion_mesh_maker = getattr(ground_motion._owner, "_mesh_maker", None)
         if ground_motion_mesh_maker is not expected_mesh_maker:
-            raise ValueError("ground_motion must belong to the local MeshMaker")
+            raise ValueError("ground_motion must belong to the local Model")
         expected_manager = getattr(owner, "_ground_motion_manager", None)
         if expected_manager is not None and ground_motion._owner is not expected_manager:
             raise ValueError("ground_motion must belong to the local GroundMotionManager")

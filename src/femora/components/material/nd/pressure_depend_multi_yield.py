@@ -31,7 +31,7 @@ class PressureDependMultiYieldMaterial(Material):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         mat = model.material.nd.pressure_depend_multi_yield(
             user_name="profiled_soil",
             nd=3,

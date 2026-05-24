@@ -25,7 +25,7 @@ class H5DRMPattern(Pattern):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         pattern = model.pattern.h5drm(
             filepath="drmload.h5drm",
             factor=1.0,

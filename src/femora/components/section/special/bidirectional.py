@@ -30,7 +30,7 @@ class BidirectionalSection(Section):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         # Create a bidirectional plasticity section for an isolator model
         sec = model.section.special.bidirectional(
             user_name="IsolatorShear",

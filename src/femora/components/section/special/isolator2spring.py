@@ -32,7 +32,7 @@ class Isolator2SpringSection(Section):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         # Create a two-spring isolator section for a seismic isolation study
         sec = model.section.special.isolator2spring(
             user_name="Isolator_Unit1",

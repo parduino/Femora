@@ -2,7 +2,7 @@ import inspect
 
 import pytest
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.components.ground_motion import (
     InterpolatedGroundMotion,
     PlainGroundMotion,
@@ -12,7 +12,7 @@ from femora.core.ground_motion_manager import GroundMotionManager
 
 @pytest.fixture(autouse=True)
 def mesh_maker():
-    mesh_maker = MeshMaker.get_instance()
+    mesh_maker = Model()
     mesh_maker.clear_model()
     yield mesh_maker
     mesh_maker.clear_model()
@@ -33,7 +33,7 @@ def test_plain_ground_motion_is_not_self_registering(mesh_maker):
 
 def test_ground_motion_manager_is_owned_by_mesh_maker(mesh_maker):
     assert mesh_maker.ground_motion is mesh_maker.ground_motion
-    with pytest.raises(TypeError, match="mesh_maker must be a MeshMaker instance"):
+    with pytest.raises(TypeError, match="mesh_maker must be a Model instance"):
         GroundMotionManager(mesh_maker=object())
 
 

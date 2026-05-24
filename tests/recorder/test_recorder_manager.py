@@ -1,6 +1,6 @@
 import pytest
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.components.recorder.recorders import (
     DriftRecorder,
     MPCORecorder,
@@ -13,7 +13,7 @@ from femora.core.recorder_manager import RecorderManager
 
 @pytest.fixture
 def mesh_maker():
-    mk = MeshMaker()
+    mk = Model()
     mk.clear_model()
     return mk
 

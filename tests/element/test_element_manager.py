@@ -1,13 +1,13 @@
 import pytest
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.components.material.nd import ElasticIsotropicMaterial
 from femora.core.element_base import Element
 
 
 @pytest.fixture
 def mesh_maker():
-    mk = MeshMaker()
+    mk = Model()
     mk.clear_model()
     return mk
 

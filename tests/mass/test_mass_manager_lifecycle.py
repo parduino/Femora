@@ -4,20 +4,19 @@ import pytest
 import femora.components.material.nd  # noqa: F401 — register material types
 import femora.components.element.std_brick  # noqa: F401 — register element types
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.core.mass_manager import MassManager
 from femora.core.event_bus import EventBus, FemoraEvent
 
 
 @pytest.fixture
 def mesh_maker():
-    MeshMaker._instance = None
-    mk = MeshMaker(model_name="mass_lifecycle_test")
+    mk = Model(model_name="mass_lifecycle_test")
     mk.clear_model()
     return mk
 
 
-def _build_assembled_block(mesh_maker: MeshMaker, user_name: str = "block") -> None:
+def _build_assembled_block(mesh_maker: Model, user_name: str = "block") -> None:
     mat = mesh_maker.material.nd.elastic_isotropic(
         user_name="mat", E=1.0, nu=0.3, rho=1.0
     )
@@ -51,7 +50,7 @@ def test_mass_manager_lives_in_core():
 def test_mesh_maker_imports_core_mass_manager():
     from pathlib import Path
 
-    mesh_maker_source = Path("src/femora/components/MeshMaker.py").read_text(encoding="utf-8")
+    mesh_maker_source = Path("src/femora/core/model.py").read_text(encoding="utf-8")
     assert "from femora.core.mass_manager import MassManager" in mesh_maker_source
     assert "from femora.components.mass.mass_manager import MassManager" not in mesh_maker_source
 
@@ -63,7 +62,7 @@ def test_components_mass_is_not_authoritative():
 
 
 def test_mass_manager_requires_mesh_maker():
-    with pytest.raises(TypeError, match="mesh_maker must be a MeshMaker instance"):
+    with pytest.raises(TypeError, match="mesh_maker must be a Model instance"):
         MassManager(mesh_maker=None)
 
 
@@ -90,8 +89,7 @@ def test_mass_manager_subscribes_to_model_event_bus(mesh_maker):
 
 
 def test_region_cache_is_instance_owned(mesh_maker):
-    MeshMaker._instance = None
-    other = MeshMaker(model_name="mass_other_model")
+    other = Model(model_name="mass_other_model")
     other.clear_model()
 
     mesh_maker.mass._region_point_cache[1] = np.array([10])

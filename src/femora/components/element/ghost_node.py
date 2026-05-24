@@ -95,7 +95,7 @@ class GhostNodeElement(Element):
 
         If *ndf_value* is a ghost sentinel it is resolved via the internal
         map.  Otherwise it is returned unchanged.  This is the single
-        function that ``MeshMaker.export_to_tcl`` should call.
+        function that ``Model.export_to_tcl`` should call.
 
         Args:
             ndf_value: Raw ndf value from the mesh ``point_data["ndf"]``.

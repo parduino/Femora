@@ -18,8 +18,8 @@ def test_zeroLengthContactASDimplex():
     Kn = 1.0e10
     Kt = 1.0e8
     mu = 0.5
-    from femora.components.MeshMaker import MeshMaker
-    mm = MeshMaker()
+    from femora.core.model import Model
+    mm = Model()
     mm.clear_model()
     ele1 = mm.element.special.zero_length_contact(ndof=3, Kn=Kn, Kt=Kt, mu=mu)
     tcl1 = ele1.to_tcl(tag=100, nodes=[10, 20])

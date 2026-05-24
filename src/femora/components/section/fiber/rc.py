@@ -40,7 +40,7 @@ class RCSection(Section):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         # Define materials
         core = model.material.uniaxial.concrete01(user_name="Core", fpc=-5.0, epsc0=-0.005)
         cover = model.material.uniaxial.concrete01(user_name="Cover", fpc=-4.0, epsc0=-0.002)

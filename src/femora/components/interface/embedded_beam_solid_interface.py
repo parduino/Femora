@@ -399,8 +399,12 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         It writes the necessary TCL commands to the provided file handle.
         """
         # print(f"[EmbeddedBeamSolidInterface:{self.name}] Exporting TCL commands.")
-        from femora import MeshMaker
-        mesh_maker = MeshMaker.get_instance()
+        if self._owner is None:
+            raise RuntimeError(
+                f"EmbeddedBeamSolidInterface '{self.name}' must be managed by InterfaceManager "
+                "before TCL export"
+            )
+        mesh_maker = self._owner._mesh_maker
         crd_transf_tag = self.beam_part.element.get_transformation().tag
         file_handle.write("set Femora_embeddedBeamSolidStartTag [getFemoraMax eleTag]\n")
         file_handle.write("set Femora_embeddedBeamSolidStartTag [expr $Femora_embeddedBeamSolidStartTag + 1]\n")
@@ -477,8 +481,12 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         ValueError
             If the res_type is not supported.
         """
-        from femora import MeshMaker
-        mesh_maker = MeshMaker.get_instance()
+        if self._owner is None:
+            raise RuntimeError(
+                f"EmbeddedBeamSolidInterface '{self.name}' must be managed by InterfaceManager "
+                "before recorder export"
+            )
+        mesh_maker = self._owner._mesh_maker
         core_start_tag = mesh_maker._start_core_tag
 
         cmd = ""
@@ -660,12 +668,8 @@ if __name__ == "__main__":
     #     name="EmbedTest5", beam_part="beam5", radius=interface_radius,
     #     n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
     # )
-    # open the gui to visualize the mesh
-    fm.gui()
-    exit(0)
     fm.assembler.assemble()
     # fm.export_to_tcl("embedded_demo.tcl")
-    # # fm.gui()
 
     
 

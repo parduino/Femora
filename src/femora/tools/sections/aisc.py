@@ -13,7 +13,7 @@ def create_section(name: str, model, material, type: str = "Elastic", unit_syste
 
     Args:
         name (str): AISC section name (e.g., "W14X90").
-        model (MeshMaker): Femora MeshMaker instance (or similar model object) with .section manager.
+        model (Model): Femora Model instance with a ``section`` manager.
         material (Material): Femora material object.
         type (str, optional): 'Elastic' or 'Fiber'. Defaults to "Elastic".
         unit_system (str, optional): Target unit system for geometric properties ('in', 'ft', 'm', 'cm', 'mm'). 

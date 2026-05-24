@@ -1,15 +1,16 @@
 import pytest
-import femora as fm
 import pyvista as pv
 import numpy as np
+from femora.core.model import Model
 
+model = Model()
 
 # material 
-mat = fm.material.nd.elastic_isotropic(name="mat1", E=20000, nu=0.3, rho=1.9)
+mat = model.material.nd.elastic_isotropic(name="mat1", E=20000, nu=0.3, rho=1.9)
 
 
 # element
-ele = fm.element.brick.std(ndof=3, 
+ele = model.element.brick.std(ndof=3, 
                            material=mat, 
                            b1= 0.0, b2= 0.0, b3= 0.0,
                            lumped=True)
@@ -55,7 +56,7 @@ assert embedded_depth < (zmax - zmin), "Embedded region in z-direction is invali
 
 
 
-fm.meshpart.volume.uniform_rectangular_grid(user_name="part1", 
+model.meshpart.volume.uniform_rectangular_grid(user_name="part1", 
                                             element=ele,
                                             region=None,
                                             x_min=xmin, x_max=xmax,
@@ -66,7 +67,7 @@ fm.meshpart.volume.uniform_rectangular_grid(user_name="part1",
                                             nz = int((zmax - zmin)/dz)
                                             )
 
-fm.meshpart.volume.uniform_rectangular_grid(user_name="part2", 
+model.meshpart.volume.uniform_rectangular_grid(user_name="part2", 
                                                 element=ele,
                                                 region=None,
                                                 x_min=xmin, x_max=xmax, 
@@ -77,7 +78,7 @@ fm.meshpart.volume.uniform_rectangular_grid(user_name="part2",
                                                 nz = int((zmax - zmin)/dz)
                                                 )
 
-fm.meshpart.volume.uniform_rectangular_grid(user_name="part3",
+model.meshpart.volume.uniform_rectangular_grid(user_name="part3",
                                             element=ele,
                                             region=None,
                                             x_min=xmin, x_max=embedded_xmin,
@@ -88,7 +89,7 @@ fm.meshpart.volume.uniform_rectangular_grid(user_name="part3",
                                             nz = int((zmax - zmin)/dz)
                                             )
 
-fm.meshpart.volume.uniform_rectangular_grid(user_name="part4",
+model.meshpart.volume.uniform_rectangular_grid(user_name="part4",
                                             element=ele,
                                             region=None,
                                             x_min=embedded_xmax, x_max=xmax,
@@ -99,7 +100,7 @@ fm.meshpart.volume.uniform_rectangular_grid(user_name="part4",
                                             nz = int((zmax - zmin)/dz)
                                             )
 
-fm.meshpart.volume.uniform_rectangular_grid(user_name="part5",
+model.meshpart.volume.uniform_rectangular_grid(user_name="part5",
                                             element=ele,
                                             region=None,
                                             x_min=embedded_xmin, x_max=embedded_xmax,   
@@ -110,7 +111,7 @@ fm.meshpart.volume.uniform_rectangular_grid(user_name="part5",
                                             nz = int((zmax - zmin - embedded_depth)/dz)
                                             )
 
-fm.meshpart.volume.uniform_rectangular_grid(user_name="foundation",
+model.meshpart.volume.uniform_rectangular_grid(user_name="foundation",
                                             element=ele,
                                             region=None,
                                             x_min=embedded_xmin, x_max=embedded_xmax,
@@ -189,26 +190,26 @@ fm.meshpart.volume.uniform_rectangular_grid(user_name="foundation",
 # part2.transform.rotate_z(angle=45, point=(embedded_xmax/2., embedded_ymax/2., zmax))
 
 
-fm.assembler.create_section(["part1", 
+model.assembler.create_section(["part1", 
                             "part2",
                             "part3", 
                             "part4", 
                             "part5",
                             ], 
                             num_partitions=8)
-fm.assembler.create_section(["foundation"], num_partitions=2)
+model.assembler.create_section(["foundation"], num_partitions=2)
 # fm.assembler.create_section(["foundation1","foundation2"], num_partitions=2)
 # fm.assembler.create_section(["foundation3","foundation4"], num_partitions=2)
-fm.interface.node_interface(
+model.interface.node_interface(
     name="interface1",
     constrained_node="foundation", 
     # retained_nodes=["part5"],
     offset=0.1,
     normal_filter=[1,0,0],
     filter_tolerance=0.98,)
-fm.assembler.assemble(merge_points=False)
+model.assembler.assemble(merge_points=False)
 # fm.assembler.plot(show_edges=True, scalars="MeshPartTag_celldata")
-fm.export_to_tcl("test_embededd_node.tcl")
+model.export_to_tcl("test_embededd_node.tcl")
 
 
 

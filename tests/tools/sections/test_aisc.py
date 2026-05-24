@@ -8,12 +8,12 @@ sys.path.append(r"d:\Projects\Femora\src")
 from femora.tools.sections import aisc
 from femora.components.material.nd import ElasticIsotropicMaterial
 from femora.components.section.beam import ElasticSection
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 
 class TestAISCTool(unittest.TestCase):
     def setUp(self):
-        # Initialize MeshMaker (singleton)
-        self.model = MeshMaker()
+        # Initialize a local Model instance for this test case
+        self.model = Model()
         # Ensure clean state
         self.model.section.clear()
         self.model.material.clear()

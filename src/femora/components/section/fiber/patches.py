@@ -31,7 +31,7 @@ class RectangularPatch(PatchBase):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         mat = model.material.create_material("Uniaxial", "Steel01", user_name="S", Fy=50.0, E=29000.0, b=0.01)
         
         # FiberSection uses RectangularPatch internally via add_rectangular_patch
@@ -156,7 +156,7 @@ class QuadrilateralPatch(PatchBase):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         mat = model.material.create_material("Uniaxial", "Steel01", user_name="S", Fy=50.0, E=29000.0, b=0.01)
         
         # FiberSection uses QuadrilateralPatch internally via add_quadrilateral_patch
@@ -287,7 +287,7 @@ class CircularPatch(PatchBase):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         mat = model.material.create_material("Uniaxial", "Concrete01", user_name="C", fpc=-4.0, epsc0=-0.002, fpcu=0.0, epscu=-0.005)
         
         # FiberSection uses CircularPatch internally via add_circular_patch

@@ -16,23 +16,23 @@ from femora.core.tagging import CompactRetagPolicy
 from femora.core.time_series_base import TimeSeries
 
 if TYPE_CHECKING:
-    from femora.components.MeshMaker import MeshMaker
+    from femora.core.model import Model
 
 
 class TimeSeriesManager:
     """Local manager for ``TimeSeries`` lifecycle and tag assignment.
 
     The manager is intentionally not a singleton. Each instance owns an
-    independent tag space so future model or ``MeshMaker`` instances can keep
+    independent tag space so future model or ``Model`` instances can keep
     their own time-series collections.
     """
 
-    def __init__(self, mesh_maker: MeshMaker):
+    def __init__(self, mesh_maker: Model):
         """Create an empty manager with tags starting at ``1``."""
-        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+        from femora.core.model import Model as ModelClass
 
-        if not isinstance(mesh_maker, MeshMakerClass):
-            raise TypeError("mesh_maker must be a MeshMaker instance")
+        if not isinstance(mesh_maker, ModelClass):
+            raise TypeError("mesh_maker must be a Model instance")
         self._mesh_maker = mesh_maker
         self._time_series: Dict[int, TimeSeries] = {}
         self._start_tag = 1

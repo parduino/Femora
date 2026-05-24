@@ -1,6 +1,6 @@
 import pytest
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.components.material.nd import ElasticIsotropicMaterial
 from femora.core.meshpart_base import MeshPart
 from femora.core.meshpart_manager import MeshPartManager
@@ -8,7 +8,7 @@ from femora.core.meshpart_manager import MeshPartManager
 
 @pytest.fixture
 def mesh_maker():
-    mk = MeshMaker()
+    mk = Model()
     mk.clear_model()
     return mk
 

@@ -1,7 +1,7 @@
 import pytest
 
 from femora.core.assembler import Assembler
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.components.event.event_bus import EventBus
 
 from femora.components.material.nd import ElasticIsotropicMaterial
@@ -13,7 +13,7 @@ def femora_clean_state():
     old_subscribers = EventBus._subscribers.copy()
     EventBus._subscribers.clear()
 
-    mm = MeshMaker()
+    mm = Model()
     mm.clear_model()
 
     assembler = mm.assembler
@@ -29,7 +29,7 @@ def femora_clean_state():
         EventBus._subscribers = old_subscribers
 
 
-def _make_two_adjacent_brick_meshparts(mm: MeshMaker):
+def _make_two_adjacent_brick_meshparts(mm: Model):
     mat = mm.material.add(ElasticIsotropicMaterial(user_name="mat", E=200e3, nu=0.3, rho=0.0))
     ele = mm.element.brick.std(ndof=3, material=mat)
 

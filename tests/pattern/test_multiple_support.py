@@ -1,10 +1,10 @@
 import pytest
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 
 @pytest.fixture(autouse=True)
 def managers():
-    mesh_maker = MeshMaker.get_instance()
+    mesh_maker = Model()
     mesh_maker.clear_model()
     yield mesh_maker.time_series, mesh_maker.ground_motion, mesh_maker.pattern
     mesh_maker.clear_model()

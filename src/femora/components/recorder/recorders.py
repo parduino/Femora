@@ -8,7 +8,7 @@ def _results_folder(recorder: Recorder) -> str:
     mesh_maker = recorder._mesh_maker()
     if mesh_maker is None:
         raise ValueError(
-            "Recorder must belong to a MeshMaker recorder manager to resolve results paths"
+            "Recorder must belong to a Model recorder manager to resolve results paths"
         )
     folder = mesh_maker.get_results_folder()
     if folder == "":
@@ -103,7 +103,7 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
         mesh_maker = self._mesh_maker()
         if mesh_maker is None:
             raise ValueError(
-                "EmbeddedBeamSolidInterfaceRecorder must belong to a MeshMaker recorder manager before export"
+                "EmbeddedBeamSolidInterfaceRecorder must belong to a Model recorder manager before export"
             )
         interface_manager = mesh_maker.interface
 
@@ -311,8 +311,8 @@ class DriftRecorder(Recorder):
 
     Example:
         >>> import femora as fm
-        >>> from femora.components.MeshMaker import MeshMaker
-        >>> model = MeshMaker()
+        >>> from femora.core.model import Model
+        >>> model = Model()
         >>> rec = model.recorder.drift(
         ...     file_name="StoryDrift_Story01_X.out",
         ...     i_nodes=1,
@@ -732,7 +732,7 @@ class BeamForceRecorder(Recorder):
         mesh_maker = self._mesh_maker()
         if mesh_maker is None:
             raise ValueError(
-                "BeamForceRecorder must belong to a MeshMaker recorder manager before resolving meshparts"
+                "BeamForceRecorder must belong to a Model recorder manager before resolving meshparts"
             )
         manager = mesh_maker.meshpart
         if not self.meshparts:
@@ -787,7 +787,7 @@ class BeamForceRecorder(Recorder):
         mm = self._mesh_maker()
         if mm is None:
             raise ValueError(
-                "BeamForceRecorder must belong to a MeshMaker recorder manager before export"
+                "BeamForceRecorder must belong to a Model recorder manager before export"
             )
         assembled = mm.assembled_mesh
         if assembled is None:

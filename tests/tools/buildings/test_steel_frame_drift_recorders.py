@@ -1,6 +1,6 @@
 import uuid
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.components.material.nd import ElasticIsotropicMaterial
 from femora.tools.buildings.steel_frame import FEMA_SAC_SteelFrame
 
@@ -8,7 +8,7 @@ from femora.tools.buildings.steel_frame import FEMA_SAC_SteelFrame
 def test_steel_frame_story_drift_recorders_core_aware():
     """Smoke test: build a tiny frame, assemble with 2 partitions, and generate drift recorders."""
 
-    model = MeshMaker()
+    model = Model()
     model.clear_model()
 
     steel = ElasticIsotropicMaterial(

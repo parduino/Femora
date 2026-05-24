@@ -1,13 +1,13 @@
 import pytest
 
 from femora.components.analysis.analysis import Analysis
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.core.analysis_manager import AnalysisManager
 
 
 @pytest.fixture
 def mesh_maker():
-    mk = MeshMaker()
+    mk = Model()
     mk.clear_model()
     return mk
 

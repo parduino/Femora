@@ -23,7 +23,7 @@ class LinearTimeSeries(TimeSeries):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         ts = model.timeSeries.linear(factor=0.75)
         print(ts.tag)
         print(ts.to_tcl())

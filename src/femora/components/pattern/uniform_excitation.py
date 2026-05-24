@@ -24,7 +24,7 @@ class UniformExcitation(Pattern):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         # Create a time series (e.g., from a file path)
         ts = model.timeSeries.path(dt=0.01, filePath="ground_motion.acc")
 

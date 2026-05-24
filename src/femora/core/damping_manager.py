@@ -6,17 +6,17 @@ from femora.core.damping_base import Damping
 from femora.core.tagging import CompactRetagPolicy
 
 if TYPE_CHECKING:
-    from femora.components.MeshMaker import MeshMaker
+    from femora.core.model import Model
 
 
 class DampingManager:
     """Manager-owned lifecycle and tagging for damping objects."""
 
-    def __init__(self, mesh_maker: MeshMaker):
-        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+    def __init__(self, mesh_maker: Model):
+        from femora.core.model import Model as ModelClass
 
-        if not isinstance(mesh_maker, MeshMakerClass):
-            raise TypeError("mesh_maker must be a MeshMaker instance")
+        if not isinstance(mesh_maker, ModelClass):
+            raise TypeError("mesh_maker must be a Model instance")
         existing_manager = getattr(mesh_maker, "damping", None)
         if isinstance(existing_manager, DampingManager):
             raise ValueError("mesh_maker already owns a damping manager")

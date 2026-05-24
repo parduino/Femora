@@ -33,7 +33,7 @@ class WFSection2d(Section):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         # Create a nonlinear steel material
         mat = model.material.uniaxial.steel01(user_name="Steel", Fy=50.0, E=29000.0, b=0.01)
 

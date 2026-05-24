@@ -13,17 +13,17 @@ from femora.core.section_base import Section
 from femora.core.transformation_base import GeometricTransformation
 
 if TYPE_CHECKING:
-    from femora.components.MeshMaker import MeshMaker
+    from femora.core.model import Model
 
 
 class ElementManager:
     """Local manager for ``Element`` lifecycle and tag assignment."""
 
-    def __init__(self, mesh_maker: MeshMaker):
-        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+    def __init__(self, mesh_maker: Model):
+        from femora.core.model import Model as ModelClass
 
-        if not isinstance(mesh_maker, MeshMakerClass):
-            raise TypeError("mesh_maker must be a MeshMaker instance")
+        if not isinstance(mesh_maker, ModelClass):
+            raise TypeError("mesh_maker must be a Model instance")
         self._mesh_maker = mesh_maker
         self._elements: Dict[int, Element] = {}
         self._start_tag = 1

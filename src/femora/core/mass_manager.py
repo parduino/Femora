@@ -11,22 +11,22 @@ from femora.core.event_bus import FemoraEvent
 from femora.core.meshpart_base import MeshPart
 
 if TYPE_CHECKING:
-    from femora.components.MeshMaker import MeshMaker
+    from femora.core.model import Model
 
 
 class MassManager:
-    """MeshMaker-owned service for assigning nodal mass arrays.
+    """Model-owned service for assigning nodal mass arrays.
 
     Mass data lives on mesh parts before assembly and on the assembled mesh
     after assembly. This manager provides convenience helpers that modify those
     arrays without introducing separate mass objects or registries.
     """
 
-    def __init__(self, mesh_maker: "MeshMaker"):
-        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+    def __init__(self, mesh_maker: "Model"):
+        from femora.core.model import Model as ModelClass
 
-        if not isinstance(mesh_maker, MeshMakerClass):
-            raise TypeError("mesh_maker must be a MeshMaker instance")
+        if not isinstance(mesh_maker, ModelClass):
+            raise TypeError("mesh_maker must be a Model instance")
         self._mesh_maker = mesh_maker
         self._events_subscribed = False
         self._region_point_cache: dict[int, np.ndarray] = {}

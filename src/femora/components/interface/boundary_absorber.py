@@ -26,7 +26,7 @@ from pyvista import Cube, MultiBlock, StructuredGrid
 from femora.constants import FEMORA_MAX_NDF
 
 if TYPE_CHECKING:
-    from femora.components.MeshMaker import MeshMaker
+    from femora.core.model import Model
 
 
 def _normalize_absorber_kwargs(
@@ -96,7 +96,7 @@ def _normalize_absorber_kwargs(
     }
 
 
-def apply_rectangular_absorbing_layer(mesh_maker: "MeshMaker", config: dict) -> bool:
+def apply_rectangular_absorbing_layer(mesh_maker: "Model", config: dict) -> bool:
     """Apply a registered rectangular absorbing layer to the assembled mesh."""
     if mesh_maker.assembled_mesh is None:
         raise ValueError("No mesh found\n Please assemble the mesh first")

@@ -953,7 +953,7 @@ class FEMA_SAC_SteelFrame:
         completed so nodal coordinates and tags are available.
 
         Args:
-            model: Femora model instance (``MeshMaker``) exposing ``assembler``,
+            model: Femora model instance (``Model``) exposing ``assembler``,
                 ``timeSeries``, ``pattern``, and ``_start_nodetag``.
             g: Acceleration magnitude; must combine with ``floor_masses`` units so
                 ``mass * g`` is a force in the model's force unit.
@@ -1041,7 +1041,7 @@ class FEMA_SAC_SteelFrame:
         the building region is created.
 
         Args:
-            model: Active Femora model (MeshMaker instance).
+            model: Active Femora model (Model instance).
             file_name: Output file name with .mpco extension. Defaults to {name_prefix}.mpco.
             delta_t: Optional recorder time interval (-T dt).
             element_responses: List of element responses to record (-E). Defaults to ["force"].

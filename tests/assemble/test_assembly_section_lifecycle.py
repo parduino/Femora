@@ -6,12 +6,12 @@ import femora.components.material.nd  # noqa: F401 — register material types
 import femora.components.element.std_brick  # noqa: F401 — register element types
 
 from femora.core.assembler import Assembler as CoreAssembler, AssemblySection
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 
 
 @pytest.fixture
 def mesh_maker():
-    mk = MeshMaker()
+    mk = Model()
     mk.clear_model()
     mk.assembler.clear()
     mk.assembler.delete_assembled_mesh()

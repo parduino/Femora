@@ -2,14 +2,14 @@ import inspect
 
 import pytest
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.components.region.regions import GlobalRegion
 from femora.core.region_manager import RegionManager
 
 
 @pytest.fixture
 def mesh_maker():
-    mk = MeshMaker()
+    mk = Model()
     mk.clear_model()
     return mk
 

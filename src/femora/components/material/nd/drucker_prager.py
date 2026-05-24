@@ -35,7 +35,7 @@ class DruckerPragerMaterial(Material):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         mat = model.material.nd.drucker_prager(
             user_name="dp_solid",
             k=2.0e5,

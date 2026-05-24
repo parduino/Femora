@@ -19,7 +19,7 @@ class ConstantTimeSeries(TimeSeries):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         # Create a constant time series with a factor of 1.0 (default)
         ts_default = model.timeSeries.constant()
         print(ts_default.tag)

@@ -34,7 +34,7 @@ class Steel01Material(Material):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         mat = model.material.uniaxial.steel01(
             user_name="A992",
             Fy=345.0,

@@ -31,7 +31,7 @@ class AggregatorSection(Section):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         # Create a fiber section for flexure
         fiber_sec = model.section.fiber.section(user_name="BendingOnly")
         # (add patches/fibers to fiber_sec here)

@@ -33,7 +33,7 @@ class ElasticSection(Section):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         # Create a 2D elastic section
         sec_2d = model.section.beam.elastic(
             user_name="Beam2D",

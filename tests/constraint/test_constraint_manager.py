@@ -1,6 +1,6 @@
 import pytest
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.components.constraint.sp_constraints import FixConstraint
 from femora.components.constraint.mp_constraints import EqualDOF
 from femora.core.constraint_manager import ConstraintManager
@@ -10,7 +10,7 @@ from femora.core.sp_constraint_manager import SpConstraintManager
 
 @pytest.fixture
 def mesh_maker():
-    mk = MeshMaker()
+    mk = Model()
     mk.clear_model()
     return mk
 
@@ -104,7 +104,7 @@ def test_managers_require_mesh_maker():
         SpConstraintManager(None)  # type: ignore[arg-type]
     with pytest.raises(TypeError):
         MPConstraintManager(None)  # type: ignore[arg-type]
-    mk = MeshMaker()
+    mk = Model()
     mk.clear_model()
     with pytest.raises(TypeError):
         SpConstraintManager(mk)  # type: ignore[arg-type]

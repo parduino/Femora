@@ -11,7 +11,7 @@ from femora.core.tagging import CompactRetagPolicy
 from femora.core.time_series_base import TimeSeries
 
 if TYPE_CHECKING:
-    from femora.components.MeshMaker import MeshMaker
+    from femora.core.model import Model
 
 
 class PatternManager:
@@ -23,15 +23,15 @@ class PatternManager:
 
     def __init__(
         self,
-        mesh_maker: MeshMaker,
+        mesh_maker: Model,
         time_series_manager=None,
         ground_motion_manager=None,
     ):
         """Create an empty manager with pattern tags starting at ``1``."""
-        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+        from femora.core.model import Model as ModelClass
 
-        if not isinstance(mesh_maker, MeshMakerClass):
-            raise TypeError("mesh_maker must be a MeshMaker instance")
+        if not isinstance(mesh_maker, ModelClass):
+            raise TypeError("mesh_maker must be a Model instance")
         self._mesh_maker = mesh_maker
         self._patterns: Dict[int, Pattern] = {}
         self._start_tag = 1
@@ -227,7 +227,7 @@ class PatternManager:
             owner_manager = time_series._owner
             owner_mesh_maker = getattr(owner_manager, "_mesh_maker", None)
             if owner_mesh_maker is not self._mesh_maker:
-                raise ValueError("Pattern references a TimeSeries from another MeshMaker")
+                raise ValueError("Pattern references a TimeSeries from another Model")
             if (
                 self._time_series_manager is not None
                 and owner_manager is not self._time_series_manager
@@ -244,7 +244,7 @@ class PatternManager:
             owner_manager = ground_motion._owner
             owner_mesh_maker = getattr(owner_manager, "_mesh_maker", None)
             if owner_mesh_maker is not self._mesh_maker:
-                raise ValueError("Pattern references a GroundMotion from another MeshMaker")
+                raise ValueError("Pattern references a GroundMotion from another Model")
             if (
                 self._ground_motion_manager is not None
                 and owner_manager is not self._ground_motion_manager

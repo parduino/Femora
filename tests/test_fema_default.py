@@ -1,11 +1,9 @@
-
-import femora as fm
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.components.material.nd import ElasticIsotropicMaterial
 from femora.tools.buildings.steel_frame import FEMA_SAC_SteelFrame
 
 def main():
-    model = MeshMaker()
+    model = Model()
     steel = ElasticIsotropicMaterial("Steel", E=29000.0, nu=0.3)
     
     # Test Default Constructor (Should be 9-Story LA9)

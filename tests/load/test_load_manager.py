@@ -1,6 +1,6 @@
 import pytest
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.components.load.node_load import NodeLoad
 from femora.components.load.element_load import ElementLoad
 from femora.components.load.sp_load import SpLoad
@@ -12,7 +12,7 @@ REMOVED_HELPER_METHODS = ("get_parameters", "get_values", "validate", "update_va
 
 @pytest.fixture
 def mesh_maker():
-    mk = MeshMaker()
+    mk = Model()
     mk.clear_model()
     return mk
 

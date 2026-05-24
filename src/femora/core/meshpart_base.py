@@ -14,7 +14,7 @@ from femora.core.region_base import RegionBase
 
 
 class MeshPart(ABC):
-    """Base class for mesh parts on one MeshMaker model.
+    """Base class for mesh parts on one Model model.
 
     Instances do not self-register. A :class:`MeshPartManager` owns tag
     assignment and lifecycle.

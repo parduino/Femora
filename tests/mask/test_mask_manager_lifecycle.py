@@ -4,20 +4,19 @@ import pytest
 import femora.components.material.nd  # noqa: F401 — register material types
 import femora.components.element.std_brick  # noqa: F401 — register element types
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.core.event_bus import EventBus, FemoraEvent
 from femora.core.mask_manager import MaskManager
 
 
 @pytest.fixture
 def mesh_maker():
-    MeshMaker._instance = None
-    mk = MeshMaker(model_name="mask_lifecycle_test")
+    mk = Model(model_name="mask_lifecycle_test")
     mk.clear_model()
     return mk
 
 
-def _build_assembled_block(mesh_maker: MeshMaker, user_name: str = "block") -> None:
+def _build_assembled_block(mesh_maker: Model, user_name: str = "block") -> None:
     mat = mesh_maker.material.nd.elastic_isotropic(
         user_name="mat", E=1.0, nu=0.3, rho=1.0
     )
@@ -58,7 +57,7 @@ def test_mask_manager_lives_in_core():
 def test_mesh_maker_imports_core_mask_manager():
     from pathlib import Path
 
-    mesh_maker_source = Path("src/femora/components/MeshMaker.py").read_text(encoding="utf-8")
+    mesh_maker_source = Path("src/femora/core/model.py").read_text(encoding="utf-8")
     assert "from femora.core.mask_manager import MaskManager" in mesh_maker_source
     assert "MaskManager.from_assembled" not in mesh_maker_source
     assert "MaskManager(mesh_maker=self)" in mesh_maker_source
@@ -93,8 +92,7 @@ def test_mask_rebuilds_after_post_assemble(mesh_maker):
 
 
 def test_mask_cache_is_instance_owned(mesh_maker):
-    MeshMaker._instance = None
-    other = MeshMaker(model_name="mask_other_model")
+    other = Model(model_name="mask_other_model")
     other.clear_model()
     _build_assembled_block(mesh_maker)
 

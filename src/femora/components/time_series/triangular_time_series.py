@@ -24,7 +24,7 @@ class TriangularTimeSeries(TimeSeries):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         # Create a triangular time series starting at 0, ending at 10, with period 2
         ts = model.timeSeries.triangular(
             tStart=0.0,

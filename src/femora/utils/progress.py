@@ -8,7 +8,7 @@ percentage in the 0–100 range.
 
 This module centralises that logic so every component can obtain the same
 consistent progress reporter (currently powered by *tqdm*). It avoids
-duplicating the progress-bar code in many classes (e.g. MeshMaker).
+duplicating the progress-bar code in many classes (e.g. Model).
 """
 
 from typing import Callable, Optional

@@ -16,7 +16,7 @@ class FemoraEvent(Enum):
 
 
 class ModelEventBus:
-    """Per-model pub/sub bus owned by MeshMaker."""
+    """Per-model pub/sub bus owned by Model."""
 
     def __init__(self) -> None:
         self._subscribers: Dict[FemoraEvent, List[Callable]] = defaultdict(list)

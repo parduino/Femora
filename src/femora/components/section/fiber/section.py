@@ -55,7 +55,7 @@ class FiberSection(Section):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         concr = model.material.uniaxial.concrete01(user_name="Concrete", fpc=-4.0, epsc0=-0.002)
         steel = model.material.uniaxial.steel01(user_name="Steel", Fy=60.0, E=29000.0, b=0.01)
 

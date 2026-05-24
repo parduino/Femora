@@ -26,7 +26,7 @@ fm.assembler.assemble()  # interface hooks in automatically
 4. **Mental model of the event system**  
    • **Assembler shouts**: "I'm done!" → interfaces create their stuff.  
    • **Assembler shouts**: "Cores have changed!" → interfaces move/duplicate.  
-   • **MeshMaker shouts**: "I'm exporting!" → interfaces print TCL.
+   • **Model shouts**: "I'm exporting!" → interfaces print TCL.
 
 5. **Where to look if something breaks?**  
    *event_bus.py* lists the events; put a `print()` in your handler to see if it fires.
@@ -80,7 +80,7 @@ interface runtime layout
   1. `PRE_ASSEMBLE`     (reserved)  
   2. `POST_ASSEMBLE`  → assembled mesh exists  
   3. `RESOLVE_CORE_CONFLICTS` → `Core` array final  
-  4. `PRE_EXPORT`      → MeshMaker is about to write TCL.
+  4. `PRE_EXPORT`      → Model is about to write TCL.
 * Components emit – interfaces subscribe.
 
 ### 2.2  `InterfaceBase`
@@ -125,7 +125,7 @@ Assembler POST_ASSEMBLE  ─► Interface.build_*()  (creates nodes / mesh / con
 Assembler RESOLVE_CORE_CONFLICTS ─► Interface.on_partition_update()  (move / duplicate across cores)
            │
            ▼
-MeshMaker PRE_EXPORT     ─► Interface writes TCL (nodes, elements, equalDOF, …)
+Model PRE_EXPORT     ─► Interface writes TCL (nodes, elements, equalDOF, …)
 ```
 
 Interfaces therefore “wake up” automatically at each critical stage – you never call them manually.
@@ -170,7 +170,7 @@ Usage:
 import femora as fm
 from my_laminar import LaminarBoundary
 
-fm = fm.MeshMaker()
+fm = fm.Model()
 fm.interface.add(LaminarBoundary("XFace", master_nodes=left_ids, slave_nodes=right_ids))
 ```
 
@@ -194,8 +194,8 @@ dict_keys(['pile_ifc', 'node_ifc'])
 | Component | Change | Purpose |
 |-----------|--------|---------|
 | `Assembler.assemble()` | Emits `POST_ASSEMBLE`, `RESOLVE_CORE_CONFLICTS` | Triggers interface build / core sync |
-| `MeshMaker.export_to_tcl()` | Emits `PRE_EXPORT` | Gives interfaces a chance to write TCL |
-| `MeshMaker` | Exposes `self.interface` | Convenience access for users and GUI |
+| `Model.export_to_tcl()` | Emits `PRE_EXPORT` | Gives interfaces a chance to write TCL |
+| `Model` | Exposes `self.interface` | Convenience access for users and GUI |
 
 No other parts of Femora were modified.
 

@@ -1151,9 +1151,9 @@ def soil_foundation_type_one(model_filename="model.tcl",
 
 
     # node tag start and element tag start
-    fm.MeshMaker().set_nodetag_start(500000)
-    fm.MeshMaker().set_eletag_start( 600000)
-    fm.MeshMaker().set_start_core_tag(structure_info.get("num_partitions"))
+    fm.Model().set_nodetag_start(500000)
+    fm.Model().set_eletag_start( 600000)
+    fm.Model().set_start_core_tag(structure_info.get("num_partitions"))
     # ============================================================================
     # boundary conditions
     # ============================================================================

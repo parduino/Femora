@@ -1,5 +1,5 @@
 import pytest
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.core.pattern_base import Pattern
 
 class DummyPattern(Pattern):
@@ -17,7 +17,7 @@ class DummyPattern(Pattern):
 
 @pytest.fixture(autouse=True)
 def manager():
-    mesh_maker = MeshMaker.get_instance()
+    mesh_maker = Model()
     mesh_maker.clear_model()
     yield mesh_maker.pattern
     mesh_maker.clear_model()

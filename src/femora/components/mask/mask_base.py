@@ -77,6 +77,8 @@ class MeshIndex:
     region_tags: np.ndarray           # (M,) ints
     core_ids: np.ndarray              # (M,) ints partition ids
     element_id_to_index: Dict[int, int]  # map element id -> row index
+    node_tag_start: int = 1
+    element_tag_start: int = 1
 
 
 class _BaseMask:
@@ -477,7 +479,7 @@ class NodeMask(_BaseMask):
 
         Args:
             start_tag: Optional. The starting node tag. If `None`, it attempts
-                to retrieve the starting node tag from a `MeshMaker` instance;
+                to retrieve the starting node tag from a ``Model`` instance;
                 otherwise, it defaults to 1.
 
         Returns:
@@ -505,16 +507,12 @@ class NodeMask(_BaseMask):
             >>> selected_nodes = NodeMask(mesh_index, np.array([0, 1]))
             >>> print(selected_nodes.to_tags(start_tag=100))
             [100, 101]
-            >>> print(selected_nodes.to_tags()) # Defaults to 1 if MeshMaker not available
+            >>> print(selected_nodes.to_tags()) # Defaults to 1 if Model not available
             [1, 2]
         """
         ids = self.to_list()
         if start_tag is None:
-            try:
-                from femora.components.MeshMaker import MeshMaker
-                start_tag = MeshMaker.get_instance()._start_nodetag  # type: ignore[attr-defined]
-            except Exception:
-                start_tag = 1
+            start_tag = self._mesh.node_tag_start
         return [int(start_tag) + int(i) for i in ids]
 
 
@@ -935,7 +933,7 @@ class ElementMask(_BaseMask):
         Args:
             start_tag: Optional. The value to add to each selected element ID.
                 If `None`, it attempts to retrieve the starting element tag from
-                a `MeshMaker` instance; otherwise, it defaults to 1.
+                a ``Model`` instance; otherwise, it defaults to 1.
 
         Returns:
             List[int]: A list of OpenSees-compatible element tags for the
@@ -963,14 +961,10 @@ class ElementMask(_BaseMask):
             >>> selected_elements = ElementMask(mesh_index, np.array([10, 12]))
             >>> print(selected_elements.to_tags(start_tag=500))
             [510, 512]
-            >>> print(selected_elements.to_tags()) # Defaults to 1 if MeshMaker not available
+            >>> print(selected_elements.to_tags()) # Defaults to 1 if Model not available
             [11, 13]
         """
         ids = self.to_list()
         if start_tag is None:
-            try:
-                from femora.components.MeshMaker import MeshMaker
-                start_tag = MeshMaker.get_instance()._start_ele_tag  # type: ignore[attr-defined]
-            except Exception:
-                start_tag = 1
+            start_tag = self._mesh.element_tag_start
         return [int(start_tag) + int(i) for i in ids]

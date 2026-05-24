@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 from femora.core.event_bus import FemoraEvent
 
 if TYPE_CHECKING:
-    from femora.components.MeshMaker import MeshMaker
+    from femora.core.model import Model
 
 
 class _BoundaryNamespace:
@@ -47,7 +47,7 @@ class _BoundaryNamespace:
 
 
 class InterfaceBase(ABC):
-    """Common logic for all interface objects on one MeshMaker model."""
+    """Common logic for all interface objects on one Model model."""
 
     def __init__(self, name: str, owners: List[str]) -> None:
         self.name = name
@@ -71,17 +71,17 @@ class InterfaceBase(ABC):
 
 
 class InterfaceManager:
-    """Model-owned factory and lifecycle for interface objects on one MeshMaker."""
+    """Model-owned factory and lifecycle for interface objects on one Model."""
 
-    def __init__(self, mesh_maker: "MeshMaker") -> None:
-        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+    def __init__(self, mesh_maker: "Model") -> None:
+        from femora.core.model import Model as ModelClass
 
         self._interfaces: Dict[str, InterfaceBase] = {}
         self._embeddedinfo_list: list = []
         self._beam_solid_count = 0
         self._beam_solid_conflict_subscribed = False
-        if not isinstance(mesh_maker, MeshMakerClass):
-            raise TypeError("mesh_maker must be a MeshMaker instance")
+        if not isinstance(mesh_maker, ModelClass):
+            raise TypeError("mesh_maker must be a Model instance")
         existing = getattr(mesh_maker, "interface", None)
         if isinstance(existing, InterfaceManager) and existing is not self:
             raise ValueError("mesh_maker already owns an interface manager")

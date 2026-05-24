@@ -2,15 +2,14 @@ import inspect
 
 import pytest
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.core.action_base import Action
 from femora.core.process_manager import ProcessComponent, ProcessManager
 
 
 @pytest.fixture
 def mesh_maker():
-    MeshMaker._instance = None
-    return MeshMaker(model_name="process_test")
+    return Model(model_name="process_test")
 
 
 def test_process_manager_lives_in_core():
@@ -85,14 +84,7 @@ def test_process_step_lifecycle(mesh_maker):
     assert mesh_maker.process.current_step == -1
 
 
-def test_femora_module_process_alias_points_to_mesh_maker_manager():
-    import importlib
-
+def test_femora_module_does_not_expose_default_process_manager():
     import femora
-    from femora.components.MeshMaker import MeshMaker
 
-    MeshMaker._instance = None
-    importlib.reload(femora)
-
-    assert isinstance(femora.process, ProcessManager)
-    assert femora.process is femora.get_instance().process
+    assert not hasattr(femora, "process")

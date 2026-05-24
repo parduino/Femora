@@ -22,7 +22,7 @@ class PlainPattern(Pattern):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
 
         # Create a time series
         ts = model.timeSeries.constant(factor=2.0)
@@ -132,7 +132,7 @@ class PlainPattern(Pattern):
             ```python
             import femora as fm
 
-            model = fm.MeshMaker()
+            model = fm.Model()
             ts = model.timeSeries.constant(factor=1.0)
             pattern = model.pattern.plain(time_series=ts)
 

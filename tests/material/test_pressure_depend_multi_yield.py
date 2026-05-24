@@ -2,13 +2,13 @@
 
 import pytest
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.components.material.nd import PressureDependMultiYieldMaterial
 
 
 @pytest.fixture(autouse=True)
 def manager():
-    mm = MeshMaker.get_instance()
+    mm = Model()
     mm.clear_model()
     yield mm.material
     mm.clear_model()

@@ -24,7 +24,7 @@ class RampTimeSeries(TimeSeries):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         ts = model.timeSeries.ramp(
             tStart=0.0,
             tRamp=2.0,

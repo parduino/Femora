@@ -8,7 +8,7 @@ from femora.core.action_base import Action
 from femora.core.material_base import Material
 
 if TYPE_CHECKING:
-    from femora.components.MeshMaker import MeshMaker
+    from femora.core.model import Model
 
 
 class WipeAction(Action):
@@ -60,7 +60,7 @@ class TclAction(Action):
 class SetMaterialParameterAction(Action):
     def __init__(
         self,
-        mesh_maker: "MeshMaker",
+        mesh_maker: "Model",
         material: Union[int, str, Material],
         parameter_name: str,
         parameter_value: Union[float, int, str, None] = None,
@@ -107,7 +107,7 @@ class SetMaterialParameterAction(Action):
 
 
 class UpdateMaterialStageToElasticAction(Action):
-    def __init__(self, mesh_maker: "MeshMaker"):
+    def __init__(self, mesh_maker: "Model"):
         self._mesh_maker = mesh_maker
 
     def to_tcl(self) -> str:
@@ -120,7 +120,7 @@ class UpdateMaterialStageToElasticAction(Action):
 
 
 class UpdateMaterialStageToPlasticAction(Action):
-    def __init__(self, mesh_maker: "MeshMaker"):
+    def __init__(self, mesh_maker: "Model"):
         self._mesh_maker = mesh_maker
 
     def to_tcl(self) -> str:
@@ -133,7 +133,7 @@ class UpdateMaterialStageToPlasticAction(Action):
 
 
 class RemoveLoadPatternsAction(Action):
-    def __init__(self, mesh_maker: "MeshMaker"):
+    def __init__(self, mesh_maker: "Model"):
         self._mesh_maker = mesh_maker
 
     def to_tcl(self) -> str:

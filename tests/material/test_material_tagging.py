@@ -1,12 +1,12 @@
 """Tests for the manager-owned material tagging architecture.
 
-All tests use ``MeshMaker.get_instance()`` and reset state via
-``clear_model()`` as required by the migrated design.
+Each test uses an explicit local ``Model()`` instance and resets state via
+``clear_model()``.
 """
 
 import pytest
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.core.material_base import Material
 
 
@@ -26,8 +26,8 @@ class DummyMaterial(Material):
 
 @pytest.fixture(autouse=True)
 def manager():
-    """Provide a fresh material manager via MeshMaker for each test."""
-    mm = MeshMaker.get_instance()
+    """Provide a fresh material manager via Model for each test."""
+    mm = Model()
     mm.clear_model()
     yield mm.material
     mm.clear_model()
@@ -180,7 +180,7 @@ def test_tagging_with_deletions_and_start_tag_change(manager):
 # ---------------------------------------------------------------------------
 
 def test_add_to_another_manager_rejected():
-    mm1 = MeshMaker.get_instance()
+    mm1 = Model()
     mm1.clear_model()
     m = DummyMaterial("shared_mat")
     mm1.material.add(m)
@@ -204,11 +204,11 @@ def test_to_tcl_fails_without_manager():
 
 
 # ---------------------------------------------------------------------------
-# MeshMaker clear_model resets manager
+# Model clear_model resets manager
 # ---------------------------------------------------------------------------
 
 def test_clear_model_resets_material_manager():
-    mm = MeshMaker.get_instance()
+    mm = Model()
     mm.clear_model()
     mm.material.set_tag_start(50)
     mm.material.add(DummyMaterial("mat1"))

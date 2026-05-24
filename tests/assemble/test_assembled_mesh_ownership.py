@@ -6,12 +6,12 @@ import femora.components.material.nd  # noqa: F401 — register material types
 import femora.components.element.std_brick  # noqa: F401 — register element types
 
 from femora.core.assembler import Assembler as CoreAssembler
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 
 
 @pytest.fixture
 def mesh_maker():
-    mk = MeshMaker()
+    mk = Model()
     mk.clear_model()
     return mk
 
@@ -79,7 +79,7 @@ def test_mesh_maker_constructs_assembler_with_model_ownership(mesh_maker):
     from pathlib import Path
 
     assert mesh_maker.assembler._mesh_maker is mesh_maker
-    mesh_maker_source = Path("src/femora/components/MeshMaker.py").read_text(encoding="utf-8")
+    mesh_maker_source = Path("src/femora/core/model.py").read_text(encoding="utf-8")
     assert "bind_mesh_maker" not in mesh_maker_source
     assert "Assembler(mesh_maker=self)" in mesh_maker_source
     assert "from femora.core.assembler import Assembler" in mesh_maker_source

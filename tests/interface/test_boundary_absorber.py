@@ -1,17 +1,17 @@
 import pytest
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.components.material.nd import ElasticIsotropicMaterial
 
 
 @pytest.fixture
 def mesh_maker():
-    mm = MeshMaker()
+    mm = Model()
     mm.clear_model()
     return mm
 
 
-def _make_box_meshpart(mm: MeshMaker):
+def _make_box_meshpart(mm: Model):
     mat = mm.material.add(
         ElasticIsotropicMaterial(user_name="mat", E=200e3, nu=0.3, rho=0.0)
     )

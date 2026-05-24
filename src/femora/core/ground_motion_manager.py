@@ -9,7 +9,7 @@ from femora.core.tagging import CompactRetagPolicy
 from femora.core.time_series_base import TimeSeries
 
 if TYPE_CHECKING:
-    from femora.components.MeshMaker import MeshMaker
+    from femora.core.model import Model
 
 
 class GroundMotionManager:
@@ -19,7 +19,7 @@ class GroundMotionManager:
     adding instances, assigning tags, looking up objects, deleting objects, and
     retagging after removals or tag-start changes. It is intentionally not a
     singleton. Each ``GroundMotionManager`` instance owns an independent tag
-    space, which allows future model or ``MeshMaker`` instances to keep local
+    space, which allows future model or ``Model`` instances to keep local
     ground-motion collections.
 
     Concrete ground-motion classes validate and render themselves, while this
@@ -38,12 +38,12 @@ class GroundMotionManager:
         ```
     """
 
-    def __init__(self, mesh_maker: MeshMaker, time_series_manager=None):
+    def __init__(self, mesh_maker: Model, time_series_manager=None):
         """Create an empty ground-motion manager with tags starting at 1."""
-        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+        from femora.core.model import Model as ModelClass
 
-        if not isinstance(mesh_maker, MeshMakerClass):
-            raise TypeError("mesh_maker must be a MeshMaker instance")
+        if not isinstance(mesh_maker, ModelClass):
+            raise TypeError("mesh_maker must be a Model instance")
         self._mesh_maker = mesh_maker
         self._ground_motions: Dict[int, GroundMotion] = {}
         self._start_tag = 1
@@ -225,7 +225,7 @@ class GroundMotionManager:
             owner_manager = time_series._owner
             owner_mesh_maker = getattr(owner_manager, "_mesh_maker", None)
             if owner_mesh_maker is not self._mesh_maker:
-                raise ValueError("GroundMotion references a TimeSeries from another MeshMaker")
+                raise ValueError("GroundMotion references a TimeSeries from another Model")
             if (
                 self._time_series_manager is not None
                 and owner_manager is not self._time_series_manager
@@ -238,7 +238,7 @@ class GroundMotionManager:
             owner_manager = dependency._owner
             owner_mesh_maker = getattr(owner_manager, "_mesh_maker", None)
             if owner_mesh_maker is not self._mesh_maker:
-                raise ValueError("GroundMotion references a GroundMotion from another MeshMaker")
+                raise ValueError("GroundMotion references a GroundMotion from another Model")
             if owner_manager is not self:
                 raise ValueError("GroundMotion references a GroundMotion from another manager")
 

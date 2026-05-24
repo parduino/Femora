@@ -3,15 +3,14 @@ import inspect
 import pytest
 
 from femora.components.actions.action import WipeAction
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.core.action_base import Action
 from femora.core.action_manager import ActionManager
 
 
 @pytest.fixture
 def mesh_maker():
-    MeshMaker._instance = None
-    return MeshMaker(model_name="action_test")
+    return Model(model_name="action_test")
 
 
 def test_action_base_lives_in_core():
@@ -90,7 +89,7 @@ def test_action_factory_tcl_outputs(mesh_maker):
     assert mesh_maker.actions.tcl("custom command").to_tcl() == "custom command"
 
 
-def test_set_material_parameter_uses_mesh_maker_not_global_singleton(mesh_maker, monkeypatch):
+def test_set_material_parameter_uses_mesh_maker_not_global_singleton(mesh_maker):
     mat = mesh_maker.material.nd.elastic_isotropic(user_name="mat", E=1.0, nu=0.3, rho=1.0)
     ele = mesh_maker.element.brick.std(ndof=3, material=mat)
     mesh_maker.meshpart.volume.uniform_rectangular_grid(
@@ -109,36 +108,22 @@ def test_set_material_parameter_uses_mesh_maker_not_global_singleton(mesh_maker,
     mesh_maker.assembler.create_section(meshparts=["block"], num_partitions=1, merge_points=False)
     mesh_maker.assembler.assemble(merge_points=False)
 
-    def _fail_get_instance():
-        raise AssertionError("SetMaterialParameter should not call MeshMaker.get_instance()")
-
-    monkeypatch.setattr(MeshMaker, "get_instance", staticmethod(_fail_get_instance))
+    assert not hasattr(Model, "get_instance")
 
     action = mesh_maker.actions.set_material_parameter(mat, "E", 2.0)
     assert len(action.element_tags) == mesh_maker.assembled_mesh.n_cells
     assert isinstance(action.to_tcl(), str)
 
 
-def test_femora_module_actions_alias_points_to_mesh_maker_manager():
-    import importlib
-
+def test_femora_module_does_not_expose_default_action_manager():
     import femora
-    from femora.components.MeshMaker import MeshMaker
 
-    MeshMaker._instance = None
-    importlib.reload(femora)
-
-    assert isinstance(femora.actions, ActionManager)
-    assert femora.actions is femora.get_instance().actions
+    assert not hasattr(femora, "actions")
 
 
-def test_update_material_stage_actions_use_mesh_maker(mesh_maker, monkeypatch):
+def test_update_material_stage_actions_use_mesh_maker(mesh_maker):
     mesh_maker.material.nd.elastic_isotropic(user_name="mat", E=1.0, nu=0.3, rho=1.0)
-
-    def _fail_get_instance():
-        raise AssertionError("Material stage actions should not call MeshMaker.get_instance()")
-
-    monkeypatch.setattr(MeshMaker, "get_instance", staticmethod(_fail_get_instance))
+    assert not hasattr(Model, "get_instance")
 
     elastic = mesh_maker.actions.update_material_stage_to_elastic()
     plastic = mesh_maker.actions.update_material_stage_to_plastic()

@@ -37,7 +37,7 @@ class GeometricTransformation2D(GeometricTransformation):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         transf2d_linear = model.transformation.geometric_2d(transf_type="Linear")
         print(transf2d_linear.tag)
 
@@ -120,7 +120,7 @@ class GeometricTransformation3D(GeometricTransformation):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         transf3d_linear = model.transformation.geometric_3d(
             transf_type="Linear", vecxz_x=0.0, vecxz_y=0.0, vecxz_z=1.0
         )

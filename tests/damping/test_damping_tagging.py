@@ -1,7 +1,7 @@
 import pytest
 from femora.core.damping_base import Damping
 from femora.core.damping_manager import DampingManager
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 
 class DummyDamping(Damping):
     def __init__(self, **kwargs):
@@ -11,7 +11,7 @@ class DummyDamping(Damping):
 
 @pytest.fixture
 def manager():
-    mm = MeshMaker()
+    mm = Model()
     mm.clear_model()
     return mm.damping
 

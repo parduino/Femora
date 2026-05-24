@@ -8,17 +8,17 @@ from femora.components.mask.mask_base import ElementMask, MeshIndex, NodeMask
 from femora.core.event_bus import FemoraEvent
 
 if TYPE_CHECKING:
-    from femora.components.MeshMaker import MeshMaker
+    from femora.core.model import Model
 
 
 class MaskManager:
-    """MeshMaker-owned post-assembly query service over the assembled mesh."""
+    """Model-owned post-assembly query service over the assembled mesh."""
 
-    def __init__(self, mesh_maker: "MeshMaker"):
-        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+    def __init__(self, mesh_maker: "Model"):
+        from femora.core.model import Model as ModelClass
 
-        if not isinstance(mesh_maker, MeshMakerClass):
-            raise TypeError("mesh_maker must be a MeshMaker instance")
+        if not isinstance(mesh_maker, ModelClass):
+            raise TypeError("mesh_maker must be a Model instance")
         self._mesh_maker = mesh_maker
         self._mesh_index: MeshIndex | None = None
         self._events_subscribed = False
@@ -46,7 +46,11 @@ class MaskManager:
     def _handle_post_assemble(self, **kwargs) -> None:
         grid = kwargs.get("assembled_mesh", self._mesh_maker.assembled_mesh)
         if grid is not None:
-            self._mesh_index = self._build_index_from_grid(grid.copy())
+            self._mesh_index = self._build_index_from_grid(
+                grid.copy(),
+                node_tag_start=int(self._mesh_maker._start_nodetag),
+                element_tag_start=int(self._mesh_maker._start_ele_tag),
+            )
         else:
             self._mesh_index = None
 
@@ -59,7 +63,11 @@ class MaskManager:
                 raise RuntimeError(
                     "Mask requires an assembled mesh; call assembler.assemble() first"
                 )
-            self._mesh_index = self._build_index_from_grid(grid.copy())
+            self._mesh_index = self._build_index_from_grid(
+                grid.copy(),
+                node_tag_start=int(self._mesh_maker._start_nodetag),
+                element_tag_start=int(self._mesh_maker._start_ele_tag),
+            )
         return self._mesh_index
 
     @property
@@ -73,7 +81,12 @@ class MaskManager:
         return ElementMask(mesh, mesh.element_ids)
 
     @staticmethod
-    def _build_index_from_grid(grid) -> MeshIndex:
+    def _build_index_from_grid(
+        grid,
+        *,
+        node_tag_start: int = 1,
+        element_tag_start: int = 1,
+    ) -> MeshIndex:
         node_coords = np.asarray(grid.points)
         node_ids = np.arange(node_coords.shape[0], dtype=int)
         node_ndf = np.asarray(
@@ -123,4 +136,6 @@ class MaskManager:
             node_ndf=node_ndf,
             node_core_map=node_core_map,
             element_id_to_index=elem_id_to_index,
+            node_tag_start=node_tag_start,
+            element_tag_start=element_tag_start,
         )

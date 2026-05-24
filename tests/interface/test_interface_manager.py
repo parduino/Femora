@@ -4,7 +4,7 @@ import pyvista as pv
 
 import femora.components.section  # noqa: F401 — register section types
 
-from femora.components.MeshMaker import MeshMaker
+from femora.core.model import Model
 from femora.core.event_bus import EventBus, FemoraEvent
 from femora.components.interface.embedded_beam_solid_interface import EmbeddedBeamSolidInterface
 from femora.components.interface.embedded_node_interface import EmbeddedNodeInterface
@@ -135,7 +135,7 @@ def _assert_no_class_level_beam_solid_conflict_lifecycle() -> None:
 
 @pytest.fixture
 def mesh_maker():
-    mk = MeshMaker()
+    mk = Model()
     mk.clear_model()
     EventBus._subscribers.clear()
     mk.interface._beam_solid_count = 0
@@ -482,9 +482,9 @@ def test_node_interface_post_assemble_uses_owner_bound_context(mesh_maker, monke
     )
 
     def fail_meshmaker_singleton(*args, **kwargs):
-        raise AssertionError("MeshMaker() singleton must not be used in post-assemble block 11")
+        raise AssertionError("Model() singleton must not be used in post-assemble block 11")
 
-    monkeypatch.setattr("femora.MeshMaker", fail_meshmaker_singleton)
+    monkeypatch.setattr("femora.Model", fail_meshmaker_singleton)
 
     offset_points = np.array([[0.1, 0.1, 0.1]], dtype=float)
     monkeypatch.setattr(iface, "_tetrahedralize", lambda mesh: tet_mesh)

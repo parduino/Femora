@@ -8,27 +8,27 @@ from femora.core.material_base import Material
 from femora.core.tagging import CompactRetagPolicy
 
 if TYPE_CHECKING:
-    from femora.components.MeshMaker import MeshMaker
+    from femora.core.model import Model
 
 
 class MaterialManager:
     """Local manager for ``Material`` lifecycle and tag assignment.
 
-    The manager is intentionally not a singleton.  Each :class:`MeshMaker`
+    The manager is intentionally not a singleton.  Each :class:`Model`
     instance owns one ``MaterialManager`` with an independent tag space.
 
     Args:
-        mesh_maker: The :class:`MeshMaker` that owns this manager.
+        mesh_maker: The :class:`Model` that owns this manager.
 
     Raises:
-        TypeError: If *mesh_maker* is not a :class:`MeshMaker` instance.
+        TypeError: If *mesh_maker* is not a :class:`Model` instance.
     """
 
-    def __init__(self, mesh_maker: MeshMaker):
-        from femora.components.MeshMaker import MeshMaker as MeshMakerClass
+    def __init__(self, mesh_maker: Model):
+        from femora.core.model import Model as ModelClass
 
-        if not isinstance(mesh_maker, MeshMakerClass):
-            raise TypeError("mesh_maker must be a MeshMaker instance")
+        if not isinstance(mesh_maker, ModelClass):
+            raise TypeError("mesh_maker must be a Model instance")
         self._mesh_maker = mesh_maker
         self._materials: Dict[int, Material] = {}
         self._names: Dict[str, Material] = {}

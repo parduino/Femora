@@ -36,7 +36,7 @@ class LinearElasticGGmaxMaterial(Material):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         mat = model.material.nd.linear_elastic_ggmax(
             user_name="site_curve",
             G=62.0,

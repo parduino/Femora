@@ -20,7 +20,7 @@ class RectangularTimeSeries(TimeSeries):
         ```python
         import femora as fm
 
-        model = fm.MeshMaker()
+        model = fm.Model()
         # Create a rectangular time series that applies a factor of 1.5
         # between t=0.2 and t=1.2, repeating every 0.5 units.
         ts = model.timeSeries.rectangular(
