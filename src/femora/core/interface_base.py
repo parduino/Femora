@@ -10,6 +10,42 @@ if TYPE_CHECKING:
     from femora.components.MeshMaker import MeshMaker
 
 
+class _BoundaryNamespace:
+    """Boundary-specialized interface registration namespace."""
+
+    def __init__(self, manager: "InterfaceManager"):
+        self._manager = manager
+
+    def absorber(
+        self,
+        *,
+        num_layers: Optional[int] = None,
+        num_partitions: Optional[int] = None,
+        partition_algo: Optional[str] = None,
+        geometry: Optional[str] = None,
+        boundary_type: Optional[str] = None,
+        rayleigh_damping: Optional[float] = None,
+        match_damping: Optional[bool] = None,
+        progress_callback=None,
+        **kwargs,
+    ) -> None:
+        """Register a rectangular absorbing boundary to apply after assembly."""
+        from femora.components.interface.boundary_absorber import _normalize_absorber_kwargs
+
+        config = _normalize_absorber_kwargs(
+            num_layers=num_layers,
+            num_partitions=num_partitions,
+            partition_algo=partition_algo,
+            geometry=geometry,
+            boundary_type=boundary_type,
+            rayleigh_damping=rayleigh_damping,
+            match_damping=match_damping,
+            progress_callback=progress_callback,
+            **kwargs,
+        )
+        self._manager._register_boundary_absorber(config)
+
+
 class InterfaceBase(ABC):
     """Common logic for all interface objects on one MeshMaker model."""
 
@@ -51,6 +87,41 @@ class InterfaceManager:
             raise ValueError("mesh_maker already owns an interface manager")
         self._mesh_maker = mesh_maker
         mesh_maker.interface = self
+        self.boundary = _BoundaryNamespace(self)
+        self._boundary_absorbers: list[dict] = []
+        self._boundary_post_assemble_subscribed = False
+
+    def _register_boundary_absorber(self, config: dict) -> None:
+        self._boundary_absorbers.append(config)
+        self._ensure_boundary_absorber_subscribed()
+
+    def _ensure_boundary_absorber_subscribed(self) -> None:
+        if self._boundary_post_assemble_subscribed:
+            return
+        self._mesh_maker.events.subscribe(
+            FemoraEvent.POST_ASSEMBLE,
+            self._apply_boundary_absorbers,
+        )
+        self._boundary_post_assemble_subscribed = True
+
+    def _release_boundary_absorber_subscription(self) -> None:
+        if not self._boundary_post_assemble_subscribed:
+            return
+        self._mesh_maker.events.unsubscribe(
+            FemoraEvent.POST_ASSEMBLE,
+            self._apply_boundary_absorbers,
+        )
+        self._boundary_post_assemble_subscribed = False
+
+    def _apply_boundary_absorbers(self, assembled_mesh=None, **kwargs) -> None:
+        if not self._boundary_absorbers:
+            return
+        from femora.components.interface.boundary_absorber import apply_rectangular_absorbing_layer
+
+        pending = list(self._boundary_absorbers)
+        self._boundary_absorbers.clear()
+        for config in pending:
+            apply_rectangular_absorbing_layer(self._mesh_maker, config)
 
     def add(self, interface: InterfaceBase) -> InterfaceBase:
         if not isinstance(interface, InterfaceBase):
@@ -252,3 +323,5 @@ class InterfaceManager:
             self._release_interface(interface)
         self._interfaces.clear()
         self._embeddedinfo_list.clear()
+        self._boundary_absorbers.clear()
+        self._release_boundary_absorber_subscription()

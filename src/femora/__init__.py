@@ -67,7 +67,6 @@ time_series = _instance.time_series
 pattern = _instance.pattern
 recorder = _instance.recorder
 process = _instance.process
-drm = _instance.drm
 transformation = _instance.transformation
 section = _instance.section
 interface = _instance.interface

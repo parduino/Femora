@@ -1090,6 +1090,17 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
                                 mass_merging="sum")
 
 
+    if soil_info["boundary_conditions"] == "DRM":
+        fm.interface.boundary.absorber(
+            numLayers=soil_info["DRM_options"].get("number_of_layers"),
+            numPartitions=soil_info["DRM_options"].get("num_partitions"),
+            partitionAlgo="kd-tree",
+            geometry="Rectangular",
+            rayleighDamping=soil_info["DRM_options"].get("Rayleigh_damping"),
+            matchDamping=soil_info["DRM_options"].get("match_damping", False),
+            type=soil_info["DRM_options"].get("absorbing_layer_type", "Rayleigh"),
+        )
+
     fm.assembler.assemble()
 
 
@@ -1126,15 +1137,6 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         fm.constraint.sp.fixMacroZmin(dofs=[1,1,1],
                                     tol=1e-3)
     elif soil_info["boundary_conditions"] == "DRM":
-
-        fm.drm.addAbsorbingLayer(numLayers=soil_info["DRM_options"].get("number_of_layers"),
-                            numPartitions=soil_info["num_partitions"],
-                            partitionAlgo="kd-tree",
-                            geometry="Rectangular",
-                            rayleighDamping=soil_info["DRM_options"].get("Rayleigh_damping"),
-                            matchDamping=soil_info["DRM_options"].get("match_damping", False),
-                            type=soil_info["DRM_options"].get("absorbing_layer_type", "Rayleigh")
-                            )
         dofsVals = [1,1,1,1,1,1,1,1,1]
         fm.constraint.sp.fixMacroXmax(dofs=dofsVals)
         fm.constraint.sp.fixMacroXmin(dofs=dofsVals)

@@ -15,7 +15,6 @@ from femora.core.analysis_manager import AnalysisManager
 from femora.core.pattern_manager import PatternManager
 from femora.core.recorder_manager import RecorderManager
 from femora.core.process_manager import ProcessManager
-from femora.components.DRM.DRM import DRM
 from femora.core.transformation_manager import TransformationManager
 from femora.core.interface_base import InterfaceManager
 from femora.core.section_manager import SectionManager
@@ -102,9 +101,6 @@ class MeshMaker:
         self._start_ele_tag: int = 1
         self._start_core_tag: int = 0
 
-        # Initialize DRMHelper with a reference to this MeshMaker instance
-        self.drm = DRM()
-        self.drm.set_meshmaker(self)
         self._register_model_event_subscribers()
 
     def _register_model_event_subscribers(self) -> None:
