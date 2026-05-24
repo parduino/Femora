@@ -18,21 +18,10 @@ class MassManager:
     those arrays in a consistent way.
     """
 
-    _instance = None
-
-    def __new__(cls, mesh_maker=None):
-        if cls._instance is None:
-            cls._instance = super(MassManager, cls).__new__(cls)
-        return cls._instance
-
     def __init__(self, mesh_maker=None):
-        if getattr(self, "_initialised", False):
-            return
-
         self._mesh_maker = None
         self._events_subscribed = False
         self._region_point_cache: dict[int, np.ndarray] = {}
-        self._initialised = True
 
         # proxies
         self.meshpart = _MeshPartMassHelper(self)
@@ -158,9 +147,7 @@ def _ensure_mass_array(meshpart: MeshPart):
 class _MeshPartMassHelper:
     def __init__(self, manager: MassManager):
         self._mgr = manager
-        from femora.components.MeshMaker import MeshMaker
-
-        self._mesh_maker = MeshMaker.get_instance()
+        self._mesh_maker = manager._mesh_maker
 
     # ------------- public API -------------
     def add_all(
@@ -233,7 +220,7 @@ class _MeshPartMassHelper:
 
     # ------------- internal helpers -------------
     def _get_mp(self, name: str) -> MeshPart:
-        mp = self._mesh_maker.meshpart.get(name)
+        mp = self._mgr._mesh_maker.meshpart.get(name)
         if mp is None:
             raise KeyError(f"MeshPart '{name}' not found")
         _ensure_mass_array(mp)
@@ -297,8 +284,8 @@ class _RegionMassHelper:
         return asm
 
     def _get_region_point_ids(self, region_tag: int, asm):
-        if region_tag in MassManager()._region_point_cache:
-            return MassManager()._region_point_cache[region_tag]
+        if region_tag in self._mgr._region_point_cache:
+            return self._mgr._region_point_cache[region_tag]
         # find cells belonging to region
         cell_ids = np.where(asm.cell_data["Region"] == region_tag)[0]
         if cell_ids.size == 0:
@@ -311,7 +298,7 @@ class _RegionMassHelper:
             end = offsets[cid + 1]
             point_set.update(connectivity[start:end])
         ids = np.fromiter(point_set, dtype=int)
-        MassManager()._region_point_cache[region_tag] = ids
+        self._mgr._region_point_cache[region_tag] = ids
         return ids
 
     def _add_to_points(

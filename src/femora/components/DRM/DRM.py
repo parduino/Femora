@@ -117,7 +117,7 @@ class DRM:
                 raise ValueError("The pattern should be of type H5DRMPattern")
         
         # Clear all previous process components
-        self.meshmaker.process.clear_steps()
+        self.meshmaker.process.clear()
         self.meshmaker.analysis.clear()
         self.meshmaker.recorder.clear()
         self.meshmaker.constraint.sp.clear()

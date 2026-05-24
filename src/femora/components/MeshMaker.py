@@ -14,7 +14,7 @@ from femora.core.time_series_manager import TimeSeriesManager
 from femora.core.analysis_manager import AnalysisManager
 from femora.core.pattern_manager import PatternManager
 from femora.core.recorder_manager import RecorderManager
-from femora.components.Process.process import ProcessManager
+from femora.core.process_manager import ProcessManager
 from femora.components.DRM.DRM import DRM
 from femora.core.transformation_manager import TransformationManager
 from femora.core.interface_base import InterfaceManager
@@ -93,7 +93,7 @@ class MeshMaker:
         self.section = SectionManager(mesh_maker=self)
         self.actions = ActionManager(mesh_maker=self)
         self.spatial_transform = SpatialTransformManager()
-        self.process = ProcessManager()
+        self.process = ProcessManager(mesh_maker=self)
         
         # Tag start controls for node and element IDs written to TCL
         # These control only exported OpenSees node/element tags (not Material/Element class tags)

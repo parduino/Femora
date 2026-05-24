@@ -6,7 +6,7 @@ from qtpy.QtWidgets import (
 from qtpy.QtCore import Qt
 from femora.components.MeshMaker import MeshMaker
 from qtpy.QtWidgets import QSizePolicy
-from femora.components.Process.processGUI import ProcessGUI
+from femora.gui.components.process.process_gui import ProcessGUI
 
 class DRMProcessGUI(QWidget):
     def __init__(self, parent=None):

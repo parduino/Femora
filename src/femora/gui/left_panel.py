@@ -12,7 +12,7 @@ from femora.gui.components.constraint.sp_constraint_gui import SPConstraintManag
 from femora.components.Pattern.patternGUI import PatternManagerTab
 from femora.gui.components.recorder.recorder_gui import RecorderManagerTab
 from femora.gui.components.analysis.analysis_gui import AnalysisManagerTab
-from femora.components.Process.processGUI import ProcessGUI
+from femora.gui.components.process.process_gui import ProcessGUI
 from femora.components.DRM.combinedDRMGUI import CombinedDRMGUI
 from femora.components.section.section_gui import SectionManagerTab
 from femora.gui.components.interface.interface_gui import InterfaceManagerTab

@@ -10,7 +10,7 @@ from qtpy.QtWidgets import (
 )
 from qtpy.QtCore import Qt, QMimeData, QPoint
 
-from femora.components.Process.process import ProcessManager
+from femora.core.process_manager import ProcessManager
 from femora.core.recorder_base import Recorder
 from femora.core.recorder_manager import RecorderManager
 from femora.components.recorder.recorders import NodeRecorder, VTKHDFRecorder
@@ -85,7 +85,7 @@ class ProcessListWidget(QListWidget):
     """
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.process_manager = ProcessManager()
+        self.process_manager = MeshMaker.get_instance().process
         self.setAcceptDrops(True)
         self.setDragDropMode(QAbstractItemView.DropOnly)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)  # Allow multiple selection
@@ -281,7 +281,7 @@ class ProcessTab(QWidget):
         
         if component:
             # Add to process manager
-            ProcessManager().add_step(component, description)
+            MeshMaker.get_instance().process.add_step(component, description)
             
             # Notify parent to refresh process list - Get the main dialog (window)
             parent_dialog = self.window()
@@ -297,7 +297,7 @@ class ProcessGUI(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Process Manager")
         self.resize(900, 600)
-        self.process_manager = ProcessManager()
+        self.process_manager = MeshMaker.get_instance().process
         self.init_ui()
     
     def init_ui(self):
@@ -375,7 +375,7 @@ class ProcessGUI(QDialog):
         )
         
         if reply == QMessageBox.Yes:
-            self.process_manager.clear_steps()
+            self.process_manager.clear()
             self.refresh_process_panel()
 
 
