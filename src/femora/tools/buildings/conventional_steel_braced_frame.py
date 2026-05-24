@@ -396,8 +396,8 @@ class ConventionalSteelBracedFrame:
         y_set = {round(float(v), 4) for v in y_coords}
         ndfs = mesh.point_data["ndf"]
 
-        ts = model.time_series.create_time_series("constant", factor=1.0)
-        pattern = model.pattern.create_pattern("plain", time_series=ts, factor=1.0)
+        ts = model.time_series.constant(factor=1.0)
+        pattern = model.pattern.plain(time_series=ts, factor=1.0)
         n_per_floor = self.num_x_grid * self.num_y_grid
         for story in range(1, self.num_stories + 1):
             floor_mass = float(self.floor_masses[story - 1])

@@ -302,41 +302,6 @@ class TimeSeriesManager:
             )
         )  # type: ignore[return-value]
 
-    def create_time_series(self, series_type: str, **kwargs) -> TimeSeries:
-        """Create and manage a time series by type name.
-
-        This compatibility factory delegates to the explicit factory methods
-        such as :meth:`constant`, :meth:`linear`, and :meth:`path`.
-
-        Args:
-            series_type: Case-insensitive time-series type name.
-            **kwargs: Constructor arguments for the selected concrete class.
-
-        Returns:
-            Managed ``TimeSeries`` instance.
-
-        Raises:
-            KeyError: If ``series_type`` is not registered.
-        """
-        factories = {
-            "constant": self.constant,
-            "linear": self.linear,
-            "trig": self.trig,
-            "ramp": self.ramp,
-            "triangular": self.triangular,
-            "rectangular": self.rectangular,
-            "pulse": self.pulse,
-            "path": self.path,
-        }
-        key = series_type.lower()
-        if key not in factories:
-            raise KeyError(f"TimeSeries type {series_type} not registered")
-        return factories[key](**kwargs)
-
-    get_time_series = get
-    remove_time_series = remove
-    get_all_time_series = get_all
-
     def _next_available_tag(self) -> int:
         """Return the next unused tag in this manager's local tag space."""
         return self._tagging.next_available_tag(self._time_series, self._start_tag)

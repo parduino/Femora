@@ -70,7 +70,7 @@ def test_pattern_tagging_with_deletions_and_start_tag_change(manager):
     assert p1.tag == 10
     assert p2.tag == 11
     assert p3.tag == 12
-    manager.remove_pattern(p2.tag)
+    manager.remove(p2.tag)
     # After removal, tags are reassigned: p1=10, p3=11
     assert p1.tag == 10
     assert p3.tag == 11
@@ -80,8 +80,8 @@ def test_pattern_tagging_with_deletions_and_start_tag_change(manager):
     assert p3.tag == 105
     p4 = manager.add(DummyPattern('Uniform'))  # should get tag 106
     assert p4.tag == 106
-    manager.remove_pattern(p1.tag)
-    manager.remove_pattern(p3.tag)
+    manager.remove(p1.tag)
+    manager.remove(p3.tag)
     manager.set_tag_start(202)
     # Existing p4 is retagged to 202, so the next tag should be 203.
     p5 = manager.add(DummyPattern('Uniform'))

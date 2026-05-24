@@ -73,7 +73,7 @@ def test_time_series_tagging_with_deletions_and_start_tag_change(manager):
     assert ts1.tag == 10
     assert ts2.tag == 11
     assert ts3.tag == 12
-    manager.remove_time_series(ts2.tag)
+    manager.remove(ts2.tag)
     # After removal, tags are reassigned: ts1=10, ts3=11
     assert ts1.tag == 10
     assert ts3.tag == 11
@@ -83,8 +83,8 @@ def test_time_series_tagging_with_deletions_and_start_tag_change(manager):
     assert ts3.tag == 105
     ts4 = manager.add(DummyTimeSeries('Constant'))  # should get tag 106
     assert ts4.tag == 106
-    manager.remove_time_series(ts1.tag)
-    manager.remove_time_series(ts3.tag)
+    manager.remove(ts1.tag)
+    manager.remove(ts3.tag)
     manager.set_tag_start(202)
     # Existing ts4 is retagged to 202, so the next tag should be 203.
     ts5 = manager.add(DummyTimeSeries('Constant'))

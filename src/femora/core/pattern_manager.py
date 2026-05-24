@@ -200,40 +200,6 @@ class PatternManager:
         """
         return self.add(MultipleSupportPattern())  # type: ignore[return-value]
 
-    def create_pattern(self, pattern_type: str, **kwargs) -> Pattern:
-        """Create and manage a pattern by type name.
-
-        This compatibility factory delegates to the explicit factory methods
-        such as :meth:`plain`, :meth:`uniform_excitation`, and
-        :meth:`multiple_support`.
-
-        Args:
-            pattern_type: Case-insensitive pattern type name.
-            **kwargs: Constructor arguments for the selected concrete class.
-
-        Returns:
-            Managed ``Pattern`` instance.
-
-        Raises:
-            KeyError: If ``pattern_type`` is not registered.
-        """
-        factories = {
-            "uniformexcitation": self.uniform_excitation,
-            "uniform_excitation": self.uniform_excitation,
-            "h5drm": self.h5drm,
-            "plain": self.plain,
-            "multiplesupport": self.multiple_support,
-            "multiple_support": self.multiple_support,
-        }
-        key = pattern_type.lower()
-        if key not in factories:
-            raise KeyError(f"Pattern type {pattern_type} not registered")
-        return factories[key](**kwargs)
-
-    get_pattern = get
-    remove_pattern = remove
-    get_all_patterns = get_all
-
     def _next_available_tag(self) -> int:
         """Return the next unused pattern tag in this manager's tag space."""
         return self._tagging.next_available_tag(self._patterns, self._start_tag)
