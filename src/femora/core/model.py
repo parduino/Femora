@@ -159,6 +159,22 @@ class Model:
 
         return _export_to_vtk(self, filename=filename)
 
+    def export_to_json(self, filename=None, indent=2):
+        '''
+        Export a lightweight structural snapshot of the model to JSON.
+
+        Args:
+            filename (str, optional): The filename to export to. If None,
+                                    uses model_name in model_path
+            indent (int, optional): JSON indentation level. Defaults to 2.
+
+        Returns:
+            bool: True if export was successful
+        '''
+        from femora.io.export_json import export_to_json as _export_to_json
+
+        return _export_to_json(self, filename=filename, indent=indent)
+
     def set_model_info(self, model_name=None, model_path=None):
         """
         Update model information
