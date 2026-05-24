@@ -19,7 +19,7 @@ from femora.components.DRM.DRM import DRM
 from femora.core.transformation_manager import TransformationManager
 from femora.core.interface_base import InterfaceManager
 from femora.core.section_manager import SectionManager
-from femora.components.mass.mass_manager import MassManager
+from femora.core.mass_manager import MassManager
 from femora.components.geometry_ops.spatial_transform_manager import SpatialTransformManager
 from femora.components.mask.mask_manager import MaskManager
 from femora.core.action_manager import ActionManager

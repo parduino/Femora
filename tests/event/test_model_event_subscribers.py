@@ -2,7 +2,6 @@ import numpy as np
 
 from femora.components.MeshMaker import MeshMaker
 from femora.core.event_bus import EventBus, FemoraEvent
-from femora.components.mass.mass_manager import MassManager
 from femora.components.mask.mask_manager import MaskManager
 
 

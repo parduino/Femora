@@ -1,45 +1,42 @@
 from __future__ import annotations
 
-from typing import List, Tuple, Union, Optional
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+
 import numpy as np
 from numpy.typing import ArrayLike
 from pykdtree.kdtree import KDTree
 
 from femora.constants import FEMORA_MAX_NDF
-from femora.core.meshpart_base import MeshPart
 from femora.core.event_bus import FemoraEvent
+from femora.core.meshpart_base import MeshPart
+
+if TYPE_CHECKING:
+    from femora.components.MeshMaker import MeshMaker
 
 
 class MassManager:
-    """Singleton class that provides a high-level API for assigning nodal masses.
+    """MeshMaker-owned service for assigning nodal mass arrays.
 
-    The raw *Mass* array lives on every MeshPart (and, after assembly, on the
-    assembled mesh).  MassManager merely offers convenience methods that modify
-    those arrays in a consistent way.
+    Mass data lives on mesh parts before assembly and on the assembled mesh
+    after assembly. This manager provides convenience helpers that modify those
+    arrays without introducing separate mass objects or registries.
     """
 
-    def __init__(self, mesh_maker=None):
-        self._mesh_maker = None
-        self._events_subscribed = False
-        self._region_point_cache: dict[int, np.ndarray] = {}
-
-        # proxies
-        self.meshpart = _MeshPartMassHelper(self)
-        self.region = _RegionMassHelper(self)
-        self.global_ = _GlobalMassHelper(self)
-
-        if mesh_maker is not None:
-            self.bind_mesh_maker(mesh_maker)
-
-    def bind_mesh_maker(self, mesh_maker) -> None:
+    def __init__(self, mesh_maker: "MeshMaker"):
         from femora.components.MeshMaker import MeshMaker as MeshMakerClass
 
         if not isinstance(mesh_maker, MeshMakerClass):
             raise TypeError("mesh_maker must be a MeshMaker instance")
         self._mesh_maker = mesh_maker
+        self._events_subscribed = False
+        self._region_point_cache: dict[int, np.ndarray] = {}
+
+        self.meshpart = _MeshPartMassHelper(self)
+        self.region = _RegionMassHelper(self)
+        self.global_ = _GlobalMassHelper(self)
 
     def register_events(self) -> None:
-        if self._events_subscribed or self._mesh_maker is None:
+        if self._events_subscribed:
             return
         self._mesh_maker.events.subscribe(
             FemoraEvent.PRE_ASSEMBLE, self._handle_pre_assemble
@@ -47,30 +44,21 @@ class MassManager:
         self._events_subscribed = True
 
     def unregister_events(self) -> None:
-        if not self._events_subscribed or self._mesh_maker is None:
+        if not self._events_subscribed:
             return
         self._mesh_maker.events.unsubscribe(
             FemoraEvent.PRE_ASSEMBLE, self._handle_pre_assemble
         )
         self._events_subscribed = False
 
-    # ------------------------------------------------------------------
-    # Internal helpers
-    # ------------------------------------------------------------------
     @staticmethod
     def _pad_mass(vec: ArrayLike, ndf: int) -> np.ndarray:
-        """Return a vector of length FEMORA_MAX_NDF with zeros padded / truncated.
-
-        vec may be any 1-D iterable of length <= FEMORA_MAX_NDF.  If len(vec) < ndf a
-        ValueError is raised because we would be dropping active DOFs.
-        """
+        """Return a vector of length FEMORA_MAX_NDF with zeros padded / truncated."""
         v = np.asarray(vec, dtype=np.float32).flatten()
 
-        # Trim if the provided vector is longer than the permitted maximum
         if v.size > FEMORA_MAX_NDF:
             v = v[:FEMORA_MAX_NDF]
 
-        # Pad with zeros to reach the full storage width
         res = np.zeros(FEMORA_MAX_NDF, dtype=np.float32)
         res[: v.size] = v
         return res
@@ -79,45 +67,30 @@ class MassManager:
     def _combine(old: np.ndarray, new: np.ndarray, rule: str) -> np.ndarray:
         if rule == "sum":
             return old + new
-        elif rule == "override":
+        if rule == "override":
             return new
-        else:
-            raise ValueError("combine must be 'sum' or 'override'")
+        raise ValueError("combine must be 'sum' or 'override'")
 
     def _handle_pre_assemble(self, *_, **__):
-        """Clear caches before a fresh assembly."""
+        """Clear transient region caches before a fresh assembly."""
         self._region_point_cache.clear()
 
-    def clear(self):
-        """
-        Clear mass manager state.
-
-        - Clear internal caches used for region lookups.
-        - Remove any 'Mass' point_data arrays from mesh parts and the assembled mesh.
-        """
-        # clear internal caches
+    def clear(self) -> None:
+        """Clear manager caches and remove Mass arrays from the current model."""
         self._region_point_cache.clear()
 
-        # remove Mass arrays from all mesh parts
-        try:
-            for mp in self._mesh_maker.meshpart.get_all().values():
-                if "Mass" in mp.mesh.point_data:
-                    del mp.mesh.point_data["Mass"]
-        except Exception:
-            # be defensive: if mesh parts are not available, ignore
-            pass
+        mesh_maker = self._mesh_maker
+        if mesh_maker is None:
+            return
 
-        # remove Mass array from assembled mesh if present
-        try:
-            asm = self._mesh_maker.assembled_mesh
-            if asm is not None and "Mass" in asm.point_data:
-                del asm.point_data["Mass"]
-        except Exception:
-            pass
+        for mp in mesh_maker.meshpart.get_all().values():
+            if "Mass" in mp.mesh.point_data:
+                del mp.mesh.point_data["Mass"]
 
-    # ------------------------------------------------------------------
-    # Low-level getters exposed for export and tests
-    # ------------------------------------------------------------------
+        asm = mesh_maker.assembled_mesh
+        if asm is not None and "Mass" in asm.point_data:
+            del asm.point_data["Mass"]
+
     def get_meshpart_mass_array(self, meshpart_name: str) -> np.ndarray:
         mp = self._mesh_maker.meshpart.get(meshpart_name)
         if mp is None:
@@ -130,26 +103,28 @@ class MassManager:
         if asm is None:
             return None
         if "Mass" not in asm.point_data:
-            # create empty array lazily so exporter logic can rely on existence
-            asm.point_data["Mass"] = np.zeros((asm.n_points, FEMORA_MAX_NDF), dtype=np.float32)
+            asm.point_data["Mass"] = np.zeros(
+                (asm.n_points, FEMORA_MAX_NDF), dtype=np.float32
+            )
         return asm.point_data["Mass"]
 
 
-# ----------------------------------------------------------------------
-# Internal helper classes
-# ----------------------------------------------------------------------
-def _ensure_mass_array(meshpart: MeshPart):
+def _ensure_mass_array(meshpart: MeshPart) -> None:
     if "Mass" not in meshpart.mesh.point_data:
         n = meshpart.mesh.n_points
         meshpart.mesh.point_data["Mass"] = np.zeros((n, FEMORA_MAX_NDF), dtype=np.float32)
 
 
 class _MeshPartMassHelper:
+    """Modify meshpart mass arrays before assembly.
+
+    Meshpart ``Mass`` is authoritative pre-assembly. After assembly, edits
+    here are not synced automatically; the user must reassemble manually.
+    """
+
     def __init__(self, manager: MassManager):
         self._mgr = manager
-        self._mesh_maker = manager._mesh_maker
 
-    # ------------- public API -------------
     def add_all(
         self,
         meshpart_name: str,
@@ -158,14 +133,17 @@ class _MeshPartMassHelper:
         combine: str = "sum",
         filter_fn=None,
     ) -> None:
-        """Add mass to every node in the meshpart (optionally filtered)."""
         mp = self._get_mp(meshpart_name)
         arr = mp.mesh.point_data["Mass"]
         if "ndf" not in mp.mesh.point_data:
-            ndf_array = np.full(shape=(mp.mesh.n_points,), fill_value=mp.element._ndof, dtype=np.int8)
+            ndf_array = np.full(
+                shape=(mp.mesh.n_points,),
+                fill_value=mp.element._ndof,
+                dtype=np.int8,
+            )
         else:
             ndf_array = mp.mesh.point_data["ndf"]
-        padded = None  # will broadcast later
+        padded = None
         for idx in range(arr.shape[0]):
             if filter_fn is not None and not filter_fn(idx):
                 continue
@@ -173,8 +151,6 @@ class _MeshPartMassHelper:
             if padded is None:
                 padded = self._mgr._pad_mass(mass_vec, ndf)
             arr[idx] = self._mgr._combine(arr[idx], padded, combine)
-        # sync to assembled mesh, if present
-        self._sync_to_assembled(mp)
 
     def closest_point(
         self,
@@ -184,10 +160,6 @@ class _MeshPartMassHelper:
         *,
         combine: str = "sum",
     ) -> int:
-        """Add mass to the node in *meshpart_name* closest to *xyz*.
-
-        Returns the local point index within the MeshPart.
-        """
         mp = self._get_mp(meshpart_name)
         pts = mp.mesh.points
         tree = KDTree(pts)
@@ -209,16 +181,18 @@ class _MeshPartMassHelper:
         mp = self._get_mp(meshpart_name)
         arr = mp.mesh.point_data["Mass"]
         if "ndf" not in mp.mesh.point_data:
-            ndf_array = np.full(shape=(mp.mesh.n_points,), fill_value=mp.element._ndof, dtype=np.int8)
+            ndf_array = np.full(
+                shape=(mp.mesh.n_points,),
+                fill_value=mp.element._ndof,
+                dtype=np.int8,
+            )
         else:
             ndf_array = mp.mesh.point_data["ndf"]
         for idx, vec in zip(point_indices, mass_matrix):
             ndf = int(ndf_array[idx])
             padded = self._mgr._pad_mass(vec, ndf)
             arr[idx] = self._mgr._combine(arr[idx], padded, combine)
-        self._sync_to_assembled(mp)
 
-    # ------------- internal helpers -------------
     def _get_mp(self, name: str) -> MeshPart:
         mp = self._mgr._mesh_maker.meshpart.get(name)
         if mp is None:
@@ -226,26 +200,13 @@ class _MeshPartMassHelper:
         _ensure_mass_array(mp)
         return mp
 
-    def _sync_to_assembled(self, mp: MeshPart):
-        asm = self._mgr._mesh_maker.assembled_mesh
-        if asm is None:
-            return  # not assembled yet → nothing to sync
-        if "MeshPartTag_pointdata" not in asm.point_data:
-            return  # should not happen, but bail gracefully
-        tag = mp.tag
-        mask = asm.point_data["MeshPartTag_pointdata"] == tag
-        # NOTE: For now we skip synchronising back to assembled mesh because
-        # mapping local meshpart indices to global indices after point merging
-        # is non-trivial.  Mass assignments should generally be performed
-        # *before* assembly for mesh-parts, or via the region/global helpers
-        # after assembly.
-
 
 class _RegionMassHelper:
+    """Modify assembled-mesh mass for nodes belonging to a region."""
+
     def __init__(self, manager: MassManager):
         self._mgr = manager
 
-    # -------- public API --------
     def add_all(
         self,
         region_tag: int,
@@ -274,19 +235,19 @@ class _RegionMassHelper:
         self._add_to_points([global_idx], mass_vec, asm, combine)
         return global_idx
 
-    # -------- internal helpers --------
     def _require_assembled(self):
         asm = self._mgr._mesh_maker.assembled_mesh
         if asm is None:
             raise RuntimeError("Model must be assembled before using region mass helpers")
         if "Mass" not in asm.point_data:
-            asm.point_data["Mass"] = np.zeros((asm.n_points, FEMORA_MAX_NDF), dtype=np.float32)
+            asm.point_data["Mass"] = np.zeros(
+                (asm.n_points, FEMORA_MAX_NDF), dtype=np.float32
+            )
         return asm
 
     def _get_region_point_ids(self, region_tag: int, asm):
         if region_tag in self._mgr._region_point_cache:
             return self._mgr._region_point_cache[region_tag]
-        # find cells belonging to region
         cell_ids = np.where(asm.cell_data["Region"] == region_tag)[0]
         if cell_ids.size == 0:
             raise KeyError(f"Region tag {region_tag} not present in assembled mesh")
@@ -305,25 +266,30 @@ class _RegionMassHelper:
         self,
         point_ids: np.ndarray | List[int],
         mass_vec: ArrayLike,
-        asm,  # assembled mesh
+        asm,
         combine: str,
-    ):
+    ) -> None:
         arr = asm.point_data["Mass"]
         ndf_arr = asm.point_data["ndf"]
-        padded_cache: Optional[np.ndarray] = None
         for idx in point_ids:
             ndf = int(ndf_arr[idx])
-            if padded_cache is None:
-                padded_cache = MassManager._pad_mass(mass_vec, ndf)
-            vec = MassManager._pad_mass(mass_vec, ndf)
-            arr[idx] = MassManager._combine(arr[idx], vec, combine)
+            vec = self._mgr._pad_mass(mass_vec, ndf)
+            arr[idx] = self._mgr._combine(arr[idx], vec, combine)
 
 
 class _GlobalMassHelper:
+    """Modify assembled-mesh mass globally."""
+
     def __init__(self, manager: MassManager):
         self._mgr = manager
 
-    def closest_point(self, xyz: Tuple[float, float, float], mass_vec: ArrayLike, *, combine: str = "sum") -> int:
+    def closest_point(
+        self,
+        xyz: Tuple[float, float, float],
+        mass_vec: ArrayLike,
+        *,
+        combine: str = "sum",
+    ) -> int:
         asm = self._require_assembled()
         pts = asm.points
         tree = KDTree(pts)
@@ -336,19 +302,20 @@ class _GlobalMassHelper:
         asm = self._require_assembled()
         self._add_to_points(np.arange(asm.n_points), mass_vec, asm, combine)
 
-    # internal helpers reuse region helper ones
     def _require_assembled(self):
         asm = self._mgr._mesh_maker.assembled_mesh
         if asm is None:
             raise RuntimeError("Model must be assembled before using global mass helpers")
         if "Mass" not in asm.point_data:
-            asm.point_data["Mass"] = np.zeros((asm.n_points, FEMORA_MAX_NDF), dtype=np.float32)
+            asm.point_data["Mass"] = np.zeros(
+                (asm.n_points, FEMORA_MAX_NDF), dtype=np.float32
+            )
         return asm
 
-    def _add_to_points(self, ids, mass_vec, asm, combine):
+    def _add_to_points(self, ids, mass_vec, asm, combine) -> None:
         arr = asm.point_data["Mass"]
         ndf_arr = asm.point_data["ndf"]
         for idx in ids:
             ndf = int(ndf_arr[idx])
-            vec = MassManager._pad_mass(mass_vec, ndf)
-            arr[idx] = MassManager._combine(arr[idx], vec, combine) 
+            vec = self._mgr._pad_mass(mass_vec, ndf)
+            arr[idx] = self._mgr._combine(arr[idx], vec, combine)
