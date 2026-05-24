@@ -1,7 +1,7 @@
 <!-- <div align="center">
   <img src="docs/images/logo.png" alt="FEMORA Logo" width="750"/> -->
-<div align="center" style="height:130px; overflow:hidden;">
-  <img src="docs/images/logo.png" alt="FEMORA Logo" width="750">
+<div align="center" style="height:530px; overflow:hidden;">
+  <img src="website/ReadMe.png"" alt="FEMORA Logo" width="350">
 </div>
   <!-- <h1>FEMORA</h1> -->
   <!-- <p><strong>Fast Efficient Meshing for OpenSees-based Resilience Analysis</strong></p> -->
