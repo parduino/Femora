@@ -1,4 +1,5 @@
 import inspect
+import json
 from pathlib import Path
 
 import femora.components.element.std_brick  # noqa: F401 — register element types
@@ -52,10 +53,11 @@ def test_model_export_methods_are_thin_wrappers():
 
 def test_export_helpers_live_in_io_modules():
     from femora.io.export_tcl import export_to_tcl, _get_tcl_helper_functions
-    from femora.io.export_vtk import export_to_vtk
+    from femora.io.export_vtk import build_vtk_info_snapshot, export_to_vtk
 
     assert export_to_tcl.__module__ == "femora.io.export_tcl"
     assert export_to_vtk.__module__ == "femora.io.export_vtk"
+    assert build_vtk_info_snapshot.__module__ == "femora.io.export_vtk"
     assert "getFemoraMax" in _get_tcl_helper_functions()
 
 
@@ -78,6 +80,40 @@ def test_model_export_to_vtk_writes_file(assembled_model, tmp_path):
     assert assembled_model.export_to_vtk(str(vtk_file)) is True
     assert vtk_file.exists()
     assert vtk_file.stat().st_size > 0
+
+
+def test_model_export_to_vtk_can_write_info_json(assembled_model, tmp_path):
+    vtk_file = tmp_path / "model.vtk"
+    info_file = tmp_path / "model_info.json"
+    assert assembled_model.export_to_vtk(str(vtk_file), write_info_json=True) is True
+    assert vtk_file.exists()
+    assert info_file.exists()
+
+    payload = json.loads(info_file.read_text(encoding="utf-8"))
+    assert payload["schema_version"] == 1
+    assert payload["format"] == "femora_vtk_info"
+    assert payload["vtk_file"] == "model.vtk"
+    assert isinstance(payload["regions"], list)
+    assert isinstance(payload["meshparts"], list)
+
+    region = next(item for item in payload["regions"] if item["tag"] == 0)
+    assert region["user_name"] == "GlobalRegion"
+    assert region["type"] == "GlobalRegion"
+
+    meshpart = next(item for item in payload["meshparts"] if item["user_name"] == "block")
+    assert meshpart["tag"] == 1
+    assert meshpart["element_tag"] == 1
+    assert len(meshpart["bounds"]) == 6
+    assert "points" not in meshpart
+    assert "connectivity" not in meshpart
+
+
+def test_model_export_to_vtk_without_info_json_preserves_old_behavior(assembled_model, tmp_path):
+    vtk_file = tmp_path / "model.vtk"
+    info_file = tmp_path / "model_info.json"
+    assert assembled_model.export_to_vtk(str(vtk_file), write_info_json=False) is True
+    assert vtk_file.exists()
+    assert not info_file.exists()
 
 
 def test_standalone_export_to_tcl_matches_wrapper(assembled_model, tmp_path):

@@ -144,20 +144,28 @@ class Model:
             decimals=decimals,
         )
 
-    def export_to_vtk(self, filename=None):
+    def export_to_vtk(self, filename=None, write_info_json=False, indent=2):
         '''
         Export the model to a vtk file
 
         Args:
             filename (str, optional): The filename to export to. If None,
                                     uses model_name in model_path
+            write_info_json (bool, optional): When True, also write a
+                                    lightweight sidecar JSON file.
+            indent (int, optional): JSON indentation level for sidecar info.
 
         Returns:
             bool: True if export was successful, False otherwise
         '''
         from femora.io.export_vtk import export_to_vtk as _export_to_vtk
 
-        return _export_to_vtk(self, filename=filename)
+        return _export_to_vtk(
+            self,
+            filename=filename,
+            write_info_json=write_info_json,
+            indent=indent,
+        )
 
     def export_to_json(self, filename=None, indent=2):
         '''
