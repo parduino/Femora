@@ -48,8 +48,11 @@ class TestAISCTool(unittest.TestCase):
         
         section = aisc.create_section("W14X90", self.model, self.material)
         
+        # W14X90: AISC Ix=999 (strong), Iy=362 (weak)
+        # Femora maps Iz<-AISC Iy (weak), Iy<-AISC Ix (strong)
         self.assertAlmostEqual(section.A, 26.5, places=2)
-        self.assertAlmostEqual(section.Iz, 999.0, delta=5.0) 
+        self.assertAlmostEqual(section.Iz, 362.0, delta=5.0)
+        self.assertAlmostEqual(section.Iy, 999.0, delta=5.0)
 
     def test_case_sensitivity(self):
         """Test that section lookup handles case/separators if implemented, or fails correctly"""
@@ -74,18 +77,21 @@ class TestAISCTool(unittest.TestCase):
         """Test unit conversion for geometric properties"""
         # W14X90 properties in inches
         # A ~ 26.5 in^2
-        # Ix ~ 999 in^4
+        # AISC Ix ~ 999 in^4 (strong) -> Femora Iy
+        # AISC Iy ~ 362 in^4 (weak)  -> Femora Iz
         
         # Test 1: Conversion to Meters
         # Scale factor = 0.0254
         scale_m = 0.0254
         expected_A_m = 26.5 * (scale_m ** 2)
-        expected_Ix_m = 999.0 * (scale_m ** 4)
+        expected_Iz_m = 362.0 * (scale_m ** 4)
+        expected_Iy_m = 999.0 * (scale_m ** 4)
         
         section_m = aisc.create_section("W14X90", self.model, self.material, unit_system='m', user_name='W14X90_m')
         
         self.assertAlmostEqual(section_m.A, expected_A_m, delta=0.1 * expected_A_m) # 10% tolerance for variation/rounding
-        self.assertAlmostEqual(section_m.Iz, expected_Ix_m, delta=0.1 * expected_Ix_m)
+        self.assertAlmostEqual(section_m.Iz, expected_Iz_m, delta=0.1 * expected_Iz_m)
+        self.assertAlmostEqual(section_m.Iy, expected_Iy_m, delta=0.1 * expected_Iy_m)
         
         # Material properties should be UNCHANGED
         # self.material has E=29000
