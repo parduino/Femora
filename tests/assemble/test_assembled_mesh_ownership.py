@@ -190,7 +190,7 @@ def test_set_material_parameter_uses_model_owned_assembled_mesh(mesh_maker):
     assert len(action.element_tags) == mesh_maker.assembled_mesh.n_cells
 
 
-def test_mask_manager_from_assembled_uses_model_owned_mesh(mesh_maker):
+def test_mask_manager_uses_mesh_maker_owned_service(mesh_maker):
     mat = mesh_maker.material.nd.elastic_isotropic(user_name="mat", E=1.0, nu=0.3, rho=1.0)
     ele = mesh_maker.element.brick.std(ndof=3, material=mat)
     mesh_maker.meshpart.volume.uniform_rectangular_grid(
@@ -209,11 +209,9 @@ def test_mask_manager_from_assembled_uses_model_owned_mesh(mesh_maker):
     mesh_maker.assembler.create_section(meshparts=["block"], num_partitions=1, merge_points=False)
     mesh_maker.assembler.assemble(merge_points=False)
 
-    from femora.components.mask.mask_manager import MaskManager
-
-    MaskManager._cached_index = None
-    manager = MaskManager.from_assembled()
-    assert manager._mesh.node_ids.shape[0] == mesh_maker.assembled_mesh.n_points
+    manager = mesh_maker.mask
+    assert manager._mesh_maker is mesh_maker
+    assert manager.nodes._mesh.node_ids.shape[0] == mesh_maker.assembled_mesh.n_points
 
 
 def test_mass_manager_reads_model_owned_assembled_mesh(mesh_maker):

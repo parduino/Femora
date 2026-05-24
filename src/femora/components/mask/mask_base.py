@@ -1,3 +1,5 @@
+"""Post-assembly mesh query types used by ``femora.core.mask_manager``."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -38,7 +40,7 @@ class MeshIndex:
 
     Example:
         >>> import numpy as np
-        >>> from femora.core.masks import MeshIndex
+        >>> from femora.components.mask.mask_base import MeshIndex
         >>> # Assuming a simple mesh has been assembled
         >>> mesh_index = MeshIndex(
         ...     node_ids=np.array([0, 1, 2]),
@@ -144,7 +146,7 @@ class NodeMask(_BaseMask):
 
     Example:
         >>> import numpy as np
-        >>> from femora.core.masks import MeshIndex, NodeMask
+        >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
         >>> mesh_index = MeshIndex(
         ...     node_ids=np.array([0, 1, 2, 3]),
         ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
@@ -177,7 +179,7 @@ class NodeMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, NodeMask
+            >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2, 3]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
@@ -218,7 +220,7 @@ class NodeMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, NodeMask
+            >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2, 3]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
@@ -261,7 +263,7 @@ class NodeMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, NodeMask
+            >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2, 3]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.5]]),
@@ -304,7 +306,7 @@ class NodeMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, NodeMask
+            >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2, 3]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.5, 0.1, 0.0], [2.0, 2.0, 2.0]]),
@@ -354,7 +356,7 @@ class NodeMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, NodeMask
+            >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2, 3]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
@@ -397,7 +399,7 @@ class NodeMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, NodeMask
+            >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2, 3]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
@@ -437,7 +439,7 @@ class NodeMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, NodeMask
+            >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2, 3]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
@@ -484,7 +486,7 @@ class NodeMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, NodeMask
+            >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
@@ -523,7 +525,7 @@ class ElementMask(_BaseMask):
 
     Example:
         >>> import numpy as np
-        >>> from femora.core.masks import MeshIndex, ElementMask
+        >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
         >>> mesh_index = MeshIndex(
         ...     node_ids=np.array([0, 1, 2, 3]),
         ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
@@ -556,7 +558,7 @@ class ElementMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, ElementMask
+            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
@@ -592,7 +594,7 @@ class ElementMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, ElementMask
+            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2, 3]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
@@ -628,7 +630,7 @@ class ElementMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, ElementMask
+            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
@@ -664,7 +666,7 @@ class ElementMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, ElementMask
+            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
@@ -700,7 +702,7 @@ class ElementMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, ElementMask
+            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
@@ -736,7 +738,7 @@ class ElementMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, ElementMask
+            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
@@ -781,7 +783,7 @@ class ElementMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, ElementMask
+            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2, 3]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]]),
@@ -851,7 +853,7 @@ class ElementMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, ElementMask
+            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2, 3]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]]),
@@ -895,7 +897,7 @@ class ElementMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, ElementMask
+            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2, 3]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]]),
@@ -942,7 +944,7 @@ class ElementMask(_BaseMask):
 
         Example:
             >>> import numpy as np
-            >>> from femora.core.masks import MeshIndex, ElementMask
+            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
             >>> mesh_index = MeshIndex(
             ...     node_ids=np.array([0, 1, 2]),
             ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),

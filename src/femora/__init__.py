@@ -47,7 +47,7 @@ _instance = MeshMaker()
 for attr_name in dir(_instance):
     if attr_name.startswith('_'):
         continue
-    # Avoid evaluating lazy properties at import time (e.g., mask)
+    # Avoid exporting mask twice; it is assigned explicitly below.
     if attr_name == 'mask':
         continue
     globals()[attr_name] = getattr(_instance, attr_name)
@@ -72,6 +72,7 @@ transformation = _instance.transformation
 section = _instance.section
 interface = _instance.interface
 mass = _instance.mass
+mask = _instance.mask
 spatial_transform = _instance.spatial_transform
 
 set_results_folder = MeshMaker.set_results_folder
@@ -86,11 +87,4 @@ get_instance = MeshMaker.get_instance
 
 
 def __getattr__(name):
-    """
-    Lazy attribute access for module-level conveniences.
-
-    This avoids evaluating certain properties (like `mask`) at import time.
-    """
-    if name == 'mask':
-        return _instance.mask
     raise AttributeError(f"module 'femora' has no attribute {name!r}")

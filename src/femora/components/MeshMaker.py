@@ -21,7 +21,7 @@ from femora.core.interface_base import InterfaceManager
 from femora.core.section_manager import SectionManager
 from femora.core.mass_manager import MassManager
 from femora.components.geometry_ops.spatial_transform_manager import SpatialTransformManager
-from femora.components.mask.mask_manager import MaskManager
+from femora.core.mask_manager import MaskManager
 from femora.core.action_manager import ActionManager
 import os
 from numpy import unique, zeros, arange, array, abs, concatenate, meshgrid, ones, full, uint16, repeat, where, isin
@@ -92,6 +92,7 @@ class MeshMaker:
         self.transformation = TransformationManager(mesh_maker=self)
         self.section = SectionManager(mesh_maker=self)
         self.actions = ActionManager(mesh_maker=self)
+        self.mask = MaskManager(mesh_maker=self)
         self.spatial_transform = SpatialTransformManager()
         self.process = ProcessManager(mesh_maker=self)
         
@@ -108,7 +109,7 @@ class MeshMaker:
 
     def _register_model_event_subscribers(self) -> None:
         self.mass.register_events()
-        MaskManager.register_events(self)
+        self.mask.register_events()
         
     # ------------------------------------------------------------------
     # Progress helpers
@@ -663,22 +664,6 @@ class MeshMaker:
                 raise e
         return True
 
-    # -------------------------------------------------------------
-    # Mask convenience
-    # -------------------------------------------------------------
-    @property
-    def mask(self):
-        """
-        Access a MaskManager bound to the assembled mesh.
-
-        Returns:
-            MaskManager: Provides typed views via .nodes and .elements.
-
-        Raises:
-            RuntimeError: If the model has not been assembled yet.
-        """
-        return MaskManager.from_assembled()
-
     def set_model_info(self, model_name=None, model_path=None):
         """
         Update model information
@@ -801,7 +786,8 @@ class MeshMaker:
         """
         self.model = None
         self.mass.unregister_events()
-        MaskManager.unregister_events(self)
+        self.mask.unregister_events()
+        self.mask.clear()
         self.events.clear()
         self.assembled_mesh = None
         self.assembler.reset()

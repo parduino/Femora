@@ -1,20 +1,9 @@
-"""Mask subsystem for post-assembly mesh queries.
+"""Mask query types for post-assembly mesh filtering."""
 
-Exposes:
-- MeshIndex: immutable snapshot of the assembled mesh for fast queries
-- NodeMask, ElementMask: typed masks with common filters and conversions
-- MaskManager: entrypoint tied to the assembled mesh state
-"""
-
-from .mask_base import MeshIndex, NodeMask, ElementMask
-from .mask_manager import MaskManager
+from .mask_base import ElementMask, MeshIndex, NodeMask
 
 __all__ = [
+    "ElementMask",
     "MeshIndex",
     "NodeMask",
-    "ElementMask",
-    "MaskManager",
 ]
-
-
-

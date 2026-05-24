@@ -2,7 +2,6 @@ import numpy as np
 
 from femora.components.MeshMaker import MeshMaker
 from femora.core.event_bus import EventBus, FemoraEvent
-from femora.components.mask.mask_manager import MaskManager
 
 
 def test_mass_manager_subscribes_to_model_event_bus():
@@ -22,10 +21,10 @@ def test_mask_manager_subscribes_to_model_event_bus():
     mesh_maker.clear_model()
     EventBus._subscribers.clear()
 
-    assert MaskManager._on_post_assemble in mesh_maker.events._subscribers[
+    assert mesh_maker.mask._handle_post_assemble in mesh_maker.events._subscribers[
         FemoraEvent.POST_ASSEMBLE
     ]
-    assert MaskManager._on_post_assemble not in EventBus._subscribers.get(
+    assert mesh_maker.mask._handle_post_assemble not in EventBus._subscribers.get(
         FemoraEvent.POST_ASSEMBLE, []
     )
 
@@ -52,7 +51,7 @@ def test_clear_model_reregisters_mass_and_mask_subscribers():
     assert mesh_maker.mass._handle_pre_assemble in mesh_maker.events._subscribers[
         FemoraEvent.PRE_ASSEMBLE
     ]
-    assert MaskManager._on_post_assemble in mesh_maker.events._subscribers[
+    assert mesh_maker.mask._handle_post_assemble in mesh_maker.events._subscribers[
         FemoraEvent.POST_ASSEMBLE
     ]
     assert mesh_maker.mass._region_point_cache == {}
