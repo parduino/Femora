@@ -58,7 +58,7 @@ class PlateFiberSection(Section):
             ValueError: If the material cannot be resolved, or if it is not
                 recognized as an nDMaterial.
         """
-        resolved_material = Section.resolve_material_reference(material)
+        resolved_material = self.resolve_material(material)
         if resolved_material is None:
             raise ValueError(f"Material not found: {material}")
             

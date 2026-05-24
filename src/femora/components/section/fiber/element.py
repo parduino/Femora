@@ -70,7 +70,7 @@ class FiberElement:
             raise ValueError("Fiber area must be positive")
         
         # Resolve material
-        self.material = Section.resolve_material_reference(material)
+        self.material = self.resolve_material(material)
         if self.material is None:
             raise ValueError("Fiber requires a valid material")
 

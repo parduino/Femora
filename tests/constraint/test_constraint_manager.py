@@ -15,6 +15,19 @@ def mesh_maker():
     return mk
 
 
+def test_constraint_submanagers_have_no_legacy_lookup_names(mesh_maker):
+    sp_manager = mesh_maker.constraint.sp
+    mp_manager = mesh_maker.constraint.mp
+    assert not hasattr(sp_manager, "get_constraint")
+    assert not hasattr(sp_manager, "remove_constraint")
+    assert not hasattr(mp_manager, "get_constraint")
+    assert not hasattr(mp_manager, "remove_constraint")
+
+
+def test_sp_constraint_manager_has_no_clear_all(mesh_maker):
+    assert not hasattr(mesh_maker.constraint.sp, "clear_all")
+
+
 def test_constraints_no_self_tagging():
     sp_constraint = FixConstraint(1, [1, 0, 0])
     mp_constraint = EqualDOF(1, [2], [1])
@@ -78,9 +91,9 @@ def test_duplicate_ownership_rejected(mesh_maker):
 def test_duplicate_manager_creation_rejected(mesh_maker):
     with pytest.raises(ValueError, match="already owns a constraint manager"):
         ConstraintManager(mesh_maker)
-    with pytest.raises(ValueError, match="already owns a constraint manager"):
+    with pytest.raises(ValueError, match="already owns SP constraints"):
         SpConstraintManager(mesh_maker.constraint)
-    with pytest.raises(ValueError, match="already owns a constraint manager"):
+    with pytest.raises(ValueError, match="already owns MP constraints"):
         MPConstraintManager(mesh_maker.constraint)
 
 

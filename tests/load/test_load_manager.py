@@ -46,6 +46,10 @@ def test_manager_adds_and_tags(mesh_maker):
     assert lm.get(1) is load
 
 
+def test_load_manager_has_no_legacy_ele_alias(mesh_maker):
+    assert not hasattr(mesh_maker.load, "ele")
+
+
 def test_manager_factory_methods(mesh_maker):
     lm = mesh_maker.load
     node = lm.node(node_tag=1, values=[1.0, 0.0, 0.0])
@@ -103,6 +107,15 @@ def test_plain_pattern_add_load_uses_mesh_maker_manager(mesh_maker):
     tcl = pattern.to_tcl()
     assert "load 1" in tcl
     assert "pattern Plain" in tcl
+
+
+def test_plain_pattern_add_load_proxy_has_no_legacy_ele_alias(mesh_maker):
+    ts = mesh_maker.time_series.constant(factor=1.0)
+    pattern = mesh_maker.pattern.plain(time_series=ts)
+    assert hasattr(pattern.add_load, "node")
+    assert hasattr(pattern.add_load, "element")
+    assert hasattr(pattern.add_load, "sp")
+    assert not hasattr(pattern.add_load, "ele")
 
 
 def test_unmanaged_pattern_add_load_raises(mesh_maker):

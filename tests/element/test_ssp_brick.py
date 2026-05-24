@@ -30,14 +30,6 @@ class DummyMaterial(Material):
     def get_description(cls):
         return []
 
-from femora.core.element_base import Element
-
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    Element.clear_all_elements()
-    yield
-    Element.clear_all_elements()
-
 def test_ssp_brick_initialization():
     """Test valid initialization of SSPbrickElement."""
     mat = DummyMaterial(1, "nDMaterial")

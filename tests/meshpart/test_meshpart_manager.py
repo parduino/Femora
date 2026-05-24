@@ -31,7 +31,7 @@ def test_unmanaged_meshpart_has_no_tag(mesh_maker):
     part = StructuredRectangular3D(
         user_name="raw",
         element=ele,
-        region=mesh_maker.region.GlobalRegion(),
+        region=mesh_maker.region.global_region,
         x_min=0,
         x_max=1,
         y_min=0,
@@ -64,7 +64,7 @@ def test_volume_factory_assigns_tag_and_region(mesh_maker):
     )
     assert part.tag == 1
     assert part._owner is mesh_maker.meshpart
-    assert part.region is mesh_maker.region.GlobalRegion()
+    assert part.region is mesh_maker.region.global_region
     assert part.mesh is not None
 
 
@@ -136,7 +136,7 @@ def test_explicit_constructor_rejects_unknown_kwargs(mesh_maker):
         StructuredRectangular3D(
             user_name="bad",
             element=ele,
-            region=mesh_maker.region.GlobalRegion(),
+            region=mesh_maker.region.global_region,
             x_min=0,
             x_max=1,
             y_min=0,

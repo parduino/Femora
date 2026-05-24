@@ -65,6 +65,12 @@ def test_duplicate_ownership_rejected(mesh_maker):
     with pytest.raises(ValueError, match="already owns a damping manager"):
         DampingManager(mesh_maker)
 
+def test_damping_manager_has_no_camelcase_aliases(mesh_maker):
+    dm = mesh_maker.damping
+    assert not hasattr(dm, "frequencyRayleigh")
+    assert not hasattr(dm, "secantStiffnessProportional")
+
+
 def test_clear_model_resets_damping(mesh_maker):
     dm = mesh_maker.damping
     dm.rayleigh(alphaM=0.05)

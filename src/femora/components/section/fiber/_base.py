@@ -34,7 +34,7 @@ class PatchBase(ABC):
         Raises:
             ValueError: If the material cannot be resolved or if validation fails.
         """
-        self.material = Section.resolve_material_reference(material)
+        self.material = self.resolve_material(material)
         if self.material is None:
             raise ValueError("Patch requires a valid material")
         self.validate()
@@ -112,7 +112,7 @@ class LayerBase(ABC):
         Raises:
             ValueError: If the material cannot be resolved or if validation fails.
         """
-        self.material = Section.resolve_material_reference(material)
+        self.material = self.resolve_material(material)
         if self.material is None:
             raise ValueError("Layer requires a valid material")
         self.validate()

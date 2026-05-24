@@ -146,31 +146,3 @@ class Element(ABC):
     def get_density(self) -> float:
         """Gets the density of the element."""
         return 0.0
-
-    @classmethod
-    def get_all_elements(cls) -> Dict[int, "Element"]:
-        """Return all managed elements in the active model context."""
-        from femora.components.MeshMaker import MeshMaker
-
-        return MeshMaker.get_instance().element.get_all()
-
-    @classmethod
-    def get_element_by_tag(cls, tag: int) -> Optional["Element"]:
-        """Return a managed element by tag in the active model context."""
-        from femora.components.MeshMaker import MeshMaker
-
-        return MeshMaker.get_instance().element.get(int(tag))
-
-    @classmethod
-    def delete_element(cls, tag_or_name: int) -> None:
-        """Remove a managed element by tag from the active model context."""
-        from femora.components.MeshMaker import MeshMaker
-
-        MeshMaker.get_instance().element.remove(int(tag_or_name))
-
-    @classmethod
-    def clear_all_elements(cls):
-        """Test compatibility: clears all elements in the active MeshMaker."""
-        from femora.components.MeshMaker import MeshMaker
-
-        MeshMaker.get_instance().element.clear()

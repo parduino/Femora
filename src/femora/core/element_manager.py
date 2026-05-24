@@ -80,13 +80,6 @@ class ElementManager:
         self._start_tag = self._tagging.validate_start_tag(start_tag)
         self._reassign_tags()
 
-    get_element = get
-    get_all_elements = get_all
-    clear_all_elements = clear
-
-    def get_element_count(self) -> int:
-        return len(self._elements)
-
     def __len__(self) -> int:
         return len(self._elements)
 

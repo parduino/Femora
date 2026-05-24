@@ -11,7 +11,6 @@ if src_dir not in sys.path:
 
 from femora.components.element import stdBrickElement
 from femora.core.material_base import Material
-from femora.core.element_base import Element
 
 class DummyMaterial(Material):
     def __init__(self, tag: int, mat_type: str):
@@ -30,12 +29,6 @@ class DummyMaterial(Material):
     @classmethod
     def get_description(cls):
         return []
-
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    Element.clear_all_elements()
-    yield
-    Element.clear_all_elements()
 
 def test_std_brick_initialization():
     """Test valid initialization of stdBrickElement."""

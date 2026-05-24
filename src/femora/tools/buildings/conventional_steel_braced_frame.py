@@ -751,7 +751,7 @@ class ConventionalSteelBracedFrame:
             pid1, pid2 = grid.cell_connectivity[start:end]
             p1 = grid.points[pid1]
             p2 = grid.points[pid2]
-            element = model.element.get_element(int(grid.cell_data["ElementTag"][cell_idx]))
+            element = model.element.get(int(grid.cell_data["ElementTag"][cell_idx]))
             if element is None:
                 continue
 
@@ -812,7 +812,7 @@ class ConventionalSteelBracedFrame:
         com_grid = pv.PolyData(np.asarray(com_coords, dtype=float)).cast_to_unstructured_grid()
         com_grid.cell_data["ElementTag"] = np.asarray(com_tags, dtype=np.uint16)
         com_grid.point_data["ndf"] = np.asarray(
-            [Element.get_element_by_tag(tag).get_ndof() for tag in com_tags],
+            [model.element.get(tag).get_ndof() for tag in com_tags],
             dtype=np.uint16,
         )
         mass = np.zeros((len(com_coords), FEMORA_MAX_NDF), dtype=np.float32)

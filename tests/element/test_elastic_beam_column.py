@@ -10,7 +10,6 @@ if src_dir not in sys.path:
     sys.path.append(src_dir)
 
 from femora.components.element import ElasticBeamColumnElement
-from femora.core.element_base import Element
 from femora.core.section_base import Section
 from femora.components.transformation.transformation import GeometricTransformation
 
@@ -42,12 +41,6 @@ class MockTransformation(GeometricTransformation):
     
     def has_joint_offsets(self):
         return False
-
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    Element.clear_all_elements()
-    yield
-    Element.clear_all_elements()
 
 def test_elastic_beam_init_valid():
     """Test valid initialization."""

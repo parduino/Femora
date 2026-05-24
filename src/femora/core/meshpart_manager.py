@@ -330,7 +330,7 @@ class MeshPartManager:
         if meshpart.user_name in self._meshparts and self._meshparts[meshpart.user_name] is not meshpart:
             raise ValueError(f"Mesh part name '{meshpart.user_name}' is already in use")
         if meshpart.region is None:
-            meshpart.region = self._mesh_maker.region.GlobalRegion()
+            meshpart.region = self._mesh_maker.region.global_region
         if meshpart._owner is None:
             meshpart._owner = self
         elif meshpart._owner is not self:

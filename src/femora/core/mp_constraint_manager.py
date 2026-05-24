@@ -179,9 +179,6 @@ class MPConstraintManager:
     def get(self, tag: int) -> Optional[MPConstraint]:
         return self._constraints.get(int(tag))
 
-    def get_constraint(self, tag: int) -> Optional[MPConstraint]:
-        return self.get(tag)
-
     def get_all(self) -> Dict[int, MPConstraint]:
         return dict(self._constraints)
 
@@ -191,9 +188,6 @@ class MPConstraintManager:
             constraint.tag = None
             constraint._owner = None
             self._reassign_tags()
-
-    def remove_constraint(self, tag: int) -> None:
-        self.remove(tag)
 
     def to_tcl(self) -> str:
         tcl_str = ""

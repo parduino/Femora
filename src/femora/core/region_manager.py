@@ -141,7 +141,8 @@ class RegionManager:
                 return candidate
             index += 1
 
-    def GlobalRegion(self):
+    @property
+    def global_region(self):
         return self._global_region
 
     def __len__(self) -> int:

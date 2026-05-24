@@ -119,3 +119,21 @@ def test_section_dependent_elements(mesh_maker):
     tcl = element.to_tcl(tag=1, nodes=[1, 2])
     assert f" {sec.tag} " in tcl
     assert f" {transf.tag} " in tcl
+
+
+def test_unmanaged_section_material_resolution_fails():
+    sec = DummySection('section', 'Dummy', 'sec1')
+    with pytest.raises(ValueError, match="Cannot resolve material by tag or name"):
+        sec.resolve_material("SteelMat")
+
+
+def test_managed_section_material_resolution_by_name(mesh_maker):
+    mat = mesh_maker.material.uniaxial.elastic(user_name="SteelMat", E=29000.0)
+    sec = mesh_maker.section.beam.uniaxial(user_name="Axial", material="SteelMat", response_code="P")
+    assert sec.material is mat
+
+
+def test_unmanaged_section_reference_resolution_fails():
+    sec = DummySection('section', 'Dummy', 'sec1')
+    with pytest.raises(ValueError, match="Cannot resolve section by tag or name"):
+        sec.resolve_section("other_sec")

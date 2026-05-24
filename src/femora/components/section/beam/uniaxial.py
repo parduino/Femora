@@ -74,7 +74,7 @@ class UniaxialSection(Section):
         if response_code not in valid_codes:
             raise ValueError(f"Response code must be one of: {sorted(valid_codes)}")
         
-        resolved_material = Section.resolve_material_reference(material)
+        resolved_material = self.resolve_material(material)
         if resolved_material is None:
              raise ValueError(f"Material not found: {material}")
 

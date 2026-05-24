@@ -123,8 +123,6 @@ class MaterialManager:
         self._start_tag = self._tagging.validate_start_tag(start_tag)
         self._reassign_tags()
 
-    get_material = get
-
     # ------------------------------------------------------------------
     # Iteration helpers
     # ------------------------------------------------------------------

@@ -605,7 +605,7 @@ class DRM:
 
             # check all the elements should of type stdBrick or bbarBrick or SSPbrick
             for tag in EleTags:
-                ele = self.meshmaker.element.get_element(tag)
+                ele = self.meshmaker.element.get(tag)
 
                 if ele.element_type not in ["stdBrick", "bbarBrick", "SSPbrick"]:
                     raise ValueError(f"boundary elements should be of type stdBrick or bbarBrick or SSPbrick not {ele.element_type}")

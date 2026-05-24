@@ -95,9 +95,6 @@ class SpConstraintManager:
     def get(self, tag: int) -> Optional[SPConstraint]:
         return self._constraints.get(int(tag))
 
-    def get_constraint(self, tag: int) -> Optional[SPConstraint]:
-        return self.get(tag)
-
     def get_all(self) -> Dict[int, SPConstraint]:
         return dict(self._constraints)
 
@@ -107,9 +104,6 @@ class SpConstraintManager:
             constraint.tag = None
             constraint._owner = None
             self._reassign_tags()
-
-    def remove_constraint(self, tag: int) -> None:
-        self.remove(tag)
 
     def to_tcl(self) -> str:
         from femora.components.constraint.sp_constraints import (
@@ -156,9 +150,6 @@ class SpConstraintManager:
                 tcl_commands.append(constraint.to_tcl())
 
         return "\n".join(tcl_commands)
-
-    def clear_all(self) -> None:
-        self.clear()
 
     def clear(self) -> None:
         for constraint in list(self._constraints.values()):

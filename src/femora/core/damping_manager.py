@@ -65,9 +65,6 @@ class DampingManager:
         from femora.components.damping.dampings import SecantStiffnessProportional
         return self.add(SecantStiffnessProportional(**kwargs))
 
-    frequencyRayleigh = frequency_rayleigh
-    secantStiffnessProportional = secant_stiffness_proportional
-
     def get(self, tag: int) -> Optional[Damping]:
         return self._dampings.get(int(tag))
 

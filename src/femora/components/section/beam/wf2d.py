@@ -84,7 +84,7 @@ class WFSection2d(Section):
             ValueError: If the material cannot be resolved, or if any dimension
                 is non-positive, or if fiber counts are not positive integers.
         """
-        resolved_material = Section.resolve_material_reference(material)
+        resolved_material = self.resolve_material(material)
         if resolved_material is None:
             raise ValueError(f"Material not found: {material}")
 

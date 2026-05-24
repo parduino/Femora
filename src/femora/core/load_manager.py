@@ -57,9 +57,6 @@ class LoadManager:
 
         return self.add(ElementLoad(**kwargs))
 
-    def ele(self, **kwargs) -> Load:
-        return self.element(**kwargs)
-
     def sp(self, **kwargs) -> Load:
         from femora.components.load.sp_load import SpLoad
 

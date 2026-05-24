@@ -184,19 +184,6 @@ class PlainPattern(Pattern):
             self._pattern.add_load_instance(load)
             return load
 
-        def ele(self, **kwargs) -> Load:
-            """Alias for :meth:`element`.
-
-            This method creates an element load and attaches it to the owning pattern.
-
-            Args:
-                **kwargs: Arguments forwarded to ``LoadManager.element``.
-
-            Returns:
-                Created and attached load instance.
-            """
-            return self.element(**kwargs)
-
         def sp(self, **kwargs) -> Load:
             """Create a single-point load and attach it to the owning pattern.
 

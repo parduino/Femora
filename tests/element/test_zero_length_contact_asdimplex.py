@@ -10,13 +10,6 @@ if src_dir not in sys.path:
     sys.path.append(src_dir)
 
 from femora.components.element import ZeroLengthContactASDimplex
-from femora.core.element_base import Element
-
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    Element.clear_all_elements()
-    yield
-    Element.clear_all_elements()
 
 def test_zl_contact_initialization():
     """Test valid initialization."""

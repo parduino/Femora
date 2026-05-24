@@ -90,15 +90,15 @@ class RCSection(Section):
             ValueError: If materials cannot be resolved, if dimensions are not
                 numeric, or if dimensions are non-positive.
         """
-        resolved_core_material = Section.resolve_material_reference(core_material)
+        resolved_core_material = self.resolve_material(core_material)
         if resolved_core_material is None:
             raise ValueError("RCSection requires a valid core_material")
 
-        resolved_cover_material = Section.resolve_material_reference(cover_material)
+        resolved_cover_material = self.resolve_material(cover_material)
         if resolved_cover_material is None:
             raise ValueError("RCSection requires a valid cover_material")
 
-        resolved_steel_material = Section.resolve_material_reference(steel_material)
+        resolved_steel_material = self.resolve_material(steel_material)
         if resolved_steel_material is None:
             raise ValueError("RCSection requires a valid steel_material")
 

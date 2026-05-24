@@ -7,6 +7,19 @@ if TYPE_CHECKING:
     from femora.core.material_base import Material
 
 
+_UNMANAGED_MATERIAL_MSG = (
+    "Cannot resolve material by tag or name on an unmanaged section. "
+    "Pass a managed Material object directly, or create the section through "
+    "model.section / SectionManager."
+)
+
+_UNMANAGED_SECTION_MSG = (
+    "Cannot resolve section by tag or name on an unmanaged section. "
+    "Pass a managed Section object directly, or create the section through "
+    "model.section / SectionManager."
+)
+
+
 class Section(ABC):
     """Abstract base class for all sections with manager-owned tagging.
 
@@ -59,9 +72,21 @@ class Section(ABC):
 
     def resolve_material(self, material_input: Union[int, str, "Material", None]) -> Optional["Material"]:
         """Resolve material using the owner manager when possible."""
-        if self._owner and hasattr(self._owner, "resolve_material"):
-            return self._owner.resolve_material(material_input)
-        return self.resolve_material_reference(material_input)
+        if material_input is None:
+            return None
+
+        from femora.core.material_base import Material as MaterialClass
+
+        if isinstance(material_input, MaterialClass):
+            return material_input
+
+        if self._owner is not None and hasattr(self._owner, "resolve_material"):
+            resolved = self._owner.resolve_material(material_input)
+            if resolved is None:
+                raise ValueError(f"Material not found: {material_input}")
+            return resolved
+
+        raise ValueError(_UNMANAGED_MATERIAL_MSG)
 
     def resolve_materials_dict(
         self, materials_input: Dict[str, Union[int, str, "Material"]]
@@ -75,18 +100,19 @@ class Section(ABC):
             return None
         if isinstance(section_input, Section):
             return section_input
-        if self._owner and hasattr(self._owner, "get"):
-            return self._owner.get(section_input)
+        if self._owner is not None and hasattr(self._owner, "get"):
+            resolved = self._owner.get(section_input)
+            if resolved is None:
+                raise ValueError(f"Section not found: {section_input}")
+            return resolved
 
-        from femora.components.MeshMaker import MeshMaker
-
-        return MeshMaker.get_instance().section.get(section_input)
+        raise ValueError(_UNMANAGED_SECTION_MSG)
 
     @staticmethod
     def resolve_material_reference(
         material_input: Union[int, str, "Material", None]
     ) -> Optional["Material"]:
-        """Resolve material from object, tag, or name using global fallback."""
+        """Resolve a material object passed directly to an unmanaged section."""
         if material_input is None:
             return None
 
@@ -95,21 +121,7 @@ class Section(ABC):
         if isinstance(material_input, MaterialClass):
             return material_input
 
-        if isinstance(material_input, (int, str)):
-            try:
-                from femora.components.MeshMaker import MeshMaker
-
-                material = MeshMaker.get_instance().material.get(material_input)
-                if material is None:
-                    raise KeyError(material_input)
-                return material
-            except (KeyError, TypeError, AttributeError) as exc:
-                raise ValueError(f"Material not found: {material_input}. Error: {exc}") from exc
-
-        raise ValueError(
-            f"Invalid material input type: {type(material_input)}. "
-            "Expected Material object, int (tag), str (name), or None"
-        )
+        raise ValueError(_UNMANAGED_MATERIAL_MSG)
 
     def get_materials(self) -> List["Material"]:
         """Return materials used by this section for dependency tracking."""

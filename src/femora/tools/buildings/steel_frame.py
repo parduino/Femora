@@ -604,7 +604,7 @@ class FEMA_SAC_SteelFrame:
             p2 = grid.points[pid2]
 
             ele_tag = grid.cell_data["ElementTag"][i]
-            element = model.element.get_element(ele_tag)
+            element = model.element.get(ele_tag)
 
             if not element:
                 continue

@@ -245,7 +245,9 @@ class SectionManager:
             return None
         if isinstance(material_input, MaterialClass):
             return material_input
-        return self._mesh_maker.material.get(material_input)
+        if isinstance(material_input, str):
+            return self._mesh_maker.material.get_by_name(material_input)
+        return self._mesh_maker.material.get(int(material_input))
 
     def _reassign_tags(self) -> None:
         """Retag all managed sections from ``_start_tag`` in tag order."""

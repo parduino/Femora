@@ -60,11 +60,7 @@ class ParallelSection(Section):
         resolved_sections: list[Section] = []
         if sections:
             for section_input in sections:
-                if isinstance(section_input, Section):
-                    resolved_sections.append(section_input)
-                else:
-                    from femora.components.MeshMaker import MeshMaker
-                    resolved_sections.append(MeshMaker.get_instance().section.get(section_input))
+                resolved_sections.append(self.resolve_section(section_input))
         
         super().__init__("section", "Parallel", user_name)
         self.sections = resolved_sections

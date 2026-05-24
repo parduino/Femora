@@ -80,15 +80,9 @@ class AggregatorSection(Section):
                 raise ValueError(f"Invalid response code(s): {invalid}. Must be one of: {sorted(valid_codes)}")
             
             for key, val in materials.items():
-                resolved_materials[key] = Section.resolve_material_reference(val)
+                resolved_materials[key] = self.resolve_material(val)
 
-        resolved_base_section = None
-        if base_section is not None:
-            if isinstance(base_section, Section):
-                resolved_base_section = base_section
-            else:
-                from femora.components.MeshMaker import MeshMaker
-                resolved_base_section = MeshMaker.get_instance().section.get(base_section)
+        resolved_base_section = self.resolve_section(base_section)
 
         super().__init__("section", "Aggregator", user_name)
         self.materials = resolved_materials
