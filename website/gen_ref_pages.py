@@ -94,12 +94,35 @@ def parse_module_docstring(path: Path) -> str:
     return ast.get_docstring(tree) or ""
 
 
+GROUPED_PACKAGE_TITLES: dict[str, dict[str, str]] = {
+    "femora.components.analysis": {
+        "analysis": "core analysis",
+        "algorithms": "algorithms",
+        "convergence_tests": "convergence tests",
+        "constraint_handlers": "constraint handlers",
+        "integrators": "integrators",
+        "numberers": "numberers",
+        "systems": "systems",
+    },
+    "femora.components.constraint": {
+        "sp_constraints": "sp constraints",
+        "mp_constraints": "mp constraints",
+    },
+}
+
+
+def package_group_title(package_ident: str, module_name: str) -> str:
+    """Return the display heading for one grouped package module section."""
+    titles = GROUPED_PACKAGE_TITLES.get(package_ident, {})
+    return titles.get(module_name, module_name.replace("_", " "))
+
+
 def write_package_index(
     doc_path: Path,
     ident: str,
     title: str,
     description: str,
-    class_links: list[tuple[str, str]],
+    class_links: list[tuple[str, str, str]],
     edit_path: Path,
 ) -> None:
     """Write a minimal package landing page with links to class pages."""
@@ -108,9 +131,28 @@ def write_package_index(
         if description:
             fd.write(f"{description}\n\n")
         if class_links:
-            fd.write("Classes in this package:\n\n")
-            for class_name, href in class_links:
-                fd.write(f"- [{class_name}]({href})\n")
+            if ident in GROUPED_PACKAGE_TITLES:
+                grouped: dict[str, list[tuple[str, str]]] = {}
+                for module_name, class_name, href in class_links:
+                    grouped.setdefault(module_name, []).append((class_name, href))
+
+                preferred_order = list(GROUPED_PACKAGE_TITLES[ident].keys())
+                ordered_modules = [
+                    module_name for module_name in preferred_order if module_name in grouped
+                ]
+                ordered_modules.extend(
+                    sorted(module_name for module_name in grouped if module_name not in preferred_order)
+                )
+
+                for module_name in ordered_modules:
+                    fd.write(f"## {package_group_title(ident, module_name)}\n\n")
+                    for class_name, href in grouped[module_name]:
+                        fd.write(f"- [{class_name}]({href})\n")
+                    fd.write("\n")
+            else:
+                fd.write("Classes in this package:\n\n")
+                for _module_name, class_name, href in class_links:
+                    fd.write(f"- [{class_name}]({href})\n")
     mkdocs_gen_files.set_edit_path(doc_path, edit_path)
 
 
@@ -137,7 +179,7 @@ files = sorted(src_root.rglob("*.py"))
 print(f"DEBUG: Found {len(files)} python files in {src_root}")
 
 package_infos: list[tuple[tuple[str, ...], Path, str]] = []
-package_classes: dict[tuple[str, ...], list[str]] = {}
+package_classes: dict[tuple[str, ...], list[tuple[str, str]]] = {}
 
 for path in files:
     module_path = path.relative_to(src_root).with_suffix("")
@@ -161,11 +203,17 @@ for path in files:
     # list classes directly instead of showing a file name before the class.
     if class_entries:
         package_classes.setdefault(parts[:-1], []).extend(
-            class_name for class_name, _ in class_entries
+            (parts[-1], class_name) for class_name, _ in class_entries
         )
         for class_name, doc_controls in class_entries:
             class_doc_path = Path("reference", *doc_parts(parts[:-1]), class_name, "index.md")
-            nav[display_parts(parts[:-1]) + (class_name,)] = class_doc_path.relative_to("reference").as_posix()
+            package_ident = ".".join(parts[:-1])
+            if package_ident in GROUPED_PACKAGE_TITLES:
+                nav[
+                    display_parts(parts[:-1]) + (package_group_title(package_ident, parts[-1]), class_name)
+                ] = class_doc_path.relative_to("reference").as_posix()
+            else:
+                nav[display_parts(parts[:-1]) + (class_name,)] = class_doc_path.relative_to("reference").as_posix()
             write_class_page(class_doc_path, ".".join(parts) + "." + class_name, path, doc_controls)
     else:
         doc_path = Path("reference", *doc_parts(parts)).with_suffix(".md")
@@ -178,8 +226,8 @@ for nav_parts, path, description in package_infos:
     doc_path = Path("reference", *doc_parts(nav_parts), "index.md")
     nav[display_parts(nav_parts)] = doc_path.relative_to("reference").as_posix()
     class_links = [
-        (class_name, f"{class_name}/")
-        for class_name in package_classes.get(nav_parts, [])
+        (module_name, class_name, f"{class_name}/")
+        for module_name, class_name in package_classes.get(nav_parts, [])
     ]
     write_package_index(
         doc_path=doc_path,
