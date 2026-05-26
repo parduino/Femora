@@ -1,3 +1,16 @@
+"""Mesh-part component package for Femora.
+
+This package contains concrete mesh-part component classes representing lines, surfaces,
+volumes, and composite/external structures in an OpenSees analysis. These mesh parts define
+the geometric shapes, discretization (grid sizing/spacing), associated element typologies,
+and physical regions.
+
+Normal runtime usage should go through `Model` manager entry points under the
+`model.meshpart` namespace (e.g., `model.meshpart.line.*`, `model.meshpart.volume.*`,
+`model.meshpart.surface.*`, and `model.meshpart.general.*`). Direct imports from this
+package are mainly useful for typed references, tests, and low-level component work.
+"""
+
 from femora.components.mesh.volume_meshparts import (
     CustomRectangularGrid3D,
     GeometricStructuredRectangular3D,

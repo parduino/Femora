@@ -5,37 +5,44 @@ from femora.core.time_series_base import TimeSeries
 
 
 class TriangularTimeSeries(TimeSeries):
-    """Represents an OpenSees ``Triangular`` time series.
+    """Triangular-wave load-factor time series.
 
-    This time series generates a triangular wave, commonly used to define
-    time-dependent loads or ground motion records in OpenSees models.
-    It's defined by its start time, end time, period, a factor for amplitude,
-    and a phase shift.
+    This time series generates a triangular wave between ``tStart`` and
+    ``tEnd``. It is useful for cyclic or piecewise-linear load-factor histories
+    in dynamic analyses.
 
     Tcl form:
         ``timeSeries Triangular <tag> <tStart> <tEnd> <period>
         -factor <factor> -shift <shift>``
 
     Attributes:
-        tag: Manager-assigned identifier after the object is added to a Femora
-            manager.
+        tStart: Start time of the triangular wave.
+        tEnd: End time of the triangular wave.
+        period: Wave period.
+        factor: Scale factor for wave amplitude.
+        shift: Phase shift applied to the wave.
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
-        # Create a triangular time series starting at 0, ending at 10, with period 2
-        ts = model.timeSeries.triangular(
+        model = Model()
+        ts = model.time_series.triangular(
             tStart=0.0,
             tEnd=10.0,
             period=2.0,
             factor=1.5,
-            shift=0.5
+            shift=0.5,
         )
+        pattern = model.pattern.plain(time_series=ts)
         print(ts.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,
@@ -45,19 +52,18 @@ class TriangularTimeSeries(TimeSeries):
         factor: float = 1.0,
         shift: float = 0.0,
     ):
-        """Initialize a TriangularTimeSeries instance.
+        """Create a triangular time series.
 
         Args:
-            tStart: The start time of the triangular wave.
-            tEnd: The end time of the triangular wave.
-            period: The period of the triangular wave.
-            factor: A scaling factor applied to the wave amplitude.
-            shift: A phase shift applied to the wave.
+            tStart: Start time of the triangular wave.
+            tEnd: End time of the triangular wave.
+            period: Period of the triangular wave.
+            factor: Scale factor applied to the wave amplitude.
+            shift: Phase shift applied to the wave.
 
         Raises:
-            ValueError: If any numeric argument is non-numeric,
-                ``tStart`` is greater than or equal to ``tEnd``,
-                or ``period`` is less than or equal to 0.
+            ValueError: If numeric arguments are invalid, if ``tStart`` is not
+                less than ``tEnd``, or if ``period`` is not positive.
         """
         super().__init__("Triangular")
         self.tStart = as_float(tStart, "tStart")
@@ -71,11 +77,13 @@ class TriangularTimeSeries(TimeSeries):
             raise ValueError("period must be greater than 0")
 
     def to_tcl(self) -> str:
-        """Render this time series as an OpenSees Tcl command string.
+        """Render this time series as an OpenSees Tcl command.
 
         Returns:
-            A string representing the OpenSees Tcl command for this triangular
-            time series.
+            str: Tcl ``timeSeries Triangular`` command for this object.
+
+        Raises:
+            ValueError: If this time series has not been added to a manager.
         """
         return (
             f"timeSeries Triangular {self._require_tag()} "

@@ -29,21 +29,29 @@ class RectangularPatch(PatchBase):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
+        import femora.components.section.fiber  # noqa: F401
 
-        model = fm.Model()
-        mat = model.material.create_material("Uniaxial", "Steel01", user_name="S", Fy=50.0, E=29000.0, b=0.01)
-        
-        # FiberSection uses RectangularPatch internally via add_rectangular_patch
-        section = model.section.create_section("Fiber", user_name="MyFiberSection")
+        model = Model()
+        mat = model.material.uniaxial.elastic(user_name="Core", E=3600.0)
+        section = model.section.fiber.section(user_name="PatchSection")
         section.add_rectangular_patch(
             material=mat,
-            num_subdiv_y=4, num_subdiv_z=8,
-            y1=-5.0, z1=-10.0,
-            y2=5.0, z2=10.0
+            num_subdiv_y=4,
+            num_subdiv_z=8,
+            y1=-5.0,
+            z1=-10.0,
+            y2=5.0,
+            z2=10.0,
         )
+        print(section.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__", "estimate_fiber_count"],
+    }
 
     def __init__(self, material: Union[int, str, Material], num_subdiv_y: int, num_subdiv_z: int,
                  y1: float, z1: float, y2: float, z2: float):
@@ -117,7 +125,7 @@ class RectangularPatch(PatchBase):
         """Render the patch as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string.
+            str: Indented Tcl ``patch rect`` command for this patch.
         """
         return f"    patch rect {self.material.tag} {self.num_subdiv_y} {self.num_subdiv_z} {self.y1} {self.z1} {self.y2} {self.z2}"
 
@@ -154,20 +162,26 @@ class QuadrilateralPatch(PatchBase):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
+        import femora.components.section.fiber  # noqa: F401
 
-        model = fm.Model()
-        mat = model.material.create_material("Uniaxial", "Steel01", user_name="S", Fy=50.0, E=29000.0, b=0.01)
-        
-        # FiberSection uses QuadrilateralPatch internally via add_quadrilateral_patch
-        section = model.section.create_section("Fiber", user_name="MyFiberSection")
+        model = Model()
+        mat = model.material.uniaxial.elastic(user_name="Core", E=3600.0)
+        section = model.section.fiber.section(user_name="QuadPatchSection")
         section.add_quadrilateral_patch(
             material=mat,
-            num_subdiv_ij=4, num_subdiv_jk=4,
-            vertices=[(0,0), (10,0), (10,10), (0,10)]
+            num_subdiv_ij=4,
+            num_subdiv_jk=4,
+            vertices=[(0, 0), (10, 0), (10, 10), (0, 10)],
         )
+        print(section.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__", "estimate_fiber_count"],
+    }
 
     def __init__(self, material: Union[int, str, Material], num_subdiv_ij: int, num_subdiv_jk: int,
                  vertices: List[Tuple[float, float]]):
@@ -240,7 +254,7 @@ class QuadrilateralPatch(PatchBase):
         """Render the patch as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string.
+            str: Indented Tcl ``patch quad`` command for this patch.
         """
         coords = []
         for y, z in self.vertices:
@@ -285,21 +299,29 @@ class CircularPatch(PatchBase):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
+        import femora.components.section.fiber  # noqa: F401
 
-        model = fm.Model()
-        mat = model.material.create_material("Uniaxial", "Concrete01", user_name="C", fpc=-4.0, epsc0=-0.002, fpcu=0.0, epscu=-0.005)
-        
-        # FiberSection uses CircularPatch internally via add_circular_patch
-        section = model.section.create_section("Fiber", user_name="MyFiberSection")
+        model = Model()
+        mat = model.material.uniaxial.elastic(user_name="Core", E=3600.0)
+        section = model.section.fiber.section(user_name="CircPatchSection")
         section.add_circular_patch(
             material=mat,
-            num_subdiv_circ=8, num_subdiv_rad=4,
-            y_center=0.0, z_center=0.0,
-            int_rad=0.0, ext_rad=10.0
+            num_subdiv_circ=8,
+            num_subdiv_rad=4,
+            y_center=0.0,
+            z_center=0.0,
+            int_rad=0.0,
+            ext_rad=10.0,
         )
+        print(section.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__", "estimate_fiber_count", "is_solid"],
+    }
 
     def __init__(self, material: Union[int, str, Material], num_subdiv_circ: int, num_subdiv_rad: int,
                  y_center: float, z_center: float, int_rad: float, ext_rad: float,
@@ -396,7 +418,7 @@ class CircularPatch(PatchBase):
         """Render the patch as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string.
+            str: Indented Tcl ``patch circ`` command for this patch.
         """
         cmd = f"    patch circ {self.material.tag} {self.num_subdiv_circ} {self.num_subdiv_rad} "
         cmd += f"{self.y_center} {self.z_center} {self.int_rad} {self.ext_rad} {self.start_ang} {self.end_ang}"

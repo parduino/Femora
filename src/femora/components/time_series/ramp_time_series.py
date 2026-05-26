@@ -5,9 +5,9 @@ from femora.core.time_series_base import TimeSeries
 
 
 class RampTimeSeries(TimeSeries):
-    """Represent an OpenSees ``Ramp`` time series.
+    """Ramp load-factor time series with optional smoothing.
 
-    This time series defines a ramped load factor history starting at ``tStart``
+    This time series defines a ramped load-factor history starting at ``tStart``
     and transitioning over ``tRamp`` with optional smoothing, offset, and scale
     controls.
 
@@ -16,25 +16,32 @@ class RampTimeSeries(TimeSeries):
         -offset <offset> -factor <cFactor>``
 
     Attributes:
-        tag: Manager-assigned identifier after the time series is added to
-            ``model.timeSeries``.
-        series_type: OpenSees time-series type name.
+        tStart: Start time of the ramp.
+        tRamp: Duration of the ramp.
+        smoothness: Smoothness parameter in the inclusive range ``[0, 1]``.
+        offset: Vertical offset applied to the ramp.
+        cFactor: Scale factor applied to the ramp amplitude.
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
-        ts = model.timeSeries.ramp(
+        model = Model()
+        ts = model.time_series.ramp(
             tStart=0.0,
             tRamp=2.0,
             smoothness=0.1,
-            offset=0.0,
             cFactor=1.0,
         )
+        pattern = model.pattern.plain(time_series=ts)
         print(ts.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,
@@ -70,7 +77,10 @@ class RampTimeSeries(TimeSeries):
         """Render this time series as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string for this ``Ramp`` time series.
+            str: Tcl ``timeSeries Ramp`` command for this object.
+
+        Raises:
+            ValueError: If this time series has not been added to a manager.
         """
         return (
             f"timeSeries Ramp {self._require_tag()} {self.tStart} {self.tRamp}"

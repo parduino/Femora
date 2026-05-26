@@ -1,3 +1,16 @@
+"""Element component package for Femora.
+
+This package contains runtime finite-element definitions that are created
+through [ElementManager][femora.core.element_manager.ElementManager] and
+exported to OpenSees Tcl as ``element`` commands. Components are grouped into
+beam, brick, quadrilateral, and special-purpose families.
+
+Normal runtime usage should go through a [Model][femora.core.model.Model]
+instance and its element manager entry points, such as
+``model.element.beam.*``, ``model.element.brick.*``, ``model.element.quad.*``,
+and ``model.element.special.*``.
+"""
+
 from femora.core.element_base import Element
 from .ssp_brick import SSPbrickElement
 from .ssp_quad import SSPQuadElement

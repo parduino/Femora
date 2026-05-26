@@ -6,6 +6,18 @@ from femora.core.load_base import Load
 
 
 def _require_numeric(name: str, value: Any) -> float:
+    """Validate and convert a value to a float.
+
+    Args:
+        name: Name of the parameter/field for validation reporting.
+        value: The value to convert.
+
+    Returns:
+        The validated float value.
+
+    Raises:
+        ValueError: If the value cannot be converted to a float.
+    """
     try:
         return float(value)
     except (TypeError, ValueError) as exc:
@@ -13,7 +25,45 @@ def _require_numeric(name: str, value: Any) -> float:
 
 
 class ElementLoad(Load):
-    """Element load for the OpenSees ``eleLoad`` command."""
+    """Element load component for applying distributed or point loads to elements.
+
+    ElementLoad represents a line or point load applied along the length of
+    beam-column elements. It is commonly used in plain load patterns to represent
+    gravity, uniform pressure, or point loads.
+
+    Tcl form:
+        For uniform loads:
+            ``eleLoad -ele <tags> -type -beamUniform <Wy> <Wz> <Wx>``
+        For point loads:
+            ``eleLoad -ele <tags> -type -beamPoint <Py> <Pz> <xL> <Px>``
+
+    Note:
+        - The `kind` must be either `'beamUniform'` or `'beamPoint'`.
+        - Uniform load (`beamUniform`) requires parameter `Wy`, while `Wz` and `Wx` are optional.
+        - Point load (`beamPoint`) requires `Py` and `xL` (relative position along the element from node I, between 0.0 and 1.0), while `Pz` and `Px` are optional.
+        - The elements can be specified using a list of explicit tags (`ele_tags`), an index range (`ele_range`), or an `element_mask`.
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        ts = model.time_series.constant(factor=1.0)
+        pattern = model.pattern.plain(time_series=ts)
+
+        # Apply a uniform vertical load of -10.0 along the local y-axis of element 2
+        load = pattern.add_load.element(
+            kind="beamUniform",
+            ele_tags=[2],
+            params={"Wy": -10.0},
+        )
+        ```
+    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,
@@ -25,6 +75,22 @@ class ElementLoad(Load):
         element_mask: Optional[object] = None,
         pid: Optional[int] = None,
     ) -> None:
+        """Create an element load component.
+
+        Args:
+            kind: Type of element load. Must be either `'beamUniform'` or `'beamPoint'`.
+            params: Dictionary of load parameters. For `'beamUniform'`: `Wy`
+                (required), `Wz` (optional), `Wx` (optional). For `'beamPoint'`:
+                `Py` (required), `xL` (required, relative distance from node I),
+                `Pz` (optional), `Px` (optional).
+            ele_tags: Optional list of explicit element tags.
+            ele_range: Optional tuple of `(start, end)` element tags defining a range.
+            element_mask: Optional ElementMask object to apply the load to.
+            pid: Optional processor partition ID for parallel execution.
+
+        Raises:
+            ValueError: If constructor arguments are invalid or conflict.
+        """
         super().__init__()
 
         kind = str(kind).strip()
@@ -102,6 +168,11 @@ class ElementLoad(Load):
         self.element_mask = element_mask
 
     def _selector_tcl(self) -> str:
+        """Format the element selection arguments for OpenSees Tcl.
+
+        Returns:
+            The selector flags string (e.g. "-ele 1 2 3" or "-range 1 5").
+        """
         if self.ele_tags is not None:
             tags_str = " ".join(str(e) for e in self.ele_tags)
             return f"-ele {tags_str}"
@@ -110,6 +181,11 @@ class ElementLoad(Load):
         return f"-range {start} {end}"
 
     def to_tcl(self) -> str:
+        """Render this element load component as OpenSees Tcl commands.
+
+        Returns:
+            The OpenSees eleLoad command string.
+        """
         if self.element_mask is not None:
             ids = self.element_mask.to_list()
             tags = self.element_mask.to_tags()

@@ -1,4 +1,12 @@
-"""Fiber-section public API."""
+"""Fiber section components and discretization helpers for Femora.
+
+This subpackage contains general fiber sections plus patch, layer, and fiber
+building blocks used to discretize arbitrary cross sections.
+
+Normal runtime usage should go through ``model.section.fiber.<factory>(...)`` on
+a [Model][femora.core.model.Model] instance, for example
+``model.section.fiber.section(...)`` or ``model.section.fiber.rc(...)``.
+"""
 
 from femora.core.section_manager import SectionManager
 from femora.components.section.fiber.element import FiberElement

@@ -27,24 +27,24 @@ class ParallelSection(Section):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
+        import femora.components.section.composite  # noqa: F401
+        import femora.components.section.beam  # noqa: F401
 
-        model = fm.Model()
-        # Create two different sections
+        model = Model()
         sec1 = model.section.beam.elastic(user_name="Primary", E=29000.0, A=10.0, Iz=100.0)
         sec2 = model.section.beam.elastic(user_name="Secondary", E=29000.0, A=2.0, Iz=20.0)
-
-        # Combine them in parallel
         combined = model.section.composite.parallel(
             user_name="CompositeMember",
-            sections=[sec1, sec2]
+            sections=[sec1, sec2],
         )
+        print(combined.tag)
         ```
     """
 
     __doc_controls__ = {
-        "show_docstring_attributes": False,
-        "members": ["__init__", "add_section", "to_tcl", "get_materials"],
+        "show_docstring_attributes": True,
+        "members": ["__init__", "add_section"],
     }
 
     def __init__(self, user_name: str = "Unnamed", *, sections: Optional[List[Union[int, str, "Section"]]] = None):
@@ -87,7 +87,10 @@ class ParallelSection(Section):
         """Render the section as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string.
+            str: Tcl command string for this section.
+
+        Raises:
+            ValueError: If this section has not been added to a manager.
         """
         section_tags = " ".join(str(sec.tag) for sec in self.sections)
         return f"section Parallel {self._require_tag()} {section_tags}; # {self.user_name}"

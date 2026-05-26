@@ -9,21 +9,36 @@ from femora.core.region_base import RegionBase
 
 
 class GlobalRegion(RegionBase):
+    """A special region representing the entire structural model.
+
+    GlobalRegion represents the entire finite element model as a single region.
+    It is pre-instantiated by the region manager and assigned a reserved tag of `0`.
+    It is typically used to apply global Rayleigh or modal damping.
+
+    Tcl form:
+        None (renders as an empty string since it is the global default).
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        # Retrieve the pre-defined global region
+        glob_reg = model.region.global_region
+        print(glob_reg.tag)  # 0
+        ```
     """
-    A special region representing the entire structural model.
-    
-    GlobalRegion represents the entire model as a region.
-    It is typically assigned tag 0.
-    
-    Args:
-        damping (Damping, optional): Damping behavior to assign to this region
-    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__", "get_type"],
+    }
+
     def __init__(self, damping: Damping = None):
-        """
-        Initialize the global region.
-        
+        """Initialize the global region.
+
         Args:
-            damping (Damping, optional): Damping behavior to assign to this region
+            damping: Optional Damping component to assign globally.
         """
         super().__init__(user_name="GlobalRegion", damping=damping)
         self.elements = None
@@ -32,38 +47,71 @@ class GlobalRegion(RegionBase):
         self.node_range = None
 
     def to_tcl(self) -> str:
-        """
-        TCL representation for global region.
-        
+        """Render this global region as an OpenSees Tcl command.
+
         Returns:
-            str: TCL command string for the global region
+            An empty string as the global region represents the default scope.
         """
         return ""
 
     @staticmethod
     def get_type() -> str:
-        """
-        Get the type name of the global region.
-        
+        """Get the type name of the region.
+
         Returns:
-            str: Always returns "GlobalRegion"
+            The string "GlobalRegion".
         """
         return "GlobalRegion"
-    
+
 
 class ElementRegion(RegionBase):
+    """A region defined by a set of elements or a range of element tags.
+
+    ElementRegion groups a collection of elements (specified as an explicit list
+    or tag range) into a named structural region. This is useful for assigning
+    element-specific damping models (such as Rayleigh damping) in OpenSees.
+
+    Tcl form:
+        ``region <tag> -ele <eleTags...>`` or ``region <tag> -eleRange <start> <end>``
+
+    Note:
+        - Only one of `elements` or `element_range` can be provided.
+        - Renders with `-eleOnly` or `-eleRangeOnly` if `element_only` is set to `True`.
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        # Create an element-based region for elements 1 to 10
+        reg = model.region.element(
+            user_name="story_one_elements",
+            element_range=[1, 10],
+        )
+        print(reg.tag)
+        ```
     """
-    A region defined by a set of elements or an element range.
-    
-    Parameters:
-        damping (Damping, optional): Damping behavior to assign to this region
-        **kwargs: Additional parameters including:
-            user_name (str, optional): Name of the region
-            elements (list[int], optional): List of element IDs
-            element_range (list[int], optional): Start and end of an element range [start, end]
-            element_only (bool, optional): If True, includes only the specified elements
-    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__", "get_type"],
+    }
+
     def __init__(self, damping: Damping = None, **kwargs):
+        """Create an element-based region.
+
+        Args:
+            damping: Optional Damping component to assign to the elements in this region.
+            **kwargs: Key-value arguments including:
+                user_name: Unique name of the region.
+                elements: Optional list or array of explicit element tags.
+                element_range: Optional list/tuple of two integers `[start, end]`.
+                element_only: Optional boolean. If True, includes only the elements.
+
+        Raises:
+            ValueError: If both `elements` and `element_range` are specified, or if
+                the input formats are invalid.
+        """
         user_name = kwargs.pop("user_name", kwargs.pop("name", None))
         super().__init__(user_name=user_name, damping=damping)
         self.elements = []
@@ -89,9 +137,14 @@ class ElementRegion(RegionBase):
             self.element_range = list(element_range) if element_range is not None else []
             self.element_only = bool(element_only)
 
-    def to_tcl(self):
-        """
-        Generate TCL representation for the ElementRegion.
+    def to_tcl(self) -> str:
+        """Render this element region as OpenSees Tcl commands.
+
+        Returns:
+            The Tcl command string.
+
+        Raises:
+            ValueError: If the region is not currently managed.
         """
         if self.tag is None:
             raise ValueError(f"Region '{self.user_name}' must be managed before rendering TCL")
@@ -113,7 +166,7 @@ class ElementRegion(RegionBase):
         cmd += "\""
         return cmd
     
-    def __str__(self):
+    def __str__(self) -> str:
         res = super().__str__()
         res += f"\n\tNum of Elements: {len(self.elements)}"
         res += f"\n\tElement Range: {self.element_range}"
@@ -122,14 +175,62 @@ class ElementRegion(RegionBase):
 
     @staticmethod
     def get_type() -> str:
+        """Get the region type name.
+
+        Returns:
+            The string "ElementRegion".
+        """
         return "ElementRegion"
 
 
 class NodeRegion(RegionBase):
+    """A region defined by a set of nodes or a range of node tags.
+
+    NodeRegion groups a collection of nodes (specified as a list or a tag range)
+    into a named structural region. This allows targeted assignments such as node-based
+    recorders or specialized damping properties in OpenSees.
+
+    Tcl form:
+        ``region <tag> -node <nodeTags...>`` or ``region <tag> -nodeRange <start> <end>``
+
+    Note:
+        - Only one of `nodes` or `node_range` can be provided.
+        - Renders with `-nodeOnly` or `-nodeRangeOnly` if `node_only` is set to `True`.
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        # Create a node-based region for node tags 1, 2, and 3
+        reg = model.region.node(
+            user_name="foundation_nodes",
+            nodes=[1, 2, 3],
+        )
+        print(reg.tag)
+        ```
     """
-    A region defined by a set of nodes or a node range.
-    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__", "get_type"],
+    }
+
     def __init__(self, damping: Damping = None, **kwargs):
+        """Create a node-based region.
+
+        Args:
+            damping: Optional Damping component to assign.
+            **kwargs: Key-value arguments including:
+                user_name: Unique name of the region.
+                nodes: Optional list or array of explicit node tags.
+                node_range: Optional list/tuple of two integers `[start, end]`.
+                node_only: Optional boolean. If True, includes only the nodes.
+
+        Raises:
+            ValueError: If both `nodes` and `node_range` are specified, or if
+                the input formats are invalid.
+        """
         user_name = kwargs.pop("user_name", kwargs.pop("name", None))
         super().__init__(user_name=user_name, damping=damping)
         self.nodes = []
@@ -155,7 +256,15 @@ class NodeRegion(RegionBase):
             self.node_range = list(node_range) if node_range is not None else []
             self.node_only = bool(node_only)
 
-    def to_tcl(self):
+    def to_tcl(self) -> str:
+        """Render this node region as OpenSees Tcl commands.
+
+        Returns:
+            The Tcl command string.
+
+        Raises:
+            ValueError: If the region is not currently managed.
+        """
         if self.tag is None:
             raise ValueError(f"Region '{self.user_name}' must be managed before rendering TCL")
             
@@ -174,7 +283,7 @@ class NodeRegion(RegionBase):
                 cmd += f" -damp {self.damping.tag}"
         return cmd
     
-    def __str__(self):
+    def __str__(self) -> str:
         res = super().__str__()
         res += f"\n\tNum of Nodes: {len(self.nodes)}"
         res += f"\n\tNode Range: {self.node_range}"
@@ -182,12 +291,16 @@ class NodeRegion(RegionBase):
 
     @staticmethod
     def get_type() -> str:
+        """Get the region type name.
+
+        Returns:
+            The string "NodeRegion".
+        """
         return "NodeRegion"
+
 
 from femora.core.region_manager import RegionManager
 
 def initialize_region_base():
     """No-op for compatibility."""
     pass
-
-

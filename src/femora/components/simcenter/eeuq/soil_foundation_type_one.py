@@ -7,6 +7,39 @@ def soil_foundation_type_one(model_filename="model.tcl",
                              info_file=None,
                              EEUQ=False,
                              plotting=False):
+    """Generate a soil-foundation-structure interaction model for SimCenter EE-UQ.
+
+    This function builds a complete OpenSees soil-structure-interaction finite element 
+    model containing horizontally-layered linear elastic soil domains, a rigid foundation 
+    slab block, and pile groups. It can either accept explicit dictionaries or load them 
+    from a SimCenter-style JSON info file.
+
+    Args:
+        model_filename: Filename for the generated OpenSees TCL script. Defaults to "model.tcl".
+        structure_info: Optional dictionary defining structural parameters like bays, columns, 
+            beams, and stories.
+        soil_info: Optional dictionary containing soil layers and material properties.
+        foundation_info: Optional dictionary defining the foundation dimensions and material.
+        pile_info: Optional dictionary specifying pile layouts and contact parameters.
+        info_file: Optional path to a JSON configuration file containing both structural 
+            and soil-foundation details (overrides explicit dictionaries if provided).
+        EEUQ: If True, adapts paths and configs for the SimCenter EE-UQ environment. 
+            Defaults to False.
+        plotting: If True, launches the model plotting utility. Defaults to False.
+
+    Example:
+        ```python
+        from femora.components.simcenter.eeuq.soil_foundation_type_one import soil_foundation_type_one
+
+        # Load parameters from JSON and generate the model
+        soil_foundation_type_one(
+            model_filename="my_ssi_model.tcl",
+            info_file="building_soil_info.json",
+            EEUQ=True,
+            plotting=False,
+        )
+        ```
+    """
     # This model creates a soil profile and foundation for a custom building,
     # designed for use in the EE-UQ application.
     # Developed by Amin Pakzad, University of Washington.
@@ -129,14 +162,15 @@ def soil_foundation_type_one(model_filename="model.tcl",
     # ============================================================================
     # import libraries
     # ============================================================================
-    import femora as fm 
+    from femora.core.model import Model
     import os
     import sys
     import numpy as np
     import pyvista as pv
     import meshlib.mrmeshpy as mr
-    
-    fm.set_results_folder("Results")
+
+    model = Model()
+    model.set_results_folder("Results")
 
     # ==========================================================================
     # change the grid piles to single piles
@@ -861,7 +895,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
             E   = mat_props[0]
             nu  = mat_props[1]
             rho = mat_props[2]
-            mat = fm.material.nd.elastic_isotropic(user_name="Soil_Layer_" + str(layer_index+1),
+            mat = model.material.nd.elastic_isotropic(user_name="Soil_Layer_" + str(layer_index+1),
                                             E=E, nu=nu, rho=rho)
         else:
             print("Error: material " + material + " is not implemented yet for soil layer index : " + str(layer_index+1))
@@ -869,7 +903,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
         
 
         # create the element
-        elem = fm.element.brick.std(ndof=3, 
+        elem = model.element.brick.std(ndof=3, 
                                     material=mat,
                                     b1=soil_info["gravity_x"]*rho,
                                     b2=soil_info["gravity_y"]*rho,
@@ -883,10 +917,10 @@ def soil_foundation_type_one(model_filename="model.tcl",
             xi_s = damping_props[0]
             f1   = damping_props[1]
             f2   = damping_props[2]
-            damp = fm.damping.frequency_rayleigh(damping_factor=xi_s, f1=f1, f2=f2)
-        reg = fm.region.element(damping=damp)
+            damp = model.damping.frequency_rayleigh(damping_factor=xi_s, f1=f1, f2=f2)
+        reg = model.region.element(damping=damp)
 
-        fm.meshpart.general.external_mesh(
+        model.meshpart.general.external_mesh(
                             user_name=f"SoilLayer_{layer_index+1}",
                             element=elem,
                             region=reg,
@@ -910,14 +944,14 @@ def soil_foundation_type_one(model_filename="model.tcl",
             E   = mat_props[0]
             nu  = mat_props[1]
             rho = mat_props[2]
-            mat = fm.material.nd.elastic_isotropic(user_name="Foundation_" + str(foundation_index+1),
+            mat = model.material.nd.elastic_isotropic(user_name="Foundation_" + str(foundation_index+1),
                                             E=E, nu=nu, rho=rho)
         else:
             print("Error: material " + material + " is not implemented yet for foundation index : " + str(foundation_index+1))
             sys.exit(1)
         
         # create the element
-        elem = fm.element.brick.std(ndof=3, 
+        elem = model.element.brick.std(ndof=3, 
                                     material=mat,
                                     b1=foundation_info["gravity_x"]*rho,
                                     b2=foundation_info["gravity_y"]*rho,
@@ -930,12 +964,12 @@ def soil_foundation_type_one(model_filename="model.tcl",
             xi_s = damping_props[0]
             f1   = damping_props[1]
             f2   = damping_props[2]
-            damp = fm.damping.frequency_rayleigh(damping_factor=xi_s, f1=f1, f2=f2)
+            damp = model.damping.frequency_rayleigh(damping_factor=xi_s, f1=f1, f2=f2)
         else:
             print("Error: damping " + damping + " is not implemented yet for foundation index : " + str(foundation_index+1))
             sys.exit(1)
-        reg = fm.region.element(damping=damp)
-        fm.meshpart.general.external_mesh(
+        reg = model.region.element(damping=damp)
+        model.meshpart.general.external_mesh(
                             user_name=f"Foundation_{foundation_index+1}",
                             element=elem,
                             region=reg,
@@ -966,7 +1000,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
         mat_props = pile["mat_props"]
 
         transformation = pile.get("transformation", ["Linear", 0.0, 1.0, 0.0])
-        transf = fm.transformation.transformation3d(
+        transf = model.transformation.transformation3d(
             transf_type=transformation[0],
             vecxz_x=transformation[1],
             vecxz_y=transformation[2],
@@ -991,7 +1025,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
             except: 
                 print("Error: material properties are not valid for pile index : " + str(pile_index+1))
                 sys.exit(1)
-            pile_section = fm.section.elastic(
+            pile_section = model.section.elastic(
                 user_name="PileSection_" + str(pile_index+1),
                 E=E, A=A, Iy=Iy, Iz=Iz, G=G, J=J
             )
@@ -999,13 +1033,13 @@ def soil_foundation_type_one(model_filename="model.tcl",
             print("Error: material " + material + " or section " + section_type + " is not implemented yet for pile index : " + str(pile_index+1))
             sys.exit(1)
 
-        pile_ele = fm.element.beam.disp(
+        pile_ele = model.element.beam.disp(
         ndof=6,
         section=pile_section,
         transformation=transf,
         numIntgrPts=5,
         )
-        pile_mesh_part = fm.meshpart.line.single_line(
+        pile_mesh_part = model.meshpart.line.single_line(
         user_name="Pile_" + str(pile_index+1),
         element=pile_ele,
         region=None,
@@ -1023,7 +1057,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
         n_p = pile_info["pile_interface"]["num_points_on_perimeter"]
         n_l = pile_info["pile_interface"]["num_points_along_length"]
         pp = pile_info["pile_interface"]["penalty_parameter"]
-        fm.interface.beam_solid_interface(
+        model.interface.beam_solid_interface(
             name = "Pile-Solid_Interface_" + str(pile_index+1),
             beam_part = "Pile_" + str(pile_index+1),
             solid_parts = None,  # No solid part specified
@@ -1048,7 +1082,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
         z_top = z
         z_bot = z - foundation_info.get("column_embedment_depth")
         transformation = ["Linear", 0.0, 1.0, 0.0]
-        transf = fm.transformation.transformation3d(
+        transf = model.transformation.transformation3d(
                     transf_type=transformation[0],
                     vecxz_x=transformation[1],
                     vecxz_y=transformation[2],
@@ -1066,18 +1100,18 @@ def soil_foundation_type_one(model_filename="model.tcl",
         except:
             print("Error: column section properties are not valid")
             sys.exit(1)
-        column_section = fm.section.elastic(
+        column_section = model.section.elastic(
                 user_name="columnSection_" + str(col_index+1),
                 E=E, A=A, Iy=Iy, Iz=Iz, G=G, J=J
             )
         column_sections.append(column_section)
-        column_ele = fm.element.beam.disp(
+        column_ele = model.element.beam.disp(
             ndof=6,
             section=column_section,
             transformation=transf,
             numIntgrPts=3,
         )
-        column_mesh_part = fm.meshpart.line.single_line(
+        column_mesh_part = model.meshpart.line.single_line(
             user_name="BaseColumn_" + str(col_index+1),
             element=column_ele,
             region=None,
@@ -1095,7 +1129,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
         n_l = 6
         pp = pile_info["pile_interface"]["penalty_parameter"]
         radius = 0.1
-        fm.interface.beam_solid_interface(
+        model.interface.beam_solid_interface(
             name = "BaseColumn-Solid_Interface_" + str(col_index+1),
             beam_part = "BaseColumn_" + str(col_index+1),
             solid_parts = None,  # No solid part specified  
@@ -1112,14 +1146,14 @@ def soil_foundation_type_one(model_filename="model.tcl",
     # Assembling the model
     # ============================================================================
     foundation_pile_sections = pile_sections + foundation_sections + base_column_sections
-    fm.assembler.create_section(foundation_pile_sections, 
+    model.assembler.create_section(foundation_pile_sections, 
                                 num_partitions=foundation_info["num_partitions"],
                                 partition_algorithm="kd-tree",
                                 merge_points=True,
                                 tolerance=1e-3,
                                 mass_merging="sum")
 
-    fm.assembler.create_section(soil_sections, 
+    model.assembler.create_section(soil_sections, 
                                 num_partitions=soil_info["num_partitions"],
                                 partition_algorithm="kd-tree",
                                 merge_points=True,
@@ -1128,7 +1162,7 @@ def soil_foundation_type_one(model_filename="model.tcl",
 
 
     if soil_info["boundary_conditions"] == "DRM":
-        fm.interface.boundary.absorber(
+        model.interface.boundary.absorber(
             numLayers=soil_info["DRM_options"].get("number_of_layers"),
             numPartitions=soil_info["DRM_options"].get("num_partitions"),
             partitionAlgo="kd-tree",
@@ -1138,22 +1172,22 @@ def soil_foundation_type_one(model_filename="model.tcl",
             type=soil_info["DRM_options"].get("absorbing_layer_type", "Rayleigh"),
         )
 
-    fm.assembler.assemble(merge_points=False)
+    model.assembler.assemble(merge_points=False)
 
 
     # %%
     # ============================================================================
     # set the start tags to push the numberings
-    fm.material.set_material_tag_start(20000)
-    fm.transformation.set_tag_start(30000)
-    fm.section.set_tag_start(40000)
-    fm.damping.set_start_tag(45000)
+    model.material.set_material_tag_start(20000)
+    model.transformation.set_tag_start(30000)
+    model.section.set_tag_start(40000)
+    model.damping.set_start_tag(45000)
 
 
     # node tag start and element tag start
-    fm.Model().set_nodetag_start(500000)
-    fm.Model().set_eletag_start( 600000)
-    fm.Model().set_start_core_tag(structure_info.get("num_partitions"))
+    model.set_nodetag_start(500000)
+    model.set_eletag_start( 600000)
+    model.set_start_core_tag(structure_info.get("num_partitions"))
     # ============================================================================
     # boundary conditions
     # ============================================================================
@@ -1168,18 +1202,18 @@ def soil_foundation_type_one(model_filename="model.tcl",
                 z_max = layer["z_top"]
 
         z_min = z_min + 5e-2  # adding a small tolerance
-        fm.constraint.mp.create_laminar_boundary(bounds=(z_min, z_max),
+        model.constraint.mp.create_laminar_boundary(bounds=(z_min, z_max),
                                                 dofs=[1,2,3], 
                                                 direction=3)
-        fm.constraint.sp.fixMacroZmin(dofs=[1,1,1],
+        model.constraint.sp.fixMacroZmin(dofs=[1,1,1],
                                     tol=1e-3)
     elif soil_info["boundary_conditions"] == "DRM":
         dofsVals = [1,1,1,1,1,1,1,1,1]
-        fm.constraint.sp.fixMacroXmax(dofs=dofsVals)
-        fm.constraint.sp.fixMacroXmin(dofs=dofsVals)
-        fm.constraint.sp.fixMacroYmax(dofs=dofsVals)
-        fm.constraint.sp.fixMacroYmin(dofs=dofsVals)
-        fm.constraint.sp.fixMacroZmin(dofs=dofsVals)
+        model.constraint.sp.fixMacroXmax(dofs=dofsVals)
+        model.constraint.sp.fixMacroXmin(dofs=dofsVals)
+        model.constraint.sp.fixMacroYmax(dofs=dofsVals)
+        model.constraint.sp.fixMacroYmin(dofs=dofsVals)
+        model.constraint.sp.fixMacroZmin(dofs=dofsVals)
 
 
     # ============================================================================
@@ -1187,11 +1221,11 @@ def soil_foundation_type_one(model_filename="model.tcl",
     # ============================================================================
     # if plotting true retun the soil, foundation and pile mesh
     if plotting:
-        mesh =fm.assembler.get_mesh()
-        pile_mesh_tags = [fm.meshpart.get(name).tag for name in pile_sections]
-        foundation_mesh_tags = [fm.meshpart.get(name).tag for name in foundation_sections]
-        soil_mesh_tags = [fm.meshpart.get(name).tag for name in soil_sections]
-        MeshTag = fm.assembled_mesh.cell_data["MeshPartTag_celldata"]
+        mesh =model.assembler.get_mesh()
+        pile_mesh_tags = [model.meshpart.get(name).tag for name in pile_sections]
+        foundation_mesh_tags = [model.meshpart.get(name).tag for name in foundation_sections]
+        soil_mesh_tags = [model.meshpart.get(name).tag for name in soil_sections]
+        MeshTag = model.assembled_mesh.cell_data["MeshPartTag_celldata"]
         pile_mesh = mesh.extract_cells(np.isin(MeshTag, pile_mesh_tags))
         foundation_mesh = mesh.extract_cells(np.isin(MeshTag, foundation_mesh_tags))
         soil_mesh = mesh.extract_cells(np.isin(MeshTag, soil_mesh_tags))
@@ -1204,9 +1238,9 @@ def soil_foundation_type_one(model_filename="model.tcl",
     # gravity analysis
     newmark_gamma = 0.6
     newnark_beta = (newmark_gamma + 0.5)**2 / 4
-    elastic_update = fm.actions.update_material_stage_to_elastic()
-    dampNewmark = fm.analysis.integrator.newmark(gamma=newmark_gamma, beta=newnark_beta)
-    gravity_elastic = fm.actions.tcl("""
+    elastic_update = model.actions.update_material_stage_to_elastic()
+    dampNewmark = model.analysis.integrator.newmark(gamma=newmark_gamma, beta=newnark_beta)
+    gravity_elastic = model.actions.tcl("""
 if {$pid == 0} {puts [string repeat "=" 120] }
 if {$pid == 0} {puts "Starting analysis : defualtTransient_gravity_elastic"}
 if {$pid == 0} {puts [string repeat "=" 120] }
@@ -1226,8 +1260,8 @@ while { $AnalysisStep < 30} {
 wipeAnalysis"""
 )
 
-    plastic_update = fm.actions.update_material_stage_to_plastic()
-    gravity_plastic = fm.actions.tcl("""
+    plastic_update = model.actions.update_material_stage_to_plastic()
+    gravity_plastic = model.actions.tcl("""
 if {$pid == 0} {puts [string repeat "=" 120] }
 if {$pid == 0} {puts "Starting analysis : defualtTransient_gravity_plastic"}
 if {$pid == 0} {puts [string repeat "=" 120] }
@@ -1307,19 +1341,19 @@ proc Femora_getNodeCoordFrom {structureCores embeddedCore nTag secTag eleTag enT
         col_coord = np.array([col["x"], col["y"], col["z"]])
         col_tag = col["tag"]
         name = "BaseColumn_" + str(col_index+1)
-        mesh_part = fm.meshpart.get(name)
+        mesh_part = model.meshpart.get(name)
         if mesh_part is None:
             print("Error: mesh part " + name + " not found.")
             sys.exit(1)
         mesh_part_tag = mesh_part.tag
-        mesh_part_cells = fm.assembled_mesh.cell_data["MeshPartTag_celldata"] == mesh_part_tag
+        mesh_part_cells = model.assembled_mesh.cell_data["MeshPartTag_celldata"] == mesh_part_tag
         mesh_part_cell  = np.where(mesh_part_cells)[0]
         mesh_part_points = []
         for cell_id in mesh_part_cell:
-            mesh_part_points.append(fm.assembled_mesh.get_cell(cell_id).point_ids)
+            mesh_part_points.append(model.assembled_mesh.get_cell(cell_id).point_ids)
         mesh_part_points = np.unique(np.hstack(mesh_part_points))
         # find the point with the minimum z value and maximum z value
-        points = fm.assembled_mesh.points[mesh_part_points]
+        points = model.assembled_mesh.points[mesh_part_points]
         z_min_index = np.argmin(points[:,2])
         z_max_index = np.argmax(points[:,2])
         z_min_point = points[z_min_index]
@@ -1329,8 +1363,8 @@ proc Femora_getNodeCoordFrom {structureCores embeddedCore nTag secTag eleTag enT
         z_min_index = mesh_part_points[z_min_index]
         z_max_index = mesh_part_points[z_max_index]
 
-        z_min_index = z_min_index + fm._instance._start_nodetag
-        z_max_index = z_max_index + fm._instance._start_nodetag
+        z_min_index = z_min_index + model._start_nodetag
+        z_max_index = z_max_index + model._start_nodetag
 
         # print(f"Column {col_index+1}: z_min_point = {z_min_point}, z_max_point = {z_max_point}")
         # print(f"Column {col_index+1}: column = {col}")
@@ -1343,14 +1377,14 @@ proc Femora_getNodeCoordFrom {structureCores embeddedCore nTag secTag eleTag enT
             sys.exit(1)
 
 
-        connection_core = fm.assembled_mesh.cell_data["Core"][mesh_part_cell]
+        connection_core = model.assembled_mesh.cell_data["Core"][mesh_part_cell]
         connection_core = np.unique(connection_core)
         if len(connection_core) > 1:
             print("Error: column " + str(col_index+1) + " is spanning multiple cores. This is not supported yet.")
             sys.exit(1)
 
         connection_core = np.unique(connection_core)[0]
-        connection_core += fm._instance._start_core_tag
+        connection_core += model._start_core_tag
         tcl_command += f"set tmpTag [expr [getFemoraMax eleTag] + 1]\n"
         tcl_command += f"Femora_getNodeCoordFrom {structure_info.get('num_partitions')} {connection_core} {col_tag} {column_sections[col_index].tag} $tmpTag {z_max_index}\n\n"
 
@@ -1364,7 +1398,7 @@ proc Femora_getNodeCoordFrom {structureCores embeddedCore nTag secTag eleTag enT
         # tcl_command += "barrier\n\n"
 
         
-    connection = fm.actions.tcl(tcl_command)
+    connection = model.actions.tcl(tcl_command)
 
 
 
@@ -1384,7 +1418,7 @@ proc Femora_getNodeCoordFrom {structureCores embeddedCore nTag secTag eleTag enT
             structure_tcl = "if {$pid < %d} {\n" % structure_numpartitions
             structure_tcl += structure_data
             structure_tcl += "\n}\n"
-            structure_tcl_action = fm.actions.tcl(structure_tcl)
+            structure_tcl_action = model.actions.tcl(structure_tcl)
             del structure_data 
             del structure_tcl
         except Exception as e:
@@ -1397,13 +1431,13 @@ proc Femora_getNodeCoordFrom {structureCores embeddedCore nTag secTag eleTag enT
 
     # ============================================================================
     # recorder
-    recorder = fm.recorder.vtkhdf(file_base_name="result.vtkhdf",
+    recorder = model.recorder.vtkhdf(file_base_name="result.vtkhdf",
                                             resp_types=["stress3D6", "disp"], 
                                             delta_t=0.001)
 
     # ============================================================================
     # 
-    tmptcl = fm.actions.tcl("""
+    tmptcl = model.actions.tcl("""
 # =======================================================================================
 # Uniform Excitation (Northridge record) ======================================
 # Time Series ======================================
@@ -1449,15 +1483,15 @@ while {[getTime] < $endTime} {
     # =============================================================================
     # process
     # =============================================================================
-    fm.process.add_step(structure_tcl_action, description="Import structure model from tcl file")
-    fm.process.add_step(connection,      description="Create connections between base columns and foundation")
-    fm.process.add_step(elastic_update,  description="Update material to elastic")
-    fm.process.add_step(gravity_elastic, description="Gravity analysis in elastic regime")
-    fm.process.add_step(plastic_update,  description="Update material to plastic")
-    fm.process.add_step(gravity_plastic, description="Gravity analysis in plastic regime")
-    # fm.process.add_step(recorder,        description="Recorder")
-    # fm.process.add_step(tmptcl,          description="Dynamic analysis with ground motion")
-    # fm.process.add_step(fm.actions.tcl("exit"), description="Exit")
+    model.process.add_step(structure_tcl_action, description="Import structure model from tcl file")
+    model.process.add_step(connection,      description="Create connections between base columns and foundation")
+    model.process.add_step(elastic_update,  description="Update material to elastic")
+    model.process.add_step(gravity_elastic, description="Gravity analysis in elastic regime")
+    model.process.add_step(plastic_update,  description="Update material to plastic")
+    model.process.add_step(gravity_plastic, description="Gravity analysis in plastic regime")
+    # model.process.add_step(recorder,        description="Recorder")
+    # model.process.add_step(tmptcl,          description="Dynamic analysis with ground motion")
+    # model.process.add_step(model.actions.tcl("exit"), description="Exit")
 
 
 
@@ -1485,18 +1519,18 @@ while {[getTime] < $endTime} {
         
 
 
-    if fm.assembled_mesh is None:
+    if model.assembled_mesh is None:
         print("Error: Assembled mesh is None. Cannot export the model.")
         sys.exit(1)
     from femora.components.event.event_bus import FemoraEvent
     from femora.components.Element.elementBase import Element
 
-    self = fm._instance
+    self = model
     with open(model_filename, 'w') as f:
         # Inform interfaces that we are about to export
         self.events.emit(FemoraEvent.PRE_EXPORT, 
                     file_handle=f, 
-                    assembled_mesh=fm.assembled_mesh)
+                    assembled_mesh=model.assembled_mesh)
 
         # f.write("wipe\n")
         f.write("model BasicBuilder -ndm 3\n")
@@ -1774,7 +1808,7 @@ while {[getTime] < $endTime} {
     # # ============================================================================
     # # ploting each core separately
     # # ============================================================================
-    # mesh = fm.assembler.get_mesh()
+    # mesh = model.assembler.get_mesh()
     # cores = np.unique(mesh.cell_data["Core"])
     # print("Number of cores: ", len(cores))
     # print("Number of cells: ", mesh.n_cells)
@@ -1787,7 +1821,7 @@ while {[getTime] < $endTime} {
     # #     pl.show(title="Core " + str(core))
 
     # center = np.array(mesh.center)
-    # assmesh = fm.assembler.get_mesh()
+    # assmesh = model.assembler.get_mesh()
     # mesh = pv.MultiBlock()
     # for core in cores:
     #     part = assmesh.extract_cells(assmesh.cell_data["Core"] == core)
@@ -1811,7 +1845,7 @@ while {[getTime] < $endTime} {
     #     structure_part = pv.read(strucure_mesh)
     #     pl = pv.Plotter()
     #     pl.add_mesh(structure_part, style='wireframe', color="black", line_width=3, opacity=1.0)
-    #     pl.add_mesh(fm.assembled_mesh, show_edges=True, opacity=1.0, scalars="Core", multi_colors=True)
+    #     pl.add_mesh(model.assembled_mesh, show_edges=True, opacity=1.0, scalars="Core", multi_colors=True)
     #     pl.show(title="Structure and Soil")
     
 
@@ -1819,7 +1853,7 @@ while {[getTime] < $endTime} {
 
 
 
-    # fm.assembler.plot(show_edges=True, 
+    # model.assembler.plot(show_edges=True, 
     #                 opacity=1.0, 
     #                 scalars="Core",
     #                 multi_colors=True, 
@@ -2043,6 +2077,9 @@ if __name__ == "__main__":
             "penalty_parameter": 1.0e12
         },
     }
+
+
+
 
 
 

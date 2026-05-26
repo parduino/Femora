@@ -5,30 +5,43 @@ from femora.core.time_series_base import TimeSeries
 
 
 class RectangularTimeSeries(TimeSeries):
-    """OpenSees ``Rectangular`` time series.
+    """Rectangular-wave load-factor time series.
 
-    Represents a rectangular wave (or square wave) time series, often used in dynamic
-    analysis for excitations that are constant for a period and then change.
-    It applies a load factor that transitions between 0 and `factor` at defined
-    time intervals based on the start time, end time, and period.
+    This time series applies a load factor that switches between zero and
+    ``factor`` over repeating intervals defined by ``tStart``, ``tEnd``, and
+    ``period``.
 
     Tcl form:
         ``timeSeries Rectangular <tag> <tStart> <tEnd> <period>
         -shift <shift> -factor <factor>``
 
+    Attributes:
+        tStart: Start time when the wave first becomes active.
+        tEnd: End time when the wave last remains active.
+        period: Duration of one rectangular-wave cycle.
+        factor: Load-factor amplitude when the wave is active.
+        shift: Phase shift applied to the wave.
+
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
-        # Create a rectangular time series that applies a factor of 1.5
-        # between t=0.2 and t=1.2, repeating every 0.5 units.
-        ts = model.timeSeries.rectangular(
-            tStart=0.2, tEnd=1.2, period=0.5, factor=1.5
+        model = Model()
+        ts = model.time_series.rectangular(
+            tStart=0.2,
+            tEnd=1.2,
+            period=0.5,
+            factor=1.5,
         )
+        pattern = model.pattern.plain(time_series=ts)
         print(ts.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,
@@ -41,18 +54,15 @@ class RectangularTimeSeries(TimeSeries):
         """Create a rectangular wave time series.
 
         Args:
-            tStart: Start time of the wave, determining when the factor first
-                becomes active.
-            tEnd: End time of the wave, determining when the factor last
-                becomes active.
-            period: The period of the rectangular wave (duration of one cycle).
-            factor: The amplitude of the load factor when the wave is "on".
-            shift: A phase shift for the wave, moving its effective start
-                relative to `tStart`.
+            tStart: Start time when the wave first becomes active.
+            tEnd: End time when the wave last remains active.
+            period: Duration of one rectangular-wave cycle.
+            factor: Load-factor amplitude when the wave is active.
+            shift: Phase shift applied to the wave.
 
         Raises:
-            ValueError: If numeric arguments are invalid, `tStart` is greater
-                than or equal to `tEnd`, or `period` is less than or equal to 0.
+            ValueError: If numeric arguments are invalid, if ``tStart`` is not
+                less than ``tEnd``, or if ``period`` is not positive.
         """
         super().__init__("Rectangular")
         self.tStart = as_float(tStart, "tStart")
@@ -69,7 +79,10 @@ class RectangularTimeSeries(TimeSeries):
         """Render this time series as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string for this time series.
+            str: Tcl ``timeSeries Rectangular`` command for this object.
+
+        Raises:
+            ValueError: If this time series has not been added to a manager.
         """
         return (
             f"timeSeries Rectangular {self._require_tag()} "

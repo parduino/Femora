@@ -9,7 +9,12 @@ import pyvista as pv
 
 
 class PartitionerError(RuntimeError):
-    """Raised when a partitioning method fails or returns invalid output."""
+    """Raised when a partitioning method fails or returns invalid output.
+
+    This exception is raised when validation of partitioner output formats, min/max 
+    indices, or array shapes fails, or if METIS is requested but pymetis is not 
+    available.
+    """
 
 
 PartitionerFunc = Callable[[pv.UnstructuredGrid, int], np.ndarray]
@@ -22,11 +27,35 @@ class _RegisteredPartitioner:
 
 
 class PartitionerRegistry:
-    """Registry for Femora mesh partitioners.
+    """Registry and manager for Femora mesh partitioners.
 
-    A partitioner maps a mesh's cells to integer partition ids in
-    ``[0, num_partitions-1]``.
+    This registry maintains a collection of partitioner algorithms (both built-in 
+    and optional dependency-based, like METIS) that map a PyVista UnstructuredGrid's 
+    mesh cells to integer partition IDs in `[0, num_partitions - 1]`.
+
+    Attributes:
+        _partitioners (Dict[str, _RegisteredPartitioner]): Internal registry map 
+            storing registered partitioner functions and their availability checks.
+
+    Example:
+        ```python
+        import pyvista as pv
+        from femora.components.partitioner.partitioner import PartitionerRegistry
+
+        # Construct a simple VTK grid and partition its cells
+        grid = pv.UnstructuredGrid(...)
+        labels = PartitionerRegistry.partition(
+            grid,
+            num_partitions=4,
+            partitioner="hilbert",
+        )
+        ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["register", "get_available_types", "validate", "partition"],
+    }
 
     _partitioners: Dict[str, _RegisteredPartitioner] = {}
 
@@ -37,6 +66,18 @@ class PartitionerRegistry:
         *,
         is_available: Optional[Callable[[], bool]] = None,
     ) -> None:
+        """Register a custom partitioner algorithm in Femora.
+
+        Args:
+            name: Unique string identifier for the partitioner (case-insensitive).
+            func: A callable of type PartitionerFunc mapping a PyVista UnstructuredGrid 
+                and partition count to a 1D NumPy array of cell partition IDs.
+            is_available: Optional callback returning True if the partitioner's 
+                system dependencies are met. Defaults to None (always available).
+
+        Raises:
+            ValueError: If `name` is empty or whitespace-only.
+        """
         key = name.strip().lower()
         if not key:
             raise ValueError("Partitioner name cannot be empty")
@@ -47,6 +88,16 @@ class PartitionerRegistry:
 
     @staticmethod
     def get_available_types(*, include_unavailable: bool = False) -> List[str]:
+        """Get the names of all registered partitioner algorithms.
+
+        Args:
+            include_unavailable: If True, returns all registered algorithms 
+                even if their external library dependencies (like pymetis) are 
+                missing. Defaults to False.
+
+        Returns:
+            List[str]: A sorted list of registered partitioner name keys.
+        """
         if include_unavailable:
             return sorted(PartitionerRegistry._partitioners.keys())
         return sorted(
@@ -57,6 +108,15 @@ class PartitionerRegistry:
 
     @staticmethod
     def validate(name: str) -> None:
+        """Validate if a partitioner name is registered and available.
+
+        Args:
+            name: The case-insensitive name of the partitioner to validate.
+
+        Raises:
+            ValueError: If the partitioner name is not registered.
+            ImportError: If the partitioner requires missing external dependencies.
+        """
         key = name.strip().lower()
         if key not in PartitionerRegistry._partitioners:
             raise ValueError(
@@ -77,6 +137,24 @@ class PartitionerRegistry:
         partitioner: str = "kd-tree",
         **kwargs: Any,
     ) -> np.ndarray:
+        """Partition a mesh's cells into a specified number of balanced domains.
+
+        Args:
+            mesh: The PyVista UnstructuredGrid representing the global assembled mesh.
+            num_partitions: Target number of partitions/cores (must be >= 1).
+            partitioner: Registered case-insensitive name of the partitioning algorithm 
+                to use. Defaults to "kd-tree".
+            **kwargs: Extra parameters passed to the underlying partitioner function.
+
+        Returns:
+            np.ndarray: A 1D integer NumPy array of shape `(mesh.n_cells,)` mapping 
+                each cell index to a partition ID in `[0, num_partitions - 1]`.
+
+        Raises:
+            ValueError: If `num_partitions` is less than 1.
+            PartitionerError: If the partitioning function fails, returns an incorrect 
+                array shape, or produces out-of-bound partition IDs.
+        """
         if num_partitions < 1:
             raise ValueError(f"num_partitions must be >= 1. Got {num_partitions}.")
 
@@ -103,11 +181,31 @@ class PartitionerRegistry:
 
 
 def _cell_centers(mesh: pv.UnstructuredGrid) -> np.ndarray:
+    """Extract the centroid coordinates for all cells in a mesh.
+
+    Args:
+        mesh: The PyVista UnstructuredGrid to query.
+
+    Returns:
+        np.ndarray: A 2D float NumPy array of shape `(mesh.n_cells, 3)` containing 
+            the centroid coordinates.
+    """
     centers = mesh.cell_centers()
     return np.asarray(centers.points, dtype=float)
 
 
 def _balanced_labels_from_sorted_order(sorted_cell_ids: np.ndarray, num_partitions: int) -> np.ndarray:
+    """Assign cells to nearly-equal balanced partition chunks based on a sorted order.
+
+    Args:
+        sorted_cell_ids: A 1D integer NumPy array of cell indices sorted along 
+            a space-filling curve or coordinate direction.
+        num_partitions: The target number of partitions.
+
+    Returns:
+        np.ndarray: A 1D integer NumPy array mapping each cell index to its 
+            balanced partition ID.
+    """
     n = int(sorted_cell_ids.size)
     labels = np.empty(n, dtype=int)
     # Partition indices into nearly-equal chunks.
@@ -122,7 +220,18 @@ def _balanced_labels_from_sorted_order(sorted_cell_ids: np.ndarray, num_partitio
 
 
 def _partition_kd_tree(mesh: pv.UnstructuredGrid, num_partitions: int) -> np.ndarray:
-    """Simple KD-tree partitioning using recursive bisection of cell centers."""
+    """Partition a mesh using a recursive spatial KD-tree bisection of cell centers.
+
+    Args:
+        mesh: The PyVista UnstructuredGrid to partition.
+        num_partitions: The target number of partition domains.
+
+    Returns:
+        np.ndarray: A 1D integer NumPy array of cell partition IDs.
+
+    Raises:
+        PartitionerError: If recursive bisection fails to assign all cells.
+    """
     pts = _cell_centers(mesh)
     n_cells = pts.shape[0]
     if n_cells == 0:
@@ -166,7 +275,21 @@ def _partition_kd_tree(mesh: pv.UnstructuredGrid, num_partitions: int) -> np.nda
 
 
 def _partition_geometric(mesh: pv.UnstructuredGrid, num_partitions: int) -> np.ndarray:
-    """Geometric recursive coordinate bisection (RCB) of cell centers."""
+    """Partition a mesh using Recursive Coordinate Bisection (RCB) of cell centroids.
+
+    This method recursively bisects the cell centers along the coordinate axis exhibiting
+    the largest spatial variance in coordinate coordinates.
+
+    Args:
+        mesh: The PyVista UnstructuredGrid to partition.
+        num_partitions: The target number of partition domains.
+
+    Returns:
+        np.ndarray: A 1D integer NumPy array of cell partition IDs.
+
+    Raises:
+        PartitionerError: If recursive coordinate bisection fails to assign all cells.
+    """
     pts = _cell_centers(mesh)
     n_cells = pts.shape[0]
     if n_cells == 0:
@@ -205,12 +328,17 @@ def _partition_geometric(mesh: pv.UnstructuredGrid, num_partitions: int) -> np.n
 
 
 def _morton_key_ints(coords: np.ndarray) -> np.ndarray:
-    """Compute 64-bit Morton (Z-order) keys for 3D integer coordinates.
+    """Compute 64-bit Morton (Z-order) keys for 3D quantized integer coordinates.
 
-    Note:
-        This is a 21-bit-per-axis Morton code (63 bits total) packed into
-        ``uint64``. Inputs are expected to be in ``[0, 2**21-1]``; the partitioner
-        quantizes coordinates accordingly.
+    This function spreads 21 bits per axis (63 bits total) to pack them into a
+    64-bit unsigned integer Morton key.
+
+    Args:
+        coords: A 2D unsigned integer NumPy array of shape `(N, 3)` with coordinates 
+            quantized to `[0, 2**21 - 1]`.
+
+    Returns:
+        np.ndarray: A 1D `uint64` NumPy array containing Morton index keys.
     """
     coords = coords.astype(np.uint64, copy=False)
     x = coords[:, 0]
@@ -232,6 +360,18 @@ def _morton_key_ints(coords: np.ndarray) -> np.ndarray:
 
 
 def _partition_morton(mesh: pv.UnstructuredGrid, num_partitions: int) -> np.ndarray:
+    """Partition a mesh using Morton (Z-order) space-filling curve sorting.
+
+    This method computes 3D Morton keys for quantized cell centroids, sorts the 
+    cells by their keys, and chunks them into nearly-equal balanced partition domains.
+
+    Args:
+        mesh: The PyVista UnstructuredGrid to partition.
+        num_partitions: The target number of partition domains.
+
+    Returns:
+        np.ndarray: A 1D integer NumPy array of cell partition IDs.
+    """
     pts = _cell_centers(mesh)
     n_cells = pts.shape[0]
     if n_cells == 0:
@@ -254,12 +394,15 @@ def _partition_morton(mesh: pv.UnstructuredGrid, num_partitions: int) -> np.ndar
 
 
 def _hilbert_c2i(p: int, x: List[int]) -> int:
-    """Convert n-D coordinates to a 1D Hilbert index.
+    """Convert 3D integer coordinates to a 1D Hilbert index using Skilling's algorithm.
 
-    This uses a direct implementation of the well-known Skilling algorithm.
-    Here we only use n=3.
+    Args:
+        p: Bit depth per coordinate axis.
+        x: A list of 3 integer coordinates representing (x, y, z).
+
+    Returns:
+        int: The 1D Hilbert index key.
     """
-
     n = len(x)
     x = x[:]  # local copy
     M = 1 << (p - 1)
@@ -298,18 +441,18 @@ def _hilbert_c2i(p: int, x: List[int]) -> int:
 
 
 def _hilbert_keys_3d(q: np.ndarray, p: int) -> np.ndarray:
-    """Vectorized 3D Hilbert index for integer coordinates.
+    """Vectorized 3D Hilbert index computation for integer coordinates.
 
     Args:
-        q: Array of shape (N, 3) with integer coordinates in ``[0, 2**p - 1]``.
+        q: A 2D NumPy array of shape `(N, 3)` containing integer coordinates 
+            in `[0, 2**p - 1]`.
         p: Number of bits per axis.
 
     Returns:
-        Array of shape (N,) with ``uint64`` Hilbert indices.
+        np.ndarray: A 1D `uint64` NumPy array containing Hilbert index keys.
 
-    Note:
-        This is a vectorized form of the Skilling coordinate-to-index algorithm
-        used in `_hilbert_c2i`, avoiding per-point Python loops.
+    Raises:
+        ValueError: If coordinate array shape is not `(N, 3)`.
     """
     q = np.asarray(q)
     if q.ndim != 2 or q.shape[1] != 3:
@@ -376,6 +519,19 @@ def _hilbert_keys_3d(q: np.ndarray, p: int) -> np.ndarray:
 
 
 def _partition_hilbert(mesh: pv.UnstructuredGrid, num_partitions: int) -> np.ndarray:
+    """Partition a mesh using a 3D Hilbert space-filling curve centroid sort.
+
+    Cell centroids are quantized and converted to 1D Hilbert keys using a highly 
+    efficient vectorized Skilling algorithm. Cells are then sorted and partitioned 
+    into balanced domains.
+
+    Args:
+        mesh: The PyVista UnstructuredGrid to partition.
+        num_partitions: The target number of partition domains.
+
+    Returns:
+        np.ndarray: A 1D integer NumPy array of cell partition IDs.
+    """
     pts = _cell_centers(mesh)
     n_cells = pts.shape[0]
     if n_cells == 0:
@@ -399,10 +555,24 @@ def _partition_hilbert(mesh: pv.UnstructuredGrid, num_partitions: int) -> np.nda
 
 
 def _is_pymetis_available() -> bool:
+    """Check if pymetis library is installed and available in the environment.
+
+    Returns:
+        bool: True if pymetis spec can be found, False otherwise.
+    """
     return importlib.util.find_spec("pymetis") is not None
 
 
 def _build_cell_adjacency(mesh: pv.UnstructuredGrid) -> List[List[int]]:
+    """Build cell face neighbor adjacency lists for graph partitioning.
+
+    Args:
+        mesh: The PyVista UnstructuredGrid to query.
+
+    Returns:
+        List[List[int]]: Adjacency list mapping each cell index to its list of 
+            face-neighbor cell indices.
+    """
     n = int(mesh.n_cells)
     adjacency: List[List[int]] = [[] for _ in range(n)]
     for cell_id in range(n):
@@ -412,6 +582,22 @@ def _build_cell_adjacency(mesh: pv.UnstructuredGrid) -> List[List[int]]:
 
 
 def _partition_metis(mesh: pv.UnstructuredGrid, num_partitions: int) -> np.ndarray:
+    """Partition a mesh graph using METIS K-way nodal or graph partitioning.
+
+    This is a high-performance graph partitioner leveraging METIS. It minimizes edge cuts 
+    and ensures balanced domains. Requires the optional `pymetis` library.
+
+    Args:
+        mesh: The PyVista UnstructuredGrid to partition.
+        num_partitions: The target number of partition domains.
+
+    Returns:
+        np.ndarray: A 1D integer NumPy array of cell partition IDs.
+
+    Raises:
+        ImportError: If pymetis is not installed in the environment.
+        PartitionerError: If METIS fails or returns incorrect arrays.
+    """
     if not _is_pymetis_available():
         raise ImportError("pymetis is required for the 'metis' partitioner")
 

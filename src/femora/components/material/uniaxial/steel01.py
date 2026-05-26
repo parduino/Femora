@@ -24,17 +24,15 @@ class Steel01Material(Material):
           as OpenSees expects.
         - If the isotropic hardening set is omitted, the Tcl command ends after ``b``.
         - Stray keyword arguments are ignored to keep factory calls forward compatible.
-        - This material is typically created through
-          :meth:`~femora.core.uniaxial_material_manager.UniaxialMaterialManager.steel01`.
 
     Attributes:
-        - ``params``: Holds ``Fy``, ``E0``, ``b``, and optional ``a1`` to ``a4``.
+        params: Holds ``Fy``, ``E0``, ``b``, and optional ``a1`` to ``a4``.
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
+        model = Model()
         mat = model.material.uniaxial.steel01(
             user_name="A992",
             Fy=345.0,
@@ -44,6 +42,11 @@ class Steel01Material(Material):
         print(mat.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,
@@ -61,15 +64,15 @@ class Steel01Material(Material):
         """Validate yield, stiffness, and optional isotropic hardening inputs.
 
         Args:
-            - user_name: Unique Femora and OpenSees material label surfaced in Tcl.
-            - Fy: Yield strength, strictly positive after coercion.
-            - E0: Initial elastic modulus, strictly positive.
-            - b: Post-yield stiffness ratio ``E_ep / E0``, non-negative.
-            - a1: Isotropic coefficient for compression envelope widening.
-            - a2: Isotropic exponent paired with ``a1``.
-            - a3: Isotropic coefficient for tension envelope widening.
-            - a4: Isotropic exponent paired with ``a3``.
-            - **_: Ignored keyword cushioning.
+            user_name: Unique Femora and OpenSees material label surfaced in Tcl.
+            Fy: Yield strength, strictly positive after coercion.
+            E0: Initial elastic modulus, strictly positive.
+            b: Post-yield stiffness ratio ``E_ep / E0``, non-negative.
+            a1: Isotropic coefficient for compression envelope widening.
+            a2: Isotropic exponent paired with ``a1``.
+            a3: Isotropic coefficient for tension envelope widening.
+            a4: Isotropic exponent paired with ``a3``.
+            **_: Ignored keyword cushioning.
 
         Raises:
             ValueError: If ``Fy``, ``E0``, or ``b`` is missing.

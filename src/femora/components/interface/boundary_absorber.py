@@ -41,6 +41,27 @@ def _normalize_absorber_kwargs(
     progress_callback: Optional[Callable] = None,
     **legacy_kwargs,
 ) -> dict:
+    """Normalize and validate keyword arguments for boundary absorber creation.
+
+    Args:
+        num_layers: Number of absorbing cell layers.
+        num_partitions: Number of domain partitions/cores for parallel processing.
+        partition_algo: Partitioning algorithm. Must be "kd-tree" or "metis".
+        geometry: Boundary layer geometry. Must be "Rectangular" or "Cylindrical".
+        boundary_type: Boundary absorber formulation type. One of "PML", "Rayleigh", or "ASDA".
+        rayleigh_damping: Rayleigh damping factor. Defaults to 0.95.
+        match_damping: If True, matches existing model damping rather than applying new.
+        progress_callback: Optional callback receiving float values to track progress.
+        **legacy_kwargs: Legacy snakeCase/camelCase arguments for backward compatibility.
+
+    Returns:
+        A dictionary of normalized and validated parameter values.
+
+    Raises:
+        TypeError: If required parameters are missing.
+        ValueError: If argument values are mathematically invalid or unsupported.
+        NotImplementedError: If unsupported experimental formulations are requested.
+    """
     num_layers = num_layers if num_layers is not None else legacy_kwargs.get("numLayers")
     num_partitions = num_partitions if num_partitions is not None else legacy_kwargs.get("numPartitions")
     partition_algo = partition_algo if partition_algo is not None else legacy_kwargs.get("partitionAlgo")
@@ -97,7 +118,23 @@ def _normalize_absorber_kwargs(
 
 
 def apply_rectangular_absorbing_layer(mesh_maker: "Model", config: dict) -> bool:
-    """Apply a registered rectangular absorbing layer to the assembled mesh."""
+    """Apply a registered rectangular absorbing layer to the assembled mesh.
+
+    This function augments the assembled PyVista grid with PML or Rayleigh absorbing
+    layers at the model boundaries (left, right, front, back, bottom) and registers
+    the corresponding OpenSees elements and node constraints.
+
+    Args:
+        mesh_maker: The Model instance whose assembled mesh is to be augmented.
+        config: Dictionary containing normalized absorber parameters.
+
+    Returns:
+        True if the absorbing boundary was applied successfully.
+
+    Raises:
+        ValueError: If no assembled mesh is found, if partitioning parameters are 
+            inconsistent, or if boundary element types or materials are incompatible.
+    """
     if mesh_maker.assembled_mesh is None:
         raise ValueError("No mesh found\n Please assemble the mesh first")
 

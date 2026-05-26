@@ -53,29 +53,34 @@ class FiberSection(Section):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
+        import femora.components.section.fiber  # noqa: F401
 
-        model = fm.Model()
-        concr = model.material.uniaxial.concrete01(user_name="Concrete", fpc=-4.0, epsc0=-0.002)
-        steel = model.material.uniaxial.steel01(user_name="Steel", Fy=60.0, E=29000.0, b=0.01)
-
-        # Create a rectangular reinforced concrete section
+        model = Model()
+        concr = model.material.uniaxial.elastic(user_name="Concrete", E=3600.0)
+        steel = model.material.uniaxial.steel01(
+            user_name="Steel",
+            Fy=60.0,
+            E0=29000.0,
+            b=0.01,
+        )
         sec = model.section.fiber.section(user_name="RC_Beam", GJ=1000.0)
-        
-        # Add concrete core
-        sec.add_rectangular_patch(material=concr, num_subdiv_y=10, num_subdiv_z=10, 
-                                  y1=-5, z1=-5, y2=5, z2=5)
-        
-        # Add longitudinal reinforcement (4 bars at corners)
+        sec.add_rectangular_patch(
+            material=concr,
+            num_subdiv_y=10,
+            num_subdiv_z=10,
+            y1=-5,
+            z1=-5,
+            y2=5,
+            z2=5,
+        )
         sec.add_fiber(y_loc=-4.5, z_loc=-4.5, area=0.44, material=steel)
-        sec.add_fiber(y_loc=4.5, z_loc=-4.5, area=0.44, material=steel)
-        sec.add_fiber(y_loc=-4.5, z_loc=4.5, area=0.44, material=steel)
-        sec.add_fiber(y_loc=4.5, z_loc=4.5, area=0.44, material=steel)
+        print(sec.tag)
         ```
     """
 
     __doc_controls__ = {
-        "show_docstring_attributes": False,
+        "show_docstring_attributes": True,
         "members": [
             "__init__",
             "add_fiber",
@@ -84,17 +89,12 @@ class FiberSection(Section):
             "add_circular_patch",
             "add_straight_layer",
             "add_circular_layer",
-            "to_tcl",
-            "get_materials",
             "get_area",
             "get_Iy",
             "get_Iz",
             "get_J",
-            "clear_all",
             "plot",
-            "plot_components",
-            "generate_material_colors",
-            "calculate_scale_factor",
+            "clear_all",
         ],
     }
 
@@ -320,7 +320,10 @@ class FiberSection(Section):
         """Render the complete Fiber section command block.
 
         Returns:
-            Tcl command string including all nested fiber/patch/layer commands.
+            str: Tcl command block including nested fiber, patch, and layer commands.
+
+        Raises:
+            ValueError: If this section has not been added to a manager.
         """
         cmd = f"section Fiber {self._require_tag()}"
         if self.GJ is not None:
@@ -612,7 +615,28 @@ class FiberSection(Section):
         save_path: Optional[str] = None,
         dpi: int = 300,
     ) -> plt.Figure:
-        """Static utility to plot arbitrary fiber section components."""
+        """Static utility to plot arbitrary fiber section components.
+
+        Args:
+            fibers: Individual fiber elements to draw.
+            patches: Patch components to draw.
+            layers: Layer components to draw.
+            ax: Optional Matplotlib axes. If None, a new figure is created.
+            figsize: Figure size for the new plot.
+            show_fibers: Whether to draw small markers at each fiber location.
+            show_patches: Whether to draw filled polygons for patches.
+            show_layers: Whether to draw markers or lines for layers.
+            show_patch_outline: Whether to highlight patch boundaries.
+            show_fiber_grid: Whether to draw internal grid lines for patches.
+            show_layer_line: Whether to draw the center-line of layers.
+            title: Optional plot title.
+            material_colors: Optional map from material names to color strings.
+            save_path: Optional file path to save the image.
+            dpi: Resolution for the saved image.
+
+        Returns:
+            The Matplotlib Figure object.
+        """
         if ax is None:
             fig, ax = plt.subplots(figsize=figsize)
         else:

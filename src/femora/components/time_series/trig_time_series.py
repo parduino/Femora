@@ -5,7 +5,7 @@ from femora.core.time_series_base import TimeSeries
 
 
 class TrigTimeSeries(TimeSeries):
-    """OpenSees ``Trig`` time series.
+    """Sinusoidal load-factor time series for cyclic excitation.
 
     This time series generates a sinusoidal load factor between ``tStart`` and
     ``tEnd``. Use it for cyclic excitation where amplitude, period, and phase
@@ -16,24 +16,33 @@ class TrigTimeSeries(TimeSeries):
         -shift <shift>``
 
     Attributes:
-        tag: Manager-assigned identifier after the object is added to a Femora
-            manager.
+        tStart: Start time of the sinusoidal series.
+        tEnd: End time of the sinusoidal series.
+        period: Period of the sinusoidal cycle.
+        factor: Scale factor for the sinusoidal amplitude.
+        shift: Phase shift applied to the sinusoidal cycle.
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
-        ts = model.timeSeries.trig(
+        model = Model()
+        ts = model.time_series.trig(
             tStart=0.0,
             tEnd=10.0,
             period=2.0,
             factor=1.5,
             shift=0.25,
         )
+        pattern = model.pattern.plain(time_series=ts)
         print(ts.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,
@@ -71,10 +80,10 @@ class TrigTimeSeries(TimeSeries):
         """Render this time series as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string for the trigonometric time series.
+            str: Tcl ``timeSeries Trig`` command for this object.
 
         Raises:
-            ValueError: If this instance has not been assigned a manager tag.
+            ValueError: If this time series has not been added to a manager.
         """
         return (
             f"timeSeries Trig {self._require_tag()} "

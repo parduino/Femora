@@ -7,44 +7,47 @@ from femora.core.pattern_base import Pattern
 
 
 class ImposedMotion:
-    """OpenSees ``imposedMotion`` entry used inside ``MultipleSupport`` blocks.
+    """OpenSees imposedMotion entry used inside MultipleSupport excitation patterns.
 
-    This object represents one support constraint that applies a managed ground
-    motion to a specific node degree of freedom within a
-    ``MultipleSupportPattern``.
+    This class represents one support boundary constraint that applies a prescribed
+    ground motion to a specific node degree-of-freedom within a MultipleSupportPattern.
 
     Tcl form:
         ``imposedMotion <nodeTag> <dof> <groundMotionTag>``
 
-    Attributes:
-        node_tag: Node tag where the support motion is imposed.
-        dof: 1-based degree-of-freedom direction for the imposed motion.
-        ground_motion: Managed ground motion referenced by this entry.
+    Note:
+        - Create this entry through
+          ``MultipleSupportPattern.add_imposed_motion(...)`` rather than by
+          direct construction in normal workflows.
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
-        ts = model.timeSeries.path(dt=0.01, filePath="support.acc")
-        gm = model.groundMotion.plain(accel=ts)
+        model = Model()
+        accel = model.time_series.path(dt=0.01, filePath="support.acc")
+        gm = model.ground_motion.plain(accel=accel)
         pattern = model.pattern.multiple_support()
         imposed = pattern.add_imposed_motion(node_tag=1, dof=1, ground_motion=gm)
         print(imposed.to_tcl())
         ```
     """
 
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
     def __init__(self, node_tag: int, dof: int, ground_motion: GroundMotion):
         """Create an imposed support motion constraint.
 
         Args:
-            node_tag: Node tag where the motion is imposed.
-            dof: 1-based DOF direction.
-            ground_motion: Managed ground motion used as the prescribed motion.
+            node_tag: Tag of the node where the motion is prescribed.
+            dof: 1-based degree-of-freedom direction (e.g., 1 for X, 2 for Y, 3 for Z).
+            ground_motion: Managed ground motion that defines the boundary excitation history.
 
         Raises:
-            ValueError: If ``node_tag`` or ``dof`` is invalid, or if
-                ``ground_motion`` is not managed.
+            ValueError: If node_tag or dof are not positive integers, or if ground_motion is unmanaged.
         """
         try:
             self.node_tag = int(node_tag)
@@ -65,10 +68,10 @@ class ImposedMotion:
         """Render this imposed motion as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string for this ``imposedMotion`` entry.
+            str: Tcl command string for this imposedMotion entry.
 
         Raises:
-            ValueError: If ``ground_motion`` does not currently have a tag.
+            ValueError: If the referenced ground motion does not currently have an assigned tag.
         """
         if self.ground_motion.tag is None:
             raise ValueError("ground_motion must have a tag before rendering imposedMotion")
@@ -76,36 +79,41 @@ class ImposedMotion:
 
 
 class MultipleSupportPattern(Pattern):
-    """OpenSees ``MultipleSupport`` excitation pattern.
+    """OpenSees MultipleSupport excitation pattern for multi-support boundary loading.
 
-    The pattern emits referenced ground-motion definitions followed by the
-    imposed-motion constraints that use them. Referenced ground motions are
-    deduplicated by tag and dependencies of interpolated ground motions are
-    emitted before the interpolated motion itself.
+    This pattern is used to model structures excited by spatially varying ground motions
+    at different support nodes. It contains and manages a collection of ImposedMotion
+    constraints, automatically registering and deduplicating referenced ground motions.
 
     Tcl form:
-        ``pattern MultipleSupport <patternTag> { groundMotion... imposedMotion... }``
+        ``pattern MultipleSupport <patternTag> { <groundMotion...> <imposedMotion...> }``
 
     Note:
-        Ground motions referenced by imposed motions are deduplicated by tag in
-        the rendered Tcl block.
-
-    Attributes:
-        tag: Manager-assigned identifier after the pattern is added to the
-            pattern manager.
+        - Ground motions referenced by the attached imposed motions are automatically registered and deduplicated by tag inside the rendered Tcl command block.
+        - Interpolated ground motions will have their dependencies emitted automatically before the dependent ground motion.
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
-        ts = model.timeSeries.path(dt=0.01, filePath="support.acc")
-        gm = model.groundMotion.plain(accel=ts)
+        model = Model()
+        accel = model.time_series.path(dt=0.01, filePath="support.acc")
+        gm = model.ground_motion.plain(accel=accel)
         pattern = model.pattern.multiple_support()
         pattern.add_imposed_motion(node_tag=10, dof=1, ground_motion=gm)
         print(pattern.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": [
+            "__init__",
+            "add_imposed_motion",
+            "get_imposed_motions",
+            "clear_imposed_motions",
+        ],
+    }
 
     def __init__(self):
         """Create an empty multiple-support excitation pattern."""
@@ -118,18 +126,18 @@ class MultipleSupportPattern(Pattern):
         dof: int,
         ground_motion: GroundMotion,
     ) -> ImposedMotion:
-        """Create and attach an imposed motion to this pattern.
+        """Create and attach an imposed support motion constraint to this pattern.
 
         Args:
-            node_tag: Node tag where the motion is imposed.
-            dof: 1-based DOF direction.
-            ground_motion: Managed ground motion used as the prescribed motion.
+            node_tag: Tag of the node where the support motion is imposed.
+            dof: 1-based degree-of-freedom direction.
+            ground_motion: Managed ground motion defining the prescribed excitation history.
 
         Returns:
-            Created ``ImposedMotion`` instance.
+            ImposedMotion: The created and attached ImposedMotion instance.
 
         Raises:
-            ValueError: If any imposed-motion input fails validation.
+            ValueError: If any input fails validation or if the ground motion belongs to a different Model.
         """
         owner = self._owner
         expected_mesh_maker = getattr(owner, "_mesh_maker", None)
@@ -144,10 +152,10 @@ class MultipleSupportPattern(Pattern):
         return imposed_motion
 
     def get_imposed_motions(self) -> List[ImposedMotion]:
-        """Return imposed motions currently attached to this pattern.
+        """Return the imposed motions currently attached to this pattern.
 
         Returns:
-            Shallow copy of imposed motions in insertion order.
+            List[ImposedMotion]: A shallow copy of attached ImposedMotion instances in insertion order.
         """
         return list(self._imposed_motions)
 
@@ -159,11 +167,10 @@ class MultipleSupportPattern(Pattern):
         """Render this pattern as an OpenSees Tcl block.
 
         Returns:
-            Tcl block containing ``groundMotion`` and ``imposedMotion`` lines.
+            str: Tcl block containing groundMotion and imposedMotion lines.
 
         Raises:
-            ValueError: If the pattern is unmanaged or a referenced ground
-                motion is unmanaged.
+            ValueError: If the pattern is unmanaged or any referenced ground motion is unmanaged.
         """
         lines = [f"pattern MultipleSupport {self._require_tag()} {{"]
         for ground_motion in self._referenced_ground_motions():
@@ -174,11 +181,11 @@ class MultipleSupportPattern(Pattern):
         return "\n".join(lines)
 
     def _referenced_ground_motions(self) -> List[GroundMotion]:
-        """Return referenced ground motions in dependency-safe render order.
+        """Return referenced ground motions in a dependency-safe rendering order.
 
         Returns:
-            Ordered ground motions needed by all imposed motions in this
-            pattern, with dependencies emitted before dependents.
+            List[GroundMotion]: Ordered ground motions needed by all imposed motions in this
+                pattern, ensuring ground motion dependencies are listed before their dependents.
 
         Raises:
             ValueError: If any referenced ground motion is unmanaged.

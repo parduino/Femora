@@ -6,6 +6,19 @@ from femora.core.load_base import Load
 
 
 def _coerce_positive_int(value: Any, field: str) -> int:
+    """Coerce a value to a positive integer.
+
+    Args:
+        value: The value to be converted.
+        field: The name of the field being validated (for error messages).
+
+    Returns:
+        The validated positive integer.
+
+    Raises:
+        ValueError: If the value cannot be converted to a positive integer or
+            is less than 1.
+    """
     try:
         number = int(value)
     except (TypeError, ValueError) as exc:
@@ -16,6 +29,18 @@ def _coerce_positive_int(value: Any, field: str) -> int:
 
 
 def _coerce_load_values(values: Any) -> List[float]:
+    """Coerce input load values to a list of floats.
+
+    Args:
+        values: The load values (list or tuple) to be validated.
+
+    Returns:
+        A list of validated float values.
+
+    Raises:
+        ValueError: If the input is not a non-empty list or tuple of numeric
+            values.
+    """
     if not isinstance(values, (list, tuple)) or len(values) == 0:
         raise ValueError("values must be a non-empty list/tuple of floats")
     try:
@@ -25,6 +50,17 @@ def _coerce_load_values(values: Any) -> List[float]:
 
 
 def _coerce_pids(pids: Any) -> List[int]:
+    """Coerce partition IDs to a sorted list of unique integers.
+
+    Args:
+        pids: The partition IDs (list or tuple) to be validated.
+
+    Returns:
+        A sorted list of unique validated integers.
+
+    Raises:
+        ValueError: If the input is not a list or tuple of integer values.
+    """
     if not isinstance(pids, (list, tuple)):
         raise ValueError("pids must be a list/tuple of integers")
     try:
@@ -34,7 +70,43 @@ def _coerce_pids(pids: Any) -> List[int]:
 
 
 class NodeLoad(Load):
-    """Nodal load for the OpenSees ``load`` command."""
+    """Nodal load component for applying forces or moments to nodes.
+
+    NodeLoad represents a node-based load applied directly to a node's degrees
+    of freedom. It is typically registered under a Plain pattern to represent
+    external static or dynamic excitations.
+
+    Tcl form:
+        ``load <nodeTag> <value1> <value2> ...``
+
+    Note:
+        - The number of specified load values should match the number of degrees
+          of freedom (NDF) at the target node.
+        - If a `node_mask` is provided, the load will be automatically expanded
+          and applied to all selected nodes.
+        - In parallel computing contexts, partition IDs (`pids`) specify which
+          processor core(s) should execute the command.
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        ts = model.time_series.constant(factor=1.0)
+        pattern = model.pattern.plain(time_series=ts)
+
+        # Apply a force of 5.0 in X and -10.0 in Y to node 1
+        load = pattern.add_load.node(
+            node_tag=1,
+            values=[5.0, -10.0],
+        )
+        ```
+    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,
@@ -44,6 +116,21 @@ class NodeLoad(Load):
         node_mask: Optional[object] = None,
         pids: Optional[List[int]] = None,
     ) -> None:
+        """Create a nodal load component.
+
+        Args:
+            values: Nodal force or moment values corresponding to the active
+                degrees of freedom (DOFs) at the node.
+            node_tag: Optional explicit tag of the target node.
+            node_mask: Optional NodeMask object to apply the load to multiple
+                nodes.
+            pids: Optional processor partition IDs for parallel executions.
+
+        Raises:
+            ValueError: If neither `node_tag` nor `node_mask` is specified,
+                if `node_mask` is not a NodeMask instance, or if any input
+                parameter fails validation.
+        """
         super().__init__()
 
         if node_mask is not None:
@@ -64,6 +151,11 @@ class NodeLoad(Load):
         self.node_mask = node_mask
 
     def to_tcl(self) -> str:
+        """Render this load component as OpenSees Tcl commands.
+
+        Returns:
+            The OpenSees load command string(s) for the node(s).
+        """
         def wrap_with_pid_for_node(nid: int, s: str) -> str:
             pids = self.pids
             if self.node_mask is not None and hasattr(self.node_mask._mesh, "node_core_map"):

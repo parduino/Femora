@@ -23,19 +23,15 @@ class DruckerPragerMaterial(Material):
         - ``rhoBar`` is constrained to ``[0, rho]`` by the current validation rules.
         - Coordinate ``atmPressure`` and ``density`` units with the bulk and
           shear modulus units used in the exported model.
-        - Instances are typically created through
-          [~femora.core.nd_material_manager.NDMaterialManager.drucker_prager][]
-          and must be managed before [to_tcl()][femora.materials.nD.drucker_prager.DruckerPragerMaterial.to_tcl]
-          can be called.
 
     Attributes:
-        params (Dict[str, float]): All validated Tcl arguments keyed by parameter name.
+        params: All validated Tcl arguments keyed by parameter name.
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
+        model = Model()
         mat = model.material.nd.drucker_prager(
             user_name="dp_solid",
             k=2.0e5,

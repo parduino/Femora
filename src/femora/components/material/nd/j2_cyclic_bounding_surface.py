@@ -8,11 +8,6 @@ from femora.core.material_base import Material
 
 
 class J2CyclicBoundingSurfaceMaterial(Material):
-    __doc_controls__ = {
-        "show_docstring_attributes": False,
-        "members": ["updateMaterialStage"],
-    }
-
     """Bounding-surface J2 plasticity for undrained cyclic loading.
 
     Combines translational hardening on an inner yield surface with a bounding
@@ -28,7 +23,7 @@ class J2CyclicBoundingSurfaceMaterial(Material):
         - ``beta`` selects explicit (0), implicit (1), or midpoint (0.5)
           integration of the constitutive update.
         - Typical staged workflows use ``elastic`` and ``plastic`` states via
-          [updateMaterialStage][femora.materials.nd_materials.j2_cyclic_bounding_surface.J2CyclicBoundingSurfaceMaterial.updateMaterialStage].
+          ``updateMaterialStage``.
         - ``Den`` may be zero for stiffness-only analyses.
 
     Attributes:
@@ -37,9 +32,9 @@ class J2CyclicBoundingSurfaceMaterial(Material):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
+        model = Model()
         mat = model.material.nd.j2_cyclic_bounding_surface(
             user_name="clay_cyclic",
             G=12000.0,
@@ -55,6 +50,11 @@ class J2CyclicBoundingSurfaceMaterial(Material):
         print(mat.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,
@@ -137,7 +137,7 @@ class J2CyclicBoundingSurfaceMaterial(Material):
         """Render the defining Tcl command with parameters in fixed order.
 
         Returns:
-            Tcl line ``nDMaterial J2CyclicBoundingSurface`` followed by the
+            str: Tcl line ``nDMaterial J2CyclicBoundingSurface`` followed by the
             tag and ``G K Su Den h m h0 chi beta`` values.
 
         Raises:
@@ -156,10 +156,10 @@ class J2CyclicBoundingSurfaceMaterial(Material):
 
         Args:
             state: Case-insensitive stage name. ``"elastic"`` selects stage
-              ``0`` and ``"plastic"`` selects stage ``1``.
+                ``0`` and ``"plastic"`` selects stage ``1``.
 
         Returns:
-            The ``updateMaterialStage`` Tcl snippet for the matched state,
+            str: The ``updateMaterialStage`` Tcl snippet for the matched state,
             or an empty string when ``state`` is unrecognized.
 
         Raises:

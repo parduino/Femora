@@ -7,34 +7,41 @@ from femora.core.time_series_base import TimeSeries
 
 
 class PathTimeSeries(TimeSeries):
-    """OpenSees ``Path`` time series.
+    """Path-based time series for recorded or tabulated histories.
 
-    This time series represents user-defined path data for dynamic loading. It
-    supports value input from inline sequences or files, and time definition
-    through a constant ``dt``, inline time values, or a time file.
+    This time series represents user-defined path data for dynamic loading or
+    ground-motion records. Values may be supplied inline or from a file, and
+    time may be defined through a constant ``dt``, inline time values, or a
+    time file.
 
     Tcl form:
         ``timeSeries Path <tag> <-dt dt | -time {...} | -fileTime file>
         <-values {...} | -filePath file> [options...]``
 
-    Attributes:
-        tag: Manager-assigned identifier after the object is added to a Femora
-            manager.
-        series_type: OpenSees time-series type name.
+    Note:
+        - ``PathTimeSeries`` is the usual input for acceleration histories passed
+          to ``model.ground_motion.plain(...)`` or uniform excitation patterns.
+        - Exactly one value source and exactly one time source must be provided.
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
-        ts = model.timeSeries.path(
+        model = Model()
+        accel = model.time_series.path(
             dt=0.01,
             values=[0.0, 0.1, -0.05, 0.0],
-            factor=9.81,
+            factor=1.0,
         )
-        print(ts.tag)
+        gm = model.ground_motion.plain(accel=accel)
+        print(accel.tag, gm.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,
@@ -98,10 +105,10 @@ class PathTimeSeries(TimeSeries):
         """Render this time series as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string for this time series.
+            str: Tcl ``timeSeries Path`` command for this object.
 
         Raises:
-            ValueError: If this instance has not been assigned a manager tag.
+            ValueError: If this time series has not been added to a manager.
         """
         cmd = f"timeSeries Path {self._require_tag()}"
         if self.dt is not None:

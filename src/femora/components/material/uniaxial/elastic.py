@@ -8,10 +8,6 @@ from femora.core.material_base import Material
 
 
 class ElasticUniaxialMaterial(Material):
-    __doc_controls__ = {
-        "show_docstring_attributes": True,
-        "members": ["__init__"],
-    }
     """One-dimensional elastic stress-strain law with optional asymmetric stiffness.
 
     Suitable for simple bars, trusses, springs, and fiber sections needing a
@@ -23,20 +19,18 @@ class ElasticUniaxialMaterial(Material):
         ``uniaxialMaterial Elastic <tag> E eta Eneg; # user_name``
 
     Note:
-        - Manager ownership is required prior to [to_tcl][femora.uniaxial_materials.elastic.ElasticUniaxialMaterial.to_tcl] so the OpenSees
-          tag can be inserted after ``Elastic``.
+        - Manager ownership is required before Tcl export so the OpenSees tag
+          can be inserted after ``Elastic``.
         - ``Eneg`` defaults to ``E`` when omitted.
-        - This material is typically created through
-          [elastic][femora.core.uniaxial_material_manager.UniaxialMaterialManager.elastic].
 
     Attributes:
         params: Mapping of emitted ``E``, ``eta``, and ``Eneg`` values.
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
+        model = Model()
         mat = model.material.uniaxial.elastic(
             user_name="rebar_truss",
             E=200000.0,
@@ -46,6 +40,11 @@ class ElasticUniaxialMaterial(Material):
         print(mat.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,

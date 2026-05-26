@@ -29,28 +29,25 @@ class AggregatorSection(Section):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
+        import femora.components.section.composite  # noqa: F401
+        import femora.components.section.fiber  # noqa: F401
 
-        model = fm.Model()
-        # Create a fiber section for flexure
-        fiber_sec = model.section.fiber.section(user_name="BendingOnly")
-        # (add patches/fibers to fiber_sec here)
-
-        # Create a linear torsional material
+        model = Model()
+        fiber_sec = model.section.fiber.section(user_name="BendingOnly", GJ=1000.0)
         torsion_mat = model.material.uniaxial.elastic(user_name="TorMat", E=11200.0)
-
-        # Use Aggregator to add torsion to the fiber section
         full_sec = model.section.composite.aggregator(
             user_name="FullSection",
             materials={"T": torsion_mat},
-            base_section=fiber_sec
+            base_section=fiber_sec,
         )
+        print(full_sec.tag)
         ```
     """
 
     __doc_controls__ = {
-        "show_docstring_attributes": False,
-        "members": ["__init__", "add_material", "to_tcl", "get_materials"],
+        "show_docstring_attributes": True,
+        "members": ["__init__", "add_material"],
     }
 
     def __init__(
@@ -112,7 +109,10 @@ class AggregatorSection(Section):
         """Render the section as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string.
+            str: Tcl command string for this section.
+
+        Raises:
+            ValueError: If this section has not been added to a manager.
         """
         mat_pairs: list[str] = []
         for code, material in self.materials.items():

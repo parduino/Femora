@@ -6,38 +6,42 @@ from femora.core.time_series_base import TimeSeries
 
 
 class UniformExcitation(Pattern):
-    """OpenSees ``UniformExcitation`` pattern.
+    """Uniform excitation pattern for identical support motion in one DOF direction.
 
-    This pattern applies one managed acceleration time series to a selected
-    global degree-of-freedom direction. OpenSees reports nodal responses
-    relative to the imposed support motion.
+    This pattern applies one managed acceleration time series as boundary
+    excitation to a selected global degree-of-freedom direction at all support
+    nodes. It references a time series directly rather than a ground motion
+    object.
 
     Tcl form:
-        ``pattern UniformExcitation <tag> <dof> -accel <tsTag>
-        [-vel0 vel0] [-fact factor]``
+        ``pattern UniformExcitation <tag> <dof> -accel <tsTag> [-vel0 <vel0>] [-fact <factor>]``
 
-    Attributes:
-        tag: Manager-assigned identifier after the object is added to a Femora
-            manager.
+    Note:
+        - Use ``model.time_series.path(...)`` or another managed acceleration
+          history before creating this pattern.
+        - OpenSees reports nodal responses relative to the support motion, so
+          absolute motion interpretation requires post-processing care.
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
-        # Create a time series (e.g., from a file path)
-        ts = model.timeSeries.path(dt=0.01, filePath="ground_motion.acc")
-
-        # Create a uniform excitation pattern applied in DOF 1
+        model = Model()
+        accel = model.time_series.path(dt=0.01, filePath="ground_motion.acc")
         pattern = model.pattern.uniform_excitation(
             dof=1,
-            time_series=ts,
+            time_series=accel,
             vel0=0.0,
-            factor=1.0
+            factor=1.0,
         )
         print(pattern.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,
@@ -50,16 +54,12 @@ class UniformExcitation(Pattern):
 
         Args:
             dof: 1-based excitation direction (e.g., 1 for X, 2 for Y, 3 for Z).
-            time_series: Managed acceleration ``TimeSeries`` object that defines
-                the excitation history.
-            vel0: Initial velocity, typically 0.0 unless starting from a known
-                non-zero initial velocity.
+            time_series: Managed acceleration ``TimeSeries`` object that defines the excitation history.
+            vel0: Initial velocity, typically 0.0 unless starting from a known non-zero velocity state.
             factor: Scale factor applied to the acceleration time series.
 
         Raises:
-            ValueError: If ``dof`` is not a positive integer, ``time_series`` is
-                not an instance of ``TimeSeries``, or ``time_series`` has not
-                yet been assigned a tag by a Femora manager.
+            ValueError: If dof is not a positive integer, or if time_series is not a managed TimeSeries instance.
         """
         super().__init__("UniformExcitation")
         try:
@@ -80,7 +80,7 @@ class UniformExcitation(Pattern):
         """Render this pattern as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string for the ``UniformExcitation`` pattern.
+            str: Tcl command string for the UniformExcitation pattern.
 
         Raises:
             ValueError: If the pattern has not been assigned a manager tag.

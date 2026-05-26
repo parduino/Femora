@@ -29,10 +29,13 @@ class GroundMotionManager:
 
     Example:
         ```python
-        accel = model.timeSeries.path(dt=0.01, filePath="support.acc")
-        disp = model.timeSeries.path(dt=0.01, filePath="support.disp")
+        from femora.core.model import Model
 
-        gm = model.groundMotion.plain(accel=accel, disp=disp)
+        model = Model()
+        accel = model.time_series.path(dt=0.01, filePath="support.acc")
+        disp = model.time_series.path(dt=0.01, filePath="support.disp")
+
+        gm = model.ground_motion.plain(accel=accel, disp=disp)
         print(gm.tag)      # 1
         print(gm.to_tcl()) # groundMotion 1 Plain -accel ... -disp ...
         ```

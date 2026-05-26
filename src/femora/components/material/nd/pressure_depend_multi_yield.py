@@ -29,9 +29,9 @@ class PressureDependMultiYieldMaterial(Material):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
+        model = Model()
         mat = model.material.nd.pressure_depend_multi_yield(
             user_name="profiled_soil",
             nd=3,
@@ -56,8 +56,8 @@ class PressureDependMultiYieldMaterial(Material):
     """
 
     __doc_controls__ = {
-        "show_docstring_attributes": False,
-        "members": ["__init__", "updateMaterialStage"],
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
     }
 
     def __init__(self, user_name: str = "Unnamed", **kwargs: Any) -> None:

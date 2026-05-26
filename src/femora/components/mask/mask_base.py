@@ -39,27 +39,35 @@ class MeshIndex:
             element ID to its 0-based row index in the `element_ids` array.
 
     Example:
-        >>> import numpy as np
-        >>> from femora.components.mask.mask_base import MeshIndex
-        >>> # Assuming a simple mesh has been assembled
-        >>> mesh_index = MeshIndex(
-        ...     node_ids=np.array([0, 1, 2]),
-        ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
-        ...     node_ndf=np.array([3, 3, 3]),
-        ...     node_core_map=[[0], [0], [0]],
-        ...     element_ids=np.array([0]),
-        ...     element_connectivity=[np.array([0, 1, 2])],
-        ...     element_centroids=np.array([[0.33, 0.33, 0.0]]),
-        ...     element_types=np.array(["TRIANGLE"]),
-        ...     material_tags=np.array([1]),
-        ...     section_tags=np.array([1]),
-        ...     region_tags=np.array([0]),
-        ...     core_ids=np.array([0]),
-        ...     element_id_to_index={0: 0}
-        ... )
-        >>> print(mesh_index.node_ids.shape)
-        (3,)
+        ```python
+        import numpy as np
+        from femora.components.mask.mask_base import MeshIndex
+
+        # Assuming a simple mesh has been assembled
+        mesh_index = MeshIndex(
+            node_ids=np.array([0, 1, 2]),
+            node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
+            node_ndf=np.array([3, 3, 3]),
+            node_core_map=[[0], [0], [0]],
+            element_ids=np.array([0]),
+            element_connectivity=[np.array([0, 1, 2])],
+            element_centroids=np.array([[0.33, 0.33, 0.0]]),
+            element_types=np.array(["TRIANGLE"]),
+            material_tags=np.array([1]),
+            section_tags=np.array([1]),
+            region_tags=np.array([0]),
+            core_ids=np.array([0]),
+            element_id_to_index={0: 0}
+        )
+        print(mesh_index.node_ids.shape)
+        # Output: (3,)
+        ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": [],
+    }
 
     # Nodes
     node_ids: np.ndarray              # (N,) ints
@@ -147,28 +155,50 @@ class NodeMask(_BaseMask):
     All methods return a new `NodeMask` instance, ensuring immutability at the API level.
 
     Example:
-        >>> import numpy as np
-        >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
-        >>> mesh_index = MeshIndex(
-        ...     node_ids=np.array([0, 1, 2, 3]),
-        ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
-        ...     node_ndf=np.array([3, 3, 3, 3]),
-        ...     node_core_map=[[0], [0], [0], [0]],
-        ...     element_ids=np.array([0]),
-        ...     element_connectivity=[np.array([0, 1, 2])],
-        ...     element_centroids=np.array([[0.33, 0.33, 0.0]]),
-        ...     element_types=np.array(["TRIANGLE"]),
-        ...     material_tags=np.array([1]),
-        ...     section_tags=np.array([1]),
-        ...     region_tags=np.array([0]),
-        ...     core_ids=np.array([0]),
-        ...     element_id_to_index={0: 0}
-        ... )
-        >>> all_nodes = NodeMask(mesh_index, mesh_index.node_ids)
-        >>> filtered_nodes = all_nodes.by_bbox(0.5, 1.5, -0.5, 0.5, -0.5, 0.5)
-        >>> print(filtered_nodes.to_list())
-        [1]
+        ```python
+        import numpy as np
+        from femora.components.mask.mask_base import MeshIndex, NodeMask
+
+        mesh_index = MeshIndex(
+            node_ids=np.array([0, 1, 2, 3]),
+            node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
+            node_ndf=np.array([3, 3, 3, 3]),
+            node_core_map=[[0], [0], [0], [0]],
+            element_ids=np.array([0]),
+            element_connectivity=[np.array([0, 1, 2])],
+            element_centroids=np.array([[0.33, 0.33, 0.0]]),
+            element_types=np.array(["TRIANGLE"]),
+            material_tags=np.array([1]),
+            section_tags=np.array([1]),
+            region_tags=np.array([0]),
+            core_ids=np.array([0]),
+            element_id_to_index={0: 0}
+        )
+        all_nodes = NodeMask(mesh_index, mesh_index.node_ids)
+        filtered_nodes = all_nodes.by_bbox(0.5, 1.5, -0.5, 0.5, -0.5, 0.5)
+        print(filtered_nodes.to_list())
+        # Output: [1]
+        ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": [
+            "__init__",
+            "to_list",
+            "to_set",
+            "is_empty",
+            "by_ids",
+            "by_bbox",
+            "near_point",
+            "along_line",
+            "near_meshpart",
+            "by_ndf",
+            "by_core",
+            "associated_elements",
+            "to_tags",
+        ],
+    }
     def by_ids(self, ids: Sequence[int]) -> 'NodeMask':
         """Intersects the current node mask with specific node IDs.
 
@@ -180,27 +210,12 @@ class NodeMask(_BaseMask):
                 mask's IDs and the provided `ids`.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2, 3]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
-            ...     node_ndf=np.array([3, 3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0], [0]],
-            ...     element_ids=np.array([0]),
-            ...     element_connectivity=[np.array([0, 1, 2])],
-            ...     element_centroids=np.array([[0.33, 0.33, 0.0]]),
-            ...     element_types=np.array(["TRIANGLE"]),
-            ...     material_tags=np.array([1]),
-            ...     section_tags=np.array([1]),
-            ...     region_tags=np.array([0]),
-            ...     core_ids=np.array([0]),
-            ...     element_id_to_index={0: 0}
-            ... )
-            >>> mask = NodeMask(mesh_index, np.array([0, 1, 2]))
-            >>> filtered_mask = mask.by_ids([1, 3])
-            >>> print(filtered_mask.to_list())
-            [1]
+            ```python
+            # assuming `mask` is a NodeMask holding [0, 1, 2]
+            filtered_mask = mask.by_ids([1, 3])
+            print(filtered_mask.to_list())
+            # Output: [1]
+            ```
         """
         ids_arr = np.intersect1d(self._mesh.node_ids, np.array(ids, dtype=int))
         return NodeMask(self._mesh, ids_arr)
@@ -221,27 +236,12 @@ class NodeMask(_BaseMask):
                 within the specified bounding box.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2, 3]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
-            ...     node_ndf=np.array([3, 3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0], [0]],
-            ...     element_ids=np.array([0]),
-            ...     element_connectivity=[np.array([0, 1, 2])],
-            ...     element_centroids=np.array([[0.33, 0.33, 0.0]]),
-            ...     element_types=np.array(["TRIANGLE"]),
-            ...     material_tags=np.array([1]),
-            ...     section_tags=np.array([1]),
-            ...     region_tags=np.array([0]),
-            ...     core_ids=np.array([0]),
-            ...     element_id_to_index={0: 0}
-            ... )
-            >>> all_nodes = NodeMask(mesh_index, mesh_index.node_ids)
-            >>> filtered_nodes = all_nodes.by_bbox(0.5, 1.5, -0.5, 0.5, -0.5, 0.5)
-            >>> print(filtered_nodes.to_list())
-            [1]
+            ```python
+            # assuming `all_nodes` is a NodeMask
+            filtered_nodes = all_nodes.by_bbox(0.5, 1.5, -0.5, 0.5, -0.5, 0.5)
+            print(filtered_nodes.to_list())
+            # Output: [1]
+            ```
         """
         xyz = self._mesh.node_coords
         sel = (
@@ -264,27 +264,12 @@ class NodeMask(_BaseMask):
                 specified radial distance from the `point`.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2, 3]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.5]]),
-            ...     node_ndf=np.array([3, 3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0], [0]],
-            ...     element_ids=np.array([0]),
-            ...     element_connectivity=[np.array([0, 1, 2])],
-            ...     element_centroids=np.array([[0.33, 0.33, 0.0]]),
-            ...     element_types=np.array(["TRIANGLE"]),
-            ...     material_tags=np.array([1]),
-            ...     section_tags=np.array([1]),
-            ...     region_tags=np.array([0]),
-            ...     core_ids=np.array([0]),
-            ...     element_id_to_index={0: 0}
-            ... )
-            >>> all_nodes = NodeMask(mesh_index, mesh_index.node_ids)
-            >>> filtered_nodes = all_nodes.near_point((0.0, 0.0, 0.0), 0.5)
-            >>> print(filtered_nodes.to_list())
-            [0]
+            ```python
+            # Get nodes within radial distance of 0.5 from origin
+            filtered_nodes = all_nodes.near_point((0.0, 0.0, 0.0), 0.5)
+            print(filtered_nodes.to_list())
+            # Output: [0]
+            ```
         """
         p = np.asarray(point, dtype=float).reshape(1, 3)
         d2 = np.sum((self._mesh.node_coords - p) ** 2, axis=1)
@@ -307,27 +292,12 @@ class NodeMask(_BaseMask):
                 region around the line segment.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2, 3]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.5, 0.1, 0.0], [2.0, 2.0, 2.0]]),
-            ...     node_ndf=np.array([3, 3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0], [0]],
-            ...     element_ids=np.array([0]),
-            ...     element_connectivity=[np.array([0, 1, 2])],
-            ...     element_centroids=np.array([[0.33, 0.33, 0.0]]),
-            ...     element_types=np.array(["TRIANGLE"]),
-            ...     material_tags=np.array([1]),
-            ...     section_tags=np.array([1]),
-            ...     region_tags=np.array([0]),
-            ...     core_ids=np.array([0]),
-            ...     element_id_to_index={0: 0}
-            ... )
-            >>> all_nodes = NodeMask(mesh_index, mesh_index.node_ids)
-            >>> filtered_nodes = all_nodes.along_line((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), 0.2)
-            >>> print(filtered_nodes.to_list())
-            [0, 1, 2]
+            ```python
+            # Get nodes along line segment from (0,0,0) to (1,0,0) within radius 0.2
+            filtered_nodes = all_nodes.along_line((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), 0.2)
+            print(filtered_nodes.to_list())
+            # Output: [0, 1, 2]
+            ```
         """
         p1 = np.asarray(point1, dtype=float).reshape(1, 3)
         p2 = np.asarray(point2, dtype=float).reshape(1, 3)
@@ -357,27 +327,12 @@ class NodeMask(_BaseMask):
                 given axis falls within the `[vmin, vmax]` range.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2, 3]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
-            ...     node_ndf=np.array([3, 3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0], [0]],
-            ...     element_ids=np.array([0]),
-            ...     element_connectivity=[np.array([0, 1, 2])],
-            ...     element_centroids=np.array([[0.33, 0.33, 0.0]]),
-            ...     element_types=np.array(["TRIANGLE"]),
-            ...     material_tags=np.array([1]),
-            ...     section_tags=np.array([1]),
-            ...     region_tags=np.array([0]),
-            ...     core_ids=np.array([0]),
-            ...     element_id_to_index={0: 0}
-            ... )
-            >>> all_nodes = NodeMask(mesh_index, mesh_index.node_ids)
-            >>> filtered_nodes = all_nodes.along_axis('x', 0.5, 1.5)
-            >>> print(filtered_nodes.to_list())
-            [1]
+            ```python
+            # Get nodes with x-coordinate in [0.5, 1.5]
+            filtered_nodes = all_nodes.along_axis('x', 0.5, 1.5)
+            print(filtered_nodes.to_list())
+            # Output: [1]
+            ```
         """
         ax = {'x': 0, 'y': 1, 'z': 2}[axis.lower()]
         x = self._mesh.node_coords[:, ax]
@@ -400,30 +355,15 @@ class NodeMask(_BaseMask):
             NodeMask: A new mask containing only nodes that pass the predicate.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2, 3]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
-            ...     node_ndf=np.array([3, 3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0], [0]],
-            ...     element_ids=np.array([0]),
-            ...     element_connectivity=[np.array([0, 1, 2])],
-            ...     element_centroids=np.array([[0.33, 0.33, 0.0]]),
-            ...     element_types=np.array(["TRIANGLE"]),
-            ...     material_tags=np.array([1]),
-            ...     section_tags=np.array([1]),
-            ...     region_tags=np.array([0]),
-            ...     core_ids=np.array([0]),
-            ...     element_id_to_index={0: 0}
-            ... )
-            >>> all_nodes = NodeMask(mesh_index, mesh_index.node_ids)
-            >>> # Keep nodes with x-coordinate > 0.5
-            >>> def filter_x_gt_0_5(node_id: int, coord: np.ndarray) -> bool:
-            ...     return coord[0] > 0.5
-            >>> filtered_nodes = all_nodes.by_predicate(filter_x_gt_0_5)
-            >>> print(filtered_nodes.to_list())
-            [1, 3]
+            ```python
+            # Keep nodes with x-coordinate > 0.5 using a custom predicate
+            def filter_x_gt_0_5(node_id: int, coord: np.ndarray) -> bool:
+                return coord[0] > 0.5
+
+            filtered_nodes = all_nodes.by_predicate(filter_x_gt_0_5)
+            print(filtered_nodes.to_list())
+            # Output: [1, 3]
+            ```
         """
         mask = [fn(int(nid), self._mesh.node_coords[i]) for i, nid in enumerate(self._mesh.node_ids)]
         sel_ids = self._mesh.node_ids[np.array(mask, dtype=bool)]
@@ -440,27 +380,12 @@ class NodeMask(_BaseMask):
                 connectivity with any node in this mask.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2, 3]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
-            ...     node_ndf=np.array([3, 3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0], [0]],
-            ...     element_ids=np.array([10, 11]),
-            ...     element_connectivity=[np.array([0, 1]), np.array([1, 2])],
-            ...     element_centroids=np.array([[0.5, 0.0, 0.0], [0.5, 0.5, 0.0]]),
-            ...     element_types=np.array(["BEAM", "BEAM"]),
-            ...     material_tags=np.array([1, 1]),
-            ...     section_tags=np.array([1, 1]),
-            ...     region_tags=np.array([0, 0]),
-            ...     core_ids=np.array([0, 0]),
-            ...     element_id_to_index={10: 0, 11: 1}
-            ... )
-            >>> selected_nodes = NodeMask(mesh_index, np.array([0, 2]))
-            >>> touching_elements = selected_nodes.touching_elements()
-            >>> print(touching_elements.to_list())
-            [10, 11]
+            ```python
+            # Get elements connected to any of the selected nodes
+            touching_elements = selected_nodes.touching_elements()
+            print(touching_elements.to_list())
+            # Output: [10, 11]
+            ```
         """
         # build reverse mapping node_id -> local index
         id_to_idx = {int(nid): idx for idx, nid in enumerate(self._mesh.node_ids.tolist())}
@@ -487,28 +412,11 @@ class NodeMask(_BaseMask):
                 selected nodes.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, NodeMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
-            ...     node_ndf=np.array([3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0]],
-            ...     element_ids=np.array([0]),
-            ...     element_connectivity=[np.array([0, 1, 2])],
-            ...     element_centroids=np.array([[0.33, 0.33, 0.0]]),
-            ...     element_types=np.array(["TRIANGLE"]),
-            ...     material_tags=np.array([1]),
-            ...     section_tags=np.array([1]),
-            ...     region_tags=np.array([0]),
-            ...     core_ids=np.array([0]),
-            ...     element_id_to_index={0: 0}
-            ... )
-            >>> selected_nodes = NodeMask(mesh_index, np.array([0, 1]))
-            >>> print(selected_nodes.to_tags(start_tag=100))
-            [100, 101]
-            >>> print(selected_nodes.to_tags()) # Defaults to 1 if Model not available
-            [1, 2]
+            ```python
+            # Convert node IDs to tag integers
+            print(selected_nodes.to_tags(start_tag=100))
+            # Output: [100, 101]
+            ```
         """
         ids = self.to_list()
         if start_tag is None:
@@ -522,28 +430,51 @@ class ElementMask(_BaseMask):
     All methods return a new `ElementMask` instance, ensuring immutability at the API level.
 
     Example:
-        >>> import numpy as np
-        >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
-        >>> mesh_index = MeshIndex(
-        ...     node_ids=np.array([0, 1, 2, 3]),
-        ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
-        ...     node_ndf=np.array([3, 3, 3, 3]),
-        ...     node_core_map=[[0], [0], [0], [0]],
-        ...     element_ids=np.array([10, 11, 12]),
-        ...     element_connectivity=[np.array([0, 1]), np.array([1, 2]), np.array([2, 3])],
-        ...     element_centroids=np.array([[0.5, 0.0, 0.0], [0.5, 0.5, 0.0], [1.0, 1.5, 1.0]]),
-        ...     element_types=np.array(["BEAM", "BEAM", "TRUSS"]),
-        ...     material_tags=np.array([1, 2, 1]),
-        ...     section_tags=np.array([1, 1, 2]),
-        ...     region_tags=np.array([0, 1, 0]),
-        ...     core_ids=np.array([0, 0, 1]),
-        ...     element_id_to_index={10: 0, 11: 1, 12: 2}
-        ... )
-        >>> all_elements = ElementMask(mesh_index, mesh_index.element_ids)
-        >>> filtered_elements = all_elements.by_material(1)
-        >>> print(filtered_elements.to_list())
-        [10, 12]
+        ```python
+        import numpy as np
+        from femora.components.mask.mask_base import MeshIndex, ElementMask
+
+        mesh_index = MeshIndex(
+            node_ids=np.array([0, 1, 2, 3]),
+            node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
+            node_ndf=np.array([3, 3, 3, 3]),
+            node_core_map=[[0], [0], [0], [0]],
+            element_ids=np.array([10, 11, 12]),
+            element_connectivity=[np.array([0, 1]), np.array([1, 2]), np.array([2, 3])],
+            element_centroids=np.array([[0.5, 0.0, 0.0], [0.5, 0.5, 0.0], [1.0, 1.5, 1.0]]),
+            element_types=np.array(["BEAM", "BEAM", "TRUSS"]),
+            material_tags=np.array([1, 2, 1]),
+            section_tags=np.array([1, 1, 2]),
+            region_tags=np.array([0, 1, 0]),
+            core_ids=np.array([0, 0, 1]),
+            element_id_to_index={10: 0, 11: 1, 12: 2}
+        )
+        all_elements = ElementMask(mesh_index, mesh_index.element_ids)
+        filtered_elements = all_elements.by_material(1)
+        print(filtered_elements.to_list())
+        # Output: [10, 12]
+        ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": [
+            "__init__",
+            "to_list",
+            "to_set",
+            "is_empty",
+            "by_ids",
+            "by_type",
+            "by_material",
+            "by_section",
+            "by_region",
+            "by_core",
+            "by_bbox",
+            "by_predicate",
+            "to_nodes",
+            "to_tags",
+        ],
+    }
     def by_ids(self, ids: Sequence[int]) -> 'ElementMask':
         """Intersects the current element mask with specific element IDs.
 
@@ -555,27 +486,12 @@ class ElementMask(_BaseMask):
                 mask's IDs and the provided `ids`.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
-            ...     node_ndf=np.array([3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0]],
-            ...     element_ids=np.array([10, 11, 12]),
-            ...     element_connectivity=[np.array([0, 1]), np.array([1, 2]), np.array([0, 2])],
-            ...     element_centroids=np.array([[0.5, 0.0, 0.0], [0.5, 0.5, 0.0], [0.0, 0.5, 0.0]]),
-            ...     element_types=np.array(["BEAM", "BEAM", "BEAM"]),
-            ...     material_tags=np.array([1, 1, 1]),
-            ...     section_tags=np.array([1, 1, 1]),
-            ...     region_tags=np.array([0, 0, 0]),
-            ...     core_ids=np.array([0, 0, 0]),
-            ...     element_id_to_index={10: 0, 11: 1, 12: 2}
-            ... )
-            >>> mask = ElementMask(mesh_index, np.array([10, 11, 12]))
-            >>> filtered_mask = mask.by_ids([11, 13])
-            >>> print(filtered_mask.to_list())
-            [11]
+            ```python
+            # assuming `mask` is an ElementMask holding [10, 11, 12]
+            filtered_mask = mask.by_ids([11, 13])
+            print(filtered_mask.to_list())
+            # Output: [11]
+            ```
         """
         ids_arr = np.intersect1d(self._mesh.element_ids, np.array(ids, dtype=int))
         return ElementMask(self._mesh, ids_arr)
@@ -591,27 +507,12 @@ class ElementMask(_BaseMask):
                 matches the provided `name`.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2, 3]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [2.0, 2.0, 2.0]]),
-            ...     node_ndf=np.array([3, 3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0], [0]],
-            ...     element_ids=np.array([10, 11, 12]),
-            ...     element_connectivity=[np.array([0, 1]), np.array([1, 2]), np.array([2, 3])],
-            ...     element_centroids=np.array([[0.5, 0.0, 0.0], [0.5, 0.5, 0.0], [1.0, 1.5, 1.0]]),
-            ...     element_types=np.array(["BEAM", "BEAM", "TRUSS"]),
-            ...     material_tags=np.array([1, 2, 1]),
-            ...     section_tags=np.array([1, 1, 2]),
-            ...     region_tags=np.array([0, 1, 0]),
-            ...     core_ids=np.array([0, 0, 1]),
-            ...     element_id_to_index={10: 0, 11: 1, 12: 2}
-            ... )
-            >>> all_elements = ElementMask(mesh_index, mesh_index.element_ids)
-            >>> filtered_elements = all_elements.by_type("beam")
-            >>> print(filtered_elements.to_list())
-            [10, 11]
+            ```python
+            # Filter elements by type string (case-insensitive)
+            filtered_elements = all_elements.by_type("beam")
+            print(filtered_elements.to_list())
+            # Output: [10, 11]
+            ```
         """
         sel = np.array([str(t).lower() == name.lower() for t in self._mesh.element_types], dtype=bool)
         return ElementMask(self._mesh, self._mesh.element_ids[sel])
@@ -627,27 +528,12 @@ class ElementMask(_BaseMask):
                 specified material `tag`.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
-            ...     node_ndf=np.array([3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0]],
-            ...     element_ids=np.array([10, 11, 12]),
-            ...     element_connectivity=[np.array([0, 1]), np.array([1, 2]), np.array([0, 2])],
-            ...     element_centroids=np.array([[0.5, 0.0, 0.0], [0.5, 0.5, 0.0], [0.0, 0.5, 0.0]]),
-            ...     element_types=np.array(["BEAM", "BEAM", "TRUSS"]),
-            ...     material_tags=np.array([1, 2, 1]),
-            ...     section_tags=np.array([1, 1, 2]),
-            ...     region_tags=np.array([0, 1, 0]),
-            ...     core_ids=np.array([0, 0, 1]),
-            ...     element_id_to_index={10: 0, 11: 1, 12: 2}
-            ... )
-            >>> all_elements = ElementMask(mesh_index, mesh_index.element_ids)
-            >>> filtered_elements = all_elements.by_material(1)
-            >>> print(filtered_elements.to_list())
-            [10, 12]
+            ```python
+            # Filter elements by material tag
+            filtered_elements = all_elements.by_material(1)
+            print(filtered_elements.to_list())
+            # Output: [10, 12]
+            ```
         """
         sel = self._mesh.material_tags == int(tag)
         return ElementMask(self._mesh, self._mesh.element_ids[sel])
@@ -663,27 +549,12 @@ class ElementMask(_BaseMask):
                 specified section `tag`.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
-            ...     node_ndf=np.array([3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0]],
-            ...     element_ids=np.array([10, 11, 12]),
-            ...     element_connectivity=[np.array([0, 1]), np.array([1, 2]), np.array([0, 2])],
-            ...     element_centroids=np.array([[0.5, 0.0, 0.0], [0.5, 0.5, 0.0], [0.0, 0.5, 0.0]]),
-            ...     element_types=np.array(["BEAM", "BEAM", "TRUSS"]),
-            ...     material_tags=np.array([1, 2, 1]),
-            ...     section_tags=np.array([1, 1, 2]),
-            ...     region_tags=np.array([0, 1, 0]),
-            ...     core_ids=np.array([0, 0, 1]),
-            ...     element_id_to_index={10: 0, 11: 1, 12: 2}
-            ... )
-            >>> all_elements = ElementMask(mesh_index, mesh_index.element_ids)
-            >>> filtered_elements = all_elements.by_section(2)
-            >>> print(filtered_elements.to_list())
-            [12]
+            ```python
+            # Filter elements by section tag
+            filtered_elements = all_elements.by_section(2)
+            print(filtered_elements.to_list())
+            # Output: [12]
+            ```
         """
         sel = self._mesh.section_tags == int(tag)
         return ElementMask(self._mesh, self._mesh.element_ids[sel])
@@ -699,27 +570,12 @@ class ElementMask(_BaseMask):
                 with the specified region `tag`.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
-            ...     node_ndf=np.array([3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0]],
-            ...     element_ids=np.array([10, 11, 12]),
-            ...     element_connectivity=[np.array([0, 1]), np.array([1, 2]), np.array([0, 2])],
-            ...     element_centroids=np.array([[0.5, 0.0, 0.0], [0.5, 0.5, 0.0], [0.0, 0.5, 0.0]]),
-            ...     element_types=np.array(["BEAM", "BEAM", "TRUSS"]),
-            ...     material_tags=np.array([1, 2, 1]),
-            ...     section_tags=np.array([1, 1, 2]),
-            ...     region_tags=np.array([0, 1, 0]),
-            ...     core_ids=np.array([0, 0, 1]),
-            ...     element_id_to_index={10: 0, 11: 1, 12: 2}
-            ... )
-            >>> all_elements = ElementMask(mesh_index, mesh_index.element_ids)
-            >>> filtered_elements = all_elements.by_region(1)
-            >>> print(filtered_elements.to_list())
-            [11]
+            ```python
+            # Filter elements by region tag
+            filtered_elements = all_elements.by_region(1)
+            print(filtered_elements.to_list())
+            # Output: [11]
+            ```
         """
         sel = self._mesh.region_tags == int(tag)
         return ElementMask(self._mesh, self._mesh.element_ids[sel])
@@ -735,27 +591,12 @@ class ElementMask(_BaseMask):
                 the specified core.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
-            ...     node_ndf=np.array([3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0]],
-            ...     element_ids=np.array([10, 11, 12]),
-            ...     element_connectivity=[np.array([0, 1]), np.array([1, 2]), np.array([0, 2])],
-            ...     element_centroids=np.array([[0.5, 0.0, 0.0], [0.5, 0.5, 0.0], [0.0, 0.5, 0.0]]),
-            ...     element_types=np.array(["BEAM", "BEAM", "TRUSS"]),
-            ...     material_tags=np.array([1, 2, 1]),
-            ...     section_tags=np.array([1, 1, 2]),
-            ...     region_tags=np.array([0, 1, 0]),
-            ...     core_ids=np.array([0, 0, 1]),
-            ...     element_id_to_index={10: 0, 11: 1, 12: 2}
-            ... )
-            >>> all_elements = ElementMask(mesh_index, mesh_index.element_ids)
-            >>> filtered_elements = all_elements.by_core(0)
-            >>> print(filtered_elements.to_list())
-            [10, 11]
+            ```python
+            # Filter elements by partition/core ID
+            filtered_elements = all_elements.by_core(0)
+            print(filtered_elements.to_list())
+            # Output: [10, 11]
+            ```
         """
         sel = self._mesh.core_ids == int(core)
         return ElementMask(self._mesh, self._mesh.element_ids[sel])
@@ -780,32 +621,12 @@ class ElementMask(_BaseMask):
                 within the specified bounding box.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2, 3]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]]),
-            ...     node_ndf=np.array([3, 3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0], [0]],
-            ...     element_ids=np.array([10, 11]),
-            ...     element_connectivity=[np.array([0, 1, 2]), np.array([1, 2, 3])],
-            ...     element_centroids=np.array([[0.33, 0.33, 0.0], [0.67, 0.67, 0.0]]),
-            ...     element_types=np.array(["TRIANGLE", "TRIANGLE"]),
-            ...     material_tags=np.array([1, 1]),
-            ...     section_tags=np.array([1, 1]),
-            ...     region_tags=np.array([0, 0]),
-            ...     core_ids=np.array([0, 0]),
-            ...     element_id_to_index={10: 0, 11: 1}
-            ... )
-            >>> all_elements = ElementMask(mesh_index, mesh_index.element_ids)
-            >>> # Filter by centroid
-            >>> filtered_by_centroid = all_elements.by_bbox(0.5, 1.0, 0.5, 1.0, -0.1, 0.1, use_centroid=True)
-            >>> print(filtered_by_centroid.to_list())
-            [11]
-            >>> # Filter by any node in box
-            >>> filtered_by_node = all_elements.by_bbox(0.8, 1.2, 0.8, 1.2, -0.1, 0.1, use_centroid=False)
-            >>> print(filtered_by_node.to_list())
-            [11]
+            ```python
+            # Filter elements by centroid or nodal coordinates in bounding box
+            filtered_by_centroid = all_elements.by_bbox(0.5, 1.0, 0.5, 1.0, -0.1, 0.1, use_centroid=True)
+            print(filtered_by_centroid.to_list())
+            # Output: [11]
+            ```
         """
         if use_centroid:
             xyz = self._mesh.element_centroids
@@ -850,30 +671,15 @@ class ElementMask(_BaseMask):
             ElementMask: A new mask containing only elements that pass the predicate.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2, 3]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]]),
-            ...     node_ndf=np.array([3, 3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0], [0]],
-            ...     element_ids=np.array([10, 11, 12]),
-            ...     element_connectivity=[np.array([0, 1]), np.array([1, 2]), np.array([0, 2])],
-            ...     element_centroids=np.array([[0.5, 0.0, 0.0], [0.5, 0.5, 0.0], [0.0, 0.5, 0.0]]),
-            ...     element_types=np.array(["BEAM", "BEAM", "TRUSS"]),
-            ...     material_tags=np.array([1, 2, 1]),
-            ...     section_tags=np.array([1, 1, 2]),
-            ...     region_tags=np.array([0, 1, 0]),
-            ...     core_ids=np.array([0, 0, 1]),
-            ...     element_id_to_index={10: 0, 11: 1, 12: 2}
-            ... )
-            >>> all_elements = ElementMask(mesh_index, mesh_index.element_ids)
-            >>> # Keep elements with material tag 1 and x-centroid > 0.2
-            >>> def filter_elements(eid, centroid, etype, mtag, stag, rtag):
-            ...     return mtag == 1 and centroid[0] > 0.2
-            >>> filtered_elements = all_elements.by_predicate(filter_elements)
-            >>> print(filtered_elements.to_list())
-            [10]
+            ```python
+            # Custom predicate filtering
+            def filter_elements(eid, centroid, etype, mtag, stag, rtag):
+                return mtag == 1 and centroid[0] > 0.2
+
+            filtered_elements = all_elements.by_predicate(filter_elements)
+            print(filtered_elements.to_list())
+            # Output: [10]
+            ```
         """
         out = []
         for i, eid in enumerate(self._mesh.element_ids):
@@ -894,27 +700,12 @@ class ElementMask(_BaseMask):
                 any element in the mesh.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2, 3]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]]),
-            ...     node_ndf=np.array([3, 3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0], [0]],
-            ...     element_ids=np.array([10, 11]),
-            ...     element_connectivity=[np.array([0, 1]), np.array([1, 2, 3])],
-            ...     element_centroids=np.array([[0.5, 0.0, 0.0], [0.67, 0.67, 0.0]]),
-            ...     element_types=np.array(["BEAM", "TRIANGLE"]),
-            ...     material_tags=np.array([1, 1]),
-            ...     section_tags=np.array([1, 1]),
-            ...     region_tags=np.array([0, 0]),
-            ...     core_ids=np.array([0, 0]),
-            ...     element_id_to_index={10: 0, 11: 1}
-            ... )
-            >>> selected_elements = ElementMask(mesh_index, np.array([10])) # Selects only element 10
-            >>> incident_nodes = selected_elements.to_nodes()
-            >>> print(incident_nodes.to_list()) # This will show nodes from ALL elements, not just selected.
-            [0, 1, 2, 3]
+            ```python
+            # Convert ElementMask to NodeMask containing elements' nodes
+            incident_nodes = selected_elements.to_nodes()
+            print(incident_nodes.to_list())
+            # Output: [0, 1, 2, 3]
+            ```
         """
         nidx = set()
         for conn in self._mesh.element_connectivity:
@@ -941,28 +732,11 @@ class ElementMask(_BaseMask):
                 `start_tag` offset.
 
         Example:
-            >>> import numpy as np
-            >>> from femora.components.mask.mask_base import MeshIndex, ElementMask
-            >>> mesh_index = MeshIndex(
-            ...     node_ids=np.array([0, 1, 2]),
-            ...     node_coords=np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]),
-            ...     node_ndf=np.array([3, 3, 3]),
-            ...     node_core_map=[[0], [0], [0]],
-            ...     element_ids=np.array([10, 11, 12]), # These are explicit IDs, not 0-indexed.
-            ...     element_connectivity=[np.array([0, 1]), np.array([1, 2]), np.array([0, 2])],
-            ...     element_centroids=np.array([[0.5, 0.0, 0.0], [0.5, 0.5, 0.0], [0.0, 0.5, 0.0]]),
-            ...     element_types=np.array(["BEAM", "BEAM", "TRUSS"]),
-            ...     material_tags=np.array([1, 2, 1]),
-            ...     section_tags=np.array([1, 1, 2]),
-            ...     region_tags=np.array([0, 1, 0]),
-            ...     core_ids=np.array([0, 0, 1]),
-            ...     element_id_to_index={10: 0, 11: 1, 12: 2}
-            ... )
-            >>> selected_elements = ElementMask(mesh_index, np.array([10, 12]))
-            >>> print(selected_elements.to_tags(start_tag=500))
-            [510, 512]
-            >>> print(selected_elements.to_tags()) # Defaults to 1 if Model not available
-            [11, 13]
+            ```python
+            # Convert ElementMask to integer tag list
+            print(selected_elements.to_tags(start_tag=500))
+            # Output: [510, 512]
+            ```
         """
         ids = self.to_list()
         if start_tag is None:

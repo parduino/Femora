@@ -13,31 +13,33 @@ class WFSection2d(Section):
     [FiberSection][femora.components.section.fiber.section.FiberSection].
 
     Tcl form:
-        ``section WFSection2d <tag> <matTag> <d> <tw> <bf> <tf> <Nflweb> <Nflflange>``
+        ``section WFSection2d <tag> <d> <tw> <bf> <tf> <Nflweb> <Nflflange> <matTag>``
 
     Note:
         - This section is strictly 2D. It only supports strong-axis bending and
           axial response.
         - The discretization creates longitudinal fibers. The number of fibers
-          in the web (`Nflweb`) and flanges (`Nflflange`) determines the
-          integration accuracy across the depth.
+          in the web (``Nflweb``) and flanges (``Nflflange``) controls integration
+          accuracy across the depth.
 
     Tip:
         - Use this section for steel frame modeling where nonlinear material
-          behavior is required, but a full fiber-by-fiber definition is too
-          verbose.
-        - Convergence Tip: Usually 8-12 web fibers and 2-4 flange fibers are
-          sufficient for standard structural steel convergence.
+          behavior is required without manual fiber layout.
+        - Eight to twelve web fibers and two to four flange fibers are often
+          sufficient for standard structural steel models.
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
+        import femora.components.section.beam  # noqa: F401
 
-        model = fm.Model()
-        # Create a nonlinear steel material
-        mat = model.material.uniaxial.steel01(user_name="Steel", Fy=50.0, E=29000.0, b=0.01)
-
-        # Create a W14X90-like 2D section
+        model = Model()
+        mat = model.material.uniaxial.steel01(
+            user_name="Steel",
+            Fy=50.0,
+            E0=29000.0,
+            b=0.01,
+        )
         sec = model.section.beam.wf2d(
             user_name="W14X90_Nonlinear",
             material=mat,
@@ -46,14 +48,15 @@ class WFSection2d(Section):
             bf=14.5,
             tf=0.71,
             Nflweb=8,
-            Nflflange=4
+            Nflflange=4,
         )
+        print(sec.tag)
         ```
     """
 
     __doc_controls__ = {
-        "show_docstring_attributes": False,
-        "members": ["__init__", "to_tcl", "get_materials"],
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
     }
 
     def __init__(
@@ -115,7 +118,10 @@ class WFSection2d(Section):
         """Render the section as an OpenSees Tcl command.
 
         Returns:
-            The Tcl command string.
+            str: Tcl command string for this section.
+
+        Raises:
+            ValueError: If this section has not been added to a manager.
         """
         return (
             f"section WFSection2d {self._require_tag()} "

@@ -19,27 +19,44 @@ class Algorithm(AnalysisComponent):
 
 
 class LinearAlgorithm(Algorithm):
+    """Linear solution algorithm for solving linear equations in one iteration.
+
+    LinearAlgorithm is used in linear static or transient analyses where
+    the stiffness matrix does not change during the step.
+
+    Tcl form:
+        ``algorithm Linear [-initial] [-factorOnce]``
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        algo = model.analysis.algorithm.linear(initial=True)
+        ```
     """
-    Linear algorithm which takes one iteration to solve the system of equations
-    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
     def __init__(self, initial: bool = False, factor_once: bool = False):
-        """
-        Initialize a Linear algorithm
-        
+        """Create a Linear solution algorithm.
+
         Args:
-            initial (bool): Flag to use initial stiffness
-            factor_once (bool): Flag to only set up and factor matrix once
+            initial: If True, uses the initial structural stiffness matrix.
+            factor_once: If True, sets up and factors the matrix only once.
         """
         super().__init__("Linear")
         self.initial = initial
         self.factor_once = factor_once
     
     def to_tcl(self) -> str:
-        """
-        Convert the algorithm to a TCL command string for OpenSees
-        
+        """Render this algorithm as an OpenSees Tcl command.
+
         Returns:
-            str: The TCL command string
+            The Tcl command string.
         """
         cmd = "algorithm Linear"
         if self.initial:
@@ -51,16 +68,39 @@ class LinearAlgorithm(Algorithm):
 
 
 class NewtonAlgorithm(Algorithm):
+    """Newton-Raphson nonlinear solution algorithm.
+
+    NewtonAlgorithm uses the classical Newton-Raphson iteration scheme to solve
+    nonlinear equilibrium residual equations. It reforms the tangent stiffness
+    matrix at every iteration.
+
+    Tcl form:
+        ``algorithm Newton [-initial] [-initialThenCurrent]``
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        algo = model.analysis.algorithm.newton(initial_then_current=True)
+        ```
     """
-    Newton algorithm uses the Newton-Raphson method to solve the nonlinear residual equation
-    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
     def __init__(self, initial: bool = False, initial_then_current: bool = False):
-        """
-        Initialize a Newton algorithm
-        
+        """Create a Newton-Raphson solution algorithm.
+
         Args:
-            initial (bool): Flag to use initial stiffness
-            initial_then_current (bool): Flag to use initial stiffness on first step and then current stiffness
+            initial: If True, uses the initial stiffness matrix throughout the iterations.
+            initial_then_current: If True, uses initial stiffness for the first iteration,
+                and then reforms the tangent stiffness for subsequent iterations.
+
+        Raises:
+            ValueError: If both initial and initial_then_current are set to True.
         """
         super().__init__("Newton")
         self.initial = initial
@@ -71,11 +111,10 @@ class NewtonAlgorithm(Algorithm):
             raise ValueError("Cannot specify both -initial and -initialThenCurrent flags")
     
     def to_tcl(self) -> str:
-        """
-        Convert the algorithm to a TCL command string for OpenSees
-        
+        """Render this algorithm as an OpenSees Tcl command.
+
         Returns:
-            str: The TCL command string
+            The Tcl command string.
         """
         cmd = "algorithm Newton"
         if self.initial:
@@ -87,27 +126,45 @@ class NewtonAlgorithm(Algorithm):
 
 
 class ModifiedNewtonAlgorithm(Algorithm):
+    """Modified Newton-Raphson nonlinear solution algorithm.
+
+    ModifiedNewtonAlgorithm solves nonlinear equilibrium equations by reforming
+    the tangent stiffness matrix only at the beginning of each analysis step,
+    reducing computational cost compared to the standard Newton-Raphson method.
+
+    Tcl form:
+        ``algorithm ModifiedNewton [-initial] [-factoronce]``
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        algo = model.analysis.algorithm.modifiednewton(factor_once=True)
+        ```
     """
-    Modified Newton algorithm uses the modified Newton-Raphson algorithm to solve the nonlinear residual equation
-    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
     def __init__(self, initial: bool = False, factor_once: bool = False):
-        """
-        Initialize a Modified Newton algorithm
-        
+        """Create a Modified Newton solution algorithm.
+
         Args:
-            initial (bool): Flag to use initial stiffness iterations
-            factor_once (bool): Flag to factor matrix only once
+            initial: If True, uses initial stiffness iterations.
+            factor_once: If True, factorizes the stiffness matrix only once.
         """
         super().__init__("ModifiedNewton")
         self.initial = initial
         self.factor_once = factor_once
     
     def to_tcl(self) -> str:
-        """
-        Convert the algorithm to a TCL command string for OpenSees
-        
+        """Render this algorithm as an OpenSees Tcl command.
+
         Returns:
-            str: The TCL command string
+            The Tcl command string.
         """
         cmd = "algorithm ModifiedNewton"
         if self.initial:
@@ -119,20 +176,46 @@ class ModifiedNewtonAlgorithm(Algorithm):
 
 
 class NewtonLineSearchAlgorithm(Algorithm):
+    """Newton solution algorithm with line search acceleration.
+
+    NewtonLineSearchAlgorithm introduces line search techniques to the
+    standard Newton-Raphson iterations to enhance convergence robustness,
+    especially in highly nonlinear problems (such as contact or plasticity).
+
+    Tcl form:
+        ``algorithm NewtonLineSearch -type <typeSearch> [-tol <tol>] [-maxIter <max>] [-minEta <min>] [-maxEta <max>]``
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        algo = model.analysis.algorithm.newtonlinesearch(
+            type_search="Secant",
+            tol=0.5,
+        )
+        ```
     """
-    Newton Line Search algorithm introduces line search to the Newton-Raphson algorithm
-    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
     def __init__(self, type_search: str = "InitialInterpolated", tol: float = 0.8, 
                  max_iter: int = 10, min_eta: float = 0.1, max_eta: float = 10.0):
-        """
-        Initialize a Newton Line Search algorithm
-        
+        """Create a Newton Line Search solution algorithm.
+
         Args:
-            type_search (str): Line search algorithm type
-            tol (float): Tolerance for search
-            max_iter (int): Maximum number of iterations to try
-            min_eta (float): Minimum ? value
-            max_eta (float): Maximum ? value
+            type_search: Line search algorithm type. Must be one of
+                `'Bisection'`, `'Secant'`, `'RegulaFalsi'`, or `'InitialInterpolated'`.
+            tol: Tolerance for the line search convergence.
+            max_iter: Maximum number of line search iterations per step.
+            min_eta: Minimum scaling factor limit.
+            max_eta: Maximum scaling factor limit.
+
+        Raises:
+            ValueError: If type_search is not a valid line search type.
         """
         super().__init__("NewtonLineSearch")
         self.type_search = type_search
@@ -148,11 +231,10 @@ class NewtonLineSearchAlgorithm(Algorithm):
                            f"Valid types are: {', '.join(valid_search_types)}")
     
     def to_tcl(self) -> str:
-        """
-        Convert the algorithm to a TCL command string for OpenSees
-        
+        """Render this algorithm as an OpenSees Tcl command.
+
         Returns:
-            str: The TCL command string
+            The Tcl command string.
         """
         cmd = f"algorithm NewtonLineSearch -type {self.type_search}"
         
@@ -171,17 +253,38 @@ class NewtonLineSearchAlgorithm(Algorithm):
 
 
 class KrylovNewtonAlgorithm(Algorithm):
+    """Krylov-Newton accelerated nonlinear solution algorithm.
+
+    KrylovNewtonAlgorithm uses a modified Newton-Raphson method combined with
+    Krylov subspace acceleration to speed up iteration convergence.
+
+    Tcl form:
+        ``algorithm KrylovNewton [-iterate <type>] [-increment <type>] [-maxDim <dim>]``
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        algo = model.analysis.algorithm.krylovnewton(max_dim=5)
+        ```
     """
-    Krylov-Newton algorithm uses a modified Newton method with Krylov subspace acceleration
-    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
     def __init__(self, tang_iter: str = "current", tang_incr: str = "current", max_dim: int = 3):
-        """
-        Initialize a Krylov-Newton algorithm
-        
+        """Create a Krylov-Newton solution algorithm.
+
         Args:
-            tang_iter (str): Tangent to iterate on
-            tang_incr (str): Tangent to increment on
-            max_dim (int): Max number of iterations until tangent is reformed
+            tang_iter: Tangent to iterate on. Must be `'current'`, `'initial'`, or `'noTangent'`.
+            tang_incr: Tangent to increment on. Must be `'current'`, `'initial'`, or `'noTangent'`.
+            max_dim: Max number of subspace iterations before reforming the tangent.
+
+        Raises:
+            ValueError: If tang_iter or tang_incr is not a valid option.
         """
         super().__init__("KrylovNewton")
         self.tang_iter = tang_iter
@@ -198,11 +301,10 @@ class KrylovNewtonAlgorithm(Algorithm):
                            f"Valid types are: {', '.join(valid_tangent_options)}")
     
     def to_tcl(self) -> str:
-        """
-        Convert the algorithm to a TCL command string for OpenSees
-        
+        """Render this algorithm as an OpenSees Tcl command.
+
         Returns:
-            str: The TCL command string
+            The Tcl command string.
         """
         cmd = "algorithm KrylovNewton"
         
@@ -219,17 +321,38 @@ class KrylovNewtonAlgorithm(Algorithm):
 
 
 class SecantNewtonAlgorithm(Algorithm):
+    """Secant-Newton accelerated solution algorithm.
+
+    SecantNewtonAlgorithm uses two-term secant updates of the stiffness matrix
+    to accelerate equilibrium iteration convergence without reforming the full tangent.
+
+    Tcl form:
+        ``algorithm SecantNewton [-iterate <type>] [-increment <type>] [-maxDim <dim>]``
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        algo = model.analysis.algorithm.secantnewton(tang_iter="initial")
+        ```
     """
-    Secant Newton algorithm uses the two-term update to accelerate convergence
-    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
     def __init__(self, tang_iter: str = "current", tang_incr: str = "current", max_dim: int = 3):
-        """
-        Initialize a Secant Newton algorithm
-        
+        """Create a Secant-Newton solution algorithm.
+
         Args:
-            tang_iter (str): Tangent to iterate on
-            tang_incr (str): Tangent to increment on
-            max_dim (int): Max number of iterations until tangent is reformed
+            tang_iter: Tangent to iterate on. Must be `'current'`, `'initial'`, or `'noTangent'`.
+            tang_incr: Tangent to increment on. Must be `'current'`, `'initial'`, or `'noTangent'`.
+            max_dim: Max number of iterations before reforming the tangent.
+
+        Raises:
+            ValueError: If tang_iter or tang_incr is not a valid option.
         """
         super().__init__("SecantNewton")
         self.tang_iter = tang_iter
@@ -246,11 +369,10 @@ class SecantNewtonAlgorithm(Algorithm):
                            f"Valid types are: {', '.join(valid_tangent_options)}")
     
     def to_tcl(self) -> str:
-        """
-        Convert the algorithm to a TCL command string for OpenSees
-        
+        """Render this algorithm as an OpenSees Tcl command.
+
         Returns:
-            str: The TCL command string
+            The Tcl command string.
         """
         cmd = "algorithm SecantNewton"
         
@@ -267,15 +389,36 @@ class SecantNewtonAlgorithm(Algorithm):
 
 
 class BFGSAlgorithm(Algorithm):
+    """Broyden-Fletcher-Goldfarb-Shanno (BFGS) solution algorithm.
+
+    BFGSAlgorithm performs successive rank-two updates of the tangent stiffness
+    matrix, optimized for symmetric systems to accelerate convergence.
+
+    Tcl form:
+        ``algorithm BFGS <count>``
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        algo = model.analysis.algorithm.bfgs(count=10)
+        ```
     """
-    BFGS algorithm performs successive rank-two updates of the tangent (for symmetric systems)
-    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
     def __init__(self, count: int):
-        """
-        Initialize a BFGS algorithm
-        
+        """Create a BFGS solution algorithm.
+
         Args:
-            count (int): Number of iterations before reforming tangent
+            count: Number of iterations before reforming the tangent stiffness matrix.
+
+        Raises:
+            ValueError: If count is not a positive integer.
         """
         super().__init__("BFGS")
         self.count = count
@@ -285,26 +428,46 @@ class BFGSAlgorithm(Algorithm):
             raise ValueError("Count must be a positive integer")
     
     def to_tcl(self) -> str:
-        """
-        Convert the algorithm to a TCL command string for OpenSees
-        
+        """Render this algorithm as an OpenSees Tcl command.
+
         Returns:
-            str: The TCL command string
+            The Tcl command string.
         """
         return f"algorithm BFGS {self.count}"
     
 
 
 class BroydenAlgorithm(Algorithm):
+    """Broyden quasi-Newton solution algorithm.
+
+    BroydenAlgorithm performs successive rank-one updates of the tangent stiffness
+    matrix, optimized for general unsymmetric nonlinear structural systems.
+
+    Tcl form:
+        ``algorithm Broyden <count>``
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        algo = model.analysis.algorithm.broyden(count=8)
+        ```
     """
-    Broyden algorithm performs successive rank-one updates of the tangent (for general unsymmetric systems)
-    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
     def __init__(self, count: int):
-        """
-        Initialize a Broyden algorithm
-        
+        """Create a Broyden solution algorithm.
+
         Args:
-            count (int): Number of iterations before reforming tangent
+            count: Number of iterations before reforming the tangent stiffness matrix.
+
+        Raises:
+            ValueError: If count is not a positive integer.
         """
         super().__init__("Broyden")
         self.count = count
@@ -314,32 +477,54 @@ class BroydenAlgorithm(Algorithm):
             raise ValueError("Count must be a positive integer")
     
     def to_tcl(self) -> str:
-        """
-        Convert the algorithm to a TCL command string for OpenSees
-        
+        """Render this algorithm as an OpenSees Tcl command.
+
         Returns:
-            str: The TCL command string
+            The Tcl command string.
         """
         return f"algorithm Broyden {self.count}"
     
 
 
 class ExpressNewtonAlgorithm(Algorithm):
+    """Express Newton nonlinear solution algorithm.
+
+    ExpressNewtonAlgorithm executes a fixed number of Newton-Raphson iterations
+    and accepts the solution regardless of convergence status, speeding up
+    dynamic simulations where approximate equilibrium is tolerable.
+
+    Tcl form:
+        ``algorithm ExpressNewton <iterCount> <kMultiplier> [-initialTangent] [-currentTangent] [-factorOnce]``
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        algo = model.analysis.algorithm.expressnewton(iter_count=2, k_multiplier=1.2)
+        ```
     """
-    ExpressNewton algorithm accepts the solution after a constant number of iterations
-    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
     def __init__(self, iter_count: int = 2, k_multiplier: float = 1.0, 
                  initial_tangent: bool = False, current_tangent: bool = True, 
                  factor_once: bool = False):
-        """
-        Initialize an ExpressNewton algorithm
-        
+        """Create an Express Newton solution algorithm.
+
         Args:
-            iter_count (int): Constant number of iterations
-            k_multiplier (float): Multiplier to system stiffness
-            initial_tangent (bool): Flag to use initial stiffness
-            current_tangent (bool): Flag to use current stiffness
-            factor_once (bool): Flag to factorize system matrix only once
+            iter_count: Constant number of iterations to perform.
+            k_multiplier: Multiplier factor for system stiffness.
+            initial_tangent: If True, uses initial stiffness matrix.
+            current_tangent: If True, uses current tangent stiffness matrix.
+            factor_once: If True, factors system stiffness only once.
+
+        Raises:
+            ValueError: If iter_count is not positive, or if both initial_tangent
+                and current_tangent are set to True.
         """
         super().__init__("ExpressNewton")
         self.iter_count = iter_count
@@ -357,11 +542,10 @@ class ExpressNewtonAlgorithm(Algorithm):
             raise ValueError("Cannot specify both -initialTangent and -currentTangent flags")
     
     def to_tcl(self) -> str:
-        """
-        Convert the algorithm to a TCL command string for OpenSees
-        
+        """Render this algorithm as an OpenSees Tcl command.
+
         Returns:
-            str: The TCL command string
+            The Tcl command string.
         """
         cmd = f"algorithm ExpressNewton {self.iter_count} {self.k_multiplier}"
         
@@ -407,7 +591,6 @@ class AlgorithmManager(TaggedComponentManager[Algorithm]):
 
     def expressnewton(self, **kwargs) -> Algorithm:
         return self.add(ExpressNewtonAlgorithm(**kwargs))
-
 
 
 # Register all algorithms

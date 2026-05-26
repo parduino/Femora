@@ -31,18 +31,16 @@ class ElasticSection(Section):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
+        import femora.components.section.beam  # noqa: F401
 
-        model = fm.Model()
-        # Create a 2D elastic section
+        model = Model()
         sec_2d = model.section.beam.elastic(
             user_name="Beam2D",
             E=29000.0,
             A=10.0,
-            Iz=150.0
+            Iz=150.0,
         )
-
-        # Create a 3D elastic section
         sec_3d = model.section.beam.elastic(
             user_name="Column3D",
             E=29000.0,
@@ -50,14 +48,15 @@ class ElasticSection(Section):
             Iz=999.0,
             Iy=150.0,
             G=11200.0,
-            J=2.5
+            J=2.5,
         )
+        print(sec_3d.tag)
         ```
     """
 
     __doc_controls__ = {
-        "show_docstring_attributes": False,
-        "members": ["__init__", "to_tcl", "get_materials", "get_area", "get_Iz", "get_Iy", "get_J"],
+        "show_docstring_attributes": True,
+        "members": ["__init__", "get_area", "get_Iy", "get_Iz", "get_J"],
     }
 
     def __init__(
@@ -118,7 +117,10 @@ class ElasticSection(Section):
         """Render the section as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string.
+            str: Tcl command string for this section.
+
+        Raises:
+            ValueError: If this section has not been added to a manager.
         """
         values = [self.E, self.A, self.Iz]
         if self.Iy is not None:

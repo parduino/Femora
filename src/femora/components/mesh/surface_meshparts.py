@@ -9,6 +9,43 @@ from femora.core.region_base import RegionBase
 
 
 class CircularOGrid2D(MeshPart):
+    """Parametric structured 2D circular mesh part with an O-Grid topology.
+
+    This mesh part discretizes a circular domain into structured quad elements using
+    a central square grid block surrounded by four transition block grids (O-Grid topology).
+    This provides structured mesh quality without coordinate singularity at the center,
+    ideal for modeling circular piles, shaft sections, or circular domain boundaries.
+
+    Note:
+        - Exposes a custom node stitching utility (`_merge_nodes`) to merge coincident coordinates across adjacent grid blocks.
+        - Requires quad elements (such as `sspquad` or `stdquad`).
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        mat = model.material.nd.elastic_isotropic(user_name="soil", e_mod=30000.0, nu=0.3, rho=2.0)
+        ele = model.element.quad.ssp(ndof=2, material=mat)
+
+        # Discretize a 2D circular cross-section of radius 5.0
+        circle = model.meshpart.surface.circular_o_grid(
+            user_name="circular_pile_sec",
+            element=ele,
+            R=5.0,
+            r0_ratio=0.4,
+            nt=12,
+            nr=6,
+        )
+        print(circle.tag)
+        ```
+    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__", "generate_mesh"],
+    }
+
     _compatible_elements = [
         "sspquad", "stdquad"
     ]
@@ -25,6 +62,22 @@ class CircularOGrid2D(MeshPart):
         nr: int = 12,
         merge_tolerance: float = 1e-12,
     ) -> None:
+        """Create a parametric 2D circular O-Grid mesh part.
+
+        Args:
+            user_name: Unique user-defined name for this mesh part.
+            element: Associated Element template used for discretization.
+            region: Physical Region where this mesh part is added.
+            R: Radius of the circular domain (must be greater than 0).
+            r0_ratio: Ratio of the inner central square size to the outer radius (must be between 0.1 and 0.9).
+            nt: Number of element intervals along each block transition edge.
+            nr: Number of radial element intervals in the outer ring block.
+            merge_tolerance: Distance tolerance used to stitch adjacent block nodes.
+
+        Raises:
+            ValueError: If R <= 0, r0_ratio is outside (0.1, 0.9), nt or nr is less than 1,
+                or if the element type is not a compatible quad element.
+        """
         super().__init__(
             category='surface mesh',
             mesh_type='Circular O-Grid',
@@ -54,6 +107,16 @@ class CircularOGrid2D(MeshPart):
 
     @staticmethod
     def _merge_nodes(nodes: np.ndarray, quads: np.ndarray, tol: float) -> Tuple[np.ndarray, np.ndarray]:
+        """Merge coincident nodes across different grid blocks within a tolerance.
+
+        Args:
+            nodes: Unmerged node coordinate array of shape (N, 2).
+            quads: Element connectivity index array.
+            tol: Distance tolerance below which nodes are merged.
+
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: Coincident-merged nodes coordinate array and remapped quads index array.
+        """
         node_map = {}
         new_nodes = []
         index_map = {}
@@ -70,6 +133,11 @@ class CircularOGrid2D(MeshPart):
         return merged_nodes, remapped_quads
 
     def generate_mesh(self) -> pv.UnstructuredGrid:
+        """Construct central and ring block coordinates, merge boundary nodes, and compile a PyVista UnstructuredGrid.
+
+        Returns:
+            pv.UnstructuredGrid: The generated circular UnstructuredGrid.
+        """
         R = self.R
         r0_ratio = self.r0_ratio
         nt = self.nt
@@ -153,4 +221,12 @@ class CircularOGrid2D(MeshPart):
 
     @classmethod
     def is_elemnt_compatible(cls, element: str) -> bool:
+        """Check if the given element type is compatible with circular O-grid meshes.
+
+        Args:
+            element: Type name of the element.
+
+        Returns:
+            bool: True if compatible, False otherwise.
+        """
         return element in cls._compatible_elements

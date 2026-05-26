@@ -25,6 +25,11 @@ class PatchBase(ABC):
         material: Resolved Material object for the patch.
     """
 
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
     def __init__(self, material: Union[int, str, Material]):
         """Initialize the patch and resolve its material.
 
@@ -102,6 +107,11 @@ class LayerBase(ABC):
     Attributes:
         material: Resolved Material object for the layer.
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(self, material: Union[int, str, Material]):
         """Initialize the layer and resolve its material.

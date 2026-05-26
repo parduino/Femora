@@ -17,12 +17,10 @@ class ElasticIsotropicMaterial(Material):
     Tcl form:
         ``nDMaterial ElasticIsotropic <tag> <E> <nu> <rho>; # user_name``
 
-    Notes:
+    Note:
         - Coordinate ``E``, ``nu``, and ``rho`` with the unit system used by
           the mesh and exported Tcl model.
         - ``rho`` defaults to ``0.0`` for stiffness-only definitions.
-        - Instances are typically created through
-          [NDMaterialManager.elastic_isotropic][femora.core.nd_material_manager.NDMaterialManager.elastic_isotropic].
 
     Attributes:
         tag: Manager-assigned identifier after registration with the owning
@@ -31,9 +29,9 @@ class ElasticIsotropicMaterial(Material):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
+        model = Model()
         mat = model.material.nd.elastic_isotropic(
             user_name="sand",
             E=3.0e7,
@@ -43,6 +41,11 @@ class ElasticIsotropicMaterial(Material):
         print(mat.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,

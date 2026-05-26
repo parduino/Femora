@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import List
-# import time
 
 import numpy as np
 import pyvista as pv
@@ -15,10 +14,39 @@ from femora.components.interface.embedded_info import EmbeddedInfo
 from femora.core.region_base import RegionBase
 
 
-
-
 class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
-    """Create an *embedded beam–solid* contact interface."""
+    """Embedded beam-solid contact interface.
+
+    EmbeddedBeamSolidInterface models the kinematic and force contact interaction 
+    between line elements (e.g. beam-column piles) and 3D solid elements (e.g. soil). 
+    It enforces matching partition cores between the embedded beam elements and 
+    overlapping solid elements.
+
+    Tcl form:
+        None (renders internally via OpenSees interface-specific TCL commands).
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        # Create an interface for a piles meshpart within the soil domain
+        interface = model.interface.beam_solid_interface(
+            name="pile_soil_interface",
+            beam_part="piles",
+            radius=0.25,
+            n_peri=8,
+            n_long=5,
+            penalty_param=1.0e12,
+            g_penalty=True,
+        )
+        ```
+    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,
@@ -37,6 +65,28 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         *,
         meshpart,
     ) -> None:
+        """Create an EmbeddedBeamSolidInterface.
+
+        Args:
+            name: Unique name of the contact interface.
+            beam_part: The beam part instance, name, or tag.
+            solid_parts: Optional list of solid part instances, names, or tags.
+            shape: Shape profile of the beam cross-section. Defaults to "circle".
+            radius: Radius of the beam interface geometry. Defaults to 0.5.
+            n_peri: Number of points along the perimeter of the circular section. Defaults to 8.
+            n_long: Number of points along the longitudinal axis of the beam. Defaults to 10.
+            penalty_param: Penalty stiffness parameter for the constraint. Defaults to 1.0e12.
+            g_penalty: If True, uses the geometric penalty formulation. Defaults to True.
+            region: Optional region bounding the interface. Not implemented yet.
+            write_connectivity: If True, outputs boundary connectivity maps to file. Defaults to False.
+            write_interface: If True, outputs boundary mesh surfaces to file. Defaults to False.
+            meshpart: MeshPart registry manager from the parent model.
+
+        Raises:
+            ValueError: If `beam_part` cannot be resolved or if shape is unsupported.
+            TypeError: If argument types are invalid (e.g. `beam_part` is not a line mesh).
+            NotImplementedError: If unsupported parameter configurations are provided.
+        """
         resolved_beam = meshpart.resolve(beam_part)
         if resolved_beam is None:
             raise ValueError(f"Could not retrieve beam_part '{beam_part}' to a MeshPart.")
@@ -77,17 +127,19 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         self.write_connectivity = write_connectivity
         self.write_interface = write_interface
 
-
-
     def _fork_solid_for_single_beam(self, assembled_mesh: pv.UnstructuredGrid, beam_cells_idx: np.ndarray):
-        """
-        Fork solid mesh for a single beam element.
+        """Fork the solid mesh surrounding a single beam element.
 
-        This method is forking the solid mesh around single beam element
-        to ensure that the solid mesh is consistent with the beam element's core.
-        It will extract the solid cells that are within the radius of the beam element
-        and edit the _core_elements dictionary to include the solid elements
-        that are within the radius of the beam element.
+        This ensures the solid elements within the beam's radius are mapped to
+        the same computational core as the beam element for parallel partitioning.
+
+        Args:
+            assembled_mesh: The main assembled PyVista grid.
+            beam_cells_idx: Array of cell indices for the beam element.
+
+        Raises:
+            ValueError: If no beams or solids are found during implicit distance calculations.
+            RuntimeError: If this interface is not managed by InterfaceManager.
         """
         # t_start_total = time.time()
         assembled_mesh = assembled_mesh.copy()
@@ -98,7 +150,6 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         if unique_cores.size > 1:
             # print(f"[EmbeddedBeamSolidInterface:{self.name}] Multiple cores found for beam cells: {unique_cores}.")
             # print("Moving all beam cells to the first core for consistency.")
-            # print("all beam cells are going to be moved to core", unique_cores[0])
             # Move all beam cells to same core (pick first) for safety
             target_core = int(unique_cores[0])
             for c in unique_cores[1:]:
@@ -127,11 +178,11 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         center = (beam_tail + beam_head) / 2
         beam_vector = beam_vector / height  # Normalize the vector
         clinder = pv.Cylinder(center=center, 
-                              direction=beam_vector, 
-                              radius=self.radius,
-                              height=height,
-                              resolution=8,
-                              capping=True)  
+                               direction=beam_vector, 
+                               radius=self.radius,
+                               height=height,
+                               resolution=8,
+                               capping=True)  
 
         # clinder.plot(show_edges=True, opacity=1.0, line_width=2)
         clinder = clinder.clean(inplace=False)  # Clean the cylinder mesh
@@ -267,14 +318,17 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
 
         # print(f"--- Total time for _fork_solid_for_single_beam: {time.time() - t_start_total:.4f}s")
 
-
-
-
     def _on_post_assemble(self, assembled_mesh: pv.UnstructuredGrid, **kwargs):
-        """Locate beam & solid element tags; enforce same core."""
-        # shout  out that this is a post-assemble hook is called
-        # print(f"[EmbeddedBeamSolidInterface:{self.name}] Post-assemble hook called.")
+        """Post-assemble event listener to map core partitions between beams and solids.
 
+        Args:
+            assembled_mesh: The assembled PyVista grid.
+            **kwargs: Extra event payload.
+
+        Raises:
+            ValueError: If no beam elements are found or structured mesh length is missing.
+            TypeError: If `beam_part` is of an invalid mesh type.
+        """
         # Collect beam cells indices & compute their mean location
         beam_cells_idx = np.where(assembled_mesh.cell_data["MeshPartTag_celldata"] == self.beam_part.tag)[0]
         if beam_cells_idx.size == 0:
@@ -309,8 +363,6 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
 
             if length is None:
                 raise ValueError("StructuredLineMesh must have length defined.")
-
-            
 
             if grid_size_1 is None or grid_size_2 is None:
                 raise ValueError("StructuredLineMesh must have grid_size_1 and grid_size_2 defined.")
@@ -361,30 +413,22 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
                 else:
                     # add interface
                     self._fork_solid_for_single_beam(assembled_mesh, indxes)
-                # pl = pv.Plotter()
-                # pl.add_mesh(assembled_mesh, color="blue", show_edges=True, opacity=0.5)
-                # pl.add_mesh(assembled_mesh.extract_cells(indxes), color="red", show_edges=True, opacity=1.0,
-                #             line_width=5)
-                # pl.show()
             
         else:
             raise TypeError("beam_part must be a SingleLineMesh or StructuredLineMesh instance.")
-
-
-
-        
 
     # ------------------------------------------------------------------
     # Event subscription
     # ------------------------------------------------------------------
     def _subscribe_events(self):  # type: ignore[override]
-        """Override default subscription; conflict resolution is manager-owned."""
+        """Subscribe this interface to model assembly and TCL export events."""
         events = self._model_events()
         events.subscribe(FemoraEvent.PRE_ASSEMBLE, self._on_pre_assemble)
         events.subscribe(FemoraEvent.POST_ASSEMBLE, self._on_post_assemble)
         events.subscribe(FemoraEvent.EMBEDDED_BEAM_SOLID_TCL, self._on_embedded_beam_solid_tcl_export)
 
     def _unsubscribe_events(self):  # type: ignore[override]
+        """Unsubscribe this interface from all model events."""
         events = self._model_events()
         events.unsubscribe(FemoraEvent.PRE_ASSEMBLE, self._on_pre_assemble)
         events.unsubscribe(FemoraEvent.POST_ASSEMBLE, self._on_post_assemble)
@@ -393,10 +437,14 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         )
 
     def _on_embedded_beam_solid_tcl_export(self, file_handle, **kwargs):
-        """Export TCL commands for the EmbeddedBeamSolidInterface.
+        """Export OpenSees TCL generation commands for this interface.
 
-        This method is called when the FEMora event `EMBEDDED_BEAM_SOLID_TCL` is emitted.
-        It writes the necessary TCL commands to the provided file handle.
+        Args:
+            file_handle: File-like object to write Tcl script commands to.
+            **kwargs: Extra event payload.
+
+        Raises:
+            RuntimeError: If the interface is not registered in the manager.
         """
         # print(f"[EmbeddedBeamSolidInterface:{self.name}] Exporting TCL commands.")
         if self._owner is None:
@@ -442,44 +490,26 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
             file_handle.write("}\n")
             file_handle.write("barrier\n")
 
-
     def _get_recorder(self, 
                       res_type: list[str],
                       dt: 'float | None' = None,
                       results_folder: str = "",
                       ) -> str:
-        """
-        This method is helper to get the recorder for the interface.
-        It returns the recorder name based on the res_type.
+        """Helper method to construct the OpenSees recorder command for the interface.
 
-        This method is caling by the EmbeddedBeamSolidInterfaceRecorder class to get the recorder command.
+        Args:
+            res_type: List of response variables to record. Supported variables include
+                "displacement", "localDisplacement", "axialDisp", "radialDisp", 
+                "tangentialDisp", "globalForce", "localForce", "axialForce",
+                "radialForce", "tangentialForce", "solidForce", "beamForce", "beamLocalForce".
+            dt: Optional time step interval for recording.
+            results_folder: Destination folder for output files.
 
-        Parameters
-        ----------
-        res_type : list[str]
-            The type of the result to be recorded. It can be :
-                - "displacement"
-                - "localDisplacement"
-                - "axialDisp"
-                - "radialDisp"  
-                - "tangentialDisp"
-                - "globalForce"
-                - "localForce"
-                - "axialForce"
-                - "radialForce"
-                - "tangentialForce"
-                - "solidForce"
-                - "beamForce"
-                - "beamLocalForce"
-        Returns
-        -------
-        str
-            The recorder command for the interface.
+        Returns:
+            The OpenSees Tcl recorder command string.
 
-        Raises
-        ------
-        ValueError
-            If the res_type is not supported.
+        Raises:
+            RuntimeError: If the interface is not registered in the manager.
         """
         if self._owner is None:
             raise RuntimeError(
@@ -504,8 +534,15 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
             cmd += "}\n"
         return cmd
 
-
     def _on_pre_assemble(self, **payload):
+        """Pre-assemble event listener to reset collected EmbeddedInfo objects.
+
+        Args:
+            **payload: Event payload.
+
+        Raises:
+            RuntimeError: If the interface is not registered in the manager.
+        """
         if self._owner is None:
             raise RuntimeError(
                 f"EmbeddedBeamSolidInterface '{self.name}' must be managed by InterfaceManager "
@@ -515,35 +552,24 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         self._instance_embeddedinfo_list.clear()
 
 
-
-
 if __name__ == "__main__":
     """Quick demo – builds a cube soil mesh and a central pile, then creates
     the EmbeddedBeamSolidInterface and exports a TCL file named
-    `embedded_demo.tcl`.  Run with `python concrete_embedded_beam_solid.py`.
+    `embedded_demo.tcl`.
     """
-    import femora as fm
-    # Ensure section types (e.g., 'Elastic') are registered
-    import femora.components.section
-
-    # Clear previous global state (helpful when running repeatedly)
-    # fm.material.clear_all_materials()
-    # fm.element.clear_all_elements()
-    # fm.meshpart.clear()
-    # fm.section.clear_all_sections()
-    # fm.region.clear()
-    # fm.assembler.clear()
+    from femora.core.model import Model
+    model = Model()
 
     # ------------------------------------------------------------------
     # 1. Create materials and elements
     # ------------------------------------------------------------------
-    soil_mat = fm.material.nd.elastic_isotropic(user_name="Soil", E=30e6, nu=0.3, rho=2000)
-    brick_ele = fm.element.brick.std(ndof=3, material=soil_mat)
+    soil_mat = model.material.nd.elastic_isotropic(user_name="Soil", E=30e6, nu=0.3, rho=2000)
+    brick_ele = model.element.brick.std(ndof=3, material=soil_mat)
 
     # Beam – needs section + transformation
-    beam_sec = fm.section.create_section("Elastic", user_name="PileSection", E=2e11, A=0.05, Iz=1e-4, Iy=1e-4)
-    transf = fm.transformation.transformation3d("Linear", 0, 1, 0)  # Local y-axis as vecXZ
-    beam_ele = fm.element.beam.disp(ndof=6, section=beam_sec, transformation=transf)
+    beam_sec = model.section.beam.elastic(user_name="PileSection", E=2e11, A=0.05, Iz=1e-4, Iy=1e-4)
+    transf = model.transformation.transformation3d("Linear", 0, 1, 0)  # Local y-axis as vecXZ
+    beam_ele = model.element.beam.disp(ndof=6, section=beam_sec, transformation=transf)
 
     # ------------------------------------------------------------------
     # 2. Create mesh parts
@@ -553,92 +579,54 @@ if __name__ == "__main__":
     Ny = Nx
     Nz = int((0 - (-20)) / dx)
 
-    fm.meshpart.volume.uniform_rectangular_grid(
+    model.meshpart.volume.uniform_rectangular_grid(
         user_name="soil",
         element=brick_ele,
         region=None,
-        x_min= -10, x_max= 10, y_min= -10, y_max= 10, z_min= -20, z_max= 0,
-           nx= Nx, ny= Ny, nz= Nz
+        x_min=-10, x_max=10, y_min=-10, y_max=10, z_min=-20, z_max=0,
+        nx=Nx, ny=Ny, nz=Nz
     )
 
-    fm.meshpart.volume.uniform_rectangular_grid(
+    model.meshpart.volume.uniform_rectangular_grid(
         user_name="cap",
         element=brick_ele,
         region=None,
-        x_min= -5, x_max= 5, y_min= -5, y_max= 5, z_min= 1, z_max= 2,
-           nx= 10//0.25, ny= 10//0.25, nz= 1//0.25
+        x_min=-5, x_max=5, y_min=-5, y_max=5, z_min=1, z_max=2,
+        nx=10//0.25, ny=10//0.25, nz=1//0.25
     )
-    
-        
 
-    # pile1 = fm.meshpart.line.single_line(
-    #     user_name="beam1",
-    #     element=beam_ele,
-    #     region=None,
-    #     **{ 'x0': 0, 'y0': 0, 'z0': -10, 'x1': 0, 'y1': 0, 'z1': 3, "number_of_lines":30, }
-    # )
-    # pile2 = fm.meshpart.line.single_line(
-    #     user_name="beam2",
-    #     element=beam_ele,
-    #     region=None,
-    #     **{ 'x0': 1, 'y0': 0, 'z0': -10, 'x1': 1, 'y1': 0, 'z1': 3, "number_of_lines":30, }
-    # )
-    # pile3 = fm.meshpart.line.single_line(
-    #     user_name="beam3",
-    #     element=beam_ele,
-    #     region=None,
-    #     **{ 'x0': -1, 'y0': 0, 'z0': -10, 'x1': -1, 'y1': 0, 'z1': 3, "number_of_lines":30, }
-    # )
-    # pile4 = fm.meshpart.line.single_line(
-    #     user_name="beam4",
-    #     element=beam_ele,
-    #     region=None,
-    #     **{ 'x0': 0, 'y0': 1, 'z0': -10, 'x1': 0, 'y1': 1, 'z1': 3, "number_of_lines":30, }
-    # )
-    # pile5 = fm.meshpart.line.single_line(
-    #     user_name="beam5",
-    #     element=beam_ele,
-    #     region=None,
-    #     **{ 'x0': 0, 'y0': -1, 'z0': -10, 'x1': 0, 'y1': -1, 'z1': 3, "number_of_lines":30, }
-    # )
-
-    piles = fm.meshpart.line.structured_lines(
+    piles = model.meshpart.line.structured_lines(
         user_name="piles",
         element=beam_ele,
-        base_point_x = -4,
-        base_point_y = -4,
-        base_point_z = -8,
-        base_vector_1_x = 1,
-        base_vector_1_y = 0,
-        base_vector_1_z = 0,
-        base_vector_2_x = 0,
-        base_vector_2_y = 1,
-        base_vector_2_z = 0,
-        normal_x = 0,
-        normal_y = 0,
-        normal_z = 1,
-        grid_size_1 = 8,
-        grid_size_2 = 8,
-        spacing_1 = 1.0,
-        spacing_2 = 1.0,
-        number_of_lines = 10,
-        length = 10, 
-        offset_1 = 0,
-        offset_2 = 0,
+        base_point_x=-4,
+        base_point_y=-4,
+        base_point_z=-8,
+        base_vector_1_x=1,
+        base_vector_1_y=0,
+        base_vector_1_z=0,
+        base_vector_2_x=0,
+        base_vector_2_y=1,
+        base_vector_2_z=0,
+        normal_x=0,
+        normal_y=0,
+        normal_z=1,
+        grid_size_1=8,
+        grid_size_2=8,
+        spacing_1=1.0,
+        spacing_2=1.0,
+        number_of_lines=10,
+        length=10, 
+        offset_1=0,
+        offset_2=0,
     )
 
     # ------------------------------------------------------------------
     # 3. Make assembly & interface
     # ------------------------------------------------------------------
-    fm.assembler.create_section(["soil"], num_partitions=8, merge_points=False)
-    # "cap", "beam1", "beam2", "beam3", "beam4", "beam5"
-    fm.assembler.create_section(["cap", "piles"], num_partitions=4, merge_points=False)
-    # fm.assembler.create_section(["piles"], num_partitions=1, merge_points=False)
-    # fm.assembler.create_section(["beam1", "beam2"], num_partitions=4, merge_points=False)
-    # fm.assembler.create_section(["beam3", "beam4", "beam5"], num_partitions=4, merge_points=False)
-    # fm.assembler.create_section(["beam1", "beam2", "beam3", "beam4", "beam5"], num_partitions=8, merge_points=False)
+    model.assembler.create_section(["soil"], num_partitions=8, merge_points=False)
+    model.assembler.create_section(["cap", "piles"], num_partitions=4, merge_points=False)
     interface_radius = 0.25  # Radius for the embedded beam-solid interface
-    fm.interface.beam_solid_interface(
+    model.interface.beam_solid_interface(
         name="EmbedTest",
         beam_part="piles",
         radius=interface_radius,
@@ -648,52 +636,18 @@ if __name__ == "__main__":
         g_penalty=True,
     )
     
-    # EmbeddedBeamSolidInterface(
-    #     name="EmbedTest", beam_part="beam1", radius=interface_radius,
-    #     n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
-    # )
-    # EmbeddedBeamSolidInterface(
-    #     name="EmbedTest2", beam_part="beam2", radius=interface_radius,
-    #     n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
-    # )
-    # EmbeddedBeamSolidInterface(
-    #     name="EmbedTest3", beam_part="beam3", radius=interface_radius,
-    #     n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
-    # )
-    # EmbeddedBeamSolidInterface(
-    #     name="EmbedTest4", beam_part="beam4", radius=interface_radius,
-    #     n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
-    # )
-    # EmbeddedBeamSolidInterface(
-    #     name="EmbedTest5", beam_part="beam5", radius=interface_radius,
-    #     n_peri=8, n_long=10, crd_transf_tag=transf.transf_tag,
-    # )
-    fm.assembler.assemble()
-    # fm.export_to_tcl("embedded_demo.tcl")
+    model.assembler.assemble()
 
-    
-
-    # fm.export_to_tcl("embedded_demo.tcl")
-
-    # pl = pv.Plotter()
-    # pl.add_mesh(fm.assembled_mesh, color='blue', scalars="Core", opacity=1.0, show_edges=True)
-    # pl.show()
-    # exit(0)
-
-
-    # Assemble again to allow interface to move solids if needed
-    # exit(0)  # Exit here to avoid exporting TCL if running interactively
-
- # Exit here to avoid exporting TCL if running interactively
     import os 
     # change the directory to the current directory
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
     # Export TCL (interface will inject its command)
-    fm.export_to_tcl("embedded_demo.tcl")
-    fm.assembler.plot(show_edges=True, 
-                      scalars="Core",
-                      show_grid=True,
-                      )
+    model.export_to_tcl("embedded_demo.tcl")
+    model.assembler.plot(
+        show_edges=True, 
+        scalars="Core",
+        show_grid=True,
+    )
 
     # print("Demo finished → embedded_demo.tcl generated.")

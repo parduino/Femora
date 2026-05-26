@@ -27,24 +27,28 @@ class FiberElement:
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
+        import femora.components.section.fiber  # noqa: F401
 
-        model = fm.Model()
-        mat = model.material.create_material("Uniaxial", "Steel01", user_name="S", Fy=50.0, E=29000.0, b=0.01)
-        
-        # Fiber is usually created inside FiberSection.add_fiber
-        # but can be instantiated directly
-        fiber = fm.components.section.fiber.element.FiberElement(
-            y_loc=0.5,
-            z_loc=0.5,
-            area=0.1,
-            material=mat
+        model = Model()
+        mat = model.material.uniaxial.steel01(
+            user_name="S",
+            Fy=50.0,
+            E0=29000.0,
+            b=0.01,
         )
-        print(fiber.to_tcl())
+        section = model.section.fiber.section(user_name="BeamFiber")
+        section.add_fiber(y_loc=0.5, z_loc=0.5, area=0.1, material=mat)
+        print(section.fibers[0].to_tcl())
         ```
     """
-    
-    def __init__(self, y_loc: float, z_loc: float, area: float, 
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
+    def __init__(self, y_loc: float, z_loc: float, area: float,
                  material: Union[int, str, Material]):
         """Create a FiberElement with validated coordinates and area.
 
@@ -102,10 +106,10 @@ class FiberElement:
         """Render the fiber as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string.
+            str: Indented Tcl ``fiber`` command for this element.
         """
         return f"    fiber {self.y_loc} {self.z_loc} {self.area} {self.material.tag}"
-    
+
     def __str__(self) -> str:
         """Return a string representation of the fiber."""
         return f"Fiber at ({self.y_loc}, {self.z_loc}) with area {self.area}, material '{self.material.user_name}'"

@@ -18,35 +18,33 @@ from femora.core.transformation_base import GeometricTransformation
 class GeometricTransformation2D(GeometricTransformation):
     """Represents a 2D geometric transformation for OpenSees beam-column elements.
 
-    This class defines how beam-column elements transform nodal displacements and
-    forces between local and global coordinate systems in a 2D analysis. It supports
-    various transformation types (e.g., 'Linear', 'PDelta', 'Corotational') and
-    optional joint offsets at the element's start and end nodes.
+    GeometricTransformation2D defines how 2D beam-column elements transform nodal forces
+    and displacements between local and global coordinate systems. It supports
+    transformation formulations (such as 'Linear', 'PDelta', or 'Corotational')
+    and optional joint offsets at the element ends.
 
     Tcl form:
         ``geomTransf <transf_type> <tag> [-jntOffset <d_xi> <d_yi> <d_xj> <d_yj>]``
 
-    Attributes:
-        tag: Manager-assigned identifier after the object is added to a Femora
-            manager.
-        transformation_type: The type of geometric transformation (e.g., 'Linear').
-        ndm: The number of dimensions for the transformation (always 2 for this class).
-        description: An optional description string for the transformation.
-
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
-        transf2d_linear = model.transformation.geometric_2d(transf_type="Linear")
-        print(transf2d_linear.tag)
-
-        transf2d_pdelta = model.transformation.geometric_2d(
-            transf_type="PDelta", d_xi=0.1, d_yi=0.05, description="P-Delta with offsets"
+        model = Model()
+        transf2d = model.transformation.transformation2d(
+            transf_type="Linear",
+            d_xi=0.1,
+            d_yi=0.05,
+            description="Linear transformation with offsets",
         )
-        print(transf2d_pdelta.to_tcl())
+        print(transf2d.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__", "has_joint_offsets"],
+    }
 
     def __init__(
         self,
@@ -57,16 +55,16 @@ class GeometricTransformation2D(GeometricTransformation):
         d_yj: float | str = 0.0,
         description: str = "",
     ):
-        """Create a 2D geometric transformation object.
+        """Create a 2D geometric transformation.
 
         Args:
-            transf_type: The type of geometric transformation (e.g., 'Linear',
+            transf_type: Type of geometric transformation (e.g., 'Linear',
                 'PDelta', 'Corotational').
-            d_xi: Offset in the x-direction at the 'i' node (start node).
-            d_yi: Offset in the y-direction at the 'i' node (start node).
-            d_xj: Offset in the x-direction at the 'j' node (end node).
-            d_yj: Offset in the y-direction at the 'j' node (end node).
-            description: An optional description for the transformation.
+            d_xi: Joint offset in the local x-direction at start node I.
+            d_yi: Joint offset in the local y-direction at start node I.
+            d_xj: Joint offset in the local x-direction at end node J.
+            d_yj: Joint offset in the local y-direction at end node J.
+            description: Optional description for the transformation.
         """
         super().__init__(transf_type, 2, description=description)
         self.d_xi = float(d_xi)
@@ -75,19 +73,19 @@ class GeometricTransformation2D(GeometricTransformation):
         self.d_yj = float(d_yj)
 
     def has_joint_offsets(self) -> bool:
-        """Checks if any joint offset is non-zero.
+        """Check if the transformation has non-zero joint offsets.
 
         Returns:
-            True if any `d_xi`, `d_yi`, `d_xj`, or `d_yj` is numerically
-            greater than zero, False otherwise.
+            True if any joint offset exceeds `self.eps` in absolute magnitude,
+            False otherwise.
         """
         return any(abs(val) > self.eps for val in [self.d_xi, self.d_yi, self.d_xj, self.d_yj])
 
     def to_tcl(self) -> str:
-        """Renders this 2D geometric transformation as an OpenSees Tcl command.
+        """Render this 2D geometric transformation as an OpenSees Tcl command.
 
         Returns:
-            The Tcl command string for this 2D transformation.
+            The Tcl command string.
         """
         cmd = f"geomTransf {self.transformation_type} {self._require_tag()}"
         if self.has_joint_offsets():
@@ -100,41 +98,38 @@ class GeometricTransformation2D(GeometricTransformation):
 class GeometricTransformation3D(GeometricTransformation):
     """Represents a 3D geometric transformation for OpenSees beam-column elements.
 
-    This class defines how beam-column elements transform nodal displacements and
-    forces between local and global coordinate systems in a 3D analysis. It requires
-    a `vecxz` vector to define the local x-z plane of the element and supports
-    various transformation types (e.g., 'Linear', 'PDelta', 'Corotational')
-    along with optional joint offsets.
+    GeometricTransformation3D defines how 3D beam-column elements transform nodal forces
+    and displacements between local and global coordinate systems. It requires a
+    `vecxz` vector to define the orientation of the local x-z plane, and supports
+    optional joint offsets at the element ends.
 
     Tcl form:
         ``geomTransf <transf_type> <tag> <vecxz_x> <vecxz_y> <vecxz_z> [-jntOffset <d_xi> <d_yi> <d_zi> <d_xj> <d_yj> <d_zj>]``
 
-    Attributes:
-        tag: Manager-assigned identifier after the object is added to a Femora
-            manager.
-        transformation_type: The type of geometric transformation (e.g., 'Linear').
-        ndm: The number of dimensions for the transformation (always 3 for this class).
-        description: An optional description string for the transformation.
+    Warning:
+        - The local z-axis orientation vector `vecxz` cannot have a zero magnitude.
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
-        transf3d_linear = model.transformation.geometric_3d(
-            transf_type="Linear", vecxz_x=0.0, vecxz_y=0.0, vecxz_z=1.0
+        model = Model()
+        transf3d = model.transformation.transformation3d(
+            transf_type="Linear",
+            vecxz_x=0.0,
+            vecxz_y=0.0,
+            vecxz_z=1.0,
+            d_xi=0.1,
+            d_yj=0.05,
         )
-        print(transf3d_linear.tag)
-
-        transf3d_pdelta = model.transformation.geometric_3d(
-            transf_type="PDelta",
-            vecxz_x=0.0, vecxz_y=1.0, vecxz_z=0.0,
-            d_xi=0.1, d_yi=0.05, d_zi=0.0,
-            description="3D P-Delta with Y-axis as local Z"
-        )
-        print(transf3d_pdelta.to_tcl())
+        print(transf3d.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__", "has_joint_offsets"],
+    }
 
     def __init__(
         self,
@@ -150,27 +145,25 @@ class GeometricTransformation3D(GeometricTransformation):
         d_zj: float | str = 0.0,
         description: str = "",
     ):
-        """Create a 3D geometric transformation object.
+        """Create a 3D geometric transformation.
 
         Args:
-            transf_type: The type of geometric transformation (e.g., 'Linear',
+            transf_type: Type of geometric transformation (e.g., 'Linear',
                 'PDelta', 'Corotational').
-            vecxz_x: The x-component of a vector in the global XZ-plane that defines
-                the local x-z plane for the element.
-            vecxz_y: The y-component of a vector in the global XZ-plane that defines
-                the local x-z plane for the element.
-            vecxz_z: The z-component of a vector in the global XZ-plane that defines
-                the local x-z plane for the element.
-            d_xi: Offset in the x-direction at the 'i' node (start node).
-            d_yi: Offset in the y-direction at the 'i' node (start node).
-            d_zi: Offset in the z-direction at the 'i' node (start node).
-            d_xj: Offset in the x-direction at the 'j' node (end node).
-            d_yj: Offset in the y-direction at the 'j' node (end node).
-            d_zj: Offset in the z-direction at the 'j' node (end node).
-            description: An optional description for the transformation.
+            vecxz_x: X-component of a vector in the global coordinate system that
+                defines the local x-z plane.
+            vecxz_y: Y-component of the local z-orientation vector.
+            vecxz_z: Z-component of the local z-orientation vector.
+            d_xi: Joint offset in the local x-direction at start node I.
+            d_yi: Joint offset in the local y-direction at start node I.
+            d_zi: Joint offset in the local z-direction at start node I.
+            d_xj: Joint offset in the local x-direction at end node J.
+            d_yj: Joint offset in the local y-direction at end node J.
+            d_zj: Joint offset in the local z-direction at end node J.
+            description: Optional description for the transformation.
 
         Raises:
-            ValueError: If the `vecxz` vector components result in a zero-magnitude vector.
+            ValueError: If the `vecxz` vector components define a zero-magnitude vector.
         """
         super().__init__(transf_type, 3, description=description)
         self.vecxz_x = float(vecxz_x)
@@ -188,20 +181,20 @@ class GeometricTransformation3D(GeometricTransformation):
             raise ValueError("vecxz vector cannot be zero")
 
     def has_joint_offsets(self) -> bool:
-        """Checks if any joint offset is non-zero.
+        """Check if the transformation has non-zero joint offsets.
 
         Returns:
-            True if any `d_xi`, `d_yi`, `d_zi`, `d_xj`, `d_yj`, or `d_zj` is
-            numerically greater than zero, False otherwise.
+            True if any joint offset exceeds `self.eps` in absolute magnitude,
+            False otherwise.
         """
         offsets = [self.d_xi, self.d_yi, self.d_zi, self.d_xj, self.d_yj, self.d_zj]
         return any(abs(val) > self.eps for val in offsets)
 
     def to_tcl(self) -> str:
-        """Renders this 3D geometric transformation as an OpenSees Tcl command.
+        """Render this 3D geometric transformation as an OpenSees Tcl command.
 
         Returns:
-            The Tcl command string for this 3D transformation.
+            The Tcl command string.
         """
         cmd = (
             f"geomTransf {self.transformation_type} {self._require_tag()} "
@@ -212,6 +205,7 @@ class GeometricTransformation3D(GeometricTransformation):
         if self.description != "":
             cmd += f"; # {self.description}"
         return cmd
+
 
 __all__ = [
     "GeometricTransformation",

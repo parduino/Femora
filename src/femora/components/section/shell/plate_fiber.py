@@ -28,23 +28,22 @@ class PlateFiberSection(Section):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
+        import femora.components.section.shell  # noqa: F401
 
-        model = fm.Model()
-        # Create an nD material for the section
+        model = Model()
         mat = model.material.nd.elastic_isotropic(user_name="ConcreteND", E=3600.0, nu=0.2)
-
-        # Create the plate fiber section
         sec = model.section.shell.plate_fiber(
             user_name="ShellNonlinear",
-            material=mat
+            material=mat,
         )
+        print(sec.tag)
         ```
     """
 
     __doc_controls__ = {
-        "show_docstring_attributes": False,
-        "members": ["__init__", "to_tcl", "get_materials"],
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
     }
 
     def __init__(self, user_name: str = "Unnamed", *, material: Union[int, str, Material]):
@@ -72,7 +71,10 @@ class PlateFiberSection(Section):
         """Render the section as an OpenSees Tcl command.
 
         Returns:
-            The Tcl command string.
+            str: Tcl command string for this section.
+
+        Raises:
+            ValueError: If this section has not been added to a manager.
         """
         return f"section PlateFiber {self._require_tag()} {self.material.tag}; # {self.user_name}"
 

@@ -10,6 +10,50 @@ from femora.core.region_base import RegionBase
 
 
 class StructuredLineMesh(MeshPart):
+    """Parametric structured grid of 1D line elements generated along a plane normal.
+
+    This mesh part generates a grid of parallel line elements (beams or columns)
+    oriented along a specified vector normal. It is highly useful for structural
+    sub-assemblies such as pile group configurations or multi-column bridge piers,
+    automatically compiling connectivity and calculating mass distributions.
+
+    Note:
+        - Requires a compatible beam element that possesses both a defined cross-section and a coordinate transformation.
+        - Rotational and translational masses are integrated per unit length and lumped onto point Mass arrays.
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        sec = model.section.beam.elastic(
+            user_name="beam_sec", E=29000.0, A=10.0, Iz=100.0, Iy=100.0
+        )
+        transf = model.transformation.transformation3d("Linear", 0.0, 1.0, 0.0)
+        beam_ele = model.element.beam.disp(ndof=6, section=sec, transformation=transf)
+
+        # Create a 2x2 pile group of vertical structured lines
+        piles = model.meshpart.line.structured_lines(
+            user_name="pile_group",
+            element=beam_ele,
+            grid_size_1=1,
+            grid_size_2=1,
+            spacing_1=5.0,
+            spacing_2=5.0,
+            length=20.0,
+            normal_x=0.0,
+            normal_y=0.0,
+            normal_z=1.0,
+        )
+        print(piles.tag)
+        ```
+    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__", "is_element_compatible", "generate_mesh"],
+    }
+
     _compatible_elements = ["DispBeamColumn", "ForceBeamColumn", "ElasticBeamColumn", "NonlinearBeamColumn"]
 
     def __init__(
@@ -40,6 +84,39 @@ class StructuredLineMesh(MeshPart):
         number_of_lines: int = 1,
         merge_points: bool = True,
     ) -> None:
+        """Create a parametric structured grid of line elements.
+
+        Args:
+            user_name: Unique user-defined name for this mesh part.
+            element: Associated Element template used for discretization.
+            region: Physical Region where this mesh part is added.
+            base_point_x: X-coordinate of the grid base point.
+            base_point_y: Y-coordinate of the grid base point.
+            base_point_z: Z-coordinate of the grid base point.
+            base_vector_1_x: X-component of the first grid vector direction.
+            base_vector_1_y: Y-component of the first grid vector direction.
+            base_vector_1_z: Z-component of the first grid vector direction.
+            base_vector_2_x: X-component of the second grid vector direction.
+            base_vector_2_y: Y-component of the second grid vector direction.
+            base_vector_2_z: Z-component of the second grid vector direction.
+            normal_x: X-component of the line direction vector (plane normal).
+            normal_y: Y-component of the line direction vector (plane normal).
+            normal_z: Z-component of the line direction vector (plane normal).
+            grid_size_1: Number of cell intervals along the first grid direction.
+            grid_size_2: Number of cell intervals along the second grid direction.
+            spacing_1: Distance between grid lines along the first direction.
+            spacing_2: Distance between grid lines along the second direction.
+            length: Length of each line element.
+            offset_1: Position offset along the first direction.
+            offset_2: Position offset along the second direction.
+            number_of_lines: Number of element segments to divide each line.
+            merge_points: If True, duplicate nodes at adjacent segment boundaries are merged.
+
+        Raises:
+            ValueError: If element is not compatible, grid sizes are negative, spacing or length
+                are non-positive, or number_of_lines is less than 1.
+            TypeError: If merge_points is not a boolean.
+        """
         super().__init__(
             category='line mesh',
             mesh_type='Structured Line Grid',
@@ -94,6 +171,14 @@ class StructuredLineMesh(MeshPart):
         self.generate_mesh()
 
     def is_element_compatible(self, element: Element) -> bool:
+        """Verify that the element belongs to compatible type families and has cross-section and transformation metadata.
+
+        Args:
+            element: Element template to verify.
+
+        Returns:
+            bool: True if compatible, False otherwise.
+        """
         if not self.is_elemnt_compatible(element.element_type):
             return False
         if not element.get_section() or not element.get_transformation():
@@ -101,6 +186,11 @@ class StructuredLineMesh(MeshPart):
         return True
 
     def generate_mesh(self) -> pv.UnstructuredGrid:
+        """Generate lines grid coordinates, compile connectivity, and compute lumped point Mass arrays.
+
+        Returns:
+            pv.UnstructuredGrid: The generated UnstructuredGrid mesh with Point Mass data.
+        """
         base_point = np.array([self.base_point_x, self.base_point_y, self.base_point_z])
         base_vector_1 = np.array([
             self.base_vector_1_x,
@@ -236,6 +326,44 @@ class StructuredLineMesh(MeshPart):
 
 
 class SingleLineMesh(MeshPart):
+    """Parametric 1D line mesh part defined between two points in 3D space.
+
+    This mesh part discretizes a straight line between a start point `(x0, y0, z0)`
+    and an end point `(x1, y1, z1)` into a specified number of segments, automatically
+    assigning physical beam element templates and computing consistent lumped point Mass data.
+
+    Note:
+        - Requires a compatible beam element that has a valid cross-section and coordinate transformation.
+        - Total element mass and rotational inertia are lumped and assigned to generated point arrays.
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        sec = model.section.beam.elastic(
+            user_name="column_sec", E=29000.0, A=10.0, Iz=100.0, Iy=100.0
+        )
+        transf = model.transformation.transformation3d("Linear", 0.0, 1.0, 0.0)
+        beam_ele = model.element.beam.disp(ndof=6, section=sec, transformation=transf)
+
+        # Discretize a single vertical column
+        column = model.meshpart.line.single_line(
+            user_name="pier_column",
+            element=beam_ele,
+            x0=0.0, y0=0.0, z0=0.0,
+            x1=0.0, y1=0.0, z1=15.0,
+            number_of_lines=5,
+        )
+        print(column.tag)
+        ```
+    """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__", "is_element_compatible", "generate_mesh"],
+    }
+
     _compatible_elements = ["DispBeamColumn", "ForceBeamColumn", "ElasticBeamColumn", "NonlinearBeamColumn"]
 
     def __init__(
@@ -253,6 +381,26 @@ class SingleLineMesh(MeshPart):
         number_of_lines: int = 1,
         merge_points: bool = True,
     ) -> None:
+        """Create a parametric single line mesh part.
+
+        Args:
+            user_name: Unique user-defined name for this mesh part.
+            element: Associated Element template used for discretization.
+            region: Physical Region where this mesh part is added.
+            x0: Start point X-coordinate.
+            y0: Start point Y-coordinate.
+            z0: Start point Z-coordinate.
+            x1: End point X-coordinate.
+            y1: End point Y-coordinate.
+            z1: End point Z-coordinate.
+            number_of_lines: Number of element segments along the line.
+            merge_points: If True, duplicate nodes at segment boundaries are merged.
+
+        Raises:
+            ValueError: If element is not compatible, start and end points are identical,
+                or number_of_lines is less than 1.
+            TypeError: If merge_points is not a boolean.
+        """
         super().__init__(
             category='line mesh',
             mesh_type='Single Line',
@@ -289,6 +437,14 @@ class SingleLineMesh(MeshPart):
         self.generate_mesh()
 
     def is_element_compatible(self, element: Element) -> bool:
+        """Verify that the element belongs to compatible type families and has cross-section and transformation metadata.
+
+        Args:
+            element: Element template to verify.
+
+        Returns:
+            bool: True if compatible, False otherwise.
+        """
         if not self.is_elemnt_compatible(element.element_type):
             return False
         if not element.get_section() or not element.get_transformation():
@@ -296,6 +452,11 @@ class SingleLineMesh(MeshPart):
         return True
 
     def generate_mesh(self) -> pv.PolyData:
+        """Generate line coordinate points, connectivity indices, and point Mass data.
+
+        Returns:
+            pv.UnstructuredGrid: The generated UnstructuredGrid mesh with point Mass data.
+        """
         start_point = np.array([self.x0, self.y0, self.z0])
         end_point = np.array([self.x1, self.y1, self.z1])
         direction = end_point - start_point
@@ -405,4 +566,12 @@ class SingleLineMesh(MeshPart):
 
     @classmethod
     def is_elemnt_compatible(cls, element: str) -> bool:
+        """Check if the given element type name is compatible with line meshes.
+
+        Args:
+            element: Type name of the element.
+
+        Returns:
+            bool: True if compatible, False otherwise.
+        """
         return element.lower() in [elem.lower() for elem in cls._compatible_elements]

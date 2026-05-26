@@ -5,6 +5,17 @@ from femora.components.interface.embedded_beam_solid_interface import EmbeddedBe
 
 
 def _results_folder(recorder: Recorder) -> str:
+    """Resolve the results folder path for the given recorder.
+
+    Args:
+        recorder: The recorder instance.
+
+    Returns:
+        The results directory path ending with a slash.
+
+    Raises:
+        ValueError: If the recorder does not belong to a managed Model.
+    """
     mesh_maker = recorder._mesh_maker()
     if mesh_maker is None:
         raise ValueError(
@@ -17,55 +28,55 @@ def _results_folder(recorder: Recorder) -> str:
 
 
 class EmbeddedBeamSolidInterfaceRecorder(Recorder):
-    """
-    Recorder for embedded beam-solid interfaces.
-    
-    This recorder is used to monitor the interaction between embedded beams and solid elements.
-    It generates output files containing the interface points and connectivity information.
+    """Recorder for embedded beam-solid interfaces.
 
-    Args:
-        interface (EmbeddedBeamSolidInterface | str): The interface to record. (required)
-        resp_type (str | List[str] | None): The type of responses to record. (required)
-        If None, only displacement is recorded.
-        Valid response types include:
-            - "displacement"
-            - "localDisplacement"
-            - "axialDisp"
-            - "radialDisp"  
-            - "tangentialDisp"
-            - "globalForce"
-            - "localForce"
-            - "axialForce"
-            - "radialForce"
-            - "tangentialForce"
-            - "solidForce"
-            - "beamForce"
-            - "beamLocalForce"
-    Raises:
-        ValueError: If the interface is not an instance of EmbeddedBeamSolidInterface or a valid interface name.
-        TypeError: If resp_type is not a string or a list of strings.
-        ValueError: If resp_type contains invalid response types.
+    EmbeddedBeamSolidInterfaceRecorder monitors the kinematic and force interaction
+    between embedded beams and solid elements. It records displacements, axial forces,
+    solid forces, or beam forces directly at the interfaces.
 
-    Returns:
-        EmbeddedBeamSolidInterfaceRecorder: An instance of the recorder.
-        
+    Tcl form:
+        None (renders internally via interface-specific export commands).
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        # Create an interface recorder for an interface named 'pile_solid_interface'
+        recorder = model.recorder.embedded_beam_solid_interface(
+            interface="pile_solid_interface",
+            resp_type=["axialForce", "displacement"],
+        )
+        ```
     """
-    def __init__(self, 
-                 interface: Union[str, 'EmbeddedBeamSolidInterface', List[Union[str, 'EmbeddedBeamSolidInterface']]],
-                 resp_type: Union[str, List[str]] = ["displacement", "localDisplacement", "axialDisp", "radialDisp",
-                            "tangentialDisp", "globalForce", "localForce", "axialForce",
-                            "radialForce", "tangentialForce", "solidForce", "beamForce","beamLocalForce"],
-                 dt : Union[float, None] = None,
-                 cores: Optional[Union[int, List[int]]] = None,
-                 ):
-        """
-        Initialize an EmbeddedBeamSolidInterfaceRecorder
-        
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
+    def __init__(
+        self,
+        interface: Union[str, 'EmbeddedBeamSolidInterface', List[Union[str, 'EmbeddedBeamSolidInterface']]],
+        resp_type: Union[str, List[str]] = ["displacement", "localDisplacement", "axialDisp", "radialDisp",
+                   "tangentialDisp", "globalForce", "localForce", "axialForce",
+                   "radialForce", "tangentialForce", "solidForce", "beamForce","beamLocalForce"],
+        dt: Union[float, None] = None,
+        cores: Optional[Union[int, List[int]]] = None,
+    ):
+        """Create an embedded beam-solid interface recorder.
+
         Args:
-            - interface (EmbeddedBeamSolidInterface | str): The interface to record.
-            - resp_type (str | List[str]): The type of responses to record.
+            interface: The interface(s) to record. Can be an
+                EmbeddedBeamSolidInterface instance, a string name, or a list
+                of both.
+            resp_type: The response type or list of response types to record.
+            dt: Optional recording time step interval.
+            cores: Optional processor core ID(s) for MPI execution.
 
-    
+        Raises:
+            ValueError: If interface validation fails.
+            TypeError: If resp_type is invalid.
         """
         super().__init__("EmbeddedBeamSolidInterface", cores=cores)
         if isinstance(interface, list):
@@ -100,6 +111,16 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
         self.dt = dt
 
     def _resolve_interfaces(self) -> List[EmbeddedBeamSolidInterface]:
+        """Resolve interface identifiers to actual EmbeddedBeamSolidInterface instances.
+
+        Returns:
+            A list of resolved EmbeddedBeamSolidInterface instances.
+
+        Raises:
+            ValueError: If the recorder is not currently managed or if the
+                interface name is not found.
+            TypeError: If the interface is an invalid type.
+        """
         mesh_maker = self._mesh_maker()
         if mesh_maker is None:
             raise ValueError(
@@ -125,11 +146,10 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
         return [resolve_one(self._interface_input)]
 
     def _to_tcl_impl(self) -> str:
-        """
-        Convert the EmbeddedBeamSolidInterfaceRecorder to a TCL command string for OpenSees
-        
+        """Convert this recorder to an OpenSees TCL command string.
+
         Returns:
-            str: The TCL command string
+            The TCL command string.
         """
         # This recorder does not generate a TCL command, it writes directly to a file
         cmd = "# recorder EmbeddedBeamSolidInterface\n"
@@ -141,64 +161,61 @@ class EmbeddedBeamSolidInterfaceRecorder(Recorder):
                                           results_folder=results_folder)
            cmd += "\n"
         return cmd
-    
 
-    
 
 class NodeRecorder(Recorder):
     """Node recorder for recording nodal responses at every converged step.
 
-    This recorder monitors the response of specified nodes throughout the
-    analysis, writing output to files, XML, binary format, or TCP/IP streams.
+    NodeRecorder monitors nodal degrees of freedom throughout the analysis,
+    exporting results such as displacements, velocities, accelerations, or reaction
+    forces to files, XML, binary, or TCP streams.
 
-    Attributes:
-        file_name: Name of file to which output is sent.
-        xml_file: Name of XML file to which output is sent.
-        binary_file: Name of binary file to which output is sent.
-        inet_addr: IP address of remote machine for TCP/IP output.
-        port: Port on remote machine awaiting TCP connection.
-        precision: Number of significant digits in output.
-        time_series: Tag of previously constructed TimeSeries.
-        time: Flag to place domain time in first output column.
-        delta_t: Time interval for recording.
-        close_on_write: Flag to open and close file on each write.
-        nodes: Tags of nodes whose response is being recorded.
-        node_range: Start and end node tags for range specification.
-        region: Tag of previously defined region.
-        dofs: List of DOF at nodes whose response is requested.
-        resp_type: String indicating response required.
+    Tcl form:
+        ``recorder Node -file <fileName> -node <nodeTags...> -dof <dofs...> <respType>``
 
     Example:
-        >>> from femora.components.recorder.recorders import NodeRecorder
-        >>> # recorder = NodeRecorder(
-        >>> #     file_name="displacement.out",
-        >>> #     time=True,
-        >>> #     nodes=[1, 2, 3],
-        >>> #     dofs=[1, 2],
-        >>> #     resp_type="disp"
-        >>> # )
-        >>> # print(recorder.to_tcl())
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        # Record displacement at DOFs 1 and 2 for nodes 101 and 102
+        recorder = model.recorder.node(
+            file_name="displacement.out",
+            nodes=[101, 102],
+            dofs=[1, 2],
+            resp_type="disp",
+        )
+        ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
     def __init__(self, **kwargs):
-        """
-        Initialize a Node Recorder
-        
+        """Create a node recorder.
+
         Args:
-            file_name (str, optional): Name of file to which output is sent
-            xml_file (str, optional): Name of XML file to which output is sent
-            binary_file (str, optional): Name of binary file to which output is sent
-            inet_addr (str, optional): IP address of remote machine
-            port (int, optional): Port on remote machine awaiting TCP
-            precision (int, optional): Number of significant digits (default: 6)
-            time_series (int, optional): Tag of previously constructed TimeSeries
-            time (bool, optional): Places domain time in first output column
-            delta_t (float, optional): Time interval for recording
-            close_on_write (bool, optional): Opens and closes file on each write
-            nodes (List[int], optional): Tags of nodes whose response is being recorded
-            node_range (List[int], optional): Start and end node tags
-            region (int, optional): Tag of previously defined region
-            dofs (List[int]): List of DOF at nodes whose response is requested
-            resp_type (str): String indicating response required
+            **kwargs: Key-value parameters:
+                file_name: Optional file path for plain text output.
+                xml_file: Optional file path for XML output.
+                binary_file: Optional file path for binary output.
+                inet_addr / port: Optional IP and port for TCP output.
+                precision: Number of significant digits (default: 6).
+                time_series: Optional TimeSeries tag.
+                time: If True, includes time in the first column.
+                delta_t: Optional time step recording interval.
+                close_on_write: If True, opens/closes the output file on each write.
+                nodes: Optional list of node tags.
+                node_range: Optional start and end tag `[start, end]`.
+                region: Optional target region tag or name.
+                dofs: List of active degrees of freedom (required).
+                resp_type: Response type, e.g. `'disp'`, `'vel'`, `'accel'`, `'reaction'` (required).
+
+        Raises:
+            ValueError: If output destination, node selection, DOFs, or response type
+                validation fails.
         """
         super().__init__("Node", cores=kwargs.get("cores", None))
         self.file_name = kwargs.get("file_name", None)
@@ -249,11 +266,10 @@ class NodeRecorder(Recorder):
             )
 
     def _to_tcl_impl(self) -> str:
-        """
-        Convert the Node recorder to a TCL command string for OpenSees
-        
+        """Convert this node recorder to an OpenSees TCL command string.
+
         Returns:
-            str: The TCL command string
+            The TCL command string.
         """
         cmd = "recorder Node"
         
@@ -300,31 +316,58 @@ class NodeRecorder(Recorder):
 class DriftRecorder(Recorder):
     """Recorder for inter-story drift ratios.
 
-    This wraps the OpenSees `recorder Drift` command.
+    DriftRecorder captures inter-story drift ratios between pairs of nodes (such
+    as story bottoms and tops) to monitor shear deformation and relative structural
+    movements.
 
-        Note:
-                - In MPI runs, multiple processes must not write to the same file.
-                    This recorder automatically injects `$pid` into the output filename
-                    (before the extension if present).
-                - Optionally, `cores` can be provided to emit the recorder only on
-                    the specified MPI process ids.
+    Tcl form:
+        ``recorder Drift -file <fileName> -iNode <iNodeTags...> -jNode <jNodeTags...> -dof <dof> -perpDirn <perpDirn>``
+
+    Note:
+        - In parallel MPI runs, this recorder automatically injects `$pid` into the
+          output filename (before the extension) to prevent file conflicts.
 
     Example:
-        >>> import femora as fm
-        >>> from femora.core.model import Model
-        >>> model = Model()
-        >>> rec = model.recorder.drift(
-        ...     file_name="StoryDrift_Story01_X.out",
-        ...     i_nodes=1,
-        ...     j_nodes=101,
-        ...     dof=1,
-        ...     perp_dirn=3,
-        ...     time=True,
-        ... )
-        >>> print(rec.to_tcl())
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        # Record inter-story drift between node 1 and 101 along DOF 1
+        recorder = model.recorder.drift(
+            file_name="StoryDrift.out",
+            i_nodes=[1],
+            j_nodes=[101],
+            dof=1,
+            perp_dirn=3,
+            time=True,
+        )
+        ```
     """
 
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
     def __init__(self, **kwargs):
+        """Create a drift recorder.
+
+        Args:
+            **kwargs: Key-value parameters:
+                file_name: Output file name (required).
+                i_nodes: List of bottom node tags (required).
+                j_nodes: List of top node tags (required).
+                dof: Target degree of freedom (1 to 6).
+                perp_dirn: Perpendicular direction (1 to 3).
+                time: If True, records simulation time.
+                delta_t: Optional time step recording interval.
+                precision: Optional number of significant digits.
+                cores: Optional processor core ID(s) for MPI execution.
+
+        Raises:
+            ValueError: If input validation fails.
+            TypeError: If cores or node lists are invalid types.
+        """
         # Accept both legacy `core` and new `cores` arguments.
         cores = kwargs.get("cores", None)
         core = kwargs.get("core", None)
@@ -381,6 +424,18 @@ class DriftRecorder(Recorder):
 
     @staticmethod
     def _normalize_nodes(value, name: str) -> List[int]:
+        """Normalize node tag inputs to a list of integers.
+
+        Args:
+            value: Node tags input (integer, list, or array).
+            name: The argument field name.
+
+        Returns:
+            A list of validated node tags.
+
+        Raises:
+            TypeError: If the input is not a supported type.
+        """
         if value is None:
             return []
         if isinstance(value, int):
@@ -400,6 +455,14 @@ class DriftRecorder(Recorder):
 
     @staticmethod
     def _inject_pid_in_filename(file_name: str) -> str:
+        """Inject MPI process tag `$pid` into the output file name.
+
+        Args:
+            file_name: File name to modify.
+
+        Returns:
+            The modified file name with `$pid` before the extension.
+        """
         parts = file_name.split(".")
         if len(parts) > 1:
             ext = parts[-1]
@@ -407,6 +470,11 @@ class DriftRecorder(Recorder):
         return file_name + "$pid"
 
     def _to_tcl_impl(self) -> str:
+        """Convert this drift recorder to an OpenSees TCL command string.
+
+        Returns:
+            The TCL command string.
+        """
         results_folder = _results_folder(self)
         file_path = DriftRecorder._inject_pid_in_filename(self.file_name)
         if results_folder != "./":
@@ -425,38 +493,50 @@ class DriftRecorder(Recorder):
         if self.delta_t is not None:
             cmd += f" -dT {float(self.delta_t)}"
 
-        # Do not wrap here; `Recorder.to_tcl` will apply any core-guarding
         return cmd
 
 
 class VTKHDFRecorder(Recorder):
-    """
-    The VTKHDF recorder type is a whole model recorder designed to record 
-    the model geometry and metadata, along with selected response quantities.
-    The output of this recorder is in the .h5 file format, which can be 
-    visualized using visualization tools like ParaView.
+    """Whole-model recorder exporting geometry and results in VTK HDF format.
 
-    Args:
-        file_base_name (str): Base name of the file to which output is sent
-        resp_types (List[str]): List of strings indicating response types to record
-        delta_t (float, optional): Time interval for recording
-        r_tol_dt (float, optional): Relative tolerance for time step matching
+    VTKHDFRecorder records the entire model mesh geometry, elements, and selected
+    response field variables (such as displacement, stress, or strain) into a
+    binary `.h5` file format, allowing high-performance 3D visualization in ParaView.
 
-    Raises:
-        ValueError: If file_base_name is not specified
-        ValueError: If resp_types is not specified or contains invalid types    
-    Returns:
-        VTKHDFRecorder: An instance of the recorder.
+    Tcl form:
+        ``recorder vtkhdf <fileBaseName> [options] <respTypes...>``
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        # Create a VTKHDF whole-model recorder
+        recorder = model.recorder.vtkhdf(
+            file_base_name="results.h5",
+            resp_types=["disp", "stress3D6"],
+        )
+        ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
     def __init__(self, **kwargs):
-        """
-        Initialize a VTKHDF Recorder
-        
+        """Create a VTK HDF recorder.
+
         Args:
-            file_base_name (str): Base name of the file to which output is sent
-            resp_types (List[str]): List of strings indicating response types to record
-            delta_t (float, optional): Time interval for recording
-            r_tol_dt (float, optional): Relative tolerance for time step matching
+            **kwargs: Key-value parameters:
+                file_base_name: Base name of the file to which output is sent (required).
+                resp_types: List of strings indicating response types to record (required).
+                delta_t: Optional time interval for recording.
+                r_tol_dt: Optional relative tolerance for time step matching.
+
+        Raises:
+            ValueError: If file_base_name or resp_types are not specified, or if
+                invalid response types are supplied.
         """
         super().__init__("VTKHDF", cores=kwargs.get("cores", None))
         self.file_base_name = kwargs.get("file_base_name", "")
@@ -479,16 +559,14 @@ class VTKHDFRecorder(Recorder):
                 )
 
     def _to_tcl_impl(self) -> str:
-        """
-        Convert the VTKHDF recorder to a TCL command string for OpenSees
-        
-        Returns:
-            str: The TCL command string
-        """
+        """Convert this VTK HDF recorder to an OpenSees TCL command string.
 
+        Returns:
+            The TCL command string.
+        """
         # separete name and format of the file
         name = self.file_base_name.split(".")
-        if len(name) <2:
+        if len(name) < 2:
             fileformat = "vtkhdf"
         else:
             fileformat = name[-1]
@@ -512,37 +590,54 @@ class VTKHDFRecorder(Recorder):
         for resp_type in self.resp_types:
             cmd += f" {resp_type}"
         
-        
-        
         return cmd
 
 
 class MPCORecorder(Recorder):
-    """
-    MPCO recorder writes model responses into an HDF5 database readable by STKO (*.mpco).
+    """MPCO whole-model recorder for STKO.
 
-    Command form (see official docs):
-        recorder mpco $fileName \
-            <-N nodeResponses...> \
-            <-E elementResponses...> \
-            <-NS name1 par1 name2 par2 ...> \
-            <-R regionTag> ... \
-            <-T dt $deltaTime | -T nsteps $numSteps>
+    MPCORecorder exports complex finite element model databases, mesh topology,
+    and nodal/element response variables into an HDF5-based MPCO database (*.mpco)
+    readable by STKO.
 
-    Reference: OpenSees MPCO Recorder documentation.
+    Tcl form:
+        ``recorder mpco <fileName> [options]``
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        # Create an MPCO recorder
+        recorder = model.recorder.mpco(
+            file_name="results.mpco",
+            node_responses=["displacement", "velocity"],
+            element_responses=["force"],
+        )
+        ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
     def __init__(self, **kwargs):
-        """
-        Initialize an MPCO Recorder
+        """Create an MPCO recorder.
 
         Args:
-            file_name (str): Output file name (e.g., "results.mpco")
-            node_responses (List[str], optional): Node response names per docs
-            element_responses (List[str], optional): Element/section/material response names
-            node_sensitivities (List[tuple[str,int]] | List[dict], optional): Pairs of (name, parameterId)
-            regions (List[int], optional): Region tags to record (can repeat)
-            delta_t (float, optional): Recording time interval (mutually exclusive with num_steps)
-            num_steps (int, optional): Recording step interval (mutually exclusive with delta_t)
+            **kwargs: Key-value parameters:
+                file_name: Output database file name (required).
+                node_responses: Optional list of node response variables to record.
+                element_responses: Optional list of element response variables.
+                node_sensitivities: Optional list of node sensitivities.
+                regions: Optional list of region tags or names to restrict recording to.
+                delta_t: Optional recording time step interval.
+                num_steps: Optional recording step interval.
+
+        Raises:
+            ValueError: If file_name is missing or parameters are conflicting.
+            TypeError: If input parameter types are incorrect.
         """
         super().__init__("MPCO", cores=kwargs.get("cores", None))
         self.file_name = kwargs.get("file_name", "")
@@ -622,11 +717,10 @@ class MPCORecorder(Recorder):
             raise ValueError("Only one of delta_t or num_steps may be specified")
 
     def _to_tcl_impl(self) -> str:
-        """
-        Convert the MPCO recorder to a TCL command string for OpenSees
+        """Convert this MPCO recorder to an OpenSees TCL command string.
 
         Returns:
-            str: The TCL command string
+            The TCL command string.
         """
         results_folder = _results_folder(self)
         file_path = self.file_name
@@ -667,50 +761,51 @@ class MPCORecorder(Recorder):
 
 
 class BeamForceRecorder(Recorder):
-    """
-    Specialized Element recorder for beam meshes to record forces.
+    """Specialized Element force recorder for line meshes.
 
-    This recorder inspects the assembled mesh, resolves the element tags that
-    correspond to selected beam mesh parts (line meshes), and emits one or more
-    recorder Element commands per compute core.
+    BeamForceRecorder automatically resolves the element tags associated with
+    selected line mesh parts and creates parallel Element force recorders grouped
+    by MPI compute core.
 
-    Args:
-
-        meshparts (List[Union[str, int, object]]):
-            MeshPart identifiers (user_name strings or MeshPart instances).
-            If omitted or empty, all line mesh parts will be used.
-
-        force_type (str): 'globalForce' or 'localForce'. Default: 'globalForce'.
-
-        file_prefix (str): Prefix for output files. Default: 'Beam'.
-
-        delta_t (float | None): Optional -dT value. Default: None.
-
-        include_time (bool): Include -time flag. Default: True.
-
-        output_format (str): 'file', 'xml', or 'binary' (-file/-xml/-binary). Default: 'file'.
-
-        precision (int | None): Number of significant digits (-precision). Default: None.
-
-    Raises:
-        ValueError: If force_type is invalid or if specified meshparts are not found.
-    
-    Returns:
-        BeamForceRecorder: An instance of the recorder.
+    Tcl form:
+        Generates parallel ``recorder Element`` commands guarded by ``$pid == <core>``.
 
     Example:
-    '''
-        import femora as fm
-        fm.recorder = fm.BeamForceRecorder(
-            meshparts=["BeamMeshPart1", "BeamMeshPart2"],
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        # Record beam local forces for two line meshparts
+        recorder = model.recorder.beam_force(
+            meshparts=["Beam1", "Beam2"],
             force_type="localForce",
-            file_prefix="MyBeamForces",
-            delta_t=0.1,
-            include_time=True
+            file_prefix="BeamForces",
         )
-    '''
+        ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
     def __init__(self, **kwargs):
+        """Create a beam force recorder.
+
+        Args:
+            **kwargs: Key-value parameters:
+                meshparts: Optional list of MeshPart identifiers (user_name strings
+                    or MeshPart instances). If omitted, all line mesh parts are used.
+                force_type: Force system, either `'globalForce'` or `'localForce'`.
+                file_prefix: Prefix for output files (default: `'Beam'`).
+                delta_t: Optional time step recording interval.
+                include_time: If True, includes time in columns (default: True).
+                output_format: Output format, either `'file'`, `'xml'`, or `'binary'`.
+                precision: Optional significant digits.
+
+        Raises:
+            ValueError: If force_type or output_format are invalid.
+        """
         super().__init__("BeamForce", cores=kwargs.get("cores", None))
         self.meshparts = kwargs.get("meshparts", [])
         self.force_type = kwargs.get("force_type", "globalForce")
@@ -727,6 +822,15 @@ class BeamForceRecorder(Recorder):
             raise ValueError("output_format must be one of 'file', 'xml', 'binary'")
 
     def _resolve_meshparts(self):
+        """Resolve meshpart identifiers to actual MeshPart instances.
+
+        Returns:
+            A dictionary of resolved MeshPart instances keyed by user_name.
+
+        Raises:
+            ValueError: If the recorder is not managed or a meshpart is not found.
+            TypeError: If meshpart identifiers are invalid types.
+        """
         from femora.core.meshpart_base import MeshPart
 
         mesh_maker = self._mesh_maker()
@@ -756,6 +860,14 @@ class BeamForceRecorder(Recorder):
 
     @staticmethod
     def _compress_to_ranges(sorted_tags: List[int]) -> List[Union[int, tuple]]:
+        """Compress a sorted list of element tags into ranges.
+
+        Args:
+            sorted_tags: A sorted list of integer tags.
+
+        Returns:
+            A list of integers or tuples representing element tag ranges.
+        """
         if not sorted_tags:
             return []
         ranges: List[Union[int, tuple]] = []
@@ -778,6 +890,14 @@ class BeamForceRecorder(Recorder):
         return ranges
 
     def _to_tcl_impl(self) -> str:
+        """Convert this beam force recorder to an OpenSees TCL command string.
+
+        Returns:
+            The TCL command string.
+
+        Raises:
+            ValueError: If Model, assembled mesh, or required mesh datasets are missing.
+        """
         import numpy as np
         try:
             import pyvista as pv
@@ -887,4 +1007,3 @@ class BeamForceRecorder(Recorder):
                     lines.append(cmd)
 
         return "\n".join(lines)
-

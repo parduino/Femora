@@ -18,13 +18,13 @@ wave (TF_inc).
     TF_inc   – complex transfer function  u_top / u_incident
 
 Example:
-    >>> soil_profile = [
-    ...     {"h": 2.0, "vs": 200.0, "rho": 1500.0, "damping": 0.05},
-    ...     {"h": 54.0, "vs": 400.0, "rho": 1500.0, "damping": 0.05}
-    ... ]
-    >>> rock = {"vs": 850.0, "rho": 1500.0, "damping": 0.05}
-    >>> tf = TransferFunction(soil_profile, rock, f_max=25.0)
-    >>> f, TF_uu, TF_inc = tf.compute()
+    soil_profile = [
+        {"h": 2.0, "vs": 200.0, "rho": 1500.0, "damping": 0.05},
+        {"h": 54.0, "vs": 400.0, "rho": 1500.0, "damping": 0.05}
+    ]
+    rock = {"vs": 850.0, "rho": 1500.0, "damping": 0.05}
+    tf = TransferFunction(soil_profile, rock, f_max=25.0)
+    f, TF_uu, TF_inc = tf.compute()
 """
 import numpy as np
 from numpy.fft import fft, ifft, fftfreq
@@ -59,19 +59,19 @@ class TimeHistory:
         TimeHistory: An instance of the TimeHistory class containing the time and acceleration data.
 
     Example:
-        >>> from femora.tools.transferFunction import TimeHistory
-        >>> import numpy as np
+    from femora.tools.transferFunction import TimeHistory
+    import numpy as np
 
         # Create a TimeHistory instance with time and acceleration data
-        >>> time = np.array([0.0, 0.1, 0.2, 0.3])
-        >>> acceleration = np.array([0.0, 1.0, 0.5, -0.5])
-        >>> th = TimeHistory(time, acceleration)
-        >>> print(th.duration)  # Output: 0.3
+    time = np.array([0.0, 0.1, 0.2, 0.3])
+    acceleration = np.array([0.0, 1.0, 0.5, -0.5])
+    th = TimeHistory(time, acceleration)
+    print(th.duration)  # Output: 0.3
 
         # create a TimeHistory from a file
-        >>> th = TimeHistory.load(file_path='path/to/time_history.csv', format='csv')
-        >>> th = TimeHistory.load(file_path='path/to/time_history.peer', format='peer')
-        >>> th = TimeHistory.load(time_file='path/to/time_values.txt', acc_file='path/to/acceleration_values.txt', delimiter=',')
+    th = TimeHistory.load(file_path='path/to/time_history.csv', format='csv')
+    th = TimeHistory.load(file_path='path/to/time_history.peer', format='peer')
+    th = TimeHistory.load(time_file='path/to/time_values.txt', acc_file='path/to/acceleration_values.txt', delimiter=',')
     """
 
     def __init__(self, time: np.ndarray, 
@@ -372,12 +372,12 @@ class TransferFunction:
             TypeError: If input types are incorrect
 
         Example:
-            >>> soil_profile = [
-            ...     {"h": 2.0, "vs": 200.0, "rho": 1500.0, "damping": 0.05},
-            ...     {"h": 54.0, "vs": 400.0, "rho": 1500.0, "damping": 0.05}
-            ... ]
-            >>> rock = {"vs": 850.0, "rho": 1500.0, "damping": 0.05}
-            >>> tf = TransferFunction(soil_profile, rock, f_max=25.0)
+    soil_profile = [
+        {"h": 2.0, "vs": 200.0, "rho": 1500.0, "damping": 0.05},
+        {"h": 54.0, "vs": 400.0, "rho": 1500.0, "damping": 0.05}
+    ]
+    rock = {"vs": 850.0, "rho": 1500.0, "damping": 0.05}
+    tf = TransferFunction(soil_profile, rock, f_max=25.0)
         """
         # Only initialize once or if parameters are provided
         if soil_profile is not None and rock is not None:
@@ -665,7 +665,7 @@ class TransferFunction:
         Write the DRM data to an H5DRM file.
         
         Args:
-            ...: Parameters for writing the DRM data.
+    : Parameters for writing the DRM data.
         
         Returns:
             None
@@ -1555,8 +1555,8 @@ class TransferFunction:
             IndexError: If position is out of range
 
         Example:
-            >>> tf.add_layer({"h": 5.0, "vs": 300.0, "rho": 1500.0, "damping": 0.05})
-            >>> tf.add_layer({"h": 3.0, "vs": 250.0, "rho": 1500.0}, position=0)
+    tf.add_layer({"h": 5.0, "vs": 300.0, "rho": 1500.0, "damping": 0.05})
+    tf.add_layer({"h": 3.0, "vs": 250.0, "rho": 1500.0}, position=0)
         """
         if position is None:
             self.soil_profile.append(layer)
@@ -1577,7 +1577,7 @@ class TransferFunction:
             IndexError: If position is out of range
 
         Example:
-            >>> tf.remove_layer(0)  # Remove the top layer
+    tf.remove_layer(0)  # Remove the top layer
         """
         if 0 <= position < len(self.soil_profile):
             # check if the length of the soil profile is greater than 1
@@ -1606,8 +1606,8 @@ class TransferFunction:
             IndexError: If position is out of range
 
         Example:
-            >>> tf.modify_layer(0, vs=250.0, damping=0.06)
-            >>> tf.modify_layer(1, h=10.0, rho=1600.0)
+    tf.modify_layer(0, vs=250.0, damping=0.06)
+    tf.modify_layer(1, h=10.0, rho=1600.0)
         """
         if 0 <= position < len(self.soil_profile):
             properties = dict(properties)
@@ -1690,7 +1690,7 @@ class TransferFunction:
             f_max (float): New maximum frequency in Hz
 
         Example:
-            >>> tf.update_frequency(30.0)
+    tf.update_frequency(30.0)
         """
         if f_max <= 0:
             raise ValueError("f_max must be positive")
@@ -1705,8 +1705,8 @@ class TransferFunction:
             float: Total depth of the soil profile in meters
 
         Example:
-            >>> depth = tf.get_total_depth()
-            >>> print(f"Total depth: {depth:.2f} m")
+    depth = tf.get_total_depth()
+    print(f"Total depth: {depth:.2f} m")
         """
         return sum(layer["h"] for layer in self.soil_profile)
 
@@ -1721,8 +1721,8 @@ class TransferFunction:
             float: Fundamental frequency in Hz
 
         Example:
-            >>> f0 = tf.get_fundamental_frequency()
-            >>> print(f"Fundamental frequency: {f0:.2f} Hz")
+    f0 = tf.get_fundamental_frequency()
+    print(f"Fundamental frequency: {f0:.2f} Hz")
         """
         return self.f[np.argmax(np.abs(self.TF_uu))]
 
@@ -1737,8 +1737,8 @@ class TransferFunction:
             float: Maximum amplification factor
 
         Example:
-            >>> max_amp = tf.get_amplification_factor()
-            >>> print(f"Maximum amplification: {max_amp:.2f}")
+    max_amp = tf.get_amplification_factor()
+    print(f"Maximum amplification: {max_amp:.2f}")
         """
         return np.max(np.abs(self.TF_uu))
 
@@ -1762,8 +1762,8 @@ class TransferFunction:
             IndexError: If position is out of range
 
         Example:
-            >>> props = tf.get_layer_properties(0)
-            >>> print(f"Layer properties: {props}")
+    props = tf.get_layer_properties(0)
+    print(f"Layer properties: {props}")
         """
         if 0 <= position < len(self.soil_profile):
             return self.soil_profile[position].copy()
@@ -1783,8 +1783,8 @@ class TransferFunction:
                 - damping (float): Material damping ratio
 
         Example:
-            >>> rock_props = tf.get_rock_properties()
-            >>> print(f"Rock properties: {rock_props}")
+    rock_props = tf.get_rock_properties()
+    print(f"Rock properties: {rock_props}")
         """
         return self.rock.copy()
 
@@ -1804,8 +1804,8 @@ class TransferFunction:
                 - max_amplification (float): Maximum amplification factor
 
         Example:
-            >>> summary = tf.get_profile_summary()
-            >>> print(f"Profile summary: {summary}")
+    summary = tf.get_profile_summary()
+    print(f"Profile summary: {summary}")
         """
         return {
             "total_depth": self.get_total_depth(),
@@ -1860,6 +1860,7 @@ if __name__ == "__main__":
     tf.plot_convolved_motion(record, soil_profile=soil)
 
     plt.show()
+
 
 
 

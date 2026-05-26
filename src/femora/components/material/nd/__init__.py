@@ -1,4 +1,16 @@
-"""Continuum (nD) OpenSees materials."""
+"""Continuum nD material components for Femora.
+
+This subpackage contains ``nDMaterial`` component classes used with continuum
+elements such as bricks and quads. The classes wrap OpenSees models ranging
+from linear elasticity and modulus-degradation curves to pressure-sensitive
+and multi-yield soil plasticity.
+
+Normal runtime usage should go through
+``model.material.nd.<factory>(...)`` on a [Model][femora.core.model.Model]
+instance, for example ``model.material.nd.elastic_isotropic(...)`` or
+``model.material.nd.pressure_depend_multi_yield(...)``. Direct imports from
+this subpackage are mainly useful for typed references and tests.
+"""
 
 from femora.components.material.nd.drucker_prager import DruckerPragerMaterial
 from femora.components.material.nd.elastic_isotropic import ElasticIsotropicMaterial

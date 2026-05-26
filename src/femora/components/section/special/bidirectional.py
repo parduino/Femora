@@ -28,23 +28,24 @@ class BidirectionalSection(Section):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
+        import femora.components.section.special  # noqa: F401
 
-        model = fm.Model()
-        # Create a bidirectional plasticity section for an isolator model
+        model = Model()
         sec = model.section.special.bidirectional(
             user_name="IsolatorShear",
             E=100.0,
             Fy=1.0,
             Hiso=0.0,
-            Hkin=0.02
+            Hkin=0.02,
         )
+        print(sec.tag)
         ```
     """
 
     __doc_controls__ = {
-        "show_docstring_attributes": False,
-        "members": ["__init__", "to_tcl", "get_materials"],
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
     }
 
     def __init__(self, user_name: str = "Unnamed", *, E: float, Fy: float, Hiso: float, Hkin: float):
@@ -84,7 +85,10 @@ class BidirectionalSection(Section):
         """Render the section as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string.
+            str: Tcl command string for this section.
+
+        Raises:
+            ValueError: If this section has not been added to a manager.
         """
         return f"section Bidirectional {self._require_tag()} {self.E} {self.Fy} {self.Hiso} {self.Hkin}; # {self.user_name}"
 

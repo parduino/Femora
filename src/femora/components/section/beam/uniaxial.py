@@ -31,24 +31,23 @@ class UniaxialSection(Section):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
+        import femora.components.section.beam  # noqa: F401
 
-        model = fm.Model()
-        # Create a material for the section
+        model = Model()
         mat = model.material.uniaxial.elastic(user_name="SteelMat", E=29000.0)
-
-        # Create a uniaxial section for axial response ('P')
         sec = model.section.beam.uniaxial(
             user_name="AxialBrace",
             material=mat,
-            response_code="P"
+            response_code="P",
         )
+        print(sec.tag)
         ```
     """
 
     __doc_controls__ = {
-        "show_docstring_attributes": False,
-        "members": ["__init__", "to_tcl", "get_materials"],
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
     }
 
     def __init__(
@@ -86,7 +85,10 @@ class UniaxialSection(Section):
         """Render the section as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string.
+            str: Tcl command string for this section.
+
+        Raises:
+            ValueError: If this section has not been added to a manager.
         """
         return f"section Uniaxial {self._require_tag()} {self.material.tag} {self.response_code}; # {self.user_name}"
 

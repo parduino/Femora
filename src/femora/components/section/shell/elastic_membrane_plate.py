@@ -23,23 +23,24 @@ class ElasticMembranePlateSection(Section):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
+        import femora.components.section.shell  # noqa: F401
 
-        model = fm.Model()
-        # Create an elastic shell section for a 8-inch slab
+        model = Model()
         sec = model.section.shell.elastic_membrane_plate(
             user_name="SlabSection",
             E=3600.0,
             nu=0.2,
             h=8.0,
-            rho=0.00015
+            rho=0.00015,
         )
+        print(sec.tag)
         ```
     """
 
     __doc_controls__ = {
-        "show_docstring_attributes": False,
-        "members": ["__init__", "to_tcl", "get_materials"],
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
     }
 
     def __init__(self, user_name: str = "Unnamed", *, E: float, nu: float, h: float, rho: float):
@@ -83,7 +84,10 @@ class ElasticMembranePlateSection(Section):
         """Render the section as an OpenSees Tcl command.
 
         Returns:
-            The Tcl command string.
+            str: Tcl command string for this section.
+
+        Raises:
+            ValueError: If this section has not been added to a manager.
         """
         return f"section ElasticMembranePlateSection {self._require_tag()} {self.E} {self.nu} {self.h} {self.rho}; # {self.user_name}"
 

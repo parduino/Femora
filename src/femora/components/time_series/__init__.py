@@ -1,7 +1,13 @@
-"""Concrete OpenSees time-series implementations.
+"""Time series component package for Femora.
 
-Base classes and managers live in :mod:`femora.core`; this package contains
-only concrete ``TimeSeries`` subclasses.
+This package contains runtime time-series definitions registered through
+[TimeSeriesManager][femora.core.time_series_manager.TimeSeriesManager] and
+exported to OpenSees Tcl as ``timeSeries`` commands. Time series define
+load-factor histories or recorded motion data used downstream by ground
+motions and excitation patterns.
+
+Normal runtime usage should go through a [Model][femora.core.model.Model]
+instance and ``model.time_series.*`` factory methods.
 """
 
 from .constant_time_series import ConstantTimeSeries

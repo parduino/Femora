@@ -8,19 +8,13 @@ from femora.core.material_base import Material
 
 
 class LinearElasticGGmaxMaterial(Material):
-    __doc_controls__ = {
-        "show_docstring_attributes": False,
-        "members": ["__init__"],
-    }
-
     """Linear elastic soil skeleton with shear-modulus degradation versus strain.
 
     OpenSees evaluates an effective modulus path using a selectable backbone:
     tabulated ``(gamma, G/Gmax)``, Hardin-Drnevich style, Vucetic-Dobry, or
-    Darendeli, controlled by [curveType][femora.material.nd.linear_elastic_ggmax.LinearElasticGGmaxMaterial.__init__].
-    Bulk response is supplied via [K_or_nu][femora.material.nd.linear_elastic_ggmax.LinearElasticGGmaxMaterial.__init__]:
-    values in the special OpenSees ratio range are interpreted as Poisson's
-    ratio, and larger magnitudes are treated as bulk modulus.
+    Darendeli, controlled by ``curveType``. Bulk response is supplied via
+    ``K_or_nu``: values in the special OpenSees ratio range are interpreted as
+    Poisson's ratio, and larger magnitudes are treated as bulk modulus.
 
     Tcl form:
         ``nDMaterial LinearElasticGGmax <tag> G K_or_nu rho curveType [tail]; #``
@@ -34,9 +28,9 @@ class LinearElasticGGmaxMaterial(Material):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
+        model = Model()
         mat = model.material.nd.linear_elastic_ggmax(
             user_name="site_curve",
             G=62.0,
@@ -48,6 +42,11 @@ class LinearElasticGGmaxMaterial(Material):
         print(mat.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,

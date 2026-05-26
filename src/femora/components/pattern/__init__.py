@@ -1,7 +1,13 @@
-"""Concrete OpenSees pattern implementations.
+"""Pattern component package for Femora.
 
-Base classes and managers live in :mod:`femora.core`; this package contains
-only concrete ``Pattern`` classes and related pattern entries.
+This package contains runtime load and excitation pattern definitions
+registered through [PatternManager][femora.core.pattern_manager.PatternManager]
+and exported to OpenSees Tcl as ``pattern`` commands. Patterns apply static or
+dynamic loading through attached loads, uniform excitation time series,
+multiple-support ground motions, or DRM datasets.
+
+Normal runtime usage should go through a [Model][femora.core.model.Model]
+instance and ``model.pattern.*`` factory methods.
 """
 
 from .h5drm_pattern import H5DRMPattern

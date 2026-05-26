@@ -43,12 +43,12 @@ For a more detailed environment setup, see the [Installation](installation.md) p
 
 ## The Core Idea
 
-Femora is typically used through a `MeshMaker` instance or through the module-level convenience import:
+Femora is typically used through an explicit `Model` instance:
 
 ```python
-import femora as fm
+from femora.core.model import Model
 
-model = fm.MeshMaker()
+model = Model()
 ```
 
 From there, you work through managers on the model:
@@ -56,7 +56,7 @@ From there, you work through managers on the model:
 - `model.material`
 - `model.element`
 - `model.meshpart`
-- `model.timeSeries`
+- `model.time_series`
 - `model.pattern`
 - `model.interface`
 - `model.recorder`
@@ -77,15 +77,15 @@ It is:
 5. continue to export, record, or analyze
 
 ```python
-import femora as fm
+from femora.core.model import Model
 
-model = fm.MeshMaker()
+model = Model()
 
 # Create materials, sections, mesh parts, interfaces,
 # loading patterns, and other reusable model components
 # through the managers attached to `model`.
 
-model.assembler.Assemble(merge_points=True)
+model.assembler.assemble(merge_points=True)
 model.assembler.plot(show_edges=True)
 ```
 
@@ -99,9 +99,9 @@ Femora supports interactive inspection directly from Python.
 That means you can look at mesh parts and assemblies during the coding workflow itself.
 
 ```python
-import femora as fm
+from femora.core.model import Model
 
-model = fm.MeshMaker()
+model = Model()
 
 # Example: inspect an individual part while developing it
 mesh_part.plot()

@@ -28,22 +28,29 @@ class StraightLayer(LayerBase):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
+        import femora.components.section.fiber  # noqa: F401
 
-        model = fm.Model()
-        mat = model.material.create_material("Uniaxial", "Steel01", user_name="S", Fy=50.0, E=29000.0, b=0.01)
-        
-        # FiberSection uses StraightLayer internally via add_straight_layer
-        section = model.section.create_section("Fiber", user_name="MyFiberSection")
+        model = Model()
+        mat = model.material.uniaxial.steel01(user_name="Rebar", Fy=60.0, E0=29000.0, b=0.01)
+        section = model.section.fiber.section(user_name="StraightLayerSection")
         section.add_straight_layer(
             material=mat,
             num_fibers=5,
             area_per_fiber=0.1,
-            y1=-5.0, z1=0.0,
-            y2=5.0, z2=0.0
+            y1=-5.0,
+            z1=0.0,
+            y2=5.0,
+            z2=0.0,
         )
+        print(section.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(self, material: Union[int, str, Material], num_fibers: int, area_per_fiber: float,
                  y1: float, z1: float, y2: float, z2: float):
@@ -114,7 +121,7 @@ class StraightLayer(LayerBase):
         """Render the layer as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string.
+            str: Indented Tcl ``layer straight`` command for this layer.
         """
         return f"    layer straight {self.material.tag} {self.num_fibers} {self.area_per_fiber} {self.y1} {self.z1} {self.y2} {self.z2}"
 
@@ -147,22 +154,28 @@ class CircularLayer(LayerBase):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
+        import femora.components.section.fiber  # noqa: F401
 
-        model = fm.Model()
-        mat = model.material.create_material("Uniaxial", "Steel01", user_name="S", Fy=50.0, E=29000.0, b=0.01)
-        
-        # FiberSection uses CircularLayer internally via add_circular_layer
-        section = model.section.create_section("Fiber", user_name="MyFiberSection")
+        model = Model()
+        mat = model.material.uniaxial.steel01(user_name="Rebar", Fy=60.0, E0=29000.0, b=0.01)
+        section = model.section.fiber.section(user_name="CircLayerSection")
         section.add_circular_layer(
             material=mat,
             num_fibers=8,
             area_per_fiber=0.1,
-            y_center=0.0, z_center=0.0,
-            radius=10.0
+            y_center=0.0,
+            z_center=0.0,
+            radius=10.0,
         )
+        print(section.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__", "get_arc_length", "is_full_circle"],
+    }
 
     def __init__(self, material: Union[int, str, Material], num_fibers: int, area_per_fiber: float,
                  y_center: float, z_center: float, radius: float,
@@ -240,7 +253,7 @@ class CircularLayer(LayerBase):
         """Render the layer as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string.
+            str: Indented Tcl ``layer circ`` command for this layer.
         """
         if abs(self.start_ang) < 1e-12 and abs(self.end_ang - (360.0 - 360.0 / self.num_fibers)) < 1e-12:
             return f"    layer circ {self.material.tag} {self.num_fibers} {self.area_per_fiber} {self.y_center} {self.z_center} {self.radius}"

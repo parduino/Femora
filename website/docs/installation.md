@@ -101,15 +101,15 @@ If you rename the environment in `environment.yml`, activate that name instead o
 The quickest verification is to import Femora in Python:
 
 ```bash
-python -c "import femora as fm; print(fm.__name__)"
+python -c "import femora; print(femora.__name__)"
 ```
 
 You can also check that the main workflow entry is available:
 
 ```python
-import femora as fm
+from femora.core.model import Model
 
-model = fm.MeshMaker()
+model = Model()
 print(type(model).__name__)
 ```
 

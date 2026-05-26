@@ -13,7 +13,7 @@ class PressureIndependMultiYieldMaterial(Material):
     Use this ``nDMaterial`` when layer strength is specified through reference
     moduli, cohesion, friction, and optionally a tabular backbone instead of
     the pressure-dependent coupling used by
-    [femora.components.material.nd.pressure_depend_multi_yield.PressureDependMultiYieldMaterial][].
+    [PressureDependMultiYieldMaterial][femora.components.material.nd.pressure_depend_multi_yield.PressureDependMultiYieldMaterial].
 
     Tcl form:
         ``nDMaterial PressureIndependMultiYield <tag> nd rho Gr Br cohesi peakShearStra frictionAng refPress pressDependCoe noYieldSurf [gamma Gs ...]; #``
@@ -24,19 +24,15 @@ class PressureIndependMultiYieldMaterial(Material):
           backbone points.
         - ``frictionAng`` defaults to ``0``, ``refPress`` defaults to ``100``,
           and ``pressDependCoe`` defaults to ``0``.
-        - [updateMaterialStage][femora.components.material.nd.pressure_independ_multi_yield.PressureIndependMultiYieldMaterial.updateMaterialStage]
-          preserves ``user_name`` in an inline Tcl comment.
-        - [set_parameter][femora.components.material.nd.pressure_independ_multi_yield.PressureIndependMultiYieldMaterial.set_parameter]
-          emits Tcl loops for supported runtime updates.
 
     Attributes:
-        params (dict): Final soil parameters plus optional backbone list.
+        params: Final soil parameters plus optional backbone list.
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.Model()
+        model = Model()
         mat = model.material.nd.pressure_independ_multi_yield(
             user_name="pi_soil",
             nd=3,
@@ -53,7 +49,7 @@ class PressureIndependMultiYieldMaterial(Material):
 
     __doc_controls__ = {
         "show_docstring_attributes": True,
-        "members": ["__init__", "updateMaterialStage", "set_parameter"],
+        "members": ["__init__"],
     }
 
     def __init__(self, user_name: str = "Unnamed", **kwargs: Any) -> None:
@@ -77,7 +73,7 @@ class PressureIndependMultiYieldMaterial(Material):
             ValueError: If a required keyword argument is missing.
             ValueError: If a numeric value cannot be converted correctly.
             ValueError: If any validated value falls outside the supported range.
-            ValueError: If 'pairs' is malformed or invalid when required.
+            ValueError: If ``pairs`` is malformed or invalid when required.
         """
         super().__init__("nDMaterial", "PressureIndependMultiYield", user_name)
         validated: Dict[str, Any] = {}

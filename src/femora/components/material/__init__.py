@@ -1,13 +1,19 @@
-"""Concrete OpenSees materials bound to :class:`~femora.core.material_manager.MaterialManager`.
+"""Material component package for Femora.
 
-Runtime code should normally create instances via ``manager.nd.*`` /
-``manager.uniaxial.*``.  Direct imports from this package are supported for typed
-references and tests.
+This package contains runtime material component classes that are registered
+through [MaterialManager][femora.core.material_manager.MaterialManager] and
+exported to OpenSees Tcl as ``nDMaterial`` or ``uniaxialMaterial`` commands.
 
-Subpackages organize materials by dimensionality/type:
+Normal runtime usage should go through a [Model][femora.core.model.Model]
+instance and its material manager entry points, such as
+``model.material.nd.*`` and ``model.material.uniaxial.*``. Direct imports from
+this package are mainly useful for typed references, tests, and low-level
+component work.
 
-    * :mod:`femora.components.material.nd`
-    * :mod:`femora.components.material.uniaxial`
+This package includes:
+- [femora.components.material.nd][]: continuum nD materials for solid elements
+- [femora.components.material.uniaxial][]: uniaxial materials for truss,
+  spring, and fiber models
 """
 
 from femora.components.material.nd import (

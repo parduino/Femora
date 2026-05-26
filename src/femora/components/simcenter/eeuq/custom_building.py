@@ -1,5 +1,64 @@
 
 def custom_building(structure_info, soil_info, foundation_info, pile_info):
+    """Construct a 3D parallel finite element soil-structure interaction model of a building.
+
+    This function sets up a multi-layered soil profile, foundation slab, and pile group 
+    supporting a custom building structural model. It is designed for seamless integration 
+    with the NHERI SimCenter EE-UQ application.
+
+    Note:
+        1. All soil materials in the current implementation are assumed to be linear elastic.
+        2. The soil profile is assumed to be horizontally layered.
+        3. Custom building bays must align with the global X and Y axes, with height 
+           oriented along the Z axis.
+
+    Args:
+        structure_info (dict): Structuring layout parameters including bays, columns, 
+            beams, structural properties, and loads.
+        soil_info (dict): Soil layering, material properties (modulus, poisson, density), 
+            and frequency-dependent Rayleigh damping factors.
+        foundation_info (dict): Dimensions and material properties of the foundation block 
+            and basement walls.
+        pile_info (dict): Pile layout, pile properties (cross section area, moment of 
+            inertia, etc.), and contact interface settings.
+
+    Example:
+        ```python
+        from femora.components.simcenter.eeuq.custom_building import custom_building
+
+        # Define building, soil, foundation, and pile parameters as dicts
+        structure_info = {
+            "num_stories": 3,
+            "bays_x": [6.0, 6.0],
+            "bays_y": [6.0],
+            "story_heights": [4.0, 3.5, 3.5],
+            "column_element": "ElasticBeamColumn",
+            "beam_element": "ElasticBeamColumn",
+        }
+        soil_info = {
+            "soil_layers": [
+                {"thickness": 5.0, "E": 30e6, "nu": 0.3, "rho": 2000.0},
+                {"thickness": 15.0, "E": 60e6, "nu": 0.3, "rho": 2000.0},
+            ]
+        }
+        foundation_info = {
+            "foundation_width": 12.0,
+            "foundation_length": 6.0,
+            "foundation_height": 2.0,
+        }
+        pile_info = {
+            "pile_layout": [[-4.0, -2.0], [4.0, 2.0]],
+            "pile_interface": {
+                "num_points_on_perimeter": 8,
+                "num_points_along_length": 4,
+                "penalty_parameter": 1e12,
+            }
+        }
+
+        # Generate the complete SSI model
+        custom_building(structure_info, soil_info, foundation_info, pile_info)
+        ```
+    """
     # This model creates a soil profile and foundation for a custom building,
     # designed for use in the EE-UQ application.
     # Developed by Amin Pakzad, University of Washington.
@@ -96,13 +155,14 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
     # ============================================================================
     # import libraries
     # ============================================================================
-    import femora as fm 
+    from femora.core.model import Model
     import os
     import sys
     import numpy as np
     import pyvista as pv
     import meshlib.mrmeshpy as mr
 
+    model = Model()
     # ==========================================================================
     # change the grid piles to single piles
     # =========================================================================
@@ -826,7 +886,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             E   = mat_props[0]
             nu  = mat_props[1]
             rho = mat_props[2]
-            mat = fm.material.nd.elastic_isotropic(user_name="Soil_Layer_" + str(layer_index+1),
+            mat = model.material.nd.elastic_isotropic(user_name="Soil_Layer_" + str(layer_index+1),
                                             E=E, nu=nu, rho=rho)
         else:
             print("Error: material " + material + " is not implemented yet for soil layer index : " + str(layer_index+1))
@@ -834,7 +894,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         
 
         # create the element
-        elem = fm.element.brick.std(ndof=3, 
+        elem = model.element.brick.std(ndof=3, 
                                     material=mat,
                                     b1=soil_info["gravity_x"]*rho,
                                     b2=soil_info["gravity_y"]*rho,
@@ -848,10 +908,10 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             xi_s = damping_props[0]
             f1   = damping_props[1]
             f2   = damping_props[2]
-            damp = fm.damping.frequency_rayleigh(damping_factor=xi_s, f1=f1, f2=f2)
-        reg = fm.region.element(damping=damp)
+            damp = model.damping.frequency_rayleigh(damping_factor=xi_s, f1=f1, f2=f2)
+        reg = model.region.element(damping=damp)
 
-        fm.meshpart.general.external_mesh(
+        model.meshpart.general.external_mesh(
                             user_name=f"SoilLayer_{layer_index+1}",
                             element=elem,
                             region=reg,
@@ -875,14 +935,14 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             E   = mat_props[0]
             nu  = mat_props[1]
             rho = mat_props[2]
-            mat = fm.material.nd.elastic_isotropic(user_name="Foundation_" + str(foundation_index+1),
+            mat = model.material.nd.elastic_isotropic(user_name="Foundation_" + str(foundation_index+1),
                                             E=E, nu=nu, rho=rho)
         else:
             print("Error: material " + material + " is not implemented yet for foundation index : " + str(foundation_index+1))
             sys.exit(1)
         
         # create the element
-        elem = fm.element.brick.std(ndof=3, 
+        elem = model.element.brick.std(ndof=3, 
                                     material=mat,
                                     b1=foundation_info["gravity_x"]*rho,
                                     b2=foundation_info["gravity_y"]*rho,
@@ -895,12 +955,12 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             xi_s = damping_props[0]
             f1   = damping_props[1]
             f2   = damping_props[2]
-            damp = fm.damping.frequency_rayleigh(damping_factor=xi_s, f1=f1, f2=f2)
+            damp = model.damping.frequency_rayleigh(damping_factor=xi_s, f1=f1, f2=f2)
         else:
             print("Error: damping " + damping + " is not implemented yet for foundation index : " + str(foundation_index+1))
             sys.exit(1)
-        reg = fm.region.element(damping=damp)
-        fm.meshpart.general.external_mesh(
+        reg = model.region.element(damping=damp)
+        model.meshpart.general.external_mesh(
                             user_name=f"Foundation_{foundation_index+1}",
                             element=elem,
                             region=reg,
@@ -931,7 +991,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         mat_props = pile["mat_props"]
 
         transformation = pile.get("transformation", ["Linear", 0.0, 1.0, 0.0])
-        transf = fm.transformation.transformation3d(
+        transf = model.transformation.transformation3d(
             transf_type=transformation[0],
             vecxz_x=transformation[1],
             vecxz_y=transformation[2],
@@ -956,7 +1016,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             except: 
                 print("Error: material properties are not valid for pile index : " + str(pile_index+1))
                 sys.exit(1)
-            pile_section = fm.section.elastic(
+            pile_section = model.section.elastic(
                 user_name="PileSection_" + str(pile_index+1),
                 E=E, A=A, Iy=Iy, Iz=Iz, G=G, J=J
             )
@@ -964,13 +1024,13 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             print("Error: material " + material + " or section " + section_type + " is not implemented yet for pile index : " + str(pile_index+1))
             sys.exit(1)
 
-        pile_ele = fm.element.beam.disp(
+        pile_ele = model.element.beam.disp(
         ndof=6,
         section=pile_section,
         transformation=transf,
         numIntgrPts=5,
         )
-        pile_mesh_part = fm.meshpart.line.single_line(
+        pile_mesh_part = model.meshpart.line.single_line(
         user_name="Pile_" + str(pile_index+1),
         element=pile_ele,
         region=None,
@@ -988,7 +1048,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         n_p = pile_info["pile_interface"]["num_points_on_perimeter"]
         n_l = pile_info["pile_interface"]["num_points_along_length"]
         pp = pile_info["pile_interface"]["penalty_parameter"]
-        fm.interface.beam_solid_interface(
+        model.interface.beam_solid_interface(
             name = "Pile-Solid_Interface_" + str(pile_index+1),
             beam_part = "Pile_" + str(pile_index+1),
             solid_parts = None,  # No solid part specified
@@ -1012,7 +1072,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         z_top = z
         z_bot = z - structure_info.get("column_embedment_depth")
         transformation = ["Linear", 0.0, 1.0, 0.0]
-        transf = fm.transformation.transformation3d(
+        transf = model.transformation.transformation3d(
                     transf_type=transformation[0],
                     vecxz_x=transformation[1],
                     vecxz_y=transformation[2],
@@ -1030,17 +1090,17 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         except:
             print("Error: column section properties are not valid")
             sys.exit(1)
-        column_section = fm.section.elastic(
+        column_section = model.section.elastic(
                 user_name="columnSection_" + str(col_index+1),
                 E=E, A=A, Iy=Iy, Iz=Iz, G=G, J=J
             )
-        column_ele = fm.element.beam.disp(
+        column_ele = model.element.beam.disp(
             ndof=6,
             section=column_section,
             transformation=transf,
             numIntgrPts=3,
         )
-        column_mesh_part = fm.meshpart.line.single_line(
+        column_mesh_part = model.meshpart.line.single_line(
             user_name="BaseColumn_" + str(col_index+1),
             element=column_ele,
             region=None,
@@ -1058,7 +1118,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         n_l = 3
         pp = pile_info["pile_interface"]["penalty_parameter"]
         radius = 0.1
-        fm.interface.beam_solid_interface(
+        model.interface.beam_solid_interface(
             name = "BaseColumn-Solid_Interface_" + str(col_index+1),
             beam_part = "BaseColumn_" + str(col_index+1),
             solid_parts = None,  # No solid part specified  
@@ -1075,14 +1135,14 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
     # Assembling the model
     # ============================================================================
     foundation_pile_sections = pile_sections + foundation_sections + base_column_sections
-    fm.assembler.create_section(foundation_pile_sections, 
+    model.assembler.create_section(foundation_pile_sections, 
                                 num_partitions=foundation_info["num_partitions"],
                                 partition_algorithm="kd-tree",
                                 merge_points=True,
                                 tolerance=1e-3,
                                 mass_merging="sum")
 
-    fm.assembler.create_section(soil_sections, 
+    model.assembler.create_section(soil_sections, 
                                 num_partitions=soil_info["num_partitions"],
                                 partition_algorithm="kd-tree",
                                 merge_points=True,
@@ -1091,7 +1151,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
 
 
     if soil_info["boundary_conditions"] == "DRM":
-        fm.interface.boundary.absorber(
+        model.interface.boundary.absorber(
             numLayers=soil_info["DRM_options"].get("number_of_layers"),
             numPartitions=soil_info["DRM_options"].get("num_partitions"),
             partitionAlgo="kd-tree",
@@ -1101,22 +1161,22 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             type=soil_info["DRM_options"].get("absorbing_layer_type", "Rayleigh"),
         )
 
-    fm.assembler.assemble()
+    model.assembler.assemble()
 
 
     # %%
     # ============================================================================
     # set the start tags to push the numberings
-    fm.material.set_material_tag_start(20000)
-    fm.transformation.set_tag_start(30000)
-    fm.section.set_tag_start(40000)
-    fm.damping.set_start_tag(45000)
+    model.material.set_material_tag_start(20000)
+    model.transformation.set_tag_start(30000)
+    model.section.set_tag_start(40000)
+    model.damping.set_start_tag(45000)
 
 
     # node tag start and element tag start
-    fm.Model().set_nodetag_start(500000)
-    fm.Model().set_eletag_start( 600000)
-    fm.Model().set_start_core_tag(structure_info.get("num_partitions"))
+    model.set_nodetag_start(500000)
+    model.set_eletag_start( 600000)
+    model.set_start_core_tag(structure_info.get("num_partitions"))
     # ============================================================================
     # boundary conditions
     # ============================================================================
@@ -1131,18 +1191,18 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
                 z_max = layer["z_top"]
 
         z_min = z_min + 5e-2  # adding a small tolerance
-        fm.constraint.mp.create_laminar_boundary(bounds=(z_min, z_max),
+        model.constraint.mp.create_laminar_boundary(bounds=(z_min, z_max),
                                                 dofs=[1,2], 
                                                 direction=3)
-        fm.constraint.sp.fixMacroZmin(dofs=[1,1,1],
+        model.constraint.sp.fixMacroZmin(dofs=[1,1,1],
                                     tol=1e-3)
     elif soil_info["boundary_conditions"] == "DRM":
         dofsVals = [1,1,1,1,1,1,1,1,1]
-        fm.constraint.sp.fixMacroXmax(dofs=dofsVals)
-        fm.constraint.sp.fixMacroXmin(dofs=dofsVals)
-        fm.constraint.sp.fixMacroYmax(dofs=dofsVals)
-        fm.constraint.sp.fixMacroYmin(dofs=dofsVals)
-        fm.constraint.sp.fixMacroZmin(dofs=dofsVals)
+        model.constraint.sp.fixMacroXmax(dofs=dofsVals)
+        model.constraint.sp.fixMacroXmin(dofs=dofsVals)
+        model.constraint.sp.fixMacroYmax(dofs=dofsVals)
+        model.constraint.sp.fixMacroYmin(dofs=dofsVals)
+        model.constraint.sp.fixMacroZmin(dofs=dofsVals)
 
 
 
@@ -1152,14 +1212,14 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
     # gravity analysis
     newmark_gamma = 0.6
     newnark_beta = (newmark_gamma + 0.5)**2 / 4
-    elastic_update = fm.actions.update_material_stage_to_elastic()
-    dampNewmark = fm.analysis.integrator.newmark(gamma=newmark_gamma, beta=newnark_beta)
-    gravity_elastic = fm.analysis.default_transient(username="gravity_elastic",
+    elastic_update = model.actions.update_material_stage_to_elastic()
+    dampNewmark = model.analysis.integrator.newmark(gamma=newmark_gamma, beta=newnark_beta)
+    gravity_elastic = model.analysis.default_transient(username="gravity_elastic",
                                                             dt=1.0, num_steps=30,
                                                             options={"integrator": dampNewmark})
 
-    plastic_update = fm.actions.update_material_stage_to_plastic()
-    gravity_plastic = fm.analysis.default_transient(username="gravity_plastic",
+    plastic_update = model.actions.update_material_stage_to_plastic()
+    gravity_plastic = model.analysis.default_transient(username="gravity_plastic",
                                                             dt=0.01, num_steps=100,
                                                             options={"integrator": dampNewmark})
 
@@ -1174,19 +1234,19 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         col_coord = np.array([col["x"], col["y"], col["z"]])
         col_tag = col["tag"]
         name = "BaseColumn_" + str(col_index+1)
-        mesh_part = fm.meshpart.get(name)
+        mesh_part = model.meshpart.get(name)
         if mesh_part is None:
             print("Error: mesh part " + name + " not found.")
             sys.exit(1)
         mesh_part_tag = mesh_part.tag
-        mesh_part_cells = fm.assembled_mesh.cell_data["MeshPartTag_celldata"] == mesh_part_tag
+        mesh_part_cells = model.assembled_mesh.cell_data["MeshPartTag_celldata"] == mesh_part_tag
         mesh_part_cell  = np.where(mesh_part_cells)[0]
         mesh_part_points = []
         for cell_id in mesh_part_cell:
-            mesh_part_points.append(fm.assembled_mesh.get_cell(cell_id).point_ids)
+            mesh_part_points.append(model.assembled_mesh.get_cell(cell_id).point_ids)
         mesh_part_points = np.unique(np.hstack(mesh_part_points))
         # find the point with the minimum z value and maximum z value
-        points = fm.assembled_mesh.points[mesh_part_points]
+        points = model.assembled_mesh.points[mesh_part_points]
         z_min_index = np.argmin(points[:,2])
         z_max_index = np.argmax(points[:,2])
         z_min_point = points[z_min_index]
@@ -1196,8 +1256,8 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         z_min_index = mesh_part_points[z_min_index]
         z_max_index = mesh_part_points[z_max_index]
 
-        z_min_index = z_min_index + fm._instance._start_nodetag
-        z_max_index = z_max_index + fm._instance._start_nodetag
+        z_min_index = z_min_index + model._start_nodetag
+        z_max_index = z_max_index + model._start_nodetag
 
         # print(f"Column {col_index+1}: z_min_point = {z_min_point}, z_max_point = {z_max_point}")
         # print(f"Column {col_index+1}: column = {col}")
@@ -1210,7 +1270,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             sys.exit(1)
 
 
-        connection_core = fm.assembled_mesh.cell_data["Core"][mesh_part_cell]
+        connection_core = model.assembled_mesh.cell_data["Core"][mesh_part_cell]
         connection_core = np.unique(connection_core)
         if len(connection_core) > 1:
             print("Error: column " + str(col_index+1) + " is spanning multiple cores. This is not supported yet.")
@@ -1232,16 +1292,16 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         tcl_command += "}\n"
 
         
-    connection = fm.actions.tcl(tcl_command)
+    connection = model.actions.tcl(tcl_command)
 
     # =============================================================================
     # process
     # =============================================================================
-    fm.process.add_step(connection,      description="Create connections between base columns and foundation")
-    fm.process.add_step(elastic_update,  description="Update material to elastic")
-    fm.process.add_step(gravity_elastic, description="Gravity analysis in elastic regime")
-    fm.process.add_step(plastic_update,  description="Update material to plastic")
-    fm.process.add_step(gravity_plastic, description="Gravity analysis in plastic regime")
+    model.process.add_step(connection,      description="Create connections between base columns and foundation")
+    model.process.add_step(elastic_update,  description="Update material to elastic")
+    model.process.add_step(gravity_elastic, description="Gravity analysis in elastic regime")
+    model.process.add_step(plastic_update,  description="Update material to plastic")
+    model.process.add_step(gravity_plastic, description="Gravity analysis in plastic regime")
 
 
 
@@ -1269,18 +1329,18 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         
 
 
-    if fm.assembled_mesh is None:
+    if model.assembled_mesh is None:
         print("Error: Assembled mesh is None. Cannot export the model.")
         sys.exit(1)
     from femora.components.event.event_bus import FemoraEvent
     from femora.core.element_base import Element
 
-    self = fm._instance
+    self = model
     with open(model_filename, 'w') as f:
         # Inform interfaces that we are about to export
         self.events.emit(FemoraEvent.PRE_EXPORT, 
                     file_handle=f, 
-                    assembled_mesh=fm.assembled_mesh)
+                    assembled_mesh=model.assembled_mesh)
 
         f.write("wipe\n")
         f.write("model BasicBuilder -ndm 3\n")
@@ -1405,7 +1465,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
             sys.exit(1)
 
 
-        connection_core = fm.assembled_mesh.cell_data["Core"][mesh_part_cell]
+        connection_core = model.assembled_mesh.cell_data["Core"][mesh_part_cell]
         connection_core = np.unique(connection_core)
         if len(connection_core) > 1:
             print("Error: column " + str(col_index+1) + " is spanning multiple cores. This is not supported yet.")
@@ -1427,16 +1487,16 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         tcl_command += "}\n"
 
         
-    connection = fm.actions.tcl(tcl_command)
+    connection = model.actions.tcl(tcl_command)
 
     # =============================================================================
     # process
     # =============================================================================
-    fm.process.add_step(connection,      description="Create connections between base columns and foundation")
-    fm.process.add_step(elastic_update,  description="Update material to elastic")
-    fm.process.add_step(gravity_elastic, description="Gravity analysis in elastic regime")
-    fm.process.add_step(plastic_update,  description="Update material to plastic")
-    fm.process.add_step(gravity_plastic, description="Gravity analysis in plastic regime")
+    model.process.add_step(connection,      description="Create connections between base columns and foundation")
+    model.process.add_step(elastic_update,  description="Update material to elastic")
+    model.process.add_step(gravity_elastic, description="Gravity analysis in elastic regime")
+    model.process.add_step(plastic_update,  description="Update material to plastic")
+    model.process.add_step(gravity_plastic, description="Gravity analysis in plastic regime")
 
 
 
@@ -1464,18 +1524,18 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         
 
 
-    if fm.assembled_mesh is None:
+    if model.assembled_mesh is None:
         print("Error: Assembled mesh is None. Cannot export the model.")
         sys.exit(1)
     from femora.components.event.event_bus import FemoraEvent
     from femora.core.element_base import Element
 
-    self = fm._instance
+    self = model
     with open(model_filename, 'w') as f:
         # Inform interfaces that we are about to export
         self.events.emit(FemoraEvent.PRE_EXPORT, 
                     file_handle=f, 
-                    assembled_mesh=fm.assembled_mesh)
+                    assembled_mesh=model.assembled_mesh)
 
         f.write("wipe\n")
         f.write("model BasicBuilder -ndm 3\n")
@@ -1764,7 +1824,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
     # ============================================================================
     # ploting each core separately
     # ============================================================================
-    mesh = fm.assembler.get_mesh()
+    mesh = model.assembler.get_mesh()
     cores = np.unique(mesh.cell_data["Core"])
     print("Number of cores: ", len(cores))
     print("Number of cells: ", mesh.n_cells)
@@ -1777,7 +1837,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
     #     pl.show(title="Core " + str(core))
 
     center = np.array(mesh.center)
-    assmesh = fm.assembler.get_mesh()
+    assmesh = model.assembler.get_mesh()
     mesh = pv.MultiBlock()
     for core in cores:
         part = assmesh.extract_cells(assmesh.cell_data["Core"] == core)
@@ -1801,7 +1861,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
         structure_part = pv.read(strucure_mesh)
         pl = pv.Plotter()
         pl.add_mesh(structure_part, style='wireframe', color="black", line_width=3, opacity=1.0)
-        pl.add_mesh(fm.assembled_mesh, show_edges=True, opacity=1.0, scalars="Core", multi_colors=True)
+        pl.add_mesh(model.assembled_mesh, show_edges=True, opacity=1.0, scalars="Core", multi_colors=True)
         pl.show(title="Structure and Soil")
     
 
@@ -1809,7 +1869,7 @@ def custom_building(structure_info, soil_info, foundation_info, pile_info):
 
 
 
-    fm.assembler.plot(show_edges=True, 
+    model.assembler.plot(show_edges=True, 
                     opacity=1.0, 
                     scalars="Core",
                     multi_colors=True, 
@@ -2035,5 +2095,8 @@ if __name__ == "__main__":
     }
 
     custom_building(structure_info, soil_info, foundation_info, pile_info)
+
+
+
 
 

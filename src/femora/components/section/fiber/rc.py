@@ -38,15 +38,18 @@ class RCSection(Section):
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
+        import femora.components.section.fiber  # noqa: F401
 
-        model = fm.Model()
-        # Define materials
-        core = model.material.uniaxial.concrete01(user_name="Core", fpc=-5.0, epsc0=-0.005)
-        cover = model.material.uniaxial.concrete01(user_name="Cover", fpc=-4.0, epsc0=-0.002)
-        steel = model.material.uniaxial.steel01(user_name="Steel", Fy=60.0, E=29000.0, b=0.01)
-
-        # Create the RC section
+        model = Model()
+        core = model.material.uniaxial.elastic(user_name="Core", E=3600.0)
+        cover = model.material.uniaxial.elastic(user_name="Cover", E=3000.0)
+        steel = model.material.uniaxial.steel01(
+            user_name="Steel",
+            Fy=60.0,
+            E0=29000.0,
+            b=0.01,
+        )
         sec = model.section.fiber.rc(
             user_name="Column1",
             core_material=core,
@@ -54,14 +57,15 @@ class RCSection(Section):
             steel_material=steel,
             d=24.0,
             b=24.0,
-            cover_to_center_of_bar=2.5
+            cover_to_center_of_bar=2.5,
         )
+        print(sec.tag)
         ```
     """
 
     __doc_controls__ = {
-        "show_docstring_attributes": False,
-        "members": ["__init__", "to_tcl", "get_materials"],
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
     }
 
     def __init__(
@@ -131,7 +135,10 @@ class RCSection(Section):
         """Render the section as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string.
+            str: Tcl command string for this section.
+
+        Raises:
+            ValueError: If this section has not been added to a manager.
         """
         return (
             f"section RC {self._require_tag()} {self.core_material.tag} "

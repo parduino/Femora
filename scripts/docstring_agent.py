@@ -138,9 +138,9 @@ def main():
     - Method examples are optional.
     - If examples are included, use fenced python blocks.
     - If examples are included for normal Femora usage, prefer:
-      import femora as fm
-      model = fm.MeshMaker()
-      and manager-based creation such as model.pattern..., model.timeSeries..., model.material..., or other appropriate managers.
+      from femora.core.model import Model
+      model = Model()
+      and manager-based creation such as model.pattern..., model.time_series..., model.material..., or other appropriate managers.
     - Return ONLY the full valid Python code. No markdown fences.
     {extra_prompt_block}
 
@@ -218,3 +218,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

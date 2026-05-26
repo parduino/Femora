@@ -45,9 +45,9 @@ These rules apply to all Femora Python files.
    creation through:
 
    ```python
-   import femora as fm
+   from femora.core.model import Model
 
-   model = fm.MeshMaker()
+   model = Model()
    ```
 
 9. If type hints already exist in the signature, do not repeat types in
@@ -139,9 +139,9 @@ class SomeComponent:
 
     Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.MeshMaker()
+        model = Model()
         component = model.some_manager.some_factory(...)
         print(component.tag)
 
@@ -170,7 +170,7 @@ class SomeComponent:
   assumptions, unmanaged-state behavior, or modeling caveats, document them in
   `Note:` or `Tip:` instead of forcing a generic paragraph.
 - Every class must include at least one example.
-- Prefer manager-based creation through `model = fm.MeshMaker()` when that is
+- Prefer manager-based creation through `model = Model()` when that is
   the normal API.
 
 ---
@@ -246,7 +246,7 @@ def to_tcl(self) -> str:
   actually raise. Do not guess or invent exceptions.
 - `Example:` are optional for methods.
 - If a method example is included and the method belongs to a manager-driven
-  Femora workflow, prefer calling it through `model = fm.MeshMaker()` and the
+  Femora workflow, prefer calling it through `model = Model()` and the
   appropriate manager path when practical.
 
 ---
@@ -261,18 +261,18 @@ included, they must follow a unified format.
 - Always use fenced code blocks:
 
 ```python
-import femora as fm
+from femora.core.model import Model
 
-model = fm.MeshMaker()
+model = Model()
 ```
 
-- Use `model` as the MeshMaker variable name.
-- Prefer `import femora as fm`.
+- Use `model` as the Model variable name.
+- Prefer `from femora.core.model import Model`.
 - Use manager-based creation whenever that is the normal Femora API:
   - `model.material...`
   - `model.element...`
-  - `model.timeSeries...`
-  - `model.groundMotion...`
+  - `model.time_series...`
+  - `model.ground_motion...`
   - `model.pattern...`
   - other manager entry points as appropriate
 - Show realistic dependency creation when tags or manager ownership matter.
@@ -303,10 +303,10 @@ Direct class construction is acceptable only when:
 ```python
 Example:
     ```python
-    import femora as fm
+    from femora.core.model import Model
 
-    model = fm.MeshMaker()
-    ts = model.timeSeries.path(dt=0.01, filePath="ground.acc")
+    model = Model()
+    ts = model.time_series.path(dt=0.01, filePath="ground.acc")
     pattern = model.pattern.uniform_excitation(dof=1, time_series=ts)
     print(pattern.tag)
     ```
@@ -478,9 +478,9 @@ docstrings for a Femora file.
 14. If examples are included for normal Femora usage, prefer:
 
     ```python
-    import femora as fm
+    from femora.core.model import Model
 
-    model = fm.MeshMaker()
+    model = Model()
     ```
 
     and then use manager-based creation when practical.
@@ -524,9 +524,9 @@ Task:
 - Method examples are optional.
 - If examples are included, use fenced python blocks.
 - If examples are included for normal Femora usage, prefer:
-  import femora as fm
-  model = fm.MeshMaker()
-  and manager-based creation such as model.pattern..., model.timeSeries...,
+  from femora.core.model import Model
+  model = Model()
+  and manager-based creation such as model.pattern..., model.time_series...,
   model.material..., or other appropriate managers.
 - If the target class participates in the generated API docs, preserve or add a
   meaningful __doc_controls__ block and choose the members list intentionally.
@@ -559,7 +559,8 @@ Any human or AI reviewing a docstring update must verify:
 8. [ ] Method examples are optional, not required.
 9. [ ] If examples are present, they use fenced `python` blocks and not `>>>`.
 10. [ ] If examples are present, they prefer real Femora usage through
-       `model = fm.MeshMaker()` and manager-based creation when practical.
+       `model = Model()` and manager-based creation when practical.
 11. [ ] Section labels match this file exactly.
 12. [ ] Wrapped indentation is correct.
 13. [ ] No code logic was changed.
+
