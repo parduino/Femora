@@ -22,7 +22,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Constraints" href="constraint.html" />
-    <link rel="prev" title="Geometric Rectangular Grid" href="meshparts/volume/GeometricRectangularGrid.html" /> 
+    <link rel="prev" title="NodeRegion" href="region/noderegion.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -59,7 +59,6 @@
 <li class="toctree-l2"><a class="reference internal" href="elements.html">Element</a></li>
 <li class="toctree-l2"><a class="reference internal" href="damping.html">Damping</a></li>
 <li class="toctree-l2"><a class="reference internal" href="region.html">Region</a></li>
-<li class="toctree-l2"><a class="reference internal" href="meshparts.html">MeshPart</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Assembler</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#introduction">Introduction</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#understanding-the-assembler">Understanding the Assembler</a><ul>
@@ -123,44 +122,29 @@
 <h1>Assembler<a class="headerlink" href="#assembler" title="Link to this heading"></a></h1>
 <section id="introduction">
 <h2>Introduction<a class="headerlink" href="#introduction" title="Link to this heading"></a></h2>
-<p>The <code class="docutils literal notranslate"><span class="pre">Assembler</span></code> component in Femora is responsible for combining multiple mesh parts into a unified model, partitioning the model for parallel computing, and managing the combined mesh. It provides a centralized system for creating and managing assembly sections, which are groups of mesh parts that are combined into a single mesh.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">Assembler</span></code> component in Femora is responsible for combining multiple mesh parts into a unified model, partitioning the model for parallel computing, and managing the combined mesh. Each <code class="docutils literal notranslate"><span class="pre">Model</span></code> owns one <code class="docutils literal notranslate"><span class="pre">Assembler</span></code> with an independent assembly-section registry.</p>
 <p>The Assembler system consists of two main classes:</p>
 <ol class="arabic simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">Assembler</span></code>: A singleton class that manages multiple <code class="docutils literal notranslate"><span class="pre">AssemblySection</span></code> instances</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Assembler</span></code>: Model-owned manager for multiple <code class="docutils literal notranslate"><span class="pre">AssemblySection</span></code> instances</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">AssemblySection</span></code>: A class that represents a group of mesh parts combined into a single mesh</p></li>
 </ol>
 </section>
 <section id="understanding-the-assembler">
 <h2>Understanding the Assembler<a class="headerlink" href="#understanding-the-assembler" title="Link to this heading"></a></h2>
-<p>The <code class="docutils literal notranslate"><span class="pre">Assembler</span></code> class implements the Singleton pattern, ensuring that only one instance exists throughout the application. This provides a centralized point for managing assembly sections and accessing the assembled mesh.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">Assembler</span></code> is bound to a single <code class="docutils literal notranslate"><span class="pre">Model</span></code> instance and provides the centralized point for managing assembly sections and accessing the assembled mesh.</p>
 <section id="accessing-the-assembler">
 <h3>Accessing the Assembler<a class="headerlink" href="#accessing-the-assembler" title="Link to this heading"></a></h3>
-<p>There are two ways to access the Assembler:</p>
-<ol class="arabic">
-<li><p><strong>Direct Access</strong>:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">femora.components.Assemble.Assembler</span><span class="w"> </span><span class="kn">import</span> <span class="n">Assembler</span>
-
-<span class="c1"># Get the singleton instance</span>
-<span class="n">assembler</span> <span class="o">=</span> <span class="n">Assembler</span><span class="p">()</span>
-
-<span class="c1"># Or use the class method</span>
-<span class="n">assembler</span> <span class="o">=</span> <span class="n">Assembler</span><span class="o">.</span><span class="n">get_instance</span><span class="p">()</span>
-</pre></div>
-</div>
-</li>
-<li><p><strong>Through Femora</strong> (recommended):</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">femora</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">fm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">femora.core.model</span><span class="w"> </span><span class="kn">import</span> <span class="n">Model</span>
 
-<span class="c1"># Create a Femora instance</span>
+<span class="c1"># Module-level default model</span>
+<span class="n">fm</span><span class="o">.</span><span class="n">assembler</span><span class="o">.</span><span class="n">create_section</span><span class="p">(</span><span class="n">meshparts</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;block&quot;</span><span class="p">],</span> <span class="n">num_partitions</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 
-
-<span class="c1"># Access the Assembler through femora</span>
-<span class="n">assembler</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">assembler</span>
+<span class="c1"># Or an explicit local model instance</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">Model</span><span class="p">()</span>
+<span class="n">model</span><span class="o">.</span><span class="n">assembler</span><span class="o">.</span><span class="n">create_section</span><span class="p">(</span><span class="n">meshparts</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;block&quot;</span><span class="p">],</span> <span class="n">num_partitions</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
 </pre></div>
 </div>
-</li>
-</ol>
-<p>The second approach is recommended as it ensures proper initialization of dependencies.</p>
 </section>
 <section id="structure-of-the-assembler">
 <h3>Structure of the Assembler<a class="headerlink" href="#structure-of-the-assembler" title="Link to this heading"></a></h3>
@@ -280,7 +264,7 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="meshparts/volume/GeometricRectangularGrid.html" class="btn btn-neutral float-left" title="Geometric Rectangular Grid" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="region/noderegion.html" class="btn btn-neutral float-left" title="NodeRegion" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="constraint.html" class="btn btn-neutral float-right" title="Constraints" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

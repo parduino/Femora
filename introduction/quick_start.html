@@ -244,11 +244,10 @@
 <span class="n">Ny</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">Ymax</span> <span class="o">-</span> <span class="n">Ymin</span><span class="p">)</span><span class="o">/</span><span class="n">dy</span><span class="p">)</span>  <span class="c1"># 20 elements in y-direction</span>
 
 <span class="c1"># Create first layer (Dense Ottawa) at the bottom</span>
-<span class="n">fm</span><span class="o">.</span><span class="n">meshPart</span><span class="o">.</span><span class="n">create_mesh_part</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="s2">&quot;Volume mesh&quot;</span><span class="p">,</span>
-                            <span class="n">mesh_part_type</span><span class="o">=</span><span class="s2">&quot;Uniform Rectangular Grid&quot;</span><span class="p">,</span>
+<span class="n">fm</span><span class="o">.</span><span class="n">meshpart</span><span class="o">.</span><span class="n">volume</span><span class="o">.</span><span class="n">uniform_rectangular_grid</span><span class="p">(</span>
                             <span class="n">user_name</span><span class="o">=</span><span class="s2">&quot;DensOttawa1&quot;</span><span class="p">,</span>
                             <span class="n">element</span><span class="o">=</span><span class="n">DensOttawaEle</span><span class="p">,</span>
-                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
                             <span class="o">**</span><span class="p">{</span><span class="s1">&#39;X Min&#39;</span><span class="p">:</span> <span class="n">Xmin</span><span class="p">,</span> <span class="s1">&#39;X Max&#39;</span><span class="p">:</span> <span class="n">Xmax</span><span class="p">,</span>
                                <span class="s1">&#39;Y Min&#39;</span><span class="p">:</span> <span class="n">Ymin</span><span class="p">,</span> <span class="s1">&#39;Y Max&#39;</span><span class="p">:</span> <span class="n">Ymax</span><span class="p">,</span>
                                <span class="s1">&#39;Z Min&#39;</span><span class="p">:</span> <span class="n">Zmin</span><span class="p">,</span> <span class="s1">&#39;Z Max&#39;</span><span class="p">:</span> <span class="n">Zmin</span> <span class="o">+</span> <span class="n">thick1</span><span class="p">,</span>
@@ -258,11 +257,10 @@
 <span class="n">Zmin</span> <span class="o">+=</span> <span class="n">thick1</span>
 
 <span class="c1"># Create second layer (Dense Ottawa)</span>
-<span class="n">fm</span><span class="o">.</span><span class="n">meshPart</span><span class="o">.</span><span class="n">create_mesh_part</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="s2">&quot;Volume mesh&quot;</span><span class="p">,</span>
-                            <span class="n">mesh_part_type</span><span class="o">=</span><span class="s2">&quot;Uniform Rectangular Grid&quot;</span><span class="p">,</span>
+<span class="n">fm</span><span class="o">.</span><span class="n">meshpart</span><span class="o">.</span><span class="n">volume</span><span class="o">.</span><span class="n">uniform_rectangular_grid</span><span class="p">(</span>
                             <span class="n">user_name</span><span class="o">=</span><span class="s2">&quot;DensOttawa2&quot;</span><span class="p">,</span>
                             <span class="n">element</span><span class="o">=</span><span class="n">DensOttawaEle</span><span class="p">,</span>
-                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
                             <span class="o">**</span><span class="p">{</span><span class="s1">&#39;X Min&#39;</span><span class="p">:</span> <span class="n">Xmin</span><span class="p">,</span> <span class="s1">&#39;X Max&#39;</span><span class="p">:</span> <span class="n">Xmax</span><span class="p">,</span>
                                <span class="s1">&#39;Y Min&#39;</span><span class="p">:</span> <span class="n">Ymin</span><span class="p">,</span> <span class="s1">&#39;Y Max&#39;</span><span class="p">:</span> <span class="n">Ymax</span><span class="p">,</span>
                                <span class="s1">&#39;Z Min&#39;</span><span class="p">:</span> <span class="n">Zmin</span><span class="p">,</span> <span class="s1">&#39;Z Max&#39;</span><span class="p">:</span> <span class="n">Zmin</span> <span class="o">+</span> <span class="n">thick2</span><span class="p">,</span>
@@ -272,11 +270,10 @@
 <span class="n">Zmin</span> <span class="o">+=</span> <span class="n">thick2</span>
 
 <span class="c1"># Create third layer (Dense Ottawa)</span>
-<span class="n">fm</span><span class="o">.</span><span class="n">meshPart</span><span class="o">.</span><span class="n">create_mesh_part</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="s2">&quot;Volume mesh&quot;</span><span class="p">,</span>
-                            <span class="n">mesh_part_type</span><span class="o">=</span><span class="s2">&quot;Uniform Rectangular Grid&quot;</span><span class="p">,</span>
+<span class="n">fm</span><span class="o">.</span><span class="n">meshpart</span><span class="o">.</span><span class="n">volume</span><span class="o">.</span><span class="n">uniform_rectangular_grid</span><span class="p">(</span>
                             <span class="n">user_name</span><span class="o">=</span><span class="s2">&quot;DensOttawa3&quot;</span><span class="p">,</span>
                             <span class="n">element</span><span class="o">=</span><span class="n">DensOttawaEle</span><span class="p">,</span>
-                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
                             <span class="o">**</span><span class="p">{</span><span class="s1">&#39;X Min&#39;</span><span class="p">:</span> <span class="n">Xmin</span><span class="p">,</span> <span class="s1">&#39;X Max&#39;</span><span class="p">:</span> <span class="n">Xmax</span><span class="p">,</span>
                                <span class="s1">&#39;Y Min&#39;</span><span class="p">:</span> <span class="n">Ymin</span><span class="p">,</span> <span class="s1">&#39;Y Max&#39;</span><span class="p">:</span> <span class="n">Ymax</span><span class="p">,</span>
                                <span class="s1">&#39;Z Min&#39;</span><span class="p">:</span> <span class="n">Zmin</span><span class="p">,</span> <span class="s1">&#39;Z Max&#39;</span><span class="p">:</span> <span class="n">Zmin</span> <span class="o">+</span> <span class="n">thick3</span><span class="p">,</span>
@@ -286,11 +283,10 @@
 <span class="n">Zmin</span> <span class="o">+=</span> <span class="n">thick3</span>
 
 <span class="c1"># Create fourth layer (Loose Ottawa)</span>
-<span class="n">fm</span><span class="o">.</span><span class="n">meshPart</span><span class="o">.</span><span class="n">create_mesh_part</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="s2">&quot;Volume mesh&quot;</span><span class="p">,</span>
-                            <span class="n">mesh_part_type</span><span class="o">=</span><span class="s2">&quot;Uniform Rectangular Grid&quot;</span><span class="p">,</span>
+<span class="n">fm</span><span class="o">.</span><span class="n">meshpart</span><span class="o">.</span><span class="n">volume</span><span class="o">.</span><span class="n">uniform_rectangular_grid</span><span class="p">(</span>
                             <span class="n">user_name</span><span class="o">=</span><span class="s2">&quot;LooseOttawa&quot;</span><span class="p">,</span>
                             <span class="n">element</span><span class="o">=</span><span class="n">LooseOttawaEle</span><span class="p">,</span>
-                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
                             <span class="o">**</span><span class="p">{</span><span class="s1">&#39;X Min&#39;</span><span class="p">:</span> <span class="n">Xmin</span><span class="p">,</span> <span class="s1">&#39;X Max&#39;</span><span class="p">:</span> <span class="n">Xmax</span><span class="p">,</span>
                                <span class="s1">&#39;Y Min&#39;</span><span class="p">:</span> <span class="n">Ymin</span><span class="p">,</span> <span class="s1">&#39;Y Max&#39;</span><span class="p">:</span> <span class="n">Ymax</span><span class="p">,</span>
                                <span class="s1">&#39;Z Min&#39;</span><span class="p">:</span> <span class="n">Zmin</span><span class="p">,</span> <span class="s1">&#39;Z Max&#39;</span><span class="p">:</span> <span class="n">Zmin</span> <span class="o">+</span> <span class="n">thick4</span><span class="p">,</span>
@@ -300,11 +296,10 @@
 <span class="n">Zmin</span> <span class="o">+=</span> <span class="n">thick4</span>
 
 <span class="c1"># Create fifth layer (Montrey) at the top</span>
-<span class="n">fm</span><span class="o">.</span><span class="n">meshPart</span><span class="o">.</span><span class="n">create_mesh_part</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="s2">&quot;Volume mesh&quot;</span><span class="p">,</span>
-                            <span class="n">mesh_part_type</span><span class="o">=</span><span class="s2">&quot;Uniform Rectangular Grid&quot;</span><span class="p">,</span>
+<span class="n">fm</span><span class="o">.</span><span class="n">meshpart</span><span class="o">.</span><span class="n">volume</span><span class="o">.</span><span class="n">uniform_rectangular_grid</span><span class="p">(</span>
                             <span class="n">user_name</span><span class="o">=</span><span class="s2">&quot;Montrey&quot;</span><span class="p">,</span>
                             <span class="n">element</span><span class="o">=</span><span class="n">MontreyEle</span><span class="p">,</span>
-                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
                             <span class="o">**</span><span class="p">{</span><span class="s1">&#39;X Min&#39;</span><span class="p">:</span> <span class="n">Xmin</span><span class="p">,</span> <span class="s1">&#39;X Max&#39;</span><span class="p">:</span> <span class="n">Xmax</span><span class="p">,</span>
                                <span class="s1">&#39;Y Min&#39;</span><span class="p">:</span> <span class="n">Ymin</span><span class="p">,</span> <span class="s1">&#39;Y Max&#39;</span><span class="p">:</span> <span class="n">Ymax</span><span class="p">,</span>
                                <span class="s1">&#39;Z Min&#39;</span><span class="p">:</span> <span class="n">Zmin</span><span class="p">,</span> <span class="s1">&#39;Z Max&#39;</span><span class="p">:</span> <span class="n">Zmin</span> <span class="o">+</span> <span class="n">thick5</span><span class="p">,</span>
@@ -353,12 +348,12 @@
 <span class="n">MOTIONS</span> <span class="o">=</span> <span class="n">motions_dir</span><span class="p">()</span>
 
 <span class="c1"># Create a TimeSeries for excitation using the Kobe earthquake record</span>
-<span class="n">timeseries</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">timeSeries</span><span class="o">.</span><span class="n">create_time_series</span><span class="p">(</span><span class="n">series_type</span><span class="o">=</span><span class="s2">&quot;path&quot;</span><span class="p">,</span>
+<span class="n">timeseries</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">time_series</span><span class="o">.</span><span class="n">path</span><span class="p">(</span>
                                             <span class="n">filePath</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">MOTIONS</span> <span class="o">/</span> <span class="s2">&quot;kobe.acc&quot;</span><span class="p">),</span>  <span class="c1"># Acceleration file</span>
                                             <span class="n">fileTime</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">MOTIONS</span> <span class="o">/</span> <span class="s2">&quot;kobe.time&quot;</span><span class="p">))</span> <span class="c1"># Time steps file</span>
 
 <span class="c1"># Create a pattern for the uniform excitation (base shaking)</span>
-<span class="n">kobe</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">pattern</span><span class="o">.</span><span class="n">create_pattern</span><span class="p">(</span><span class="n">pattern_type</span><span class="o">=</span><span class="s2">&quot;uniformexcitation&quot;</span><span class="p">,</span>
+<span class="n">kobe</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">pattern</span><span class="o">.</span><span class="n">uniform_excitation</span><span class="p">(</span>
                                <span class="n">dof</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># X-direction excitation</span>
                                <span class="n">time_series</span><span class="o">=</span><span class="n">timeseries</span><span class="p">)</span>
 </pre></div>
@@ -557,11 +552,10 @@ If you run examples outside a repo checkout, set <cite>FEMORA_MOTIONS_DIR</cite>
 <span class="n">Ny</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">Ymax</span> <span class="o">-</span> <span class="n">Ymin</span><span class="p">)</span><span class="o">/</span><span class="n">dy</span><span class="p">)</span>  <span class="c1"># 20 elements in y-direction</span>
 
 <span class="c1"># Create first layer (Dense Ottawa) at the bottom</span>
-<span class="n">fm</span><span class="o">.</span><span class="n">meshPart</span><span class="o">.</span><span class="n">create_mesh_part</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="s2">&quot;Volume mesh&quot;</span><span class="p">,</span>
-                            <span class="n">mesh_part_type</span><span class="o">=</span><span class="s2">&quot;Uniform Rectangular Grid&quot;</span><span class="p">,</span>
+<span class="n">fm</span><span class="o">.</span><span class="n">meshpart</span><span class="o">.</span><span class="n">volume</span><span class="o">.</span><span class="n">uniform_rectangular_grid</span><span class="p">(</span>
                             <span class="n">user_name</span><span class="o">=</span><span class="s2">&quot;DensOttawa1&quot;</span><span class="p">,</span>
                             <span class="n">element</span><span class="o">=</span><span class="n">DensOttawaEle</span><span class="p">,</span>
-                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
                             <span class="o">**</span><span class="p">{</span><span class="s1">&#39;X Min&#39;</span><span class="p">:</span> <span class="n">Xmin</span><span class="p">,</span> <span class="s1">&#39;X Max&#39;</span><span class="p">:</span> <span class="n">Xmax</span><span class="p">,</span>
                                <span class="s1">&#39;Y Min&#39;</span><span class="p">:</span> <span class="n">Ymin</span><span class="p">,</span> <span class="s1">&#39;Y Max&#39;</span><span class="p">:</span> <span class="n">Ymax</span><span class="p">,</span>
                                <span class="s1">&#39;Z Min&#39;</span><span class="p">:</span> <span class="n">Zmin</span><span class="p">,</span> <span class="s1">&#39;Z Max&#39;</span><span class="p">:</span> <span class="n">Zmin</span> <span class="o">+</span> <span class="n">thick1</span><span class="p">,</span>
@@ -571,11 +565,10 @@ If you run examples outside a repo checkout, set <cite>FEMORA_MOTIONS_DIR</cite>
 <span class="n">Zmin</span> <span class="o">+=</span> <span class="n">thick1</span>
 
 <span class="c1"># Create second layer (Dense Ottawa)</span>
-<span class="n">fm</span><span class="o">.</span><span class="n">meshPart</span><span class="o">.</span><span class="n">create_mesh_part</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="s2">&quot;Volume mesh&quot;</span><span class="p">,</span>
-                            <span class="n">mesh_part_type</span><span class="o">=</span><span class="s2">&quot;Uniform Rectangular Grid&quot;</span><span class="p">,</span>
+<span class="n">fm</span><span class="o">.</span><span class="n">meshpart</span><span class="o">.</span><span class="n">volume</span><span class="o">.</span><span class="n">uniform_rectangular_grid</span><span class="p">(</span>
                             <span class="n">user_name</span><span class="o">=</span><span class="s2">&quot;DensOttawa2&quot;</span><span class="p">,</span>
                             <span class="n">element</span><span class="o">=</span><span class="n">DensOttawaEle</span><span class="p">,</span>
-                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
                             <span class="o">**</span><span class="p">{</span><span class="s1">&#39;X Min&#39;</span><span class="p">:</span> <span class="n">Xmin</span><span class="p">,</span> <span class="s1">&#39;X Max&#39;</span><span class="p">:</span> <span class="n">Xmax</span><span class="p">,</span>
                                <span class="s1">&#39;Y Min&#39;</span><span class="p">:</span> <span class="n">Ymin</span><span class="p">,</span> <span class="s1">&#39;Y Max&#39;</span><span class="p">:</span> <span class="n">Ymax</span><span class="p">,</span>
                                <span class="s1">&#39;Z Min&#39;</span><span class="p">:</span> <span class="n">Zmin</span><span class="p">,</span> <span class="s1">&#39;Z Max&#39;</span><span class="p">:</span> <span class="n">Zmin</span> <span class="o">+</span> <span class="n">thick2</span><span class="p">,</span>
@@ -585,11 +578,10 @@ If you run examples outside a repo checkout, set <cite>FEMORA_MOTIONS_DIR</cite>
 <span class="n">Zmin</span> <span class="o">+=</span> <span class="n">thick2</span>
 
 <span class="c1"># Create third layer (Dense Ottawa)</span>
-<span class="n">fm</span><span class="o">.</span><span class="n">meshPart</span><span class="o">.</span><span class="n">create_mesh_part</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="s2">&quot;Volume mesh&quot;</span><span class="p">,</span>
-                            <span class="n">mesh_part_type</span><span class="o">=</span><span class="s2">&quot;Uniform Rectangular Grid&quot;</span><span class="p">,</span>
+<span class="n">fm</span><span class="o">.</span><span class="n">meshpart</span><span class="o">.</span><span class="n">volume</span><span class="o">.</span><span class="n">uniform_rectangular_grid</span><span class="p">(</span>
                             <span class="n">user_name</span><span class="o">=</span><span class="s2">&quot;DensOttawa3&quot;</span><span class="p">,</span>
                             <span class="n">element</span><span class="o">=</span><span class="n">DensOttawaEle</span><span class="p">,</span>
-                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
                             <span class="o">**</span><span class="p">{</span><span class="s1">&#39;X Min&#39;</span><span class="p">:</span> <span class="n">Xmin</span><span class="p">,</span> <span class="s1">&#39;X Max&#39;</span><span class="p">:</span> <span class="n">Xmax</span><span class="p">,</span>
                                <span class="s1">&#39;Y Min&#39;</span><span class="p">:</span> <span class="n">Ymin</span><span class="p">,</span> <span class="s1">&#39;Y Max&#39;</span><span class="p">:</span> <span class="n">Ymax</span><span class="p">,</span>
                                <span class="s1">&#39;Z Min&#39;</span><span class="p">:</span> <span class="n">Zmin</span><span class="p">,</span> <span class="s1">&#39;Z Max&#39;</span><span class="p">:</span> <span class="n">Zmin</span> <span class="o">+</span> <span class="n">thick3</span><span class="p">,</span>
@@ -599,11 +591,10 @@ If you run examples outside a repo checkout, set <cite>FEMORA_MOTIONS_DIR</cite>
 <span class="n">Zmin</span> <span class="o">+=</span> <span class="n">thick3</span>
 
 <span class="c1"># Create fourth layer (Loose Ottawa)</span>
-<span class="n">fm</span><span class="o">.</span><span class="n">meshPart</span><span class="o">.</span><span class="n">create_mesh_part</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="s2">&quot;Volume mesh&quot;</span><span class="p">,</span>
-                            <span class="n">mesh_part_type</span><span class="o">=</span><span class="s2">&quot;Uniform Rectangular Grid&quot;</span><span class="p">,</span>
+<span class="n">fm</span><span class="o">.</span><span class="n">meshpart</span><span class="o">.</span><span class="n">volume</span><span class="o">.</span><span class="n">uniform_rectangular_grid</span><span class="p">(</span>
                             <span class="n">user_name</span><span class="o">=</span><span class="s2">&quot;LooseOttawa&quot;</span><span class="p">,</span>
                             <span class="n">element</span><span class="o">=</span><span class="n">LooseOttawaEle</span><span class="p">,</span>
-                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
                             <span class="o">**</span><span class="p">{</span><span class="s1">&#39;X Min&#39;</span><span class="p">:</span> <span class="n">Xmin</span><span class="p">,</span> <span class="s1">&#39;X Max&#39;</span><span class="p">:</span> <span class="n">Xmax</span><span class="p">,</span>
                                <span class="s1">&#39;Y Min&#39;</span><span class="p">:</span> <span class="n">Ymin</span><span class="p">,</span> <span class="s1">&#39;Y Max&#39;</span><span class="p">:</span> <span class="n">Ymax</span><span class="p">,</span>
                                <span class="s1">&#39;Z Min&#39;</span><span class="p">:</span> <span class="n">Zmin</span><span class="p">,</span> <span class="s1">&#39;Z Max&#39;</span><span class="p">:</span> <span class="n">Zmin</span> <span class="o">+</span> <span class="n">thick4</span><span class="p">,</span>
@@ -613,11 +604,10 @@ If you run examples outside a repo checkout, set <cite>FEMORA_MOTIONS_DIR</cite>
 <span class="n">Zmin</span> <span class="o">+=</span> <span class="n">thick4</span>
 
 <span class="c1"># Create fifth layer (Montrey) at the top</span>
-<span class="n">fm</span><span class="o">.</span><span class="n">meshPart</span><span class="o">.</span><span class="n">create_mesh_part</span><span class="p">(</span><span class="n">category</span><span class="o">=</span><span class="s2">&quot;Volume mesh&quot;</span><span class="p">,</span>
-                            <span class="n">mesh_part_type</span><span class="o">=</span><span class="s2">&quot;Uniform Rectangular Grid&quot;</span><span class="p">,</span>
+<span class="n">fm</span><span class="o">.</span><span class="n">meshpart</span><span class="o">.</span><span class="n">volume</span><span class="o">.</span><span class="n">uniform_rectangular_grid</span><span class="p">(</span>
                             <span class="n">user_name</span><span class="o">=</span><span class="s2">&quot;Montrey&quot;</span><span class="p">,</span>
                             <span class="n">element</span><span class="o">=</span><span class="n">MontreyEle</span><span class="p">,</span>
-                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get_region</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                            <span class="n">region</span><span class="o">=</span><span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
                             <span class="o">**</span><span class="p">{</span><span class="s1">&#39;X Min&#39;</span><span class="p">:</span> <span class="n">Xmin</span><span class="p">,</span> <span class="s1">&#39;X Max&#39;</span><span class="p">:</span> <span class="n">Xmax</span><span class="p">,</span>
                                <span class="s1">&#39;Y Min&#39;</span><span class="p">:</span> <span class="n">Ymin</span><span class="p">,</span> <span class="s1">&#39;Y Max&#39;</span><span class="p">:</span> <span class="n">Ymax</span><span class="p">,</span>
                                <span class="s1">&#39;Z Min&#39;</span><span class="p">:</span> <span class="n">Zmin</span><span class="p">,</span> <span class="s1">&#39;Z Max&#39;</span><span class="p">:</span> <span class="n">Zmin</span> <span class="o">+</span> <span class="n">thick5</span><span class="p">,</span>
@@ -637,12 +627,12 @@ If you run examples outside a repo checkout, set <cite>FEMORA_MOTIONS_DIR</cite>
 <span class="n">fm</span><span class="o">.</span><span class="n">assembler</span><span class="o">.</span><span class="n">Assemble</span><span class="p">()</span>
 
 <span class="c1"># Create a TimeSeries for excitation using the Kobe earthquake record</span>
-<span class="n">timeseries</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">timeSeries</span><span class="o">.</span><span class="n">create_time_series</span><span class="p">(</span><span class="n">series_type</span><span class="o">=</span><span class="s2">&quot;path&quot;</span><span class="p">,</span>
+<span class="n">timeseries</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">time_series</span><span class="o">.</span><span class="n">path</span><span class="p">(</span>
                                             <span class="n">filePath</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">MOTIONS</span> <span class="o">/</span> <span class="s2">&quot;kobe.acc&quot;</span><span class="p">),</span>  <span class="c1"># Acceleration file</span>
                                             <span class="n">fileTime</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">MOTIONS</span> <span class="o">/</span> <span class="s2">&quot;kobe.time&quot;</span><span class="p">))</span> <span class="c1"># Time steps file</span>
 
 <span class="c1"># Create a pattern for the uniform excitation (base shaking)</span>
-<span class="n">kobe</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">pattern</span><span class="o">.</span><span class="n">create_pattern</span><span class="p">(</span><span class="n">pattern_type</span><span class="o">=</span><span class="s2">&quot;uniformexcitation&quot;</span><span class="p">,</span>
+<span class="n">kobe</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">pattern</span><span class="o">.</span><span class="n">uniform_excitation</span><span class="p">(</span>
                                <span class="n">dof</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>  <span class="c1"># X-direction excitation</span>
                                <span class="n">time_series</span><span class="o">=</span><span class="n">timeseries</span><span class="p">)</span>
 

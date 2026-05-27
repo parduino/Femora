@@ -221,7 +221,7 @@
                                          <span class="n">b1</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">b2</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">b3</span><span class="o">=-</span><span class="mf">9.81</span> <span class="o">*</span> <span class="n">rho</span><span class="p">)</span>
 
 <span class="c1"># Create one damping for all the meshParts</span>
-<span class="n">uniformDamp</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">damping</span><span class="o">.</span><span class="n">frequencyRayleigh</span><span class="p">(</span><span class="n">f1</span><span class="o">=</span><span class="mf">2.76</span><span class="p">,</span> <span class="n">f2</span><span class="o">=</span><span class="mf">13.84</span><span class="p">,</span> <span class="n">dampingFactor</span><span class="o">=</span><span class="mf">0.03</span><span class="p">)</span>
+<span class="n">uniformDamp</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">damping</span><span class="o">.</span><span class="n">frequency_rayleigh</span><span class="p">(</span><span class="n">f1</span><span class="o">=</span><span class="mf">2.76</span><span class="p">,</span> <span class="n">f2</span><span class="o">=</span><span class="mf">13.84</span><span class="p">,</span> <span class="n">damping_factor</span><span class="o">=</span><span class="mf">0.03</span><span class="p">)</span>
 <span class="n">region</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">region</span><span class="o">.</span><span class="n">elementRegion</span><span class="p">(</span><span class="n">damping</span><span class="o">=</span><span class="n">uniformDamp</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -251,9 +251,7 @@
 <span class="n">Ny</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">Ymax</span> <span class="o">-</span> <span class="n">Ymin</span><span class="p">)</span><span class="o">/</span><span class="n">dy</span><span class="p">)</span>
 
 <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="n">layers</span><span class="p">:</span>
-    <span class="n">fm</span><span class="o">.</span><span class="n">meshPart</span><span class="o">.</span><span class="n">create_mesh_part</span><span class="p">(</span>
-        <span class="n">category</span><span class="o">=</span><span class="s2">&quot;Volume mesh&quot;</span><span class="p">,</span>
-        <span class="n">mesh_part_type</span><span class="o">=</span><span class="s2">&quot;Uniform Rectangular Grid&quot;</span><span class="p">,</span>
+    <span class="n">fm</span><span class="o">.</span><span class="n">meshpart</span><span class="o">.</span><span class="n">volume</span><span class="o">.</span><span class="n">uniform_rectangular_grid</span><span class="p">(</span>
         <span class="n">user_name</span><span class="o">=</span><span class="n">layer</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
         <span class="n">element</span><span class="o">=</span><span class="n">layer</span><span class="p">[</span><span class="s2">&quot;element&quot;</span><span class="p">],</span>
         <span class="n">region</span><span class="o">=</span><span class="n">region</span><span class="p">,</span>
@@ -289,13 +287,13 @@
 <span class="n">MOTIONS</span> <span class="o">=</span> <span class="n">motions_dir</span><span class="p">()</span>
 
 <span class="c1"># Create a TimeSeries for the uniform excitation</span>
-<span class="n">timeseries</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">timeSeries</span><span class="o">.</span><span class="n">create_time_series</span><span class="p">(</span><span class="n">series_type</span><span class="o">=</span><span class="s2">&quot;path&quot;</span><span class="p">,</span>
+<span class="n">timeseries</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">time_series</span><span class="o">.</span><span class="n">path</span><span class="p">(</span>
                                             <span class="n">filePath</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">MOTIONS</span> <span class="o">/</span> <span class="s2">&quot;FrequencySweep.acc&quot;</span><span class="p">),</span>
                                             <span class="n">fileTime</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">MOTIONS</span> <span class="o">/</span> <span class="s2">&quot;FrequencySweep.time&quot;</span><span class="p">),</span>
                                             <span class="n">factor</span><span class="o">=</span> <span class="mf">9.81</span><span class="p">)</span>
 
 <span class="c1"># Create a pattern for the uniform excitation</span>
-<span class="n">kobe</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">pattern</span><span class="o">.</span><span class="n">create_pattern</span><span class="p">(</span><span class="n">pattern_type</span><span class="o">=</span><span class="s2">&quot;uniformexcitation&quot;</span><span class="p">,</span><span class="n">dof</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">time_series</span><span class="o">=</span><span class="n">timeseries</span><span class="p">)</span>
+<span class="n">kobe</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">pattern</span><span class="o">.</span><span class="n">uniform_excitation</span><span class="p">(</span><span class="n">dof</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">time_series</span><span class="o">=</span><span class="n">timeseries</span><span class="p">)</span>
 </pre></div>
 </div>
 </section>
@@ -337,7 +335,7 @@
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mkdir</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">actions</span><span class="o">.</span><span class="n">tcl</span><span class="p">(</span><span class="s2">&quot;file mkdir Results&quot;</span><span class="p">)</span>
 <span class="n">recorder</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">recorder</span><span class="o">.</span><span class="n">create_recorder</span><span class="p">(</span><span class="s2">&quot;vtkhdf&quot;</span><span class="p">,</span> <span class="n">file_base_name</span><span class="o">=</span><span class="s2">&quot;Results/result.vtkhdf&quot;</span><span class="p">,</span>
                                       <span class="n">resp_types</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;accel&quot;</span><span class="p">,</span> <span class="s2">&quot;disp&quot;</span><span class="p">],</span> <span class="n">delta_t</span><span class="o">=</span><span class="mf">0.001</span><span class="p">)</span>
-<span class="n">reset</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">actions</span><span class="o">.</span><span class="n">seTime</span><span class="p">(</span><span class="n">pseudo_time</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+<span class="n">reset</span> <span class="o">=</span> <span class="n">fm</span><span class="o">.</span><span class="n">actions</span><span class="o">.</span><span class="n">set_time</span><span class="p">(</span><span class="n">pseudo_time</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
 
 <span class="c1"># Add steps to the process</span>
 <span class="n">fm</span><span class="o">.</span><span class="n">process</span><span class="o">.</span><span class="n">add_step</span><span class="p">(</span><span class="n">gravity</span><span class="p">,</span>  <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Gravity Analysis Step&quot;</span><span class="p">)</span>
