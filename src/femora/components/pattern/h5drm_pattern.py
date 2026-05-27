@@ -6,26 +6,24 @@ from femora.core.pattern_base import Pattern
 
 
 class H5DRMPattern(Pattern):
-    """OpenSees ``H5DRM`` pattern for Domain Reduction Method loading.
+    """OpenSees H5DRM pattern for Domain Reduction Method boundary loading.
 
-    This pattern references an H5DRM dataset and configures how dataset
-    coordinates and loads are mapped into the analysis model, including optional
-    coordinate transformation and transformed origin values.
+    This pattern references an HDF5-based Domain Reduction Method (DRM) dataset and
+    configures how dataset coordinates and loads map into the analysis model, including
+    optional coordinate transformations and transformed origin offsets.
 
     Tcl form:
-        ``pattern H5DRM <tag> "<filepath>" <factor> <crdScale> <distanceTolerance>
-        <doCoordinateTransformation> <T00> <T01> <T02> <T10> <T11> <T12> <T20>
-        <T21> <T22> <x00> <x01> <x02>``
+        ``pattern H5DRM <tag> "<filepath>" <factor> <crdScale> <distanceTolerance> <doCoordinateTransformation> <T00> <T01> <T02> <T10> <T11> <T12> <T20> <T21> <T22> <x00> <x01> <x02>``
 
-    Attributes:
-        tag: Manager-assigned identifier after the object is added to a Femora
-            manager.
+    Note:
+        - The H5DRM pattern is typically used in large-scale wave propagation models to apply boundary excitations generated from external site response simulations.
+        - Nodes in the finite element mesh that lie on the DRM boundary are matched with dataset points within the specified `distance_tolerance`.
 
-    Examples:
+    Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.MeshMaker()
+        model = Model()
         pattern = model.pattern.h5drm(
             filepath="drmload.h5drm",
             factor=1.0,
@@ -38,6 +36,11 @@ class H5DRMPattern(Pattern):
         print(pattern.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,
@@ -53,23 +56,21 @@ class H5DRMPattern(Pattern):
         """Create an H5DRM pattern with coordinate mapping parameters.
 
         Args:
-            filepath: Path to the H5DRM dataset.
-            factor: Scale factor for DRM forces and displacements.
+            filepath: Path to the H5DRM dataset file.
+            factor: Scale factor applied to DRM forces and displacements.
             crd_scale: Coordinate scale factor for the dataset.
-            distance_tolerance: Tolerance used to match DRM points to mesh
-                nodes.
-            do_coordinate_transformation: ``0`` or ``1`` flag controlling
-                coordinate transformation.
-            transform_matrix: Optional 9-value transformation matrix. If not
-                supplied, ``T00`` through ``T22`` must be present in ``kwargs``.
-            origin: Optional 3-value transformed origin. If not supplied,
-                ``x00`` through ``x02`` must be present in ``kwargs``.
-            **kwargs: Compatibility support for individual matrix/origin
-                entries.
+            distance_tolerance: Tolerance used to match DRM dataset points to mesh nodes.
+            do_coordinate_transformation: Flag (0 or 1) controlling coordinate transformation.
+            transform_matrix: Optional 9-value sequence representing a 3x3 transformation matrix.
+                If not supplied, T00 through T22 must be present in kwargs.
+            origin: Optional 3-value sequence representing the transformed origin coordinate.
+                If not supplied, x00 through x02 must be present in kwargs.
+            **kwargs: Compatibility support for individual matrix or origin entries.
 
         Raises:
-            ValueError: If transformation flags or sequence lengths are invalid.
-            KeyError: If required individual matrix/origin keys are missing.
+            ValueError: If do_coordinate_transformation is not 0 or 1, or if
+                transform_matrix or origin sequences have invalid lengths.
+            KeyError: If required individual matrix/origin keys are missing from kwargs when not using sequences.
         """
         super().__init__("H5DRM")
         self.filepath = str(filepath)
@@ -98,7 +99,7 @@ class H5DRMPattern(Pattern):
         """Render this pattern as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string for the ``H5DRM`` pattern.
+            str: Tcl command string for the H5DRM pattern.
 
         Raises:
             ValueError: If the pattern has not been assigned a manager tag.

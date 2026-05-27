@@ -1,13 +1,17 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Sequence
+from typing import TYPE_CHECKING, Dict, Optional, Sequence
 
 from femora.components.pattern.h5drm_pattern import H5DRMPattern
 from femora.components.pattern.multiple_support import MultipleSupportPattern
 from femora.components.pattern.plain_pattern import PlainPattern
 from femora.components.pattern.uniform_excitation import UniformExcitation
 from femora.core.pattern_base import Pattern
+from femora.core.tagging import CompactRetagPolicy
 from femora.core.time_series_base import TimeSeries
+
+if TYPE_CHECKING:
+    from femora.core.model import Model
 
 
 class PatternManager:
@@ -17,10 +21,23 @@ class PatternManager:
     independent pattern tag space for one model context.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        mesh_maker: Model,
+        time_series_manager=None,
+        ground_motion_manager=None,
+    ):
         """Create an empty manager with pattern tags starting at ``1``."""
+        from femora.core.model import Model as ModelClass
+
+        if not isinstance(mesh_maker, ModelClass):
+            raise TypeError("mesh_maker must be a Model instance")
+        self._mesh_maker = mesh_maker
         self._patterns: Dict[int, Pattern] = {}
         self._start_tag = 1
+        self._tagging = CompactRetagPolicy[Pattern]()
+        self._time_series_manager = time_series_manager
+        self._ground_motion_manager = ground_motion_manager
 
     def add(self, pattern: Pattern) -> Pattern:
         """Add an existing pattern and assign a tag if needed.
@@ -38,10 +55,19 @@ class PatternManager:
         """
         if not isinstance(pattern, Pattern):
             raise TypeError("pattern must be a Pattern instance")
-        if pattern.tag is None:
-            pattern.tag = self._next_available_tag()
-        elif pattern.tag in self._patterns and self._patterns[pattern.tag] is not pattern:
-            raise ValueError(f"Pattern tag {pattern.tag} already exists")
+        if pattern._owner is None:
+            pattern._owner = self
+        elif pattern._owner is not self:
+            raise ValueError("pattern already belongs to another manager")
+        self._validate_dependencies(pattern)
+        try:
+            pattern.tag = self._tagging.assign_tag(
+                self._patterns,
+                pattern,
+                self._start_tag,
+            )
+        except ValueError as exc:
+            raise ValueError(f"Pattern tag {pattern.tag} already exists") from exc
         self._patterns[pattern.tag] = pattern
         self._sync_attached_load_tags(pattern)
         return pattern
@@ -70,12 +96,14 @@ class PatternManager:
         pattern = self._patterns.pop(tag, None)
         if pattern is not None:
             pattern.tag = None
+            pattern._owner = None
             self._reassign_tags()
 
     def clear(self) -> None:
         """Remove all patterns and clear their assigned tags."""
         for pattern in self._patterns.values():
             pattern.tag = None
+            pattern._owner = None
         self._patterns.clear()
 
     def set_tag_start(self, start_tag: int) -> None:
@@ -87,10 +115,7 @@ class PatternManager:
         Raises:
             ValueError: If ``start_tag`` is less than ``1``.
         """
-        start_tag = int(start_tag)
-        if start_tag < 1:
-            raise ValueError("start_tag must be a positive integer")
-        self._start_tag = start_tag
+        self._start_tag = self._tagging.validate_start_tag(start_tag)
         self._reassign_tags()
 
     def uniform_excitation(
@@ -175,57 +200,14 @@ class PatternManager:
         """
         return self.add(MultipleSupportPattern())  # type: ignore[return-value]
 
-    def create_pattern(self, pattern_type: str, **kwargs) -> Pattern:
-        """Create and manage a pattern by type name.
-
-        This compatibility factory delegates to the explicit factory methods
-        such as :meth:`plain`, :meth:`uniform_excitation`, and
-        :meth:`multiple_support`.
-
-        Args:
-            pattern_type: Case-insensitive pattern type name.
-            **kwargs: Constructor arguments for the selected concrete class.
-
-        Returns:
-            Managed ``Pattern`` instance.
-
-        Raises:
-            KeyError: If ``pattern_type`` is not registered.
-        """
-        factories = {
-            "uniformexcitation": self.uniform_excitation,
-            "uniform_excitation": self.uniform_excitation,
-            "h5drm": self.h5drm,
-            "plain": self.plain,
-            "multiplesupport": self.multiple_support,
-            "multiple_support": self.multiple_support,
-        }
-        key = pattern_type.lower()
-        if key not in factories:
-            raise KeyError(f"Pattern type {pattern_type} not registered")
-        return factories[key](**kwargs)
-
-    get_pattern = get
-    remove_pattern = remove
-    get_all_patterns = get_all
-
     def _next_available_tag(self) -> int:
         """Return the next unused pattern tag in this manager's tag space."""
-        tag = self._start_tag
-        while tag in self._patterns:
-            tag += 1
-        return tag
+        return self._tagging.next_available_tag(self._patterns, self._start_tag)
 
     def _reassign_tags(self) -> None:
         """Retag all managed patterns from ``_start_tag`` in tag order."""
-        items: List[Pattern] = sorted(
-            self._patterns.values(),
-            key=lambda item: item.tag if item.tag is not None else 0,
-        )
-        self._patterns.clear()
-        for offset, pattern in enumerate(items):
-            pattern.tag = self._start_tag + offset
-            self._patterns[pattern.tag] = pattern
+        self._tagging.reassign_tags(self._patterns, self._start_tag)
+        for pattern in self._patterns.values():
             self._sync_attached_load_tags(pattern)
 
     def _sync_attached_load_tags(self, pattern: Pattern) -> None:
@@ -235,3 +217,36 @@ class PatternManager:
             return
         for load in get_loads():
             load.pattern_tag = pattern.tag
+
+    def _validate_dependencies(self, pattern: Pattern) -> None:
+        """Ensure a pattern only references dependencies from the local context."""
+        time_series = getattr(pattern, "time_series", None)
+        if time_series is not None:
+            if time_series.tag is None or time_series._owner is None:
+                raise ValueError("Pattern references an unmanaged TimeSeries")
+            owner_manager = time_series._owner
+            owner_mesh_maker = getattr(owner_manager, "_mesh_maker", None)
+            if owner_mesh_maker is not self._mesh_maker:
+                raise ValueError("Pattern references a TimeSeries from another Model")
+            if (
+                self._time_series_manager is not None
+                and owner_manager is not self._time_series_manager
+            ):
+                raise ValueError("Pattern references a TimeSeries from another manager")
+
+        get_imposed_motions = getattr(pattern, "get_imposed_motions", None)
+        if get_imposed_motions is None:
+            return
+        for imposed_motion in get_imposed_motions():
+            ground_motion = imposed_motion.ground_motion
+            if ground_motion.tag is None or ground_motion._owner is None:
+                raise ValueError("Pattern references an unmanaged GroundMotion")
+            owner_manager = ground_motion._owner
+            owner_mesh_maker = getattr(owner_manager, "_mesh_maker", None)
+            if owner_mesh_maker is not self._mesh_maker:
+                raise ValueError("Pattern references a GroundMotion from another Model")
+            if (
+                self._ground_motion_manager is not None
+                and owner_manager is not self._ground_motion_manager
+            ):
+                raise ValueError("Pattern references a GroundMotion from another manager")

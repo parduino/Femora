@@ -132,11 +132,10 @@ In this step, we define the dimensions and discretization of our 3D soil profile
    Ny = int((Ymax - Ymin)/dy)  # 20 elements in y-direction
    
    # Create first layer (Dense Ottawa) at the bottom
-   fm.meshPart.create_mesh_part(category="Volume mesh",
-                               mesh_part_type="Uniform Rectangular Grid",
+   fm.meshpart.volume.uniform_rectangular_grid(
                                user_name="DensOttawa1",
                                element=DensOttawaEle,
-                               region=fm.region.get_region(0),
+                               region=fm.region.get(0),
                                **{'X Min': Xmin, 'X Max': Xmax, 
                                   'Y Min': Ymin, 'Y Max': Ymax, 
                                   'Z Min': Zmin, 'Z Max': Zmin + thick1, 
@@ -146,11 +145,10 @@ In this step, we define the dimensions and discretization of our 3D soil profile
    Zmin += thick1
    
    # Create second layer (Dense Ottawa)
-   fm.meshPart.create_mesh_part(category="Volume mesh",
-                               mesh_part_type="Uniform Rectangular Grid",
+   fm.meshpart.volume.uniform_rectangular_grid(
                                user_name="DensOttawa2",
                                element=DensOttawaEle,
-                               region=fm.region.get_region(0),
+                               region=fm.region.get(0),
                                **{'X Min': Xmin, 'X Max': Xmax, 
                                   'Y Min': Ymin, 'Y Max': Ymax, 
                                   'Z Min': Zmin, 'Z Max': Zmin + thick2, 
@@ -160,11 +158,10 @@ In this step, we define the dimensions and discretization of our 3D soil profile
    Zmin += thick2
    
    # Create third layer (Dense Ottawa)
-   fm.meshPart.create_mesh_part(category="Volume mesh",
-                               mesh_part_type="Uniform Rectangular Grid",
+   fm.meshpart.volume.uniform_rectangular_grid(
                                user_name="DensOttawa3",
                                element=DensOttawaEle,
-                               region=fm.region.get_region(0),
+                               region=fm.region.get(0),
                                **{'X Min': Xmin, 'X Max': Xmax, 
                                   'Y Min': Ymin, 'Y Max': Ymax, 
                                   'Z Min': Zmin, 'Z Max': Zmin + thick3, 
@@ -174,11 +171,10 @@ In this step, we define the dimensions and discretization of our 3D soil profile
    Zmin += thick3
    
    # Create fourth layer (Loose Ottawa)
-   fm.meshPart.create_mesh_part(category="Volume mesh",
-                               mesh_part_type="Uniform Rectangular Grid",
+   fm.meshpart.volume.uniform_rectangular_grid(
                                user_name="LooseOttawa",
                                element=LooseOttawaEle,
-                               region=fm.region.get_region(0),
+                               region=fm.region.get(0),
                                **{'X Min': Xmin, 'X Max': Xmax, 
                                   'Y Min': Ymin, 'Y Max': Ymax, 
                                   'Z Min': Zmin, 'Z Max': Zmin + thick4, 
@@ -188,11 +184,10 @@ In this step, we define the dimensions and discretization of our 3D soil profile
    Zmin += thick4
    
    # Create fifth layer (Montrey) at the top
-   fm.meshPart.create_mesh_part(category="Volume mesh",
-                               mesh_part_type="Uniform Rectangular Grid",
+   fm.meshpart.volume.uniform_rectangular_grid(
                                user_name="Montrey",
                                element=MontreyEle,
-                               region=fm.region.get_region(0),
+                               region=fm.region.get(0),
                                **{'X Min': Xmin, 'X Max': Xmax, 
                                   'Y Min': Ymin, 'Y Max': Ymax, 
                                   'Z Min': Zmin, 'Z Max': Zmin + thick5, 
@@ -249,12 +244,12 @@ Now we define the seismic loading by creating a time series and excitation patte
    MOTIONS = motions_dir()
 
    # Create a TimeSeries for excitation using the Kobe earthquake record
-   timeseries = fm.timeSeries.create_time_series(series_type="path",
+   timeseries = fm.time_series.path(
                                                filePath=str(MOTIONS / "kobe.acc"),  # Acceleration file
                                                fileTime=str(MOTIONS / "kobe.time")) # Time steps file
 
    # Create a pattern for the uniform excitation (base shaking)
-   kobe = fm.pattern.create_pattern(pattern_type="uniformexcitation",
+   kobe = fm.pattern.uniform_excitation(
                                   dof=1,  # X-direction excitation
                                   time_series=timeseries)
 
@@ -459,11 +454,10 @@ Here's the complete code for this quick start example:
    Ny = int((Ymax - Ymin)/dy)  # 20 elements in y-direction
    
    # Create first layer (Dense Ottawa) at the bottom
-   fm.meshPart.create_mesh_part(category="Volume mesh",
-                               mesh_part_type="Uniform Rectangular Grid",
+   fm.meshpart.volume.uniform_rectangular_grid(
                                user_name="DensOttawa1",
                                element=DensOttawaEle,
-                               region=fm.region.get_region(0),
+                               region=fm.region.get(0),
                                **{'X Min': Xmin, 'X Max': Xmax, 
                                   'Y Min': Ymin, 'Y Max': Ymax, 
                                   'Z Min': Zmin, 'Z Max': Zmin + thick1, 
@@ -473,11 +467,10 @@ Here's the complete code for this quick start example:
    Zmin += thick1
    
    # Create second layer (Dense Ottawa)
-   fm.meshPart.create_mesh_part(category="Volume mesh",
-                               mesh_part_type="Uniform Rectangular Grid",
+   fm.meshpart.volume.uniform_rectangular_grid(
                                user_name="DensOttawa2",
                                element=DensOttawaEle,
-                               region=fm.region.get_region(0),
+                               region=fm.region.get(0),
                                **{'X Min': Xmin, 'X Max': Xmax, 
                                   'Y Min': Ymin, 'Y Max': Ymax, 
                                   'Z Min': Zmin, 'Z Max': Zmin + thick2, 
@@ -487,11 +480,10 @@ Here's the complete code for this quick start example:
    Zmin += thick2
    
    # Create third layer (Dense Ottawa)
-   fm.meshPart.create_mesh_part(category="Volume mesh",
-                               mesh_part_type="Uniform Rectangular Grid",
+   fm.meshpart.volume.uniform_rectangular_grid(
                                user_name="DensOttawa3",
                                element=DensOttawaEle,
-                               region=fm.region.get_region(0),
+                               region=fm.region.get(0),
                                **{'X Min': Xmin, 'X Max': Xmax, 
                                   'Y Min': Ymin, 'Y Max': Ymax, 
                                   'Z Min': Zmin, 'Z Max': Zmin + thick3, 
@@ -501,11 +493,10 @@ Here's the complete code for this quick start example:
    Zmin += thick3
    
    # Create fourth layer (Loose Ottawa)
-   fm.meshPart.create_mesh_part(category="Volume mesh",
-                               mesh_part_type="Uniform Rectangular Grid",
+   fm.meshpart.volume.uniform_rectangular_grid(
                                user_name="LooseOttawa",
                                element=LooseOttawaEle,
-                               region=fm.region.get_region(0),
+                               region=fm.region.get(0),
                                **{'X Min': Xmin, 'X Max': Xmax, 
                                   'Y Min': Ymin, 'Y Max': Ymax, 
                                   'Z Min': Zmin, 'Z Max': Zmin + thick4, 
@@ -515,11 +506,10 @@ Here's the complete code for this quick start example:
    Zmin += thick4
    
    # Create fifth layer (Montrey) at the top
-   fm.meshPart.create_mesh_part(category="Volume mesh",
-                               mesh_part_type="Uniform Rectangular Grid",
+   fm.meshpart.volume.uniform_rectangular_grid(
                                user_name="Montrey",
                                element=MontreyEle,
-                               region=fm.region.get_region(0),
+                               region=fm.region.get(0),
                                **{'X Min': Xmin, 'X Max': Xmax, 
                                   'Y Min': Ymin, 'Y Max': Ymax, 
                                   'Z Min': Zmin, 'Z Max': Zmin + thick5, 
@@ -539,12 +529,12 @@ Here's the complete code for this quick start example:
    fm.assembler.Assemble()
 
    # Create a TimeSeries for excitation using the Kobe earthquake record
-   timeseries = fm.timeSeries.create_time_series(series_type="path",
+   timeseries = fm.time_series.path(
                                                filePath=str(MOTIONS / "kobe.acc"),  # Acceleration file
                                                fileTime=str(MOTIONS / "kobe.time")) # Time steps file
 
    # Create a pattern for the uniform excitation (base shaking)
-   kobe = fm.pattern.create_pattern(pattern_type="uniformexcitation",
+   kobe = fm.pattern.uniform_excitation(
                                   dof=1,  # X-direction excitation
                                   time_series=timeseries)
 

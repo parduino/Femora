@@ -10,13 +10,13 @@ if src_dir not in sys.path:
     sys.path.append(src_dir)
 
 from femora.components.element import ForceBeamColumnElement
-from femora.core.element_base import Element
-from femora.components.section.section_base import Section
+from femora.core.section_base import Section
 from femora.components.transformation.transformation import GeometricTransformation
 
 # Mock classes
 class MockSection(Section):
     def __init__(self, tag):
+        super().__init__("section", "Mock", f"Sec{tag}")
         self.tag = tag
         self.section_type = "MockSection"
         self.user_name = f"Sec{tag}"
@@ -25,17 +25,6 @@ class MockSection(Section):
     
     def to_tcl(self):
         return f"section {self.tag}"
-
-    @classmethod
-    def get_parameters(cls): return []
-    @classmethod
-    def get_description(cls): return []
-    @classmethod
-    def get_help_text(cls): return ""
-    @classmethod
-    def validate_section_parameters(cls, **kwargs): return kwargs
-    def get_values(self, keys): return {}
-    def update_values(self, values): pass
 
 class MockTransformation(GeometricTransformation):
     def __init__(self, tag):
@@ -53,19 +42,13 @@ class MockTransformation(GeometricTransformation):
     def has_joint_offsets(self):
         return False
 
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    Element.clear_all_elements()
-    yield
-    Element.clear_all_elements()
-
 def test_force_beam_init_valid():
     """Test valid initialization."""
     sec = MockSection(1)
     transf = MockTransformation(1)
     
     ele = ForceBeamColumnElement(ndof=3, section=sec, transformation=transf)
-    assert ele.tag is not None
+    assert ele.tag is None
     assert ele._section == sec
     assert ele._transformation == transf
     assert ele.numIntgrPts == 5

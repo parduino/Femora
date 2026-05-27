@@ -5,7 +5,7 @@ from femora.core.time_series_base import TimeSeries
 
 
 class LinearTimeSeries(TimeSeries):
-    """OpenSees ``Linear`` time series component.
+    """Linear load-factor time series for monotonic ramping.
 
     This time series scales load factors linearly with pseudo-time, optionally
     multiplied by a user-defined factor. Use it when a monotonic linear ramp is
@@ -15,20 +15,23 @@ class LinearTimeSeries(TimeSeries):
         ``timeSeries Linear <tag> -factor <factor>``
 
     Attributes:
-        tag: Manager-assigned identifier after the object is added to a Femora
-            time-series manager.
         factor: Scale factor applied to pseudo-time.
 
-    Examples:
+    Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.MeshMaker()
-        ts = model.timeSeries.linear(factor=0.75)
+        model = Model()
+        ts = model.time_series.linear(factor=0.75)
+        pattern = model.pattern.plain(time_series=ts)
         print(ts.tag)
-        print(ts.to_tcl())
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(self, factor: float = 1.0):
         """Create a linearly varying time series.
@@ -46,6 +49,9 @@ class LinearTimeSeries(TimeSeries):
         """Render this time series as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string for the linear time series.
+            str: Tcl ``timeSeries Linear`` command for this object.
+
+        Raises:
+            ValueError: If this time series has not been added to a manager.
         """
         return f"timeSeries Linear {self._require_tag()} -factor {self.factor}"

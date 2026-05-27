@@ -3,13 +3,12 @@ import numpy as np
 import pyvista as pv
 from typing import List, Dict, Union, Optional, Tuple
 
-from femora.components.Mesh.meshPartBase import MeshPart
-from femora.components.Mesh.meshPartInstance import CompositeMesh
+from femora.core.meshpart_base import MeshPart
+from femora.components.mesh.general_meshparts import CompositeMesh
 from femora.components.element.elastic_beam_column import ElasticBeamColumnElement
 from femora.components.element.ghost_node import GhostNodeElement
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 from femora.tools.sections import aisc
-from femora.components.transformation.transformation import GeometricTransformation3D
 from femora.core.element_base import Element
 from femora.core.pattern_base import Pattern
 from femora.constants import FEMORA_MAX_NDF
@@ -416,16 +415,7 @@ class FEMA_SAC_SteelFrame:
         print("-" * 60)
         
         # Coordinates
-        x_coords = [0.0]
-        for b in self.x_bays: x_coords.append(x_coords[-1] + b)
-        x_coords = np.cumsum([0] + self.x_bays)
-        y_coords = np.cumsum([0] + self.y_bays)
-        z_coords = np.cumsum([0] + self.story_heights)
-        
-        # Apply Origin Offset
-        x_coords += self.origin[0]
-        y_coords += self.origin[1]
-        z_coords += self.origin[2]
+        x_coords, y_coords, z_coords = self.get_coordinates()
         
         # --- Geometry Collection ---
         elements_cache = {}
@@ -435,9 +425,9 @@ class FEMA_SAC_SteelFrame:
         current_point_id = 0
     
         # --- Transformations ---
-        transf_col_x = GeometricTransformation3D("Linear", 1, 0, 0, description="Column_Transf_X")
-        transf_col_y = GeometricTransformation3D("Linear", 0, 1, 0, description="Column_Transf_Y")
-        transf_beam = GeometricTransformation3D("Linear", 0, 0, 1, description="Beam_Transf")
+        transf_col_x = model.transformation.transformation3d("Linear", 1, 0, 0, description="Column_Transf_X")
+        transf_col_y = model.transformation.transformation3d("Linear", 0, 1, 0, description="Column_Transf_Y")
+        transf_beam = model.transformation.transformation3d("Linear", 0, 0, 1, description="Beam_Transf")
         
         cat_transf_map = {
             "Column_Grav": transf_col_x, 
@@ -451,20 +441,19 @@ class FEMA_SAC_SteelFrame:
             if key in elements_cache: return elements_cache[key]
             
             try:
-                try: fm_section = model.section.get_section(section_name)
-                except KeyError: fm_section = aisc.create_section(section_name, model, material, type="Elastic", unit_system=self.section_unit_system)
+                fm_section = model.section.get(section_name)
+                if fm_section is None:
+                    fm_section = aisc.create_section(section_name, model, material, type="Elastic", unit_system=self.section_unit_system)
             except Exception as e:
                 print(f"Warning: Issue with section {section_name}: {e}. using W14X90")
-                try: fm_section = model.section.get_section('W14X90')
-                except KeyError: fm_section = aisc.create_section('W14X90', model, material, type="Elastic", unit_system=self.section_unit_system)
+                fm_section = model.section.get('W14X90')
+                if fm_section is None:
+                    fm_section = aisc.create_section('W14X90', model, material, type="Elastic", unit_system=self.section_unit_system)
     
             transf = cat_transf_map.get(category, transf_col_x)
-            element = ElasticBeamColumnElement(ndof=6, section=fm_section, transformation=transf)
+            element = model.element.beam.elastic(ndof=6, section=fm_section, transformation=transf)
             elements_cache[key] = element
-            return element
-    
-            return element
-    
+            return element    
         def add_element_segment(category, section_name, p1, p2):
             nonlocal current_point_id
             element = get_or_create_element(category, section_name)
@@ -572,7 +561,11 @@ class FEMA_SAC_SteelFrame:
             
         # --- Construct Composite Mesh ---
         if not all_points:
-            return CompositeMesh(f"{self.name_prefix}", pv.UnstructuredGrid())
+            return model.meshpart.general.composite(
+                user_name=f"{self.name_prefix}",
+                mesh=pv.UnstructuredGrid(),
+                region=model.region.element(),
+            )
     
         points_array = np.array(all_points)
         cells_array = np.array(all_cells)
@@ -611,7 +604,7 @@ class FEMA_SAC_SteelFrame:
             p2 = grid.points[pid2]
 
             ele_tag = grid.cell_data["ElementTag"][i]
-            element = model.element.get_element(ele_tag)
+            element = model.element.get(ele_tag)
 
             if not element:
                 continue
@@ -797,7 +790,7 @@ class FEMA_SAC_SteelFrame:
             z_floor = z_coords[story_idx]
 
             # One GhostNodeElement per floor (unique sentinel ndf each)
-            com_elem = GhostNodeElement(ndof=6)
+            com_elem = model.element.special.ghost_node(ndof=6)
 
             com_coords.append([x_center, y_center, z_floor])
             com_element_tags.append(com_elem.tag)
@@ -812,7 +805,7 @@ class FEMA_SAC_SteelFrame:
             # --- Fix: Ensure Ghost Nodes have their unique 'ndf' sentinels ---
             # This prevents them from being merged with structural nodes or each other
             # during the Assembler's cleaning step.
-            com_ndfs = [Element.get_element_by_tag(tag).get_ndof() for tag in com_element_tags]
+            com_ndfs = [model.element.get(tag).get_ndof() for tag in com_element_tags]
             com_grid.point_data["ndf"] = np.array(com_ndfs, dtype=np.uint16)
 
             # Initialize center-of-mass Mass array
@@ -839,9 +832,12 @@ class FEMA_SAC_SteelFrame:
                   f"(x={x_center:.1f}, y={y_center:.1f}, "
                   f"z={z_coords[1]:.1f}..{z_coords[-1]:.1f})")
 
-        self.building_region = model.region.create_region("ElementRegion")
-        composite_mesh = CompositeMesh(user_name=f"{self.name_prefix}", mesh=grid, region=self.building_region)
-        return composite_mesh
+        self.building_region = model.region.element()
+        return model.meshpart.general.composite(
+            user_name=f"{self.name_prefix}",
+            mesh=grid,
+            region=self.building_region,
+        )
 
     def create_rigid_diaphragms(self, model):
         """
@@ -851,9 +847,9 @@ class FEMA_SAC_SteelFrame:
         connects it to all column endpoint nodes on that floor. It ensures
         that intermediate beam nodes (from subdivided beams) are excluded.
         
-        Must be called AFTER model.assembler.Assemble().
+        Must be called AFTER model.assembler.assemble().
         """
-        mesh = model.assembler.AssembeledMesh
+        mesh = model.assembled_mesh
         if mesh is None:
             raise ValueError("Mesh must be assembled before creating rigid diaphragms.")
         
@@ -866,6 +862,10 @@ class FEMA_SAC_SteelFrame:
         # Round coordinates for robust matching
         x_set = {round(val, 4) for val in x_coords}
         y_set = {round(val, 4) for val in y_coords}
+        x_min = float(min(x_coords)) - 1e-4
+        x_max = float(max(x_coords)) + 1e-4
+        y_min = float(min(y_coords)) - 1e-4
+        y_max = float(max(y_coords)) + 1e-4
         
         print(f"\nAdding Rigid Diaphragms for {self.num_stories} stories...")
         
@@ -874,7 +874,13 @@ class FEMA_SAC_SteelFrame:
             
             # 1. Potential floor nodes (vectorized search for Z)
             mask_z = np.abs(points[:, 2] - z_floor) < 1e-4
-            floor_indices = np.where(mask_z)[0]
+            mask_xy = (
+                (points[:, 0] >= x_min)
+                & (points[:, 0] <= x_max)
+                & (points[:, 1] >= y_min)
+                & (points[:, 1] <= y_max)
+            )
+            floor_indices = np.where(mask_z & mask_xy)[0]
             
             if len(floor_indices) == 0:
                 print(f"  [Floor {s}] No nodes found at z={z_floor:.2f}")
@@ -919,7 +925,7 @@ class FEMA_SAC_SteelFrame:
                 #     slave_nodes=slave_tags
                 # )
                 for slave_tag in slave_tags:
-                    model.constraint.mp.create_rigid_diaphragm(
+                    model.constraint.mp.rigid_diaphragm(
                         direction=3, # Normal to XY plane
                         master_node=master_tag,
                         slave_nodes=[slave_tag]
@@ -947,7 +953,7 @@ class FEMA_SAC_SteelFrame:
         completed so nodal coordinates and tags are available.
 
         Args:
-            model: Femora model instance (``MeshMaker``) exposing ``assembler``,
+            model: Femora model instance (``Model``) exposing ``assembler``,
                 ``timeSeries``, ``pattern``, and ``_start_nodetag``.
             g: Acceleration magnitude; must combine with ``floor_masses`` units so
                 ``mass * g`` is a force in the model's force unit.
@@ -956,7 +962,7 @@ class FEMA_SAC_SteelFrame:
             A ``Pattern`` instance (plain pattern with a constant time series and
             six-DOF nodal loads in global Z) ready to attach to a process or export.
         """
-        mesh = model.assembler.AssembeledMesh
+        mesh = model.assembled_mesh
         if mesh is None:
             raise ValueError("Mesh must be assembled before creating gravity loads.")
 
@@ -971,8 +977,8 @@ class FEMA_SAC_SteelFrame:
         points = mesh.points
         tol = 1e-4
 
-        ts = model.timeSeries.create_time_series("constant", factor=1.0)
-        pattern = model.pattern.create_pattern("plain", time_series=ts, factor=1.0)
+        ts = model.time_series.constant(factor=1.0)
+        pattern = model.pattern.plain(time_series=ts, factor=1.0)
         n_per_floor = self.num_x_grid * self.num_y_grid
         if n_per_floor == 0:
             return pattern
@@ -1035,7 +1041,7 @@ class FEMA_SAC_SteelFrame:
         the building region is created.
 
         Args:
-            model: Active Femora model (MeshMaker instance).
+            model: Active Femora model (Model instance).
             file_name: Output file name with .mpco extension. Defaults to {name_prefix}.mpco.
             delta_t: Optional recorder time interval (-T dt).
             element_responses: List of element responses to record (-E). Defaults to ["force"].
@@ -1047,7 +1053,7 @@ class FEMA_SAC_SteelFrame:
         if self.building_region is None:
             raise ValueError("Building region not found. Call build() first.")
 
-        mesh = model.assembler.AssembeledMesh
+        mesh = model.assembled_mesh
         if mesh is None:
             raise ValueError("Mesh must be assembled before creating recorders")
 

@@ -118,7 +118,7 @@ The elements are created with gravitational body forces in the vertical directio
                                              b1=0.0, b2=0.0, b3=-9.81 * rho)
 
     # Create one damping for all the meshParts
-    uniformDamp = fm.damping.frequencyRayleigh(f1=2.76, f2=13.84, dampingFactor=0.03)
+    uniformDamp = fm.damping.frequency_rayleigh(f1=2.76, f2=13.84, damping_factor=0.03)
     region = fm.region.elementRegion(damping=uniformDamp)
 
 The frequencies for Rayleigh damping (f1=2.76Hz, f2=13.84Hz) were specifically selected based on the first and third natural frequencies of the soil column. This approach ensures relatively constant damping across the frequency range of interest, which is important for accurate transfer function calculation. By targeting these specific modal frequencies, the model maintains consistent energy dissipation characteristics for the predominant modes of vibration.
@@ -153,9 +153,7 @@ Note how we systematically create each layer by updating the Z coordinate as we 
     Ny = int((Ymax - Ymin)/dy)
     
     for layer in layers:
-        fm.meshPart.create_mesh_part(
-            category="Volume mesh",
-            mesh_part_type="Uniform Rectangular Grid",
+        fm.meshpart.volume.uniform_rectangular_grid(
             user_name=layer["name"],
             element=layer["element"],
             region=region,
@@ -195,13 +193,13 @@ Instead of using an earthquake record, we use a frequency sweep signal that tran
     MOTIONS = motions_dir()
 
     # Create a TimeSeries for the uniform excitation
-    timeseries = fm.timeSeries.create_time_series(series_type="path",
+    timeseries = fm.time_series.path(
                                                 filePath=str(MOTIONS / "FrequencySweep.acc"),
                                                 fileTime=str(MOTIONS / "FrequencySweep.time"),
                                                 factor= 9.81)
     
     # Create a pattern for the uniform excitation
-    kobe = fm.pattern.create_pattern(pattern_type="uniformexcitation",dof=1, time_series=timeseries)
+    kobe = fm.pattern.uniform_excitation(dof=1, time_series=timeseries)
 
 Boundary Conditions
 ~~~~~~~~~~~~~~~~~~~
@@ -251,7 +249,7 @@ The process flow includes gravity initialization, setting up the frequency sweep
     mkdir = fm.actions.tcl("file mkdir Results")
     recorder = fm.recorder.create_recorder("vtkhdf", file_base_name="Results/result.vtkhdf",
                                           resp_types=["accel", "disp"], delta_t=0.001)
-    reset = fm.actions.seTime(pseudo_time=0.0)
+    reset = fm.actions.set_time(pseudo_time=0.0)
     
     # Add steps to the process
     fm.process.add_step(gravity,  description="Gravity Analysis Step")

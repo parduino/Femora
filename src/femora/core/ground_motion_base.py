@@ -16,7 +16,7 @@ class GroundMotion(ABC):
     own tags. A :class:`femora.core.ground_motion_manager.GroundMotionManager`
     owns instance storage, tag assignment, retagging, and deletion. This keeps
     the base class independent from any particular model and allows separate
-    managers, such as future separate ``MeshMaker`` instances, to maintain
+    managers, such as future separate ``Model`` instances, to maintain
     independent ground-motion collections.
 
     Attributes:
@@ -33,6 +33,7 @@ class GroundMotion(ABC):
             motion_type: OpenSees ground-motion type name used by subclasses.
         """
         self.tag: Optional[int] = None
+        self._owner: object | None = None
         self.motion_type = motion_type
 
     def _require_tag(self) -> int:

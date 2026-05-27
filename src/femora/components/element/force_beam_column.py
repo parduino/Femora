@@ -1,223 +1,214 @@
-from typing import Dict, List, Union
-from femora.components.section.section_base import Section, SectionManager
-from femora.components.transformation.transformation import GeometricTransformation, GeometricTransformationManager
-from femora.core.element_base import Element, ElementRegistry
+from typing import List, Union
+
+from femora.core.element_base import Element
+from femora.core.section_base import Section
+from femora.core.transformation_base import GeometricTransformation
+
 
 class ForceBeamColumnElement(Element):
+    """Force-based nonlinear beam-column element with distributed plasticity.
+
+    This two-node element uses OpenSees' ``nonlinearBeamColumn`` formulation to
+    integrate section force-deformation response along the member. It supports
+    2D models with 3 DOFs per node and 3D models with 6 DOFs per node.
+
+    Tcl form:
+        ``element nonlinearBeamColumn <tag> <iNode> <jNode> <numIntgrPts> <secTag> <transfTag> <-mass massDens> <-iter maxIters tol>``
+
+    Note:
+        - Requires a managed section and geometric transformation with assigned
+          tags before Tcl export.
+        - The ``-iter`` parameters control the internal compatibility iteration
+          used by the force-based formulation.
+
+    Attributes:
+        numIntgrPts: Number of integration points along the element length.
+        massDens: Mass density per unit length for optional dynamic mass
+            formation.
+        maxIters: Maximum compatibility iterations for the force-based solve.
+        tol: Convergence tolerance for the compatibility iteration.
+
+    Example:
+        ```python
+        from femora.core.model import Model
+        import femora.components.section.beam  # noqa: F401
+
+        model = Model()
+        sec = model.section.beam.elastic(
+            user_name="Frame",
+            E=29000.0,
+            A=18.0,
+            Iz=400.0,
+            Iy=400.0,
+            G=11200.0,
+            J=8.0,
+        )
+        transf = model.transformation.transformation3d(
+            transf_type="Linear",
+            vecxz_x=0.0,
+            vecxz_y=0.0,
+            vecxz_z=1.0,
+        )
+        ele = model.element.beam.force(
+            ndof=6,
+            section=sec,
+            transformation=transf,
+            numIntgrPts=5,
+            maxIters=10,
+            tol=1.0e-12,
+        )
+        print(ele.tag)
+        ```
     """
-    Force-Based Beam-Column Element for OpenSees (nonlinearBeamColumn).
-    Uses force-based formulation with distributed plasticity.
-    """
-    
-    def __init__(self, ndof: int, section: Union[Section, int, str], 
-                 transformation: Union[GeometricTransformation, int, str], 
-                 numIntgrPts: int = 5, 
-                 massDens: float = 0.0,
-                 maxIters: int = 10,
-                 tol: float = 1e-12,
-                 **kwargs):
-        """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__", "get_mass_per_length"],
+    }
+
+    def __init__(
+        self,
+        ndof: int,
+        section: Union[Section, int, str],
+        transformation: Union[GeometricTransformation, int, str],
+        numIntgrPts: int = 5,
+        massDens: float = 0.0,
+        maxIters: int = 10,
+        tol: float = 1e-12,
+        **kwargs,
+    ):
+        """Create a ForceBeamColumnElement with validated dependencies.
+
         Args:
-            ndof (int): Number of degrees of freedom (3 for 2D, 6 for 3D).
-            section (Union[Section, int, str]): Section object, tag, or name.
-            transformation (Union[GeometricTransformation, int, str]): 
-                Transformation object, tag, or name.
-            numIntgrPts (int, optional): Number of integration points along the element. 
-                Defaults to 5.
-            massDens (float, optional): Element mass density per unit length. 
-                Defaults to 0.0.
-            maxIters (int, optional): Maximum number of iterations for element compatibility. 
-                Defaults to 10.
-            tol (float, optional): Tolerance for satisfaction of element compatibility. 
-                Defaults to 1e-12.
+            ndof: Number of DOFs per node. Must be 3 for 2D or 6 for 3D.
+            section: Managed section object integrated along the member.
+            transformation: Managed geometric transformation defining the local
+                element axis.
+            numIntgrPts: Number of Gauss integration points along the element.
+            massDens: Optional mass per unit length for dynamic analyses.
+            maxIters: Maximum number of internal compatibility iterations.
+            tol: Convergence tolerance for compatibility iteration.
+            **kwargs: Additional element parameters stored on the base element.
 
         Raises:
-            ValueError: If parameters are invalid.
-
-        OpenSees command syntax:
-            ``element nonlinearBeamColumn $tag $iNode $jNode $numIntgrPts $secTag $transfTag <-mass $massDens> <-iter $maxIters $tol>``
-
-        Example:
-            ```python
-            element = ForceBeamColumnElement(ndof=3, section=1, transformation=1, numIntgrPts=5, maxIters=10, tol=1e-12)
-            ```
+            ValueError: If ``ndof`` is unsupported, if the section or
+                transformation is missing, if integration, mass, or iteration
+                inputs are invalid, or if dependencies cannot be resolved.
         """
-        # Validate DOF requirement (typically 6 for 3D, 3 for 2D)
         if ndof not in [3, 6]:
             raise ValueError(f"ForceBasedBeamColumnElement requires 3 (2D) or 6 (3D) DOFs, but got {ndof}")
-        
-        # Resolve section - REQUIRED for beam elements
+
         if section is None:
             raise ValueError("ForceBasedBeamColumnElement requires a section")
         self._section = self._resolve_section(section)
-        
-        # Resolve transformation - REQUIRED for beam elements  
+
         if transformation is None:
             raise ValueError("ForceBasedBeamColumnElement requires a geometric transformation")
         self._transformation = self._resolve_transformation(transformation)
-        
-        # Validate parameters
-        if numIntgrPts < 1:
+
+        self.numIntgrPts = int(numIntgrPts)
+        if self.numIntgrPts < 1:
             raise ValueError("Number of integration points must be positive")
-        if massDens < 0:
+
+        self.massDens = float(massDens)
+        if self.massDens < 0:
             raise ValueError("Mass density must be non-negative")
-        if maxIters < 1:
+
+        self.maxIters = int(maxIters)
+        if self.maxIters < 1:
             raise ValueError("Max iterations must be positive")
-        if tol <= 0:
+
+        self.tol = float(tol)
+        if self.tol <= 0:
             raise ValueError("Tolerance must be positive")
-            
-        # Material should be None for beam elements (they use sections)
-        super().__init__('nonlinearBeamColumn', ndof, material=None, 
-                         section=self._section, transformation=self._transformation, **kwargs)
-        
-        self.numIntgrPts = numIntgrPts
-        self.massDens = massDens
-        self.maxIters = maxIters
-        self.tol = tol
+
+        super().__init__(
+            "nonlinearBeamColumn",
+            ndof,
+            material=None,
+            section=self._section,
+            transformation=self._transformation,
+            **kwargs,
+        )
 
     @staticmethod
     def _resolve_section(section_input: Union[Section, int, str]) -> Section:
-        """Resolve section from different input types"""
+        """Resolve a managed section object from a direct section reference.
+
+        Args:
+            section_input: Section object passed to the constructor.
+
+        Returns:
+            The resolved section instance.
+
+        Raises:
+            ValueError: If the input is not a managed section object.
+        """
         if isinstance(section_input, Section):
             return section_input
-        if isinstance(section_input, (int, str)):
-            return SectionManager.get_section(section_input)
-        raise ValueError(f"Invalid section input type: {type(section_input)}")
+        raise ValueError(
+            f"Cannot resolve section '{section_input}' in unmanaged element creation. "
+            "Pass a managed Section object directly or use model.element.beam.force(...)"
+        )
 
     @staticmethod
     def _resolve_transformation(transf_input: Union[GeometricTransformation, int, str]) -> GeometricTransformation:
-        """Resolve transformation from different input types"""
+        """Resolve a managed geometric transformation from a direct reference.
+
+        Args:
+            transf_input: Transformation object passed to the constructor.
+
+        Returns:
+            The resolved transformation instance.
+
+        Raises:
+            ValueError: If the input is not a managed transformation object.
+        """
         if isinstance(transf_input, GeometricTransformation):
+            if transf_input.tag is None:
+                raise ValueError("Transformation must be managed before assigning it to an element")
             return transf_input
-        if isinstance(transf_input, (int, str)):
-            return GeometricTransformationManager.get_transformation(transf_input)
-        raise ValueError(f"Invalid transformation input type: {type(transf_input)}")
+        raise ValueError(
+            f"Cannot resolve transformation '{transf_input}' in unmanaged element creation. "
+            "Pass a managed GeometricTransformation object directly or use model.element.beam.force(...)"
+        )
 
     def __str__(self):
-        """Generate the OpenSees element string representation"""
+        """Return a compact parameter summary for debugging."""
         return f"{self._section.tag} {self._transformation.tag} {self.numIntgrPts} {self.massDens} {self.maxIters} {self.tol}"
-    
+
     def to_tcl(self, tag: int, nodes: List[int]) -> str:
-        """
-        Generate the OpenSees TCL command
-        
-        Example: element nonlinearBeamColumn $tag $iNode $jNode $numIntgrPts $secTag $transfTag <-mass $massDens> <-iter $maxIters $tol>
+        """Render the element as an OpenSees Tcl command.
+
+        Args:
+            tag: Assigned element tag.
+            nodes: Two node tags ``[iNode, jNode]``.
+
+        Returns:
+            str: Tcl ``element nonlinearBeamColumn`` command for this element.
+
+        Raises:
+            ValueError: If ``nodes`` does not contain exactly two node tags.
         """
         if len(nodes) != 2:
             raise ValueError("Force-based beam-column element requires 2 nodes")
-        
+
         nodes_str = " ".join(str(node) for node in nodes)
-        
-        # Required parameters
         cmd_parts = [f"element nonlinearBeamColumn {tag} {nodes_str}"]
-        
-        # Add number of integration points
         cmd_parts.append(str(self.numIntgrPts))
-            
-        # Add section and transformation tags
         cmd_parts.extend([str(self._section.tag), str(self._transformation.tag)])
-        
-        # Add optional mass density
+
         if self.massDens != 0.0:
             cmd_parts.extend(["-mass", str(self.massDens)])
-            
-        # Add iteration parameters (always outputting to be safe given explicit defaults)
+
         cmd_parts.extend(["-iter", str(self.maxIters), str(self.tol)])
-        
+
         return " ".join(cmd_parts)
-    
-    @classmethod
-    def get_parameters(cls) -> List[str]:
-        return ["numIntgrPts", "massDens", "maxIters", "tol"]
-
-    @classmethod
-    def get_description(cls) -> List[str]:
-        """Parameter descriptions for Force-Based Beam-Column Element"""
-        return [
-            "Number of integration points along the element",
-            "Element mass density per unit length (optional)",
-            "Maximum number of iterations for element compatibility (optional)",
-            "Tolerance for satisfaction of element compatibility (optional)"
-        ]
-
-    @classmethod
-    def validate_element_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
-        """Validate element parameters"""
-        validated_params = {}
-        
-        # Validate numIntgrPts
-        if "numIntgrPts" in kwargs:
-            try:
-                num_pts = int(kwargs["numIntgrPts"])
-                if num_pts < 1:
-                    raise ValueError("Number of integration points must be positive")
-                validated_params["numIntgrPts"] = num_pts
-            except (ValueError, TypeError):
-                raise ValueError("Invalid numIntgrPts. Must be a positive integer")
-        
-        # Validate massDens
-        if "massDens" in kwargs:
-            try:
-                mass_dens = float(kwargs["massDens"])
-                if mass_dens < 0:
-                    raise ValueError("Mass density must be non-negative")
-                validated_params["massDens"] = mass_dens
-            except (ValueError, TypeError):
-                raise ValueError("Invalid massDens. Must be a non-negative number")
-        
-        # Validate maxIters
-        if "maxIters" in kwargs:
-            try:
-                max_iters = int(kwargs["maxIters"])
-                if max_iters < 1:
-                    raise ValueError("Maximum iterations must be positive")
-                validated_params["maxIters"] = max_iters
-            except (ValueError, TypeError):
-                raise ValueError("Invalid maxIters. Must be a positive integer")
-        
-        # Validate tol
-        if "tol" in kwargs:
-            try:
-                tol = float(kwargs["tol"])
-                if tol <= 0:
-                    raise ValueError("Tolerance must be positive")
-                validated_params["tol"] = tol
-            except (ValueError, TypeError):
-                raise ValueError("Invalid tol. Must be a positive number")
-        
-        return validated_params
-
-    @staticmethod
-    def get_possible_dofs():
-        return ["3", "6"]
-    
-    def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
-        values = {}
-        for key in keys:
-             if hasattr(self, key): values[key] = getattr(self, key)
-        return values
-        
-    def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
-        if "numIntgrPts" in values:
-            val = int(values["numIntgrPts"])
-            if val < 1: raise ValueError("Positive numIntgrPts required")
-            self.numIntgrPts = val
-        if "massDens" in values:
-            val = float(values["massDens"])
-            if val < 0: raise ValueError("Non-negative massDens required")
-            self.massDens = val
-        if "maxIters" in values:
-            val = int(values["maxIters"])
-            if val < 1: raise ValueError("Positive maxIters required")
-            self.maxIters = val
-        if "tol" in values:
-            val = float(values["tol"])
-            if val <= 0: raise ValueError("Positive tol required")
-            self.tol = val
 
     def get_mass_per_length(self) -> float:
-        """Retrieve mass density per unit length if defined"""
-        return self.massDens
+        """Return the mass density per unit length.
 
-ElementRegistry.register_element_type('NonlinearBeamColumn', ForceBeamColumnElement)
-ElementRegistry.register_element_type('ForceBasedBeamColumn', ForceBeamColumnElement)
+        Returns:
+            Mass per unit length assigned to this element.
+        """
+        return self.massDens

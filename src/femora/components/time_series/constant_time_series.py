@@ -5,35 +5,33 @@ from femora.core.time_series_base import TimeSeries
 
 
 class ConstantTimeSeries(TimeSeries):
-    """OpenSees ``Constant`` time series.
+    """Constant load-factor time series for time-invariant scaling.
 
-    Represents a time series that applies a constant scale factor to loads,
-    displacements, or other quantities throughout an analysis. It is primarily
-    used when a time-invariant scaling is desired, such as for static analysis
-    where loads are applied as a fraction of their magnitude.
+    This time series applies a fixed scale factor throughout an analysis. It is
+    commonly used for static load patterns or as a simple multiplier in plain
+    load patterns.
 
     Tcl form:
         ``timeSeries Constant <tag> -factor <factor>``
 
-    Examples:
+    Attributes:
+        factor: Constant scale factor applied for the whole analysis.
+
+    Example:
         ```python
-        import femora as fm
+        from femora.core.model import Model
 
-        model = fm.MeshMaker()
-        # Create a constant time series with a factor of 1.0 (default)
-        ts_default = model.timeSeries.constant()
-        print(ts_default.tag)
-
-        # Create a constant time series with a specific factor
-        ts_scaled = model.timeSeries.constant(factor=0.5)
-        print(ts_scaled.tag)
-
-        # This time series can then be assigned to a pattern, for example
-        # a uniform excitation pattern for static gravity loads.
-        # pattern = model.pattern.uniform_excitation(dof=2, time_series=ts_scaled)
-        # print(pattern.tag)
+        model = Model()
+        ts = model.time_series.constant(factor=0.5)
+        pattern = model.pattern.plain(time_series=ts)
+        print(ts.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(self, factor: float = 1.0):
         """Create a constant time series.
@@ -51,6 +49,9 @@ class ConstantTimeSeries(TimeSeries):
         """Render this time series as an OpenSees Tcl command.
 
         Returns:
-            Tcl command string for the constant time series.
+            str: Tcl ``timeSeries Constant`` command for this object.
+
+        Raises:
+            ValueError: If this time series has not been added to a manager.
         """
         return f"timeSeries Constant {self._require_tag()} -factor {self.factor}"

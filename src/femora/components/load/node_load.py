@@ -1,172 +1,164 @@
 from __future__ import annotations
 
-from typing import Dict, List, Union, Any, Optional
+from typing import Any, List, Optional
 
-from .load_base import Load, LoadRegistry
+from femora.core.load_base import Load
+
+
+def _coerce_positive_int(value: Any, field: str) -> int:
+    """Coerce a value to a positive integer.
+
+    Args:
+        value: The value to be converted.
+        field: The name of the field being validated (for error messages).
+
+    Returns:
+        The validated positive integer.
+
+    Raises:
+        ValueError: If the value cannot be converted to a positive integer or
+            is less than 1.
+    """
+    try:
+        number = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field} must be a positive integer") from exc
+    if number < 1:
+        raise ValueError(f"{field} must be a positive integer")
+    return number
+
+
+def _coerce_load_values(values: Any) -> List[float]:
+    """Coerce input load values to a list of floats.
+
+    Args:
+        values: The load values (list or tuple) to be validated.
+
+    Returns:
+        A list of validated float values.
+
+    Raises:
+        ValueError: If the input is not a non-empty list or tuple of numeric
+            values.
+    """
+    if not isinstance(values, (list, tuple)) or len(values) == 0:
+        raise ValueError("values must be a non-empty list/tuple of floats")
+    try:
+        return [float(v) for v in values]
+    except (TypeError, ValueError) as exc:
+        raise ValueError("values must be numeric") from exc
+
+
+def _coerce_pids(pids: Any) -> List[int]:
+    """Coerce partition IDs to a sorted list of unique integers.
+
+    Args:
+        pids: The partition IDs (list or tuple) to be validated.
+
+    Returns:
+        A sorted list of unique validated integers.
+
+    Raises:
+        ValueError: If the input is not a list or tuple of integer values.
+    """
+    if not isinstance(pids, (list, tuple)):
+        raise ValueError("pids must be a list/tuple of integers")
+    try:
+        return sorted({int(x) for x in pids})
+    except (TypeError, ValueError) as exc:
+        raise ValueError("pids must be integers") from exc
 
 
 class NodeLoad(Load):
+    """Nodal load component for applying forces or moments to nodes.
+
+    NodeLoad represents a node-based load applied directly to a node's degrees
+    of freedom. It is typically registered under a Plain pattern to represent
+    external static or dynamic excitations.
+
+    Tcl form:
+        ``load <nodeTag> <value1> <value2> ...``
+
+    Note:
+        - The number of specified load values should match the number of degrees
+          of freedom (NDF) at the target node.
+        - If a `node_mask` is provided, the load will be automatically expanded
+          and applied to all selected nodes.
+        - In parallel computing contexts, partition IDs (`pids`) specify which
+          processor core(s) should execute the command.
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        ts = model.time_series.constant(factor=1.0)
+        pattern = model.pattern.plain(time_series=ts)
+
+        # Apply a force of 5.0 in X and -10.0 in Y to node 1
+        load = pattern.add_load.node(
+            node_tag=1,
+            values=[5.0, -10.0],
+        )
+        ```
     """
-    Nodal load wrapper for the OpenSees ``load`` command.
 
-    TCL form::
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
-        load <nodeTag> <values...>
-
-    Supports either a single ``node_tag`` or a :class:`NodeMask` to expand to
-    multiple nodes. When a mask is provided, TCL is emitted on tag level via
-    ``NodeMask.to_tags()``, while DOF padding/truncation and pid derivation
-    use mask IDs and mesh metadata.
-
-    Attributes:
-        node_tag (Optional[int]): Target node tag when applying to a single node.
-        values (List[float]): Reference load vector; padded/truncated to each
-            node's DOF when using masks.
-        pids (List[int]): Optional list of core IDs. Defaults to ``[0]`` when
-            not set; overridden by mask-derived pids if a mask is supplied.
-        node_mask: Optional :class:`NodeMask` to target multiple nodes.
-    """
-
-    def __init__(self, **kwargs):
-        super().__init__("NodeLoad")
-        validated = self.validate(**kwargs)
-        self.node_tag: Optional[int] = validated.get("node_tag")
-        self.values: List[float] = validated["values"]
-        # Optional list of pids (cores) where this node participates
-        self.pids: List[int] = validated.get("pids", [])
-        # Optional mask of nodes
-        self.node_mask = validated.get("node_mask")
-
-    @staticmethod
-    def get_parameters() -> List[tuple]:
-        """
-        Parameters metadata for UI/inspection.
-
-        Returns:
-            List[tuple]: Tuples of (name, description).
-        """
-        return [
-            ("node_tag", "Tag of node on which the loads act (optional if node_mask provided)"),
-            ("values", "List of load values for each DOF"),
-            ("pids", "Optional list of core ids (ints) where to emit this load"),
-            ("node_mask", "Optional NodeMask to expand into multiple nodes"),
-        ]
-
-    def get_values(self) -> Dict[str, Union[str, int, float, bool, list, tuple]]:
-        """
-        Return a serializable dictionary of the current load state.
-
-        Returns:
-            Dict[str, Union[str, int, float, bool, list, tuple]]
-        """
-        return {
-            "node_tag": self.node_tag,
-            "values": list(self.values),
-            "pids": list(self.pids),
-            "node_mask": self.node_mask,
-            "pattern_tag": self.pattern_tag,
-        }
-
-    @staticmethod
-    def validate(**kwargs) -> Dict[str, Any]:
-        """
-        Validate constructor/update parameters for NodeLoad.
+    def __init__(
+        self,
+        *,
+        values: List[float],
+        node_tag: Optional[int] = None,
+        node_mask: Optional[object] = None,
+        pids: Optional[List[int]] = None,
+    ) -> None:
+        """Create a nodal load component.
 
         Args:
-            **kwargs: Supported keys are ``node_tag`` (int), ``node_mask``
-                (NodeMask), ``values`` (list[float]), ``pids`` (list[int]).
-
-        Returns:
-            Dict[str, Any]: Normalized values.
+            values: Nodal force or moment values corresponding to the active
+                degrees of freedom (DOFs) at the node.
+            node_tag: Optional explicit tag of the target node.
+            node_mask: Optional NodeMask object to apply the load to multiple
+                nodes.
+            pids: Optional processor partition IDs for parallel executions.
 
         Raises:
-            ValueError: On missing or invalid parameters.
+            ValueError: If neither `node_tag` nor `node_mask` is specified,
+                if `node_mask` is not a NodeMask instance, or if any input
+                parameter fails validation.
         """
-        node_tag = None
-        node_mask = None
-        if "node_mask" in kwargs and kwargs["node_mask"] is not None:
-            node_mask = kwargs["node_mask"]
-            # Lazy import to avoid cycles
-            try:
-                from femora.components.mask.mask_base import NodeMask as _NodeMask
-            except Exception:
-                _NodeMask = None  # type: ignore
-            if _NodeMask is not None and not isinstance(node_mask, _NodeMask):
+        super().__init__()
+
+        if node_mask is not None:
+            from femora.components.mask.mask_base import NodeMask
+
+            if not isinstance(node_mask, NodeMask):
                 raise ValueError("node_mask must be a NodeMask")
-        if "node_tag" in kwargs and kwargs["node_tag"] is not None:
-            try:
-                node_tag = int(kwargs["node_tag"])
-                if node_tag < 1:
-                    raise ValueError
-            except Exception:
-                raise ValueError("node_tag must be a positive integer")
+
+        if node_tag is not None:
+            node_tag = _coerce_positive_int(node_tag, "node_tag")
+
         if node_mask is None and node_tag is None:
             raise ValueError("Either node_tag or node_mask must be specified")
 
-        if "values" not in kwargs:
-            raise ValueError("values must be specified as a list of floats")
-        values_in = kwargs["values"]
-        if not isinstance(values_in, (list, tuple)) or len(values_in) == 0:
-            raise ValueError("values must be a non-empty list/tuple of floats")
-        try:
-            values = [float(v) for v in values_in]
-        except Exception:
-            raise ValueError("values must be numeric")
-
-        out: Dict[str, Any] = {"values": values}
-        if node_tag is not None:
-            out["node_tag"] = node_tag
-        if node_mask is not None:
-            out["node_mask"] = node_mask
-
-        # Optional pids (default [0] if not provided)
-        if "pids" in kwargs and kwargs["pids"] is not None:
-            p = kwargs["pids"]
-            if not isinstance(p, (list, tuple)):
-                raise ValueError("pids must be a list/tuple of integers")
-            try:
-                pids = sorted({int(x) for x in p})
-            except Exception:
-                raise ValueError("pids must be integers")
-            out["pids"] = pids
-        else:
-            out["pids"] = [0]
-
-        return out
-
-    def update_values(self, **kwargs) -> None:
-        """
-        Update the load's values after validation.
-
-        Args:
-            **kwargs: Same keys as :meth:`validate`.
-        """
-        validated = self.validate(
-            node_tag=kwargs.get("node_tag", self.node_tag),
-            values=kwargs.get("values", self.values),
-            pids=kwargs.get("pids", self.pids),
-            node_mask=kwargs.get("node_mask", self.node_mask),
-        )
-        self.node_tag = validated.get("node_tag")
-        self.values = validated["values"]
-        self.pids = validated.get("pids", [])
-        self.node_mask = validated.get("node_mask")
+        self.node_tag = node_tag
+        self.values = _coerce_load_values(values)
+        self.pids = _coerce_pids(pids) if pids is not None else [0]
+        self.node_mask = node_mask
 
     def to_tcl(self) -> str:
-        """
-        Convert the nodal load to its TCL command(s).
-
-        When ``node_mask`` is provided, emits one ``load`` line per node tag.
-        Load vectors are padded/truncated per node DOF. pids are derived per
-        node from the mesh when available; otherwise uses stored ``pids``.
+        """Render this load component as OpenSees Tcl commands.
 
         Returns:
-            str: TCL command string (single or multi-line).
+            The OpenSees load command string(s) for the node(s).
         """
         def wrap_with_pid_for_node(nid: int, s: str) -> str:
-            # Prefer pids from the mask's mesh index if available, else self.pids
             pids = self.pids
-            if self.node_mask is not None and hasattr(self.node_mask._mesh, 'node_core_map'):
+            if self.node_mask is not None and hasattr(self.node_mask._mesh, "node_core_map"):
                 pids = self.node_mask._mesh.node_core_map[nid] or [0]
             if pids:
                 cond = " || ".join(f"($pid == {pid})" for pid in pids)
@@ -174,27 +166,22 @@ class NodeLoad(Load):
             return s
 
         if self.node_mask is not None:
-            # Expand to multiple nodes, truncating/padding values by node ndf
-            mesh = self.node_mask._mesh  # type: ignore[attr-defined]
+            mesh = self.node_mask._mesh
             id_list = self.node_mask.to_list()
             tag_list = self.node_mask.to_tags()
             lines: List[str] = []
             for nid, node_tag in zip(id_list, tag_list):
-                ndf = int(mesh.node_ndf[nid]) if hasattr(mesh, 'node_ndf') else len(self.values)
+                ndf = int(mesh.node_ndf[nid]) if hasattr(mesh, "node_ndf") else len(self.values)
                 vals = list(self.values)[:ndf]
                 if len(vals) < ndf:
                     vals = vals + [0.0] * (ndf - len(vals))
                 values_str = " ".join(str(v) for v in vals)
                 lines.append(wrap_with_pid_for_node(int(nid), f"load {int(node_tag)} {values_str}"))
             return "\n\t".join(lines)
-        else:
-            values_str = " ".join(str(v) for v in self.values)
-            cmd = f"load {self.node_tag} {values_str}"
-            return wrap_with_pid_for_node(int(self.node_tag) if self.node_tag is not None else 0, cmd)
+
+        values_str = " ".join(str(v) for v in self.values)
+        cmd = f"load {self.node_tag} {values_str}"
+        return wrap_with_pid_for_node(int(self.node_tag) if self.node_tag is not None else 0, cmd)
 
 
-# Register type
-LoadRegistry.register_load_type("node", NodeLoad)
-LoadRegistry.register_load_type("nodeload", NodeLoad)
-
-
+__all__ = ["NodeLoad"]

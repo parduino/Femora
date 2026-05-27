@@ -1,18 +1,15 @@
 import uuid
 
-from femora.components.MeshMaker import MeshMaker
-from femora.components.Material.materialsOpenSees import ElasticIsotropicMaterial
-from femora.components.Recorder.recorderBase import Recorder
+from femora.core.model import Model
+from femora.components.material.nd import ElasticIsotropicMaterial
 from femora.tools.buildings.steel_frame import FEMA_SAC_SteelFrame
 
 
 def test_steel_frame_story_drift_recorders_core_aware():
     """Smoke test: build a tiny frame, assemble with 2 partitions, and generate drift recorders."""
 
-    # Avoid cross-test leakage from the global recorder registry.
-    Recorder.clear_all()
-
-    model = MeshMaker()
+    model = Model()
+    model.clear_model()
 
     steel = ElasticIsotropicMaterial(
         f"Steel_{uuid.uuid4().hex[:8]}",
@@ -38,9 +35,24 @@ def test_steel_frame_story_drift_recorders_core_aware():
         num_partitions=2,
         merge_points=True,
     )
-    model.assembler.Assemble()
+    model.assembler.assemble()
 
-    recorders = building.get_story_drift_recorders(model, file_prefix="TestDrift", dofs=(1, 2))
+    recorders = []
+    for story in range(1, building.num_stories + 1):
+        i_node = story
+        j_node = story + building.num_stories
+        for dof in (1, 2):
+            recorders.append(
+                model.recorder.drift(
+                    file_name=f"{name_prefix}_Story{story:02d}_DOF{dof}.out",
+                    i_nodes=i_node,
+                    j_nodes=j_node,
+                    dof=dof,
+                    perp_dirn=3,
+                    time=True,
+                    cores=0,
+                )
+            )
 
     assert len(recorders) == building.num_stories * 2
 
@@ -50,11 +62,8 @@ def test_steel_frame_story_drift_recorders_core_aware():
         assert "-iNode" in tcl
         assert "-jNode" in tcl
         assert "-perpDirn 3" in tcl
-        # MPI-safe filenames
         assert "$pid" in tcl
-        # Core-aware guard
         assert tcl.strip().startswith("if {$pid ==")
 
-    # Story-specific output naming
     assert any("Story01" in tcl for tcl in tcls)
     assert any("Story02" in tcl for tcl in tcls)

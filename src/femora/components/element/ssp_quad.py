@@ -1,231 +1,150 @@
-from typing import Dict, List, Union, Optional
-from femora.components.Material.materialBase import Material
-from femora.core.element_base import Element, ElementRegistry
+from typing import List
+
+from femora.core.element_base import Element
+from femora.core.material_base import Material
+
 
 class SSPQuadElement(Element):
-    """OpenSees 4-node stabilized single-point integration quadrilateral (SSPquad).
+    """Stabilized single-point quadrilateral continuum element for 2D models.
 
-    This element represents a 2D continuum element that can operate in
-    PlaneStrain or PlaneStress. It requires materials of type ``nDMaterial``
-    and exactly 2 DOFs per node.
+    This four-node element represents plane-strain or plane-stress continua with
+    2 translational DOFs per node. It requires a 2D ``nDMaterial`` and an
+    explicit out-of-plane thickness.
+
+    Tcl form:
+        ``element SSPquad <tag> <n1> <n2> <n3> <n4> <matTag> <Type> <Thickness> [<b1> <b2>]``
+
+    Note:
+        - ``Type`` must be either ``PlaneStrain`` or ``PlaneStress``.
+        - Nodes should be ordered counter-clockwise in the element plane.
+        - Body forces are constant in global coordinates and omitted when zero.
+
+    Attributes:
+        Type: Plane-stress or plane-strain formulation flag.
+        Thickness: Out-of-plane thickness used by the element formulation.
+        b1: Constant body force in the global x-direction.
+        b2: Constant body force in the global y-direction.
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        mat = model.material.nd.elastic_isotropic(
+            user_name="Soil2D",
+            E=3.0e7,
+            nu=0.3,
+            rho=1900.0,
+        )
+        ele = model.element.quad.ssp(
+            ndof=2,
+            material=mat,
+            Type="PlaneStrain",
+            Thickness=1.0,
+        )
+        print(ele.tag)
+        ```
     """
-    def __init__(self, ndof: int, material: Material, Type: str, Thickness: float, b1: float = 0.0, b2: float = 0.0, **kwargs):
-        """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
+    def __init__(
+        self,
+        ndof: int,
+        material: Material,
+        Type: str,
+        Thickness: float,
+        b1: float = 0.0,
+        b2: float = 0.0,
+        **kwargs,
+    ):
+        """Create an SSPQuadElement with validated material and geometry inputs.
+
         Args:
-            ndof (int): Number of degrees of freedom per node. Must be 2.
-            material (Material): Associated OpenSees material. Must have
-                material_type == 'nDMaterial'.
-            Type (str): Either 'PlaneStrain' or 'PlaneStress'. Required.
-            Thickness (float): Element thickness (out-of-plane). Required.
-            b1 (float, optional): Constant body force in global x-direction. 
-                Defaults to 0.0.
-            b2 (float, optional): Constant body force in global y-direction. 
-                Defaults to 0.0.
+            ndof: Number of DOFs per node. Must be 2 for this element.
+            material: Managed 2D ``nDMaterial`` assigned to the quadrilateral.
+            Type: ``PlaneStrain`` or ``PlaneStress`` formulation flag.
+            Thickness: Element thickness in the out-of-plane direction.
+            b1: Constant body force in the global x-direction.
+            b2: Constant body force in the global y-direction.
+            **kwargs: Additional element parameters stored on the base element.
 
         Raises:
-            ValueError: If the material is incompatible, ndof != 2, or any
-                parameter is missing/invalid.
-
-        OpenSees command syntax:
-            ``element SSPquad $tag $n1 $n2 $n3 $n4 $matTag $Type $Thickness [$b1 $b2]``
-
-        Example:
-            ```python
-            element = SSPQuadElement(ndof=2, material=mat, Type='PlaneStrain', Thickness=1.0)
-            ```
+            ValueError: If the material is incompatible, if ``ndof`` is not 2,
+                or if any parameter is missing or invalid.
         """
-        # Validate material compatibility
         if not self._is_material_compatible(material):
-            raise ValueError(f"Material {material.user_name} with type {material.material_type} is not compatible with SSPQuadElement")
-        
-        # Validate DOF requirement
+            raise ValueError(
+                f"Material {material.user_name} with type {material.material_type} "
+                "is not compatible with SSPQuadElement"
+            )
+
         if ndof != 2:
             raise ValueError(f"SSPQuadElement requires 2 DOFs, but got {ndof}")
-        
-        # Validate element parameters
-        params = {"Type": Type, "Thickness": Thickness, "b1": b1, "b2": b2}
-        validated = self.validate_element_parameters(**params)
-            
-        super().__init__('SSPQuad', ndof, material, **kwargs)
-        
-        self.Type = validated["Type"]
-        self.Thickness = validated["Thickness"]
-        self.b1 = validated.get("b1", 0.0)
-        self.b2 = validated.get("b2", 0.0)
 
+        if Type not in ["PlaneStrain", "PlaneStress"]:
+            raise ValueError("Element type must be either 'PlaneStrain' or 'PlaneStress'")
+        self.Type = Type
+
+        self.Thickness = float(Thickness)
+        self.b1 = float(b1)
+        self.b2 = float(b2)
+
+        super().__init__("SSPQuad", ndof, material, **kwargs)
 
     def __str__(self):
-        """Return a compact string with material tag and parameters.
-        
+        """Return a compact parameter summary for debugging.
+
         Returns:
-            str: String representation.
+            str: Material tag followed by element parameters.
         """
         params_str = f"{self.Type} {self.Thickness}"
         if self.b2 != 0.0:
             params_str += f" {self.b1} {self.b2}"
         elif self.b1 != 0.0:
             params_str += f" {self.b1}"
-            
+
         return f"{self._material.tag} {params_str}"
-    
+
     def to_tcl(self, tag: int, nodes: List[int]) -> str:
-        """Generate the OpenSees TCL command for this SSPquad element.
-        
+        """Render the element as an OpenSees Tcl command.
+
         Args:
-            tag: Unique element tag.
-            nodes: List of 4 node tags in counter-clockwise order.
-        
+            tag: Assigned element tag.
+            nodes: Four node tags in counter-clockwise order.
+
         Returns:
-            str: A TCL command of the form:
-                 ``element SSPquad <tag> <n1> <n2> <n3> <n4> <matTag> <Type> <Thickness> [b1] [b2]``
-        
+            str: Tcl ``element SSPquad`` command for this element.
+
         Raises:
-            ValueError: If ``nodes`` does not contain exactly 4 node IDs.
+            ValueError: If ``nodes`` does not contain exactly four node tags.
         """
         if len(nodes) != 4:
             raise ValueError("SSPQuad element requires 4 nodes")
-        
+
         nodes_str = " ".join(str(node) for node in nodes)
         tag = str(tag)
-        
+
         cmd = f"element SSPquad {tag} {nodes_str} {self._material.tag} {self.Type} {self.Thickness}"
-        
+
         if self.b2 != 0.0:
             cmd += f" {self.b1} {self.b2}"
         elif self.b1 != 0.0:
             cmd += f" {self.b1}"
-            
+
         return cmd
-    
-    @classmethod 
-    def get_parameters(cls) -> List[str]:
-        """List the supported parameter names for SSPQuad.
-        
-        Returns:
-            List[str]: ``["Type", "Thickness", "b1", "b2"]``.
-        """
-        return ["Type", "Thickness", "b1", "b2"]
-
-    def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
-        """Retrieve current values for the given parameters.
-        
-        Args:
-            keys: Parameter names to retrieve; see :meth:`get_parameters`.
-        
-        Returns:
-            Dict: standard key-value pairs.
-        """
-        values = {}
-        for key in keys:
-            if key == "Type": values[key] = self.Type
-            elif key == "Thickness": values[key] = self.Thickness
-            elif key == "b1": values[key] = self.b1
-            elif key == "b2": values[key] = self.b2
-        return values
-
-    def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
-        """Replace all stored parameters with the provided mapping.
-        
-        Args:
-            values: New parameter mapping.
-        """
-        # We need to preserve existing values if not provided
-        current_params = {
-            "Type": self.Type, 
-            "Thickness": self.Thickness, 
-            "b1": self.b1, 
-            "b2": self.b2
-        }
-        current_params.update(values)
-        
-        validated = self.validate_element_parameters(**current_params)
-        
-        self.Type = validated["Type"]
-        self.Thickness = validated["Thickness"]
-        if "b1" in validated: self.b1 = validated["b1"]
-        if "b2" in validated: self.b2 = validated["b2"]
-
-    @classmethod
-    def validate_element_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
-        """Validate and coerce SSPQuad parameters.
-
-        The following rules apply:
-        - ``Type`` must be ``'PlaneStrain'`` or ``'PlaneStress'`` (required).
-        - ``Thickness`` must be convertible to ``float`` (required).
-        - ``b1`` and ``b2`` are optional but, if provided, must be ``float``.
-
-        Args:
-            **kwargs: Raw parameter mapping.
-
-        Returns:
-            Dict[str, Union[int, float, str]]: Validated and coerced parameters.
-
-        Raises:
-            ValueError: If a required parameter is missing or a value cannot be
-                coerced/validated.
-        """
-        if 'Type' not in kwargs:
-            raise ValueError("Type of element must be specified")
-        elif kwargs['Type'] not in ['PlaneStrain', 'PlaneStress']:
-            raise ValueError("Element type must be either 'PlaneStrain' or 'PlaneStress'")
-        
-        if "Thickness" not in kwargs:
-            raise ValueError("Thickness must be specified")
-        else:
-            try:
-                kwargs['Thickness'] = float(kwargs['Thickness'])
-            except ValueError:
-                raise ValueError("Thickness must be a float number")
-        
-        if "b1" in kwargs:
-            try:
-                kwargs['b1'] = float(kwargs['b1'])
-            except ValueError:
-                raise ValueError("b1 must be a float number")
-        
-        if "b2" in kwargs:
-            try:
-                kwargs['b2'] = float(kwargs['b2'])
-            except ValueError:
-                raise ValueError("b2 must be a float number")
-            
-        return kwargs
-
 
     @classmethod
     def _is_material_compatible(cls, material: Material) -> bool:
-        """Check whether the provided material can be used with SSPQuad.
-        
-        SSPQuad requires an OpenSees ``nDMaterial``.
-        
-        Args:
-            material: Material instance to check.
-        
-        Returns:
-            bool: ``True`` if ``material.material_type == 'nDMaterial'``.
-        """
-        return material.material_type == 'nDMaterial'
-    
-    @classmethod
-    def get_possible_dofs(cls) -> List[str]:
-        """Get the allowed number of DOFs per node for this element.
-        
-        Returns:
-            List[str]: ``['2']``.
-        """
-        return ['2']
-    
-    @classmethod
-    def get_description(cls) -> List[str]:
-        """Describe each parameter expected by this element.
-        
-        Returns:
-            List[str]: Human-readable descriptions in the same order as
-            :meth:`get_parameters`.
-        """
-        return ['Type of element can be either "PlaneStrain" or "PlaneStress" ', 
-                'Thickness of the element in out-of-plane direction ',
-                'Constant body forces in global x direction',
-                'Constant body forces in global y direction'] 
+        """Check whether the material is compatible with ``SSPquad``.
 
-ElementRegistry.register_element_type('SSPQuad', SSPQuadElement)
+        Args:
+            material: Material instance to validate.
+
+        Returns:
+            bool: ``True`` when ``material.material_type == 'nDMaterial'``.
+        """
+        return material.material_type == "nDMaterial"

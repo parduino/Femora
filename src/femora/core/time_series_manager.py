@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Dict, Optional, Sequence, Union
 
 from femora.components.time_series import (
     ConstantTimeSeries,
@@ -12,21 +12,31 @@ from femora.components.time_series import (
     TriangularTimeSeries,
     TrigTimeSeries,
 )
+from femora.core.tagging import CompactRetagPolicy
 from femora.core.time_series_base import TimeSeries
+
+if TYPE_CHECKING:
+    from femora.core.model import Model
 
 
 class TimeSeriesManager:
     """Local manager for ``TimeSeries`` lifecycle and tag assignment.
 
     The manager is intentionally not a singleton. Each instance owns an
-    independent tag space so future model or ``MeshMaker`` instances can keep
+    independent tag space so future model or ``Model`` instances can keep
     their own time-series collections.
     """
 
-    def __init__(self):
+    def __init__(self, mesh_maker: Model):
         """Create an empty manager with tags starting at ``1``."""
+        from femora.core.model import Model as ModelClass
+
+        if not isinstance(mesh_maker, ModelClass):
+            raise TypeError("mesh_maker must be a Model instance")
+        self._mesh_maker = mesh_maker
         self._time_series: Dict[int, TimeSeries] = {}
         self._start_tag = 1
+        self._tagging = CompactRetagPolicy[TimeSeries]()
 
     def add(self, time_series: TimeSeries) -> TimeSeries:
         """Add an existing time series and assign a tag if needed.
@@ -44,10 +54,18 @@ class TimeSeriesManager:
         """
         if not isinstance(time_series, TimeSeries):
             raise TypeError("time_series must be a TimeSeries instance")
-        if time_series.tag is None:
-            time_series.tag = self._next_available_tag()
-        elif time_series.tag in self._time_series and self._time_series[time_series.tag] is not time_series:
-            raise ValueError(f"TimeSeries tag {time_series.tag} already exists")
+        if time_series._owner is None:
+            time_series._owner = self
+        elif time_series._owner is not self:
+            raise ValueError("time_series already belongs to another manager")
+        try:
+            time_series.tag = self._tagging.assign_tag(
+                self._time_series,
+                time_series,
+                self._start_tag,
+            )
+        except ValueError as exc:
+            raise ValueError(f"TimeSeries tag {time_series.tag} already exists") from exc
         self._time_series[time_series.tag] = time_series
         return time_series
 
@@ -80,12 +98,14 @@ class TimeSeriesManager:
         time_series = self._time_series.pop(tag, None)
         if time_series is not None:
             time_series.tag = None
+            time_series._owner = None
             self._reassign_tags()
 
     def clear(self) -> None:
         """Remove all time series and clear their assigned tags."""
         for time_series in self._time_series.values():
             time_series.tag = None
+            time_series._owner = None
         self._time_series.clear()
 
     def set_tag_start(self, start_tag: int) -> None:
@@ -97,10 +117,7 @@ class TimeSeriesManager:
         Raises:
             ValueError: If ``start_tag`` is less than ``1``.
         """
-        start_tag = int(start_tag)
-        if start_tag < 1:
-            raise ValueError("start_tag must be a positive integer")
-        self._start_tag = start_tag
+        self._start_tag = self._tagging.validate_start_tag(start_tag)
         self._reassign_tags()
 
     def constant(self, factor: float = 1.0) -> ConstantTimeSeries:
@@ -285,55 +302,10 @@ class TimeSeriesManager:
             )
         )  # type: ignore[return-value]
 
-    def create_time_series(self, series_type: str, **kwargs) -> TimeSeries:
-        """Create and manage a time series by type name.
-
-        This compatibility factory delegates to the explicit factory methods
-        such as :meth:`constant`, :meth:`linear`, and :meth:`path`.
-
-        Args:
-            series_type: Case-insensitive time-series type name.
-            **kwargs: Constructor arguments for the selected concrete class.
-
-        Returns:
-            Managed ``TimeSeries`` instance.
-
-        Raises:
-            KeyError: If ``series_type`` is not registered.
-        """
-        factories = {
-            "constant": self.constant,
-            "linear": self.linear,
-            "trig": self.trig,
-            "ramp": self.ramp,
-            "triangular": self.triangular,
-            "rectangular": self.rectangular,
-            "pulse": self.pulse,
-            "path": self.path,
-        }
-        key = series_type.lower()
-        if key not in factories:
-            raise KeyError(f"TimeSeries type {series_type} not registered")
-        return factories[key](**kwargs)
-
-    get_time_series = get
-    remove_time_series = remove
-    get_all_time_series = get_all
-
     def _next_available_tag(self) -> int:
         """Return the next unused tag in this manager's local tag space."""
-        tag = self._start_tag
-        while tag in self._time_series:
-            tag += 1
-        return tag
+        return self._tagging.next_available_tag(self._time_series, self._start_tag)
 
     def _reassign_tags(self) -> None:
         """Retag all managed time series from ``_start_tag`` in tag order."""
-        items: List[TimeSeries] = sorted(
-            self._time_series.values(),
-            key=lambda item: item.tag if item.tag is not None else 0,
-        )
-        self._time_series.clear()
-        for offset, time_series in enumerate(items):
-            time_series.tag = self._start_tag + offset
-            self._time_series[time_series.tag] = time_series
+        self._tagging.reassign_tags(self._time_series, self._start_tag)

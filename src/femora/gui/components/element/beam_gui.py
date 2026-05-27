@@ -10,42 +10,30 @@ from qtpy.QtWidgets import (
 )
 from qtpy.QtCore import Qt
 
-from femora.core.element_base import ElementRegistry
-from femora.components.section.section_base import Section, SectionManager
-from femora.components.transformation.transformation import GeometricTransformation, GeometricTransformationManager
-from femora.components.transformation.transformation_gui import TransformationWidget3D
+from femora.core.element_manager import ElementManager
+from femora.core.section_base import Section
+from femora.core.transformation_base import GeometricTransformation
+from femora.components.MeshMaker import MeshMaker
+from femora.gui.transformation_gui import TransformationWidget3D
 
 
 def setup_section_dropdown(combo_box: QComboBox, placeholder_text: str = "Select Section"):
     """Populates a QComboBox with available section objects.
 
     This function clears the given QComboBox and adds a placeholder item,
-    followed by all sections retrieved from the `Section` registry. Each
+    followed by all sections retrieved from the section manager. Each
     section is displayed using its `user_name` and `section_name`.
 
     Args:
         combo_box: The QComboBox widget to populate.
         placeholder_text: The text for the initial, non-selectable item
             in the dropdown.
-    
-    Example:
-        >>> from qtpy.QtWidgets import QApplication, QComboBox
-        >>> from femora.components.section.section_opensees import ElasticSection
-        >>> app = QApplication([])
-        >>> combo = QComboBox()
-        >>> # Assume ElasticSection is registered with 'get_all_sections'
-        >>> ElasticSection(tag=1, user_name="Concrete Rect", E=30e9, G=12e9, A=0.1, Iy=1e-3, Iz=2e-3, J=3e-3)
-        >>> setup_section_dropdown(combo)
-        >>> print(combo.itemText(0))
-        Select Section
-        >>> print(combo.itemText(1)) # Assuming 'Concrete Rect' is the first added section
-        Concrete Rect (ElasticSection)
-        >>> app.quit()
     """
     combo_box.clear()
     combo_box.addItem(placeholder_text)
     
-    sections = Section.get_all_sections()
+    from femora.components.MeshMaker import MeshMaker
+    sections = MeshMaker.get_instance().section.get_all()
     for section in sections.values():
         display_text = f"{section.user_name} ({section.section_name})"
         combo_box.addItem(display_text, section)
@@ -154,7 +142,7 @@ class BeamElementCreationDialog(QDialog):
         self.created_element = None
         
         # Get element class
-        self.element_class = ElementRegistry._element_types[element_type]
+        self.element_class = ElementManager._element_types[element_type]
         
         self.setup_ui()
     
@@ -250,7 +238,7 @@ class BeamElementCreationDialog(QDialog):
         """Creates the beam element based on the user inputs in the dialog.
 
         This method validates all user inputs (DOF, section, transformation,
-        and element-specific parameters), then uses the `ElementRegistry`
+        and element-specific parameters), then uses the active element manager
         to instantiate the element. Upon successful creation, an information
         message is displayed, and the dialog is accepted.
         If any input is invalid or an error occurs during element creation,
@@ -293,7 +281,7 @@ class BeamElementCreationDialog(QDialog):
                 params = self.element_class.validate_element_parameters(**params)
             
             # Create element
-            self.created_element = ElementRegistry.create_element(
+            self.created_element = MeshMaker.get_instance().element.create_element(
                 element_type=self.element_type,
                 ndof=dof,
                 section=section,
@@ -320,7 +308,7 @@ class BeamElementEditDialog(QDialog):
 
     Attributes:
         element (object): The existing element object to be edited. Expected to be
-            an instance of a class registered in `ElementRegistry`, with attributes
+            an instance of a manager-owned element class, with attributes
             like `element_type`, `tag`, `_ndof`, `_section`, `_transformation`,
             and methods like `get_values`, `update_values`, etc.
         dof_combo (QComboBox): Dropdown for selecting the degrees of freedom (e.g., 3D or 6D).

@@ -10,14 +10,13 @@ from typing import Dict, List, Optional, Sequence, Tuple, Union
 import numpy as np
 import pyvista as pv
 
-from femora.components.Material.materialBase import Material
-from femora.components.Mesh.meshPartInstance import CompositeMesh
+from femora.core.material_base import Material
+from femora.components.mesh.general_meshparts import CompositeMesh
 from femora.components.element.elastic_beam_column import ElasticBeamColumnElement
 from femora.components.element.ghost_node import GhostNodeElement
 from femora.components.element.truss import TrussElement
-from femora.components.section.section_opensees import ElasticSection
-from femora.components.Region.regionBase import RegionBase
-from femora.components.transformation.transformation import GeometricTransformation3D
+from femora.components.section.beam import ElasticSection
+from femora.core.region_base import RegionBase
 from femora.constants import FEMORA_MAX_NDF
 from femora.core.element_base import Element
 from femora.core.pattern_base import Pattern
@@ -186,19 +185,18 @@ class ConventionalSteelBracedFrame:
         cell_element_tags: List[int] = []
         current_point_id = 0
 
-        transf_col_x = GeometricTransformation3D("Linear", 1, 0, 0, description="CBF_Column_Transf_X")
-        transf_col_y = GeometricTransformation3D("Linear", 0, 1, 0, description="CBF_Column_Transf_Y")
-        transf_beam_x = GeometricTransformation3D("Linear", 0, 0, 1, description="CBF_Beam_Transf_X")
-        transf_beam_y = GeometricTransformation3D("Linear", 0, 0, 1, description="CBF_Beam_Transf_Y")
+        transf_col_x = model.transformation.transformation3d("Linear", 1, 0, 0, description="CBF_Column_Transf_X")
+        transf_col_y = model.transformation.transformation3d("Linear", 0, 1, 0, description="CBF_Column_Transf_Y")
+        transf_beam_x = model.transformation.transformation3d("Linear", 0, 0, 1, description="CBF_Beam_Transf_X")
+        transf_beam_y = model.transformation.transformation3d("Linear", 0, 0, 1, description="CBF_Beam_Transf_Y")
 
         def get_or_create_beam_element(category: str, section_name: str) -> ElasticBeamColumnElement:
             key = (category, section_name)
             if key in elements_cache:
                 return elements_cache[key]  # type: ignore[return-value]
             try:
-                try:
-                    section = model.section.get_section(section_name)
-                except KeyError:
+                section = model.section.get(section_name)
+                if section is None:
                     section = aisc.create_section(
                         section_name,
                         model,
@@ -219,12 +217,12 @@ class ConventionalSteelBracedFrame:
                 transformation = transf_col_y
             else:
                 raise ValueError(f"Unknown frame member category: {category}")
-            element = ElasticBeamColumnElement(ndof=6, section=section, transformation=transformation)
+            element = model.element.beam.elastic(ndof=6, section=section, transformation=transformation)
             elements_cache[key] = element
             return element
 
         brace_section = self._get_or_create_brace_section(model, material)
-        brace_element = TrussElement(ndof=6, section=brace_section, rho=0.0)
+        brace_element = model.element.beam.truss(ndof=6, section=brace_section, rho=0.0)
         self._brace_elements.append(brace_element)
 
         def add_element_segment(element: Element, p1: Sequence[float], p2: Sequence[float]) -> None:
@@ -306,14 +304,18 @@ class ConventionalSteelBracedFrame:
         if "ndf" not in grid.point_data:
             grid.point_data["ndf"] = np.full(grid.n_points, 6, dtype=np.uint16)
         self._add_member_self_mass(grid, model, material_density)
-        grid = self._add_center_of_mass_nodes(grid)
+        grid = self._add_center_of_mass_nodes(grid, model)
 
-        self.building_region = model.region.create_region("ElementRegion")
-        return CompositeMesh(user_name=self.name_prefix, mesh=grid, region=self.building_region)
+        self.building_region = model.region.element()
+        return model.meshpart.general.composite(
+            user_name=self.name_prefix,
+            mesh=grid,
+            region=self.building_region,
+        )
 
     def create_rigid_diaphragms(self, model) -> None:
         """Create floor rigid diaphragms to COM nodes and fix COM vertical/rocking DOFs."""
-        mesh = model.assembler.AssembeledMesh
+        mesh = model.assembled_mesh
         if mesh is None:
             raise ValueError("Mesh must be assembled before creating rigid diaphragms.")
 
@@ -323,11 +325,22 @@ class ConventionalSteelBracedFrame:
         x_coords, y_coords, z_coords = self.get_coordinates()
         x_set = {round(float(value), 4) for value in x_coords}
         y_set = {round(float(value), 4) for value in y_coords}
+        x_min = float(min(x_coords)) - 1e-4
+        x_max = float(max(x_coords)) + 1e-4
+        y_min = float(min(y_coords)) - 1e-4
+        y_max = float(max(y_coords)) + 1e-4
         self._com_node_tags = []
 
         for story in range(1, self.num_stories + 1):
             z_floor = float(z_coords[story])
-            floor_indices = np.where(np.abs(points[:, 2] - z_floor) < 1e-4)[0]
+            floor_mask = np.abs(points[:, 2] - z_floor) < 1e-4
+            footprint_mask = (
+                (points[:, 0] >= x_min)
+                & (points[:, 0] <= x_max)
+                & (points[:, 1] >= y_min)
+                & (points[:, 1] <= y_max)
+            )
+            floor_indices = np.where(floor_mask & footprint_mask)[0]
             if not len(floor_indices):
                 print(f"  [Floor {story}] Warning: no floor nodes found at z={z_floor:.3f}")
                 continue
@@ -352,7 +365,7 @@ class ConventionalSteelBracedFrame:
                     slave_tags.append(int(global_idx + start_node_tag))
 
             for slave_tag in slave_tags:
-                model.constraint.mp.create_rigid_diaphragm(
+                model.constraint.mp.rigid_diaphragm(
                     direction=3,
                     master_node=master_tag,
                     slave_nodes=[slave_tag],
@@ -362,7 +375,7 @@ class ConventionalSteelBracedFrame:
 
     def apply_fixed_base(self, model, tol: float = 1e-4) -> None:
         """Fix all base structural grid nodes for fixed-base period checks."""
-        mesh = model.assembler.AssembeledMesh
+        mesh = model.assembled_mesh
         if mesh is None:
             raise ValueError("Mesh must be assembled before fixing base nodes.")
         z_base = float(self.get_coordinates()[2][0])
@@ -374,7 +387,7 @@ class ConventionalSteelBracedFrame:
 
     def gravity_pattern(self, model, g: float) -> Pattern:
         """Create a plain gravity load pattern using true floor masses times ``g``."""
-        mesh = model.assembler.AssembeledMesh
+        mesh = model.assembled_mesh
         if mesh is None:
             raise ValueError("Mesh must be assembled before creating gravity loads.")
 
@@ -383,8 +396,8 @@ class ConventionalSteelBracedFrame:
         y_set = {round(float(v), 4) for v in y_coords}
         ndfs = mesh.point_data["ndf"]
 
-        ts = model.timeSeries.create_time_series("constant", factor=1.0)
-        pattern = model.pattern.create_pattern("plain", time_series=ts, factor=1.0)
+        ts = model.time_series.constant(factor=1.0)
+        pattern = model.pattern.plain(time_series=ts, factor=1.0)
         n_per_floor = self.num_x_grid * self.num_y_grid
         for story in range(1, self.num_stories + 1):
             floor_mass = float(self.floor_masses[story - 1])
@@ -417,7 +430,7 @@ class ConventionalSteelBracedFrame:
         """Return an MPCO recorder scoped to this building region."""
         if self.building_region is None:
             raise ValueError("Building region not found. Call build() first.")
-        mesh = model.assembler.AssembeledMesh
+        mesh = model.assembled_mesh
         if mesh is None:
             raise ValueError("Mesh must be assembled before creating recorders")
         if file_name is None:
@@ -620,11 +633,12 @@ class ConventionalSteelBracedFrame:
     @staticmethod
     def _scale_elastic_section_geometry(section: ElasticSection, factor: float) -> None:
         """Scale area and inertias for period calibration (axial stiffness ∝ EA)."""
-        p = dict(section.params)
-        for key in ("A", "Iz", "Iy", "J"):
-            if key in p:
-                p[key] = float(p[key]) * factor
-        section.update_values(p)
+        section.A = float(section.A) * factor
+        section.Iz = float(section.Iz) * factor
+        if section.Iy is not None:
+            section.Iy = float(section.Iy) * factor
+        if section.J is not None:
+            section.J = float(section.J) * factor
 
     def _get_or_create_brace_section(self, model, material: Material) -> ElasticSection:
         """Elastic brace section referenced by ``trussSection`` elements."""
@@ -637,9 +651,14 @@ class ConventionalSteelBracedFrame:
             params = dict(E=E_val, A=A0, Iz=Iz0, Iy=Iz0, G=G_val, J=2.0 * Iz0)
             user_name = f"{self.name_prefix}_cbf_brace"
             try:
-                existing = model.section.get_section(user_name)
-                if isinstance(existing, ElasticSection):
-                    existing.update_values(params)
+                existing = model.section.get(user_name)
+                if existing is not None:
+                    existing.E = float(params["E"])
+                    existing.A = float(params["A"])
+                    existing.Iz = float(params["Iz"])
+                    existing.Iy = float(params["Iy"])
+                    existing.G = float(params["G"])
+                    existing.J = float(params["J"])
                     return existing
             except Exception:
                 pass
@@ -647,9 +666,8 @@ class ConventionalSteelBracedFrame:
 
         section_name = self._section_for(self.brace_sections, 1, 0, 0, default="HSS8X8X3/8")
         try:
-            try:
-                section = model.section.get_section(section_name)
-            except KeyError:
+            section = model.section.get(section_name)
+            if section is None:
                 section = aisc.create_section(
                     section_name,
                     model,
@@ -663,8 +681,8 @@ class ConventionalSteelBracedFrame:
                 "Provide brace_area and optional brace_E to use direct brace properties."
             ) from exc
 
-        if not isinstance(section, ElasticSection):
-            raise ValueError("Brace sections for trussSection must be Elastic sections.")
+        if section is None:
+            raise ValueError("Brace section could not be resolved.")
 
         if self.brace_area_scale != 1.0:
             self._scale_elastic_section_geometry(section, self.brace_area_scale)
@@ -733,7 +751,7 @@ class ConventionalSteelBracedFrame:
             pid1, pid2 = grid.cell_connectivity[start:end]
             p1 = grid.points[pid1]
             p2 = grid.points[pid2]
-            element = model.element.get_element(int(grid.cell_data["ElementTag"][cell_idx]))
+            element = model.element.get(int(grid.cell_data["ElementTag"][cell_idx]))
             if element is None:
                 continue
 
@@ -777,7 +795,7 @@ class ConventionalSteelBracedFrame:
                     grid, pid, M_rot_torsion, M_rot_iy, M_rot_iz, kind
                 )
 
-    def _add_center_of_mass_nodes(self, grid: pv.UnstructuredGrid) -> pv.UnstructuredGrid:
+    def _add_center_of_mass_nodes(self, grid: pv.UnstructuredGrid, model) -> pv.UnstructuredGrid:
         x_coords, y_coords, z_coords = self.get_coordinates()
         x_center = (x_coords[0] + x_coords[-1]) / 2.0
         y_center = (y_coords[0] + y_coords[-1]) / 2.0
@@ -787,14 +805,14 @@ class ConventionalSteelBracedFrame:
         com_coords = []
         com_tags = []
         for story in range(1, self.num_stories + 1):
-            com_element = GhostNodeElement(ndof=6)
+            com_element = model.element.special.ghost_node(ndof=6)
             com_coords.append([x_center, y_center, z_coords[story]])
             com_tags.append(com_element.tag)
 
         com_grid = pv.PolyData(np.asarray(com_coords, dtype=float)).cast_to_unstructured_grid()
         com_grid.cell_data["ElementTag"] = np.asarray(com_tags, dtype=np.uint16)
         com_grid.point_data["ndf"] = np.asarray(
-            [Element.get_element_by_tag(tag).get_ndof() for tag in com_tags],
+            [model.element.get(tag).get_ndof() for tag in com_tags],
             dtype=np.uint16,
         )
         mass = np.zeros((len(com_coords), FEMORA_MAX_NDF), dtype=np.float32)
@@ -810,7 +828,7 @@ class ConventionalSteelBracedFrame:
         return grid.merge(com_grid, merge_points=False)
 
     def _find_com_node_tags(self, model) -> List[int]:
-        mesh = model.assembler.AssembeledMesh
+        mesh = model.assembled_mesh
         if mesh is None:
             return []
         tags: List[int] = []

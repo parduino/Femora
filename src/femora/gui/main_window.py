@@ -7,7 +7,7 @@ import pyvista as pv
 from femora.components.MeshMaker import MeshMaker
 from femora.gui.left_panel import LeftPanel
 from femora.gui.console import InteractiveConsole
-from femora.components.drm_creators.drm_manager import DRMManager
+from femora.gui.components.drm_creators.drm_manager import DRMManager
 from femora.gui.plotter import PlotterManager
 from femora.gui.toolbar import ToolbarManager
 from femora.gui.progress_gui import ProgressGUI

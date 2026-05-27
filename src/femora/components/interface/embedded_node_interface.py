@@ -8,23 +8,53 @@ import numpy as np
 import pyvista as pv
 from pykdtree.kdtree import KDTree
 
-from femora.components.interface.interface_base import InterfaceBase
+from femora.core.interface_base import InterfaceBase
 from femora.components.event.mixins import GeneratesMeshMixin
-from femora.components.Mesh.meshPartBase import MeshPart
-from femora.components.event.event_bus import EventBus, FemoraEvent
-from femora.components.Assemble.Assembler import Assembler
+from femora.core.meshpart_base import MeshPart
+from femora.core.event_bus import FemoraEvent
 from femora.constants import FEMORA_MAX_NDF
 
 class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
-    """Create an *embedded node* contact interface. The EmbeddedNodeElement is a constraint between one constrained node and many retained nodes. Since in OpenSees a Multi-Point constraint can have only one retained node, this constraint was implemented as an Element, thus imposing the constraint using the Penalty approach.
+    """Embedded node constraint contact interface.
 
-    It constrains the displacements of the constrained node (NC) to be the weighted average of the displacements of the surrounding retained nodes (NRi). The same is done with the infinitesimal rotation, if the constrained node has rotational DOFs.
+    EmbeddedNodeInterface models multi-point constraint boundary connections in 
+    OpenSees by constraining the displacements (and optionally rotations) of a 
+    constrained node to be a weighted average of a set of surrounding retained nodes. 
+    It leverages a penalty approach element formulation internally.
 
-    The constrained node should be inside (or on the boundary of) the domain defined by the retained nodes.
+    Tcl form:
+        None (renders internally via OpenSees interface-specific TCL commands).
 
+    Example:
+        ```python
+        from femora.core.model import Model
 
-    Using this interface in Femora all the complexities of the EmbeddedNodeElement are hidden from the user. The user only needs to provide two mesh parts: one for the constrained node and one for the retained nodes. The interface will handle the rest.
+        model = Model()
+        # Create an embedded node interface mapping a constrained node part to retained parts
+        interface = model.interface.node_interface(
+            name="node_soil_interface",
+            constrained_node="pile_head_node",
+            retained_nodes=["soil_volume"],
+            rot=True,
+            p=True,
+            K=1e10,
+        )
+        ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
+    def _subscribe_events(self) -> None:
+        """Subscribe this interface to post-assemble mesh generation events."""
+        self._model_events().subscribe(FemoraEvent.POST_ASSEMBLE, self._on_post_assemble)
+
+    def _unsubscribe_events(self) -> None:
+        """Unsubscribe this interface from all model events."""
+        self._model_events().unsubscribe(FemoraEvent.POST_ASSEMBLE, self._on_post_assemble)
+
     def __init__(
         self,
         name: str,
@@ -42,29 +72,42 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
         friction_interface_kn: float = 1e8,
         friction_interface_kt: float = 1e8,
         friction_interface_mu: float = 0.5,
-        friction_interface_int_type: int = 1 
+        friction_interface_int_type: int = 1,
+        *,
+        meshpart,
 
     ) -> None:
-        
-        # Helper to resolve MeshPart from str, int, or instance
-        def resolve_meshpart(mp):
-            if isinstance(mp, MeshPart):
-                return mp
-            elif isinstance(mp, str):
-                return MeshPart.get_mesh_parts().get(mp)
-            elif isinstance(mp, int):
-                for part in MeshPart.get_mesh_parts().values():
-                    if getattr(part, 'tag', None) == mp:
-                        return part
-            return None
+        """Initialize the EmbeddedNodeInterface.
 
-        # Resolve MeshParts
-        self.constrained_node = resolve_meshpart(constrained_node)
+        Args:
+            name: Unique name of the node interface.
+            constrained_node: The constrained node part instance, name, or tag.
+            retained_nodes: Optional list of retained node part instances, names, or tags.
+                If None, uses all mesh parts in the model except the constrained node.
+            rot: If True, constrains rotational degrees of freedom. Defaults to False.
+            p: If True, activates pressure-dof constraints. Defaults to False.
+            K: Penalty stiffness parameter for translation constraints.
+            KP: Penalty stiffness parameter for rotational constraints.
+            offset: Geometric normal offset for locating coupling nodes. Defaults to None.
+            use_mesh_part_points: If True, uses mesh part nodal points directly. Defaults to True.
+            normal_filter: Optional 3D orientation direction vector to filter points. Defaults to None.
+            filter_tolerance: Direction cosine tolerance for the normal filter. Defaults to 0.98.
+            friction_interface: If True, applies frictional interface properties. Defaults to True.
+            friction_interface_kn: Normal penalty stiffness for friction contact. Defaults to 1e8.
+            friction_interface_kt: Tangent penalty stiffness for friction contact. Defaults to 1e8.
+            friction_interface_mu: Friction coefficient (mu). Defaults to 0.5.
+            friction_interface_int_type: Frictional element interface formulation type. Defaults to 1.
+            meshpart: MeshPart registry manager from the parent model.
+
+        Raises:
+            ValueError: If `offset` is negative or if constrained node matches retained node tag.
+        """
+        
+        self.constrained_node = meshpart.resolve(constrained_node)
         if retained_nodes:
-            self.retained_nodes = [resolve_meshpart(mp) for mp in retained_nodes]
+            self.retained_nodes = [meshpart.resolve(mp) for mp in retained_nodes]
         else:
-            self.retained_nodes = list(MeshPart.get_mesh_parts().values())
-            # remove the constrained node from the list
+            self.retained_nodes = list(meshpart.get_all().values())
             self.retained_nodes.remove(self.constrained_node)
 
 
@@ -109,6 +152,17 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
 
 
     def _create_offset_mesh(self, asembelled_mesh: pv.UnstructuredGrid) -> pv.PolyData:
+        """Construct the geometric surface representing offset coupling points.
+
+        Args:
+            asembelled_mesh: The main assembled PyVista grid.
+
+        Returns:
+            The PyVista PolyData surface representing the offset coupling points.
+
+        Raises:
+            ValueError: If the mesh is not a PolyData or UnstructuredGrid.
+        """
         if self.offset is None:
             #check if the mesh is a pv.PolyData or pv.UnstructuredGrid
             if isinstance(self.constrained_node.mesh, pv.PolyData):
@@ -226,8 +280,14 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
 
 
     def _on_post_assemble(self, assembled_mesh: pv.UnstructuredGrid) -> None:
-        """Detect the nodes from the offset mesh that are inside tetrahedra elements of the retained nodes."""
+        """Detect the nodes from the offset mesh that are inside tetrahedra elements of the retained nodes.
 
+        Args:
+            assembled_mesh: The main assembled PyVista grid.
+
+        Raises:
+            ValueError: If required model parts or elements cannot be found.
+        """
         # 1) get the asembelled mesh
         asembelled_mesh = assembled_mesh.copy()
 
@@ -317,17 +377,16 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
     
 
         # create a embedded node element
-        from femora import MeshMaker
+        mesh_maker = self._owner._mesh_maker
         ndf = 3
 
-
         # 1. Get references to the existing assembled mesh data
-        base_mesh = Assembler().AssembeledMesh
+        base_mesh = mesh_maker.assembled_mesh
         old_points = base_mesh.points
         # 2. Offset the indices in the new mesh
         offset = old_points.shape[0]
 
-        start_node_tag = MeshMaker().get_start_node_tag()
+        start_node_tag = mesh_maker.get_start_node_tag()
 
         # create the element orientation map 
         orientation_map = {}
@@ -338,21 +397,21 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
                 node_tag = offset + i + start_node_tag
             orientation_map[node_tag] = selected_normals[i].tolist()
             
-        embededd_ele = MeshMaker().element.create_element("ASDEmbeddedNodeElement3D",
-                                           ndof = ndf, 
-                                           rot = self._rot,
-                                           p = self._p, 
-                                           K = self._K,
-                                           KP = self._KP,
-                                           contact = self._friction_interface,
-                                           Kn = self._friction_interface_kn,
-                                           Kt = self._friction_interface_kt,
-                                           mu = self._friction_interface_mu,
-                                           int_type = self._friction_interface_int_type,
-                                           orient_map = orientation_map,
-                                           )
+        embededd_ele = mesh_maker.element.special.asd_embedded_node(
+            ndof=ndf,
+            rot=self._rot,
+            p=self._p,
+            K=self._K,
+            KP=self._KP,
+            contact=self._friction_interface,
+            Kn=self._friction_interface_kn,
+            Kt=self._friction_interface_kt,
+            mu=self._friction_interface_mu,
+            int_type=self._friction_interface_int_type,
+            orient_map=orientation_map,
+        )
 
-        # Assembler().AssembeledMesh.merge(embedded_mesh, merge_points=True, inplace=True)
+        # mesh_maker.assembled_mesh.merge(embedded_mesh, merge_points=True, inplace=True)
         old_cells = base_mesh.cells
         old_celltypes = base_mesh.celltypes
 
@@ -404,8 +463,8 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
             final_mesh.point_data['ndf'] = base_mesh.point_data['ndf']
                                                  
 
-        # 6. Update your Assembler
-        Assembler().AssembeledMesh = final_mesh
+        # 6. Update model-owned assembled mesh
+        mesh_maker.assembled_mesh = final_mesh
             
 
 
@@ -415,6 +474,14 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
 
             
     def _tetrahedralize(self, mesh: pv.UnstructuredGrid) -> pv.UnstructuredGrid:
+        """Decompose hexahedron elements to standard tetrahedrons for contact search.
+
+        Args:
+            mesh: The PyVista UnstructuredGrid to decompose.
+
+        Returns:
+            The tetrahedralized PyVista UnstructuredGrid.
+        """
         new_cells = []
         new_cell_types = []
         parent_indices = [] # Track which original cell each new cell came from

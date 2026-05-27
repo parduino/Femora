@@ -1,21 +1,21 @@
 from qtpy.QtWidgets import QFrame, QVBoxLayout, QWidget, QTabWidget, QLabel, QPushButton
 from qtpy.QtCore import Qt
 
-from femora.components.Material.materialGUI import MaterialManagerTab
-from femora.components.Mesh.meshPartGUI import MeshPartManagerTab
-from femora.components.Assemble.AssemblerGUI import AssemblyManagerTab
-from femora.components.Damping.dampingGUI import DampingManagerTab
-from femora.components.Region.regionGUI import RegionManagerTab
-from femora.components.Constraint.mpConstraintGUI import MPConstraintManagerTab
+from femora.gui.components.material.materialGUI import MaterialManagerTab
+from femora.gui.components.mesh.meshpart_gui import MeshPartManagerTab
+from femora.gui.components.assembler.assembler_gui import AssemblyManagerTab
+from femora.gui.components.damping.damping_gui import DampingManagerTab
+from femora.gui.components.region.region_gui import RegionManagerTab
+from femora.gui.components.constraint.mp_constraint_gui import MPConstraintManagerTab
 from femora.components.TimeSeries.timeSeriesGUI import TimeSeriesManagerTab
-from femora.components.Constraint.spConstraintGUI import SPConstraintManagerTab
+from femora.gui.components.constraint.sp_constraint_gui import SPConstraintManagerTab
 from femora.components.Pattern.patternGUI import PatternManagerTab
-from femora.components.Recorder.recorderGUI import RecorderManagerTab
-from femora.components.Analysis.analysisGUI import AnalysisManagerTab
-from femora.components.Process.processGUI import ProcessGUI
+from femora.gui.components.recorder.recorder_gui import RecorderManagerTab
+from femora.gui.components.analysis.analysis_gui import AnalysisManagerTab
+from femora.gui.components.process.process_gui import ProcessGUI
 from femora.components.DRM.combinedDRMGUI import CombinedDRMGUI
 from femora.components.section.section_gui import SectionManagerTab
-from femora.components.interface.interface_gui import InterfaceManagerTab
+from femora.gui.components.interface.interface_gui import InterfaceManagerTab
 
 class LeftPanel(QFrame):
     '''

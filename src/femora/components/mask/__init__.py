@@ -1,20 +1,17 @@
-"""Mask subsystem for post-assembly mesh queries.
+"""Mask package for Femora.
 
-Exposes:
-- MeshIndex: immutable snapshot of the assembled mesh for fast queries
-- NodeMask, ElementMask: typed masks with common filters and conversions
-- MaskManager: entrypoint tied to the assembled mesh state
+This package contains runtime mask component classes that enable post-assembly
+spatial and attribute-based queries on nodes and elements.
+
+Normal runtime usage should go through the `Model` mask manager entry point
+using the `model.mask` namespace, which provides access to `NodeMask` and 
+`ElementMask` builders.
 """
 
-from .mask_base import MeshIndex, NodeMask, ElementMask
-from .mask_manager import MaskManager
+from .mask_base import ElementMask, MeshIndex, NodeMask
 
 __all__ = [
+    "ElementMask",
     "MeshIndex",
     "NodeMask",
-    "ElementMask",
-    "MaskManager",
 ]
-
-
-

@@ -10,8 +10,8 @@ This is purposefully separate from the OpenSees element transformation
 classes that live under `components/transformation/`.
 
 Targets supported:
-- MeshPart: femora.components.Mesh.meshPartBase.MeshPart
-- AssemblySection: femora.components.Assemble.Assembler.AssemblySection
+- MeshPart: femora.components.mesh.meshpart_registry.MeshPart
+- AssemblySection: femora.core.assembler.AssemblySection
 - PyVista datasets: pv.DataSet and subclasses
 - Collections of the above
 

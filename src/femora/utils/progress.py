@@ -8,7 +8,7 @@ percentage in the 0–100 range.
 
 This module centralises that logic so every component can obtain the same
 consistent progress reporter (currently powered by *tqdm*). It avoids
-duplicating the progress-bar code in many classes (e.g. MeshMaker).
+duplicating the progress-bar code in many classes (e.g. Model).
 """
 
 from typing import Callable, Optional
@@ -30,14 +30,7 @@ class Progress:
             or `None` if the bar has not been initialized or has been closed.
         _last_value (int): The last integer progress value reported (0-100).
 
-    Example:
-        >>> from femora.progress import Progress
-        >>> Progress.callback(value=0, desc="Loading Data")
-        Loading Data:   0%|          | 0/100 [...]
-        >>> Progress.callback(value=50, message="Processing chunk 1")
-        Loading Data:  50%|█████     | 50/100 [...] Processing chunk 1
-        >>> Progress.callback(value=100)
-        Loading Data: 100%|██████████| 100/100 [...]
+    Example:`r`n        ```python`r`n        from femora.utils.progress import Progress`r`n`r`n        Progress.callback(value=0, desc="Loading Data")`r`n        Progress.callback(value=50, message="Processing chunk 1")`r`n        Progress.callback(value=100)`r`n        ``` 100%|██████████| 100/100 [...]
     """
 
     _bar: Optional[tqdm.tqdm] = None
@@ -74,16 +67,7 @@ class Progress:
                 when the bar is created for the first time. Defaults to
                 "Processing".
 
-        Example:
-            >>> from femora.progress import Progress
-            >>> Progress.callback(value=0, desc="File Transfer")
-            File Transfer:   0%|          | 0/100 [...]
-            >>> Progress.callback(value=25, message="Downloading part A")
-            File Transfer:  25%|██½       | 25/100 [...] Downloading part A
-            >>> Progress.callback(value=75, message="Verifying checksum")
-            File Transfer:  75%|███████½  | 75/100 [...] Verifying checksum
-            >>> Progress.callback(value=100, message="Complete")
-            File Transfer: 100%|██████████| 100/100 [...] Complete
+        Example:`r`n            ```python`r`n            from femora.utils.progress import Progress`r`n`r`n            Progress.callback(value=0, desc="File Transfer")`r`n            Progress.callback(value=25, message="Downloading part A")`r`n            Progress.callback(value=75, message="Verifying checksum")`r`n            Progress.callback(value=100, message="Complete")`r`n            ``` 100%|██████████| 100/100 [...] Complete
         """
         value_int = int(value)
         cls._ensure_bar(desc)
@@ -107,12 +91,7 @@ class Progress:
         aborted or finishes without `value` reaching 100 (which automatically
         closes the bar). It ensures that no lingering `tqdm` bar remains open.
 
-        Example:
-            >>> from femora.progress import Progress
-            >>> Progress.callback(value=0, desc="Long Operation")
-            Long Operation:   0%|          | 0/100 [...]
-            >>> # Some error occurs or operation is cancelled
-            >>> Progress.close()
+        Example:`r`n            ```python`r`n            from femora.utils.progress import Progress`r`n`r`n            Progress.callback(value=0, desc="Long Operation")`r`n            Progress.close()`r`n            ```
         """
         if cls._bar is not None:
             cls._bar.close()
@@ -138,15 +117,7 @@ def get_progress_callback(desc: str = "Processing") -> Callable[[float, str], No
         A callable function `(value: float, message: str) -> None` that can
         be used to update the global progress bar.
 
-    Example:
-        >>> from femora.progress import get_progress_callback
-        >>> export_progress = get_progress_callback(desc="Exporting Data")
-        >>> export_progress(value=0, message="Starting export...")
-        Exporting Data:   0%|          | 0/100 [...] Starting export...
-        >>> export_progress(value=50, message="Writing chunks...")
-        Exporting Data:  50%|█████     | 50/100 [...] Writing chunks...
-        >>> export_progress(value=100, message="Export complete.")
-        Exporting Data: 100%|██████████| 100/100 [...] Export complete.
+    Example:`r`n        ```python`r`n        from femora.utils.progress import get_progress_callback`r`n`r`n        export_progress = get_progress_callback(desc="Exporting Data")`r`n        export_progress(value=0, message="Starting export...")`r`n        export_progress(value=50, message="Writing chunks...")`r`n        export_progress(value=100, message="Export complete.")`r`n        ``` 100%|██████████| 100/100 [...] Export complete.
     """
 
     def _cb(value: float, message: str = "") -> None:  # noqa: D401

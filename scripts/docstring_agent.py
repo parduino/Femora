@@ -8,6 +8,7 @@ class Config:
     STYLE_GUIDE_PATH: str = "STYLE_GUIDE.md"
     TARGETS_PATH: str = ".github/docstring_targets.yml"
     EXTENSIONS: tuple = (".py",)
+    BATCH_SIZE: int = int(os.getenv("DOCSTRING_BATCH_SIZE", "3"))
 
 def read_file(path: str) -> str:
     with open(path, "r", encoding="utf-8") as f:
@@ -49,7 +50,20 @@ def normalize_target(entry: dict) -> tuple[str, str]:
         raise ValueError("Target 'prompt' must be a string when provided.")
     return path.strip(), prompt.strip()
 
+
+def append_github_output(name: str, value: str) -> None:
+    """Append one output entry to the GitHub Actions output file."""
+    output_path = os.environ.get("GITHUB_OUTPUT")
+    if not output_path:
+        return
+    with open(output_path, "a", encoding="utf-8") as f:
+        if "\n" in value:
+            f.write(f"{name}<<EOF\n{value}\nEOF\n")
+        else:
+            f.write(f"{name}={value}\n")
+
 def main():
+    append_github_output("refactored_count", "0")
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         print("Skipping: GEMINI_API_KEY not found.")
@@ -77,31 +91,33 @@ def main():
         print("No docstring targets are queued.")
         return
 
-    # 2. Pick the First Explicit Target
-    try:
-        target_file, target_prompt = normalize_target(targets_data["targets"][0])
-    except Exception as e:
-        print(f"Error in first target entry: {e}")
-        return
+    batch_size = max(1, Config.BATCH_SIZE)
+    queued_targets = targets_data["targets"][:batch_size]
+    processed_files: list[str] = []
 
-    if not os.path.exists(target_file):
-        print(f"Error: target file does not exist: {target_file}")
-        return
+    for index, target_entry in enumerate(queued_targets):
+        try:
+            target_file, target_prompt = normalize_target(target_entry)
+        except Exception as e:
+            print(f"Error in target entry {index + 1}: {e}")
+            break
 
-    print(f"Refactoring docstrings for: {target_file}")
-    
-    original_code = read_file(target_file)
-    
-    # 3. Prompt Engineering
-    extra_prompt_block = ""
-    if target_prompt:
-        extra_prompt_block = f"""
+        if not os.path.exists(target_file):
+            print(f"Error: target file does not exist: {target_file}")
+            break
+
+        print(f"Refactoring docstrings for: {target_file}")
+        original_code = read_file(target_file)
+
+        extra_prompt_block = ""
+        if target_prompt:
+            extra_prompt_block = f"""
 
     Additional file-specific instructions:
     {target_prompt}
     """
 
-    prompt = f"""
+        prompt = f"""
     You are editing docstrings for the Femora project.
 
     Follow the STYLE_GUIDE below exactly.
@@ -122,9 +138,9 @@ def main():
     - Method examples are optional.
     - If examples are included, use fenced python blocks.
     - If examples are included for normal Femora usage, prefer:
-      import femora as fm
-      model = fm.MeshMaker()
-      and manager-based creation such as model.pattern..., model.timeSeries..., model.material..., or other appropriate managers.
+      from femora.core.model import Model
+      model = Model()
+      and manager-based creation such as model.pattern..., model.time_series..., model.material..., or other appropriate managers.
     - Return ONLY the full valid Python code. No markdown fences.
     {extra_prompt_block}
 
@@ -135,74 +151,71 @@ def main():
     {original_code}
     """
 
-    # 4. Agent Execution with Retry Logic
-    models_to_try = [
-        'gemini-2.5-flash',
-        'gemini-2.0-flash',
-        'gemini-flash-latest',
-        'gemini-2.5-pro',
-        'gemini-2.0-flash-001'
-    ]
-    
-    new_code = None
-    
-    for model_name in models_to_try:
-        print(f"Trying model: {model_name}...")
-        try:
-            response = client.models.generate_content(
-                model=model_name, 
-                contents=prompt
-            )
-            new_code = response.text
-            print(f"Success with {model_name}!")
+        models_to_try = [
+            'gemini-2.5-flash',
+            'gemini-2.0-flash',
+            'gemini-flash-latest',
+            'gemini-2.5-pro',
+            'gemini-2.0-flash-001'
+        ]
+
+        new_code = None
+
+        for model_name in models_to_try:
+            print(f"Trying model: {model_name}...")
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
+                new_code = response.text
+                print(f"Success with {model_name}!")
+                break
+            except Exception as e:
+                print(f"Failed with {model_name}: {e}")
+
+        if not new_code:
+            print("ALL models failed.")
+            print("DEBUG: Listing available models for this API Key:")
+            try:
+                for m in client.models.list():
+                    try:
+                        name = getattr(m, 'name', 'Unknown')
+                        disp = getattr(m, 'display_name', '')
+                        print(f" - {name} ({disp})")
+                    except:
+                        print(f" - {m}")
+            except Exception as e2:
+                print(f"Error listing models: {e2}")
             break
-        except Exception as e:
-            print(f"Failed with {model_name}: {e}")
-            
-    if not new_code:
-        print("ALL models failed.")
-        print("DEBUG: Listing available models for this API Key:")
-        try:
-            for m in client.models.list():
-                # Safely inspect the model object
-                try:
-                    name = getattr(m, 'name', 'Unknown')
-                    disp = getattr(m, 'display_name', '')
-                    print(f" - {name} ({disp})")
-                except:
-                    print(f" - {m}")
-        except Exception as e2:
-            print(f"Error listing models: {e2}")
+
+        if new_code.startswith("```python"):
+            lines = new_code.splitlines()
+            if lines[0].strip().startswith("```"):
+                lines = lines[1:]
+            if lines[-1].strip().startswith("```"):
+                lines = lines[:-1]
+            new_code = "\n".join(lines)
+        elif new_code.startswith("```"):
+            lines = new_code.splitlines()
+            new_code = "\n".join(lines[1:-1])
+
+        with open(target_file, "w", encoding="utf-8") as f:
+            f.write(new_code)
+
+        processed_files.append(target_file)
+        print(f"Successfully updated docstrings for {target_file}")
+
+    if not processed_files:
         return
-    
-    # Clean possible markdown fences
-    if new_code.startswith("```python"):
-        lines = new_code.splitlines()
-        # Remove first line (```python) and last line (```)
-        if lines[0].strip().startswith("```"):
-            lines = lines[1:]
-        if lines[-1].strip().startswith("```"):
-            lines = lines[:-1]
-        new_code = "\n".join(lines)
-    elif new_code.startswith("```"):
-         lines = new_code.splitlines()
-         new_code = "\n".join(lines[1:-1])
 
-        
-    # 5. Save Changes
-    with open(target_file, "w", encoding="utf-8") as f:
-        f.write(new_code)
-
-    # Remove the completed target from the queue.
-    targets_data["targets"].pop(0)
+    targets_data["targets"] = targets_data["targets"][len(processed_files):]
     save_targets(Config.TARGETS_PATH, targets_data)
-    
-    print(f"Successfully updated docstrings for {target_file}")
 
-    # Set output for GitHub Action
-    if "GITHUB_OUTPUT" in os.environ:
-        with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-            f.write(f"refactored_file={target_file}\n")
+    append_github_output("refactored_count", str(len(processed_files)))
+    append_github_output("refactored_summary", ", ".join(processed_files))
+    append_github_output("refactored_files", "\n".join(processed_files))
 
 if __name__ == "__main__":
     main()
+

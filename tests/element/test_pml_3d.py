@@ -10,8 +10,7 @@ if src_dir not in sys.path:
     sys.path.append(src_dir)
 
 from femora.components.element import PML3DElement
-from femora.components.Material.materialBase import Material
-from femora.core.element_base import Element
+from femora.core.material_base import Material
 
 # Mock material with specific class name required by PML3DElement
 class ElasticIsotropicMaterial(Material):
@@ -48,24 +47,16 @@ class OtherMaterial(Material):
     def get_description(cls):
         return []
 
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    Material.clear_all()
-    Element.clear_all_elements()
-    yield
-    Material.clear_all()
-    Element.clear_all_elements()
-
 def test_pml_3d_initialization_valid():
     """Test valid initialization of PML3DElement."""
     mat = ElasticIsotropicMaterial(1)
     # Defaults for some params
-    ele = PML3DElement(ndof=9, material=mat, 
-                       PML_Thickness=1.0, 
-                       meshType='box', 
+    ele = PML3DElement(ndof=9, material=mat,
+                       PML_Thickness=1.0,
+                       meshType='box',
                        meshTypeParameters=[1.0, 2.0, 3.0, 4, 5, 6])
-    
-    assert ele.tag is not None
+
+    assert ele.tag is None
     assert ele.PML_Thickness == 1.0
     assert ele.meshType == "box"
     assert ele.m == 2.0 # Default checked

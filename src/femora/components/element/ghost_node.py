@@ -1,88 +1,73 @@
-from typing import Dict, List, Union
-from femora.core.element_base import Element, ElementRegistry
+from typing import Dict, List
+
+from femora.core.element_base import Element
 
 
 class GhostNodeElement(Element):
-    """A virtual element that owns nodes without generating an OpenSees element.
+    """Virtual element that owns mesh nodes without creating OpenSees elements.
 
-    GhostNodeElement is used when you need nodes to exist in the Femora model
-    without them belonging to a physical structural element.  Common use-cases:
+    GhostNodeElement keeps nodes in the Femora mesh and Tcl export pipeline
+    without emitting a structural ``element`` command. It is commonly used for
+    center-of-mass nodes, control or reference nodes, and mass application
+    points that should not participate in element stiffness.
 
-    - **Center-of-mass nodes** for buildings (mass-only, no structural element).
-    - **Control/reference nodes** used by constraints or recorders.
-    - **Mass application points** that don't participate in the element stiffness.
-
-    The element uses PyVista ``CellType.VERTEX`` cells (one node per cell) so
-    that the nodes stay in the mesh pipeline, survive the cleaning/merge step,
-    and are written during TCL export.  The ``to_tcl`` method returns a TCL
-    comment so no real ``element`` command is emitted.
-
-    Merge Protection:
-        Every GhostNodeElement instance is assigned a **unique sentinel ndf**
-        value (≥ 1000).  Because the assembler's ``mesh.clean()`` uses
-        ``merging_array_name="ndf"``, points are only merged when their ndf
-        values match.  Unique sentinels ensure that:
-
-        * Ghost nodes are *never* merged with co-located structural nodes.
-        * Ghost nodes are *never* merged with other ghost nodes.
-
-        At TCL export the sentinel is transparently mapped back to the real
-        DOF count (3 or 6) via :meth:`resolve_ndf`.
+    Note:
+        - Each instance receives a unique sentinel ``ndf`` value so mesh merging
+          does not combine ghost nodes with structural nodes or with one
+          another. At export, the sentinel is mapped back to the real DOF count
+          through ``resolve_ndf``.
+        - ``to_tcl`` returns a Tcl comment rather than an OpenSees element
+          command; the owning nodes are still written by the export loop.
 
     Example:
         ```python
-        from femora.components.element.ghost_node import GhostNodeElement
+        from femora.core.model import Model
 
-        # Create two ghost-node elements at the same position — they will
-        # NOT be merged because each gets a unique sentinel ndf.
-        ghost_a = GhostNodeElement(ndof=6)
-        ghost_b = GhostNodeElement(ndof=6)
+        model = Model()
+        ghost = model.element.special.ghost_node(ndof=6)
+        print(ghost.real_ndof)
         ```
     """
 
-    # ---- class-level sentinel bookkeeping ----
-    _SENTINEL_START = 1000          # first sentinel value
-    _sentinel_counter = _SENTINEL_START  # bumped per instance
-    _ndf_map: Dict[int, int] = {}   # sentinel → real DOF count
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__", "resolve_ndf", "is_ghost_ndf", "real_ndof"],
+    }
+
+    _SENTINEL_START = 1000
+    _sentinel_counter = _SENTINEL_START
+    _ndf_map: Dict[int, int] = {}
 
     def __init__(self, ndof: int = 3, **kwargs):
-        """Initialize a GhostNodeElement.
+        """Create a GhostNodeElement with merge-protected sentinel DOF metadata.
 
         Args:
-            ndof: Number of degrees of freedom per node.  Must be 3 or 6.
-                Defaults to 3.
+            ndof: Real number of DOFs per node written during Tcl export. Must
+                be 3 or 6.
             **kwargs: Additional keyword arguments forwarded to the base
-                ``Element`` constructor.
+                element constructor.
 
         Raises:
-            ValueError: If *ndof* is not 3 or 6.
+            ValueError: If ``ndof`` is not 3 or 6.
         """
         if ndof not in (3, 6):
             raise ValueError(
                 f"GhostNodeElement requires 3 or 6 DOFs, but got {ndof}"
             )
 
-        # Store the real DOF count for reference
         self._real_ndof = ndof
-
-        # Reserve a unique sentinel ndf — prevents merging with anything
         sentinel_ndof = GhostNodeElement._next_sentinel(ndof)
-
-        # No material, section, or transformation required
         super().__init__("GhostNode", sentinel_ndof, **kwargs)
 
-    # ------------------------------------------------------------------
-    # Sentinel helpers
-    # ------------------------------------------------------------------
     @classmethod
     def _next_sentinel(cls, real_ndof: int) -> int:
-        """Reserve and return the next unique sentinel ndf value.
+        """Reserve and return the next unique sentinel ``ndf`` value.
 
         Args:
-            real_ndof: The real DOF count (3 or 6) to map back to at export.
+            real_ndof: Real DOF count (3 or 6) mapped back during export.
 
         Returns:
-            A unique sentinel ndf integer (≥ 1000).
+            A unique sentinel ``ndf`` integer greater than or equal to 1000.
         """
         sentinel = cls._sentinel_counter
         cls._sentinel_counter += 1
@@ -91,118 +76,50 @@ class GhostNodeElement(Element):
 
     @classmethod
     def resolve_ndf(cls, ndf_value: int) -> int:
-        """Map a (possibly sentinel) ndf value to the real DOF count.
+        """Map a mesh ``ndf`` value to the real DOF count for Tcl export.
 
-        If *ndf_value* is a ghost sentinel it is resolved via the internal
-        map.  Otherwise it is returned unchanged.  This is the single
-        function that ``MeshMaker.export_to_tcl`` should call.
+        If ``ndf_value`` is a ghost sentinel, it is resolved through the
+        internal map. Otherwise the input is returned unchanged.
 
         Args:
-            ndf_value: Raw ndf value from the mesh ``point_data["ndf"]``.
+            ndf_value: Raw ``ndf`` value from mesh ``point_data["ndf"]``.
 
         Returns:
-            The real DOF count to write into the TCL ``node`` command.
+            The real DOF count to write into the Tcl ``node`` command.
         """
         return cls._ndf_map.get(int(ndf_value), int(ndf_value))
 
     @classmethod
     def is_ghost_ndf(cls, ndf_value: int) -> bool:
-        """Check whether an ndf value is a ghost-node sentinel.
+        """Check whether an ``ndf`` value is a ghost-node sentinel.
 
         Args:
-            ndf_value: The ndf value to check.
+            ndf_value: The ``ndf`` value to inspect.
 
         Returns:
-            True if the value is a ghost-node sentinel.
+            ``True`` if the value is a ghost-node sentinel.
         """
         return int(ndf_value) >= cls._SENTINEL_START
 
     @property
     def real_ndof(self) -> int:
-        """The actual DOF count written to the TCL ``node`` command."""
+        """Return the real DOF count written to the Tcl ``node`` command."""
         return self._real_ndof
 
-    # ------------------------------------------------------------------
-    # to_tcl  –  returns a TCL comment (no structural element)
-    # ------------------------------------------------------------------
     def to_tcl(self, tag: int, nodes: List[int]) -> str:
-        """Return a TCL comment — no OpenSees element command is emitted.
+        """Return a Tcl comment instead of an OpenSees element command.
 
         The owning node(s) are still written by the export loop; only the
-        ``element …`` line is replaced with a comment.
+        ``element`` line is replaced with a comment.
 
         Args:
-            tag: Element tag (unused).
-            nodes: Node tags (unused).
+            tag: Element tag assigned by the manager.
+            nodes: Node tags owned by this ghost element.
 
         Returns:
-            A TCL comment string.
+            str: Tcl comment describing the ghost element.
         """
-        return f"# GhostNode Element number {tag} nodes({', '.join(str(n) for n in nodes)}) with {self.real_ndof} DOFs — no structural element generated"
-
-    # ------------------------------------------------------------------
-    # Abstract-method implementations
-    # ------------------------------------------------------------------
-    @classmethod
-    def get_parameters(cls) -> List[str]:
-        """GhostNodeElement has no configurable parameters.
-
-        Returns:
-            An empty list.
-        """
-        return []
-
-    @classmethod
-    def get_possible_dofs(cls) -> List[str]:
-        """Allowed DOF counts per node.
-
-        Returns:
-            ``['3', '6']``.
-        """
-        return ["3", "6"]
-
-    @classmethod
-    def get_description(cls) -> List[str]:
-        """Parameter descriptions (none for this element).
-
-        Returns:
-            An empty list.
-        """
-        return []
-
-    @classmethod
-    def validate_element_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str]]:
-        """No parameters to validate — returns *kwargs* unchanged.
-
-        Args:
-            **kwargs: (ignored).
-
-        Returns:
-            The unchanged *kwargs* dictionary.
-        """
-        return kwargs
-
-    def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str]]:
-        """Retrieve values for the given parameter keys.
-
-        Since GhostNodeElement has no parameters, all values are ``None``.
-
-        Args:
-            keys: Parameter names to look up.
-
-        Returns:
-            Dictionary mapping each key to ``None``.
-        """
-        return {k: None for k in keys}
-
-    def update_values(self, values: Dict[str, Union[int, float, str]]) -> None:
-        """Update parameters (no-op for GhostNodeElement).
-
-        Args:
-            values: Parameter mapping (ignored).
-        """
-        pass
-
-
-# Register so it can be created through ElementRegistry.create_element()
-ElementRegistry.register_element_type("GhostNode", GhostNodeElement)
+        return (
+            f"# GhostNode Element number {tag} nodes({', '.join(str(n) for n in nodes)}) "
+            f"with {self.real_ndof} DOFs - no structural element generated"
+        )

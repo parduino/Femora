@@ -1,7 +1,7 @@
 <!-- <div align="center">
   <img src="docs/images/logo.png" alt="FEMORA Logo" width="750"/> -->
-<div align="center" style="height:130px; overflow:hidden;">
-  <img src="docs/images/logo.png" alt="FEMORA Logo" width="750">
+<div align="center" style="height:530px; overflow:hidden;">
+  <img src="website/ReadMe.png"" alt="FEMORA Logo" width="350">
 </div>
   <!-- <h1>FEMORA</h1> -->
   <!-- <p><strong>Fast Efficient Meshing for OpenSees-based Resilience Analysis</strong></p> -->
@@ -167,66 +167,59 @@ print(femora.__version__)
 The following example creates a 3D layered soil profile and exports it to an OpenSees TCL file:
 
 ```python
-import femora as fm
+from femora.core.model import Model
+
+model = Model()
 
 # --- Define materials ---
-fm.material.create_material(
-    material_category="nDMaterial",
-    material_type="ElasticIsotropic",
+soil_region = model.region.get(0)
+
+dense_mat = model.material.nd.elastic_isotropic(
     user_name="Dense Ottawa Sand",
-    E=2.0e7, nu=0.3, rho=2.02
+    e_mod=2.0e7, nu=0.3, rho=2.02,
 )
 
-fm.material.create_material(
-    material_category="nDMaterial",
-    material_type="ElasticIsotropic",
+loose_mat = model.material.nd.elastic_isotropic(
     user_name="Loose Ottawa Sand",
-    E=1.5e7, nu=0.3, rho=1.94
+    e_mod=1.5e7, nu=0.3, rho=1.94,
 )
 
 # --- Define elements ---
-dense_elem = fm.element.create_element(
-    element_type="stdBrick", ndof=3,
-    material="Dense Ottawa Sand",
-    b1=0.0, b2=0.0, b3=-9.81 * 2.02
+dense_elem = model.element.brick.std(
+    ndof=3,
+    material=dense_mat,
+    b1=0.0, b2=0.0, b3=-9.81 * 2.02,
 )
 
-loose_elem = fm.element.create_element(
-    element_type="stdBrick", ndof=3,
-    material="Loose Ottawa Sand",
-    b1=0.0, b2=0.0, b3=-9.81 * 1.94
+loose_elem = model.element.brick.std(
+    ndof=3,
+    material=loose_mat,
+    b1=0.0, b2=0.0, b3=-9.81 * 1.94,
 )
 
 # --- Create mesh parts (layered soil column 20m x 20m x 18m) ---
-fm.meshPart.create_mesh_part(
-    category="Volume mesh",
-    mesh_part_type="Uniform Rectangular Grid",
+model.meshpart.volume.uniform_rectangular_grid(
     user_name="Layer1",
     element=dense_elem,
-    region=fm.region.get_region(0),
-    **{"X Min": -10, "X Max": 10, "Y Min": -10, "Y Max": 10,
-       "Z Min": -18, "Z Max": -8, "Nx Cells": 20, "Ny Cells": 20, "Nz Cells": 10}
+    region=soil_region,
+    x_min=-10, x_max=10, y_min=-10, y_max=10,
+    z_min=-18, z_max=-8, nx=20, ny=20, nz=10,
 )
 
-fm.meshPart.create_mesh_part(
-    category="Volume mesh",
-    mesh_part_type="Uniform Rectangular Grid",
+model.meshpart.volume.uniform_rectangular_grid(
     user_name="Layer2",
     element=loose_elem,
-    region=fm.region.get_region(0),
-    **{"X Min": -10, "X Max": 10, "Y Min": -10, "Y Max": 10,
-       "Z Min": -8, "Z Max": 0, "Nx Cells": 20, "Ny Cells": 20, "Nz Cells": 8}
+    region=soil_region,
+    x_min=-10, x_max=10, y_min=-10, y_max=10,
+    z_min=-8, z_max=0, nx=20, ny=20, nz=8,
 )
 
 # --- Assemble the model ---
-fm.assembler.create_section(meshparts=["Layer1", "Layer2"], num_partitions=2)
-fm.assembler.Assemble()
+model.assembler.create_section(meshparts=["Layer1", "Layer2"], num_partitions=2)
+model.assembler.assemble()
 
 # --- Export to OpenSees TCL ---
-fm.export_to_tcl("soil_model.tcl")
-
-# --- (Optional) Launch GUI for visualization ---
-# fm.gui()
+model.export_to_tcl("soil_model.tcl")
 ```
 
 For a complete walkthrough including seismic loading, boundary conditions, and analysis setup, see the [Quick Start Guide](https://amnp95.github.io/Femora/introduction/quick_start.html).
@@ -242,26 +235,18 @@ FEMORA supports two complementary working modes:
 Use the full Python API for programmatic model creation — ideal for automation, batch processing, parametric studies, and integration into larger workflows or CI/CD pipelines.
 
 ```python
-import femora as fm
+from femora.core.model import Model
 
+model = Model()
 # Build model programmatically
-fm.material.create_material(...)
-fm.element.create_element(...)
-fm.meshPart.create_mesh_part(...)
-fm.assembler.Assemble()
-fm.export_to_tcl("model.tcl")
+model.material.nd.elastic_isotropic(...)
+model.element.brick.std(...)
+model.meshpart.volume.uniform_rectangular_grid(...)
+model.assembler.assemble()
+model.export_to_tcl("model.tcl")
 ```
 
 ### GUI Mode (Qt Interface)
-
-Launch the interactive graphical interface for visual model construction, real-time 3D preview, and exploratory analysis. Ideal for rapid prototyping, teaching, and debugging.
-
-```python
-import femora as fm
-
-# Build your model, then launch the GUI
-fm.gui()
-```
 
 Install GUI dependencies with:
 
@@ -380,3 +365,4 @@ If you use FEMORA in your research or projects, please cite it as:
 - **Discussions & questions**: [GitHub Discussions](https://github.com/amnp95/Femora/discussions)
 - **Documentation**: [amnp95.github.io/Femora](https://amnp95.github.io/Femora)
 - **Source code**: [github.com/amnp95/Femora](https://github.com/amnp95/Femora)
+

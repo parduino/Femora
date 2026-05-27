@@ -22,6 +22,7 @@ class TimeSeries(ABC):
 
     def __init__(self, series_type: str):
         self.tag: Optional[int] = None
+        self._owner: object | None = None
         self.series_type = series_type
 
     def _require_tag(self) -> int:

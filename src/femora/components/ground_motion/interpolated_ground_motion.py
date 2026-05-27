@@ -6,21 +6,50 @@ from femora.core.ground_motion_base import GroundMotion
 
 
 class InterpolatedGroundMotion(GroundMotion):
-    """OpenSees ``Interpolated`` ground motion.
+    """Interpolated ground motion combining managed ground motions.
 
     An interpolated ground motion combines previously managed ground motions
-    using a list of interpolation factors. The referenced ground motions must
-    already have manager-assigned tags before this object can render Tcl,
-    because OpenSees references them by tag inside the interpolation command.
-
-    Tags are not assigned by this class; create instances through
-    ``GroundMotionManager.interpolated(...)`` or add them to a manager before
-    calling ``to_tcl()``.
+    using a list of interpolation factors. Referenced ground motions must
+    already have manager-assigned tags because OpenSees references them by tag
+    inside the interpolation command.
 
     Tcl form:
         ``groundMotion <tag> Interpolated <gmTag1> <gmTag2> ... -fact
         <factor1> <factor2> ...``
+
+    Note:
+        - Each referenced ground motion must be created through
+          ``model.ground_motion.*`` before interpolation.
+        - Interpolated ground motions are commonly attached to multiple-support
+          patterns through ``add_imposed_motion(...)``.
+
+    Attributes:
+        ground_motions: Managed ground motions being combined.
+        factors: Interpolation factors aligned with ``ground_motions``.
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        ts_a = model.time_series.path(dt=0.01, filePath="gm_a.acc")
+        ts_b = model.time_series.path(dt=0.01, filePath="gm_b.acc")
+        gm_a = model.ground_motion.plain(accel=ts_a)
+        gm_b = model.ground_motion.plain(accel=ts_b)
+        gm = model.ground_motion.interpolated(
+            ground_motions=[gm_a, gm_b],
+            factors=[0.6, 0.4],
+        )
+        pattern = model.pattern.multiple_support()
+        pattern.add_imposed_motion(node_tag=10, dof=1, ground_motion=gm)
+        print(gm.tag)
+        ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,
@@ -60,14 +89,14 @@ class InterpolatedGroundMotion(GroundMotion):
         self.factors = factor_values
 
     def to_tcl(self) -> str:
-        """Render the OpenSees ``groundMotion`` Tcl command.
+        """Render the ground motion as an OpenSees Tcl command.
 
         Returns:
-            A Tcl command for this interpolated ground motion.
+            str: Tcl ``groundMotion Interpolated`` command for this object.
 
         Raises:
             ValueError: If this ground motion or any referenced ground motion
-                has not been added to a manager and therefore has no tag.
+                has not been added to a manager.
         """
         gm_tags = []
         for gm in self.ground_motions:

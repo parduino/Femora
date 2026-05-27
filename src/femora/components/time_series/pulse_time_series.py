@@ -5,30 +5,45 @@ from femora.core.time_series_base import TimeSeries
 
 
 class PulseTimeSeries(TimeSeries):
-    """Represents an OpenSees ``Pulse`` time series.
+    """Periodic pulse load-factor time series.
 
-    This time series generates a periodic pulse function with configurable
-    start time, end time, period, width, amplitude factor, and phase shift.
-    It is typically used to define dynamic loads or ground motions that
-    exhibit a pulse-like behavior over a specified duration.
+    This time series generates a repeating pulse between ``tStart`` and
+    ``tEnd``. It is commonly used for impulsive dynamic loading or simplified
+    ground-motion pulses.
 
     Tcl form:
         ``timeSeries Pulse <tag> <tStart> <tEnd> <period> -width <width>
         -factor <factor> -shift <shift>``
 
-    Examples:
-        ```python
-        import femora as fm
+    Attributes:
+        tStart: Start time of the pulse series.
+        tEnd: End time of the pulse series.
+        period: Pulse period.
+        width: Pulse width as a fraction of the period.
+        factor: Load-factor amplitude.
+        shift: Phase shift applied to the pulse train.
 
-        model = fm.MeshMaker()
-        # Create a pulse time series for a load with a 0.5s period, 0.2 width
-        # starting at 0.1s and ending at 10.0s
-        pulse_ts = model.timeSeries.pulse(
-            tStart=0.1, tEnd=10.0, period=0.5, width=0.2, factor=2.0
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        ts = model.time_series.pulse(
+            tStart=0.1,
+            tEnd=10.0,
+            period=0.5,
+            width=0.2,
+            factor=2.0,
         )
-        print(pulse_ts.tag)
+        pattern = model.pattern.plain(time_series=ts)
+        print(ts.tag)
         ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
 
     def __init__(
         self,
@@ -46,12 +61,13 @@ class PulseTimeSeries(TimeSeries):
             tEnd: End time of the pulse series.
             period: Pulse period.
             width: Pulse width as a fraction of the period.
-            factor: Load factor amplitude.
-            shift: Phase shift.
+            factor: Load-factor amplitude.
+            shift: Phase shift applied to the pulse train.
 
         Raises:
-            ValueError: If numeric arguments are invalid, ``tStart >= tEnd``,
-                ``period <= 0``, or ``width`` is not between ``0`` and ``1``.
+            ValueError: If numeric arguments are invalid, if ``tStart`` is not
+                less than ``tEnd``, if ``period`` is not positive, or if
+                ``width`` is not between ``0`` and ``1``.
         """
         super().__init__("Pulse")
         self.tStart = as_float(tStart, "tStart")
@@ -71,7 +87,10 @@ class PulseTimeSeries(TimeSeries):
         """Render this time series as an OpenSees Tcl command.
 
         Returns:
-            A string representing the OpenSees Tcl command for this pulse time series.
+            str: Tcl ``timeSeries Pulse`` command for this object.
+
+        Raises:
+            ValueError: If this time series has not been added to a manager.
         """
         return (
             f"timeSeries Pulse {self._require_tag()} "

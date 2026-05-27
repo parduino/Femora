@@ -1,19 +1,53 @@
-from typing import Dict, List, Union
+from typing import List, Union
 
-from femora.components.section.section_base import Section, SectionManager
-from femora.core.element_base import Element, ElementRegistry
+from femora.core.element_base import Element
+from femora.core.section_base import Section
 
 
 class TrussElement(Element):
-    """OpenSees truss element using a section definition.
+    """Axial truss element defined by a section stiffness model.
+
+    This two-node element carries axial force only. Cross-section area and axial
+    stiffness come from the assigned section, typically an elastic section for
+    braces or struts. It supports 2D, 3D, or mixed 6-DOF structural models.
 
     Tcl form:
-        ``element trussSection <tag> <iNode> <jNode> <secTag>
-        <-rho rho> <-cMass cFlag> <-doRayleigh rFlag>``
+        ``element trussSection <tag> <iNode> <jNode> <secTag> <-rho rho> <-cMass cFlag> <-doRayleigh rFlag>``
 
-    Cross-section properties and axial stiffness come from the ``Section`` object
-    (typically ``section Elastic`` for elastic struts/braces).
+    Note:
+        - Requires a managed section with an assigned tag before Tcl export.
+        - ``rho`` supplies optional mass per unit length for dynamic analyses.
+
+    Attributes:
+        rho: Mass per unit length used when dynamic mass formation is requested.
+        cMass: Consistent-mass flag passed to OpenSees (``0`` or ``1``).
+        doRayleigh: Rayleigh-damping flag passed to OpenSees (``0`` or ``1``).
+
+    Example:
+        ```python
+        from femora.core.model import Model
+        import femora.components.section.beam  # noqa: F401
+
+        model = Model()
+        sec = model.section.beam.elastic(
+            user_name="Brace",
+            E=29000.0,
+            A=2.5,
+            Iz=0.1,
+        )
+        ele = model.element.beam.truss(
+            ndof=3,
+            section=sec,
+            rho=0.01,
+        )
+        print(ele.tag)
+        ```
     """
+
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__", "get_mass_per_length"],
+    }
 
     def __init__(
         self,
@@ -24,11 +58,11 @@ class TrussElement(Element):
         doRayleigh: int = 0,
         **kwargs,
     ):
-        """Create a truss element definition.
+        """Create a TrussElement with validated section and mass options.
 
         Args:
             ndof: Number of nodal DOFs in the surrounding model (2, 3, or 6).
-            section: Section object, tag, or user name.
+            section: Managed section object defining axial stiffness and area.
             rho: Optional mass per unit length.
             cMass: Consistent mass flag, ``0`` or ``1``.
             doRayleigh: Rayleigh damping flag, ``0`` or ``1``.
@@ -44,15 +78,16 @@ class TrussElement(Element):
             raise ValueError("TrussElement requires a section")
         resolved_section = self._resolve_section(section)
 
-        rho = float(rho)
-        if rho < 0.0:
+        self.rho = float(rho)
+        if self.rho < 0.0:
             raise ValueError("TrussElement rho must be non-negative")
 
-        cMass = int(cMass)
-        doRayleigh = int(doRayleigh)
-        if cMass not in (0, 1):
+        self.cMass = int(cMass)
+        if self.cMass not in (0, 1):
             raise ValueError("cMass must be 0 or 1")
-        if doRayleigh not in (0, 1):
+
+        self.doRayleigh = int(doRayleigh)
+        if self.doRayleigh not in (0, 1):
             raise ValueError("doRayleigh must be 0 or 1")
 
         super().__init__(
@@ -60,26 +95,46 @@ class TrussElement(Element):
             ndof,
             material=None,
             section=resolved_section,
-            rho=rho,
-            cMass=cMass,
-            doRayleigh=doRayleigh,
+            rho=self.rho,
+            cMass=self.cMass,
+            doRayleigh=self.doRayleigh,
             **kwargs,
         )
-        self.rho = rho
-        self.cMass = cMass
-        self.doRayleigh = doRayleigh
 
     @staticmethod
     def _resolve_section(section_input: Union[Section, int, str]) -> Section:
-        """Resolve a section object, tag, or user name."""
+        """Resolve a managed section object from a direct section reference.
+
+        Args:
+            section_input: Section object passed to the constructor.
+
+        Returns:
+            The resolved section instance.
+
+        Raises:
+            ValueError: If the input is not a managed section object.
+        """
         if isinstance(section_input, Section):
             return section_input
-        if isinstance(section_input, (int, str)):
-            return SectionManager().get_section(section_input)
-        raise ValueError(f"Invalid section input type: {type(section_input)}")
+        raise ValueError(
+            f"Cannot resolve section '{section_input}' in unmanaged element creation. "
+            "Pass a managed Section object directly or use model.element.beam.truss(...)"
+        )
 
     def to_tcl(self, tag: int, nodes: List[int]) -> str:
-        """Generate the OpenSees TCL command for this truss element."""
+        """Render the element as an OpenSees Tcl command.
+
+        Args:
+            tag: Assigned element tag.
+            nodes: Two node tags ``[iNode, jNode]``.
+
+        Returns:
+            str: Tcl ``element trussSection`` command for this element.
+
+        Raises:
+            ValueError: If ``nodes`` does not contain exactly two node tags or
+                if no section is assigned.
+        """
         if len(nodes) != 2:
             raise ValueError("TrussElement requires exactly 2 nodes")
         if self._section is None:
@@ -101,50 +156,10 @@ class TrussElement(Element):
             cmd.extend(["-doRayleigh", str(self.doRayleigh)])
         return " ".join(cmd)
 
-    @classmethod
-    def get_parameters(cls) -> List[str]:
-        return ["rho", "cMass", "doRayleigh"]
-
-    @classmethod
-    def get_description(cls) -> List[str]:
-        return [
-            "Mass per unit length",
-            "Consistent mass flag, 0 or 1",
-            "Rayleigh damping flag, 0 or 1",
-        ]
-
-    @staticmethod
-    def get_possible_dofs() -> List[str]:
-        return ["2", "3", "6"]
-
-    @classmethod
-    def validate_element_parameters(cls, **kwargs) -> Dict[str, Union[float, int]]:
-        validated: Dict[str, Union[float, int]] = {}
-        if "rho" in kwargs:
-            rho = float(kwargs["rho"])
-            if rho < 0.0:
-                raise ValueError("rho must be non-negative")
-            validated["rho"] = rho
-        for key in ("cMass", "doRayleigh"):
-            if key in kwargs:
-                value = int(kwargs[key])
-                if value not in (0, 1):
-                    raise ValueError(f"{key} must be 0 or 1")
-                validated[key] = value
-        return validated
-
-    def get_values(self, keys: List[str]) -> Dict[str, Union[float, int]]:
-        return {key: getattr(self, key) for key in keys if hasattr(self, key)}
-
-    def update_values(self, values: Dict[str, Union[float, int]]) -> None:
-        validated = self.validate_element_parameters(**values)
-        for key, value in validated.items():
-            setattr(self, key, value)
-
     def get_mass_per_length(self) -> float:
+        """Return the mass per unit length assigned to this truss element.
+
+        Returns:
+            Mass per unit length from ``rho``.
+        """
         return self.rho
-
-
-ElementRegistry.register_element_type("Truss", TrussElement)
-ElementRegistry.register_element_type("truss", TrussElement)
-ElementRegistry.register_element_type("trussSection", TrussElement)

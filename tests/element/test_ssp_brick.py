@@ -10,7 +10,7 @@ if src_dir not in sys.path:
     sys.path.append(src_dir)
 
 from femora.components.element import SSPbrickElement
-from femora.components.Material.materialBase import Material
+from femora.core.material_base import Material
 
 class DummyMaterial(Material):
     def __init__(self, tag: int, mat_type: str):
@@ -30,22 +30,11 @@ class DummyMaterial(Material):
     def get_description(cls):
         return []
 
-from femora.core.element_base import Element
-
-@pytest.fixture(autouse=True)
-def setup_teardown():
-    Material.clear_all()
-    Element.clear_all_elements()
-    yield
-    Material.clear_all()
-    Element.clear_all_elements()
-
 def test_ssp_brick_initialization():
     """Test valid initialization of SSPbrickElement."""
     mat = DummyMaterial(1, "nDMaterial")
     ele = SSPbrickElement(ndof=3, material=mat)
-    assert ele.tag is not None
-    assert ele.tag > 0
+    assert ele.tag is None
     assert ele._material == mat
     assert ele.b1 == 0.0
     assert ele.b2 == 0.0
@@ -97,20 +86,14 @@ def test_ssp_brick_to_tcl():
     with pytest.raises(ValueError, match="requires 8 nodes"):
         ele.to_tcl(tag=100, nodes=[1, 2, 3])
 
-def test_ssp_brick_update_values():
-    """Test updating parameters."""
+def test_ssp_brick_runtime_attributes():
+    """Test direct runtime attributes."""
     mat = DummyMaterial(1, "nDMaterial")
-    ele = SSPbrickElement(ndof=3, material=mat)
-    
-    ele.update_values({"b1": 5.0, "b3": -10.0})
+    ele = SSPbrickElement(ndof=3, material=mat, b1=5.0, b3=-10.0)
+
     assert ele.b1 == 5.0
     assert ele.b3 == -10.0
     assert ele.b2 == 0.0
-
-    values = ele.get_values(["b1", "b2", "b3"])
-    assert values["b1"] == 5.0
-    assert values["b2"] == 0.0
-    assert values["b3"] == -10.0
 
 if __name__ == "__main__":
     # Allow running as standalone script
@@ -121,7 +104,7 @@ if __name__ == "__main__":
         test_ssp_brick_invalid_inputs()
         test_ssp_brick_optional_params()
         test_ssp_brick_to_tcl()
-        test_ssp_brick_update_values()
+        test_ssp_brick_runtime_attributes()
         print("All SSPbrickElement tests passed interactively!")
     except ImportError:
         pass

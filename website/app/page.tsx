@@ -1,5 +1,7 @@
 import { Hero } from "@/components/hero"
 import { Features } from "@/components/features"
+import { WorkflowSection } from "@/components/workflow-section"
+import { UseCasesSection } from "@/components/use-cases-section"
 import { ModesSection } from "@/components/modes-section"
 import { Documentation } from "@/components/documentation"
 import { AISection } from "@/components/ai-section"
@@ -15,8 +17,8 @@ export default function Home() {
           className="absolute inset-0"
           style={{
             backgroundImage: `
-            linear-gradient(to right, rgba(99, 179, 237, 0.1) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(99, 179, 237, 0.1) 1px, transparent 1px)
+            linear-gradient(to right, rgba(169, 116, 97, 0.08) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(169, 116, 97, 0.08) 1px, transparent 1px)
           `,
             backgroundSize: "40px 40px",
           }}
@@ -25,9 +27,9 @@ export default function Home() {
 
       {/* Animated gradient orbs */}
       <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute top-1/4 -left-48 w-96 h-96 bg-primary/20 rounded-full blur-[128px] animate-pulse"></div>
+        <div className="absolute top-1/4 -left-40 w-72 h-72 bg-primary/12 rounded-full blur-[72px] animate-pulse"></div>
         <div
-          className="absolute bottom-1/4 -right-48 w-96 h-96 bg-accent/20 rounded-full blur-[128px] animate-pulse"
+          className="absolute bottom-1/4 -right-40 w-72 h-72 bg-accent/12 rounded-full blur-[72px] animate-pulse"
           style={{ animationDelay: "1s" }}
         ></div>
       </div>
@@ -35,6 +37,8 @@ export default function Home() {
       <Navigation />
       <Hero />
       <Features />
+      <WorkflowSection />
+      <UseCasesSection />
       <ModesSection />
       <Documentation />
       <AISection />

@@ -1,128 +1,134 @@
-from typing import Dict, List, Union, Optional
-from femora.components.Material.materialBase import Material
-from femora.core.element_base import Element, ElementRegistry
+from typing import List, Optional
+
+from femora.core.element_base import Element
+from femora.core.material_base import Material
+
 
 class ZeroLengthContactASDimplex(Element):
-    """OpenSees ZeroLengthContactASDimplex Element.
+    """Two-node zero-length contact element with normal and tangential penalty stiffness.
 
-    This element is used to model contact between two nodes. It supports
-    normal and tangential stiffness, and friction.
+    This element models frictional contact between two coincident or nearly
+    coincident nodes using normal stiffness ``Kn``, tangential stiffness ``Kt``,
+    and a Mohr-Coulomb friction coefficient ``mu``.
+
+    Tcl form:
+        ``element zeroLengthContactASDimplex <tag> <n1> <n2> <Kn> <Kt> <mu> [-orient nx ny nz] [-intType type]``
+
+    Note:
+        - Requires exactly two nodes at export.
+        - ``intType`` selects the contact integration scheme (``0`` implicit,
+          ``1`` IMPL-EX).
+
+    Attributes:
+        Kn: Normal contact penalty stiffness.
+        Kt: Tangential contact penalty stiffness.
+        mu: Friction coefficient.
+        orient: Optional contact orientation vector ``[nx, ny, nz]``.
+        intType: Contact integration type (``0`` implicit, ``1`` IMPL-EX).
+
+    Example:
+        ```python
+        from femora.core.model import Model
+
+        model = Model()
+        ele = model.element.special.zero_length_contact(
+            ndof=3,
+            Kn=1.0e8,
+            Kt=1.0e8,
+            mu=0.5,
+            orient=[0.0, 0.0, 1.0],
+            intType=1,
+        )
+        print(ele.tag)
+        ```
     """
 
-    def __init__(self, ndof: int, Kn: float, Kt: float, mu: float, material: Material = None, orient: List[float] = None, intType: int = 0, **kwargs):
-        """
+    __doc_controls__ = {
+        "show_docstring_attributes": True,
+        "members": ["__init__"],
+    }
+
+    def __init__(
+        self,
+        ndof: int,
+        Kn: float,
+        Kt: float,
+        mu: float,
+        material: Material = None,
+        orient: List[float] = None,
+        intType: int = 0,
+        **kwargs,
+    ):
+        """Create a ZeroLengthContactASDimplex element with validated contact inputs.
+
         Args:
-            ndof (int): Number of degrees of freedom per node.
-            Kn (float): Penalty stiffness for normal contact.
-            Kt (float): Penalty stiffness for tangential contact.
-            mu (float): Friction coefficient using Mohr-Coulomb friction.
-            material (Material, optional): Not used by this element, but required by base class signature.
-                Defaults to None.
-            orient (List[float], optional): Orientation vector [nx, ny, nz].
-            intType (int, optional): Integration type (0: Implicit, 1: IMPL-EX). Defaults to 0.
+            ndof: Number of DOFs per node in the surrounding model (2, 3, 4,
+                or 6).
+            Kn: Normal contact penalty stiffness. Must be positive.
+            Kt: Tangential contact penalty stiffness. Must be positive.
+            mu: Mohr-Coulomb friction coefficient. Must be non-negative.
+            material: Unused placeholder accepted for base-class compatibility.
+            orient: Optional contact orientation vector ``[nx, ny, nz]``.
+            intType: Contact integration type (``0`` implicit, ``1`` IMPL-EX).
+            **kwargs: Additional element parameters stored on the base element.
 
         Raises:
-            ValueError: If parameters are invalid.
-
-        OpenSees command syntax:
-             ``element zeroLengthContactASDimplex $tag $n1 $n2 $Kn $Kt $mu [-orient $nx $ny $nz] [-intType $type]``
-
-        Example:
-            ```python
-            element = ZeroLengthContactASDimplex(ndof=3, Kn=1e8, Kt=1e8, mu=0.5)
-            ```
+            ValueError: If ``ndof`` is unsupported or if contact parameters are
+                invalid.
         """
-        super().__init__('ZeroLengthContactASDimplex', ndof, material=None, **kwargs)
-        
-        # Store required params
-        self.params = {
-            'Kn': float(Kn),
-            'Kt': float(Kt),
-            'mu': float(mu)
-        }
-        
-        if intType != 0:
-            self.params['intType'] = int(intType)
-        
-        # Store optional path
+        if ndof not in (2, 3, 4, 6):
+            raise ValueError("ZeroLengthContactASDimplex requires 2, 3, 4, or 6 DOFs")
+
+        self.Kn = float(Kn)
+        if self.Kn <= 0.0:
+            raise ValueError("Kn must be positive")
+
+        self.Kt = float(Kt)
+        if self.Kt <= 0.0:
+            raise ValueError("Kt must be positive")
+
+        self.mu = float(mu)
+        if self.mu < 0.0:
+            raise ValueError("mu must be non-negative")
+
+        self.intType = int(intType)
+        if self.intType not in [0, 1]:
+            raise ValueError("intType must be 0 or 1")
+
         if orient is not None:
-             # Validate orient
             if not isinstance(orient, (list, tuple)) or len(orient) != 3:
                 raise ValueError("orient must be a list/tuple of 3 floats")
-            try:
-                self.params['orient'] = [float(x) for x in orient]
-            except (ValueError, TypeError):
-                raise ValueError("orient components must be floats")
+            self.orient = [float(x) for x in orient]
+        else:
+            self.orient = None
+
+        super().__init__("ZeroLengthContactASDimplex", ndof, material=None, **kwargs)
 
     def to_tcl(self, tag: int, nodes: List[int]) -> str:
-        """Generate the OpenSees TCL command for this element.
+        """Render the element as an OpenSees Tcl command.
 
         Args:
-            tag: Unique element tag.
-            nodes: List of 2 node tags.
+            tag: Assigned element tag.
+            nodes: Two node tags defining the contact pair.
 
         Returns:
-            str: TCL command string.
+            str: Tcl ``element zeroLengthContactASDimplex`` command for this element.
+
+        Raises:
+            ValueError: If ``nodes`` does not contain exactly two node tags.
         """
         if len(nodes) != 2:
             raise ValueError("ZeroLengthContactASDimplex element requires 2 nodes")
-        
-        cmd = f"element zeroLengthContactASDimplex {tag} {nodes[0]} {nodes[1]} {self.params['Kn']} {self.params['Kt']} {self.params['mu']}"
-        
-        if 'orient' in self.params:
-            orient = self.params['orient']
-            cmd += f" -orient {orient[0]} {orient[1]} {orient[2]}"
-            
-        if 'intType' in self.params:
-            cmd += f" -intType {self.params['intType']}"
-            
+
+        cmd = (
+            f"element zeroLengthContactASDimplex {tag} {nodes[0]} {nodes[1]} "
+            f"{self.Kn} {self.Kt} {self.mu}"
+        )
+
+        if self.orient is not None:
+            cmd += f" -orient {self.orient[0]} {self.orient[1]} {self.orient[2]}"
+
+        if self.intType != 0:
+            cmd += f" -intType {self.intType}"
+
         return cmd
-
-    @classmethod
-    def get_parameters(cls) -> List[str]:
-        return ["Kn", "Kt", "mu", "intType", "orient"]
-
-    @classmethod
-    def get_description(cls) -> List[str]:
-        return [
-            "Penalty stiffness for normal contact",
-            "Penalty stiffness for tangential contact",
-            "Friction coefficient",
-            "Integration type (0: Implicit, 1: IMPL-EX)",
-            "Orientation vector [nx, ny, nz] (optional)"
-        ]
-
-    @classmethod
-    def get_possible_dofs(cls) -> List[str]:
-        # Supports 2D (2, 3 DOFs) and 3D (3, 4, 6 DOFs)
-        return ['2', '3', '4', '6']
-
-    def get_values(self, keys: List[str]) -> Dict[str, Union[int, float, str, List[float]]]:
-        return {key: self.params.get(key) for key in keys}
-
-    def update_values(self, values: Dict[str, Union[int, float, str, List[float]]]) -> None:
-        self.params.update(values)
-
-    @classmethod
-    def validate_element_parameters(cls, **kwargs) -> Dict[str, Union[int, float, str, List[float]]]:
-        # Validate optional parameters
-        if 'intType' in kwargs:
-            try:
-                kwargs['intType'] = int(kwargs['intType'])
-                if kwargs['intType'] not in [0, 1]:
-                    raise ValueError
-            except (ValueError, TypeError):
-                raise ValueError("intType must be 0 or 1")
-                
-        if 'orient' in kwargs:
-            orient = kwargs['orient']
-            if not isinstance(orient, (list, tuple)) or len(orient) != 3:
-                raise ValueError("orient must be a list/tuple of 3 floats")
-            try:
-                kwargs['orient'] = [float(x) for x in orient]
-            except (ValueError, TypeError):
-                raise ValueError("orient components must be floats")
-                
-        return kwargs
-
-ElementRegistry.register_element_type('ZeroLengthContactASDimplex', ZeroLengthContactASDimplex)
