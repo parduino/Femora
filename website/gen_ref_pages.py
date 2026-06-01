@@ -178,9 +178,12 @@ def write_class_page(doc_path: Path, ident: str, edit_path: Path, doc_controls: 
     """Write one page for an individual public class."""
     with mkdocs_gen_files.open(doc_path, "w") as fd:
         fd.write(f"::: {ident}\n")
-        if doc_controls:
+        effective_doc_controls = dict(doc_controls or {})
+        if effective_doc_controls.get("members") == ["__init__"]:
+            effective_doc_controls.setdefault("show_category_heading", False)
+        if effective_doc_controls:
             fd.write("    options:\n")
-            for key, value in doc_controls.items():
+            for key, value in effective_doc_controls.items():
                 if isinstance(value, bool):
                     rendered = "true" if value else "false"
                     fd.write(f"      {key}: {rendered}\n")
