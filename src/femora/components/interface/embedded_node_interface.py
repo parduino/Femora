@@ -144,6 +144,20 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
         super().__init__(name, owners=[self.constrained_node.user_name])
         
 
+    @staticmethod
+    def _extract_surface_compat(mesh: pv.UnstructuredGrid) -> pv.PolyData:
+        """Extract a surface while supporting multiple PyVista versions.
+
+        Newer PyVista versions accept ``algorithm=...`` and warn when the
+        argument is omitted. Older versions do not accept that keyword at all.
+        This helper preserves the current extraction behavior on new versions
+        and falls back cleanly on older ones.
+        """
+        try:
+            return mesh.extract_surface(algorithm="dataset_surface")
+        except TypeError:
+            return mesh.extract_surface()
+
 
 
     
@@ -168,7 +182,7 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
             if isinstance(self.constrained_node.mesh, pv.PolyData):
                 return self.constrained_node.mesh
             elif isinstance(self.constrained_node.mesh, pv.UnstructuredGrid):
-                return self.constrained_node.mesh.extract_surface()
+                return self._extract_surface_compat(self.constrained_node.mesh)
             else:
                 raise ValueError("Mesh must be a pv.PolyData or pv.UnstructuredGrid")
         else:
@@ -178,7 +192,7 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
             constrained_mesh = asembelled_mesh.extract_cells(
                 asembelled_mesh.cell_data['MeshPartTag_celldata'] == self.constrained_node.tag
             )
-            original_mesh = constrained_mesh.extract_surface()
+            original_mesh = self._extract_surface_compat(constrained_mesh)
             # clean_original_mesh = original_mesh.clean(point_merging=True, tolerance=1e-6)
 
             # mesh with normals

@@ -149,6 +149,177 @@ HIDDEN_PACKAGE_CLASSES: dict[str, set[str]] = {
     },
 }
 
+PACKAGE_GUIDES: dict[str, tuple[str, str]] = {
+    "femora.components.event": (
+        "guide",
+        """# Event Guide
+
+The Femora event system is an advanced runtime API for lifecycle-sensitive
+work. It exists so model-owned subsystems can react to assembly and export
+stages without hard-coding every extension directly into the core pipeline.
+
+Most modeling workflows do not need this package directly. If you are defining
+ordinary materials, elements, loads, sections, or analyses, you can usually
+ignore it. This guide is for the cases where *timing* matters: when the right
+thing to do depends on whether the mesh has already been assembled, whether
+partition ownership has been resolved, or whether an export pipeline has
+started.
+
+## The Idea In One Sentence
+
+Femora emits lifecycle events, and advanced components subscribe to those
+events when they need to react at exactly the right runtime stage.
+
+## What Happens Under The Hood
+
+At a high level, the runtime flow is:
+
+1. a subsystem such as the assembler reaches a lifecycle boundary
+2. it emits a [`FemoraEvent`][femora.components.event.event_bus.FemoraEvent]
+3. the model-owned event bus dispatches payload data to subscribers
+4. subscribers inspect that payload and react
+5. the runtime continues to the next stage
+
+In practice this means the event system is less about creating objects and more
+about coordinating *when* an advanced object is allowed to inspect or modify
+state.
+
+## The Most Important Lifecycle Stages
+
+The most important practical events are:
+
+- `PRE_ASSEMBLE`
+  Called before the final assembled mesh is built. Use this when something
+  must be prepared before the assembly pipeline commits the final mesh state.
+
+- `POST_ASSEMBLE`
+  Called after the assembled mesh exists. This is the most important hook for
+  advanced interfaces because the full model mesh can now be inspected.
+
+- `RESOLVE_CORE_CONFLICTS`
+  Called after assembly when partition/core ownership updates may require
+  follow-up work.
+
+- `PRE_EXPORT` / `POST_EXPORT`
+  Called around export workflows. These are mainly useful for specialized
+  export augmentation and compatibility layers.
+
+## When You Should Use Events
+
+Use the event system when the right behavior depends on lifecycle timing, for
+example:
+
+- generating extra interface mesh after the final assembled mesh exists
+- pairing constrained and retained nodes after assembly
+- creating constraints only after geometry relationships have been discovered
+- reacting to partition-aware updates
+- injecting custom export-time behavior
+
+## When You Should Not Use Events
+
+Do not use the event system as a replacement for ordinary model construction.
+If a component can be created directly through a manager or configured entirely
+at construction time, that is usually the better design.
+
+## Minimal Subscription Example
+
+```python
+from femora.core.model import Model
+from femora.components.event.event_bus import FemoraEvent
+
+model = Model()
+
+def on_post_assemble(**payload):
+    assembled_mesh = payload.get("assembled_mesh")
+    if assembled_mesh is not None:
+        print(f"assembled cells: {assembled_mesh.n_cells}")
+
+model.events.subscribe(FemoraEvent.POST_ASSEMBLE, on_post_assemble)
+```
+
+This kind of callback is appropriate for diagnostics, inspection, or small
+advanced extensions.
+
+## A More Realistic Femora Workflow
+
+The more important use case is a model-owned advanced component.
+
+For example, an interface component may:
+
+1. subscribe to `POST_ASSEMBLE`
+2. wait until the assembled mesh exists
+3. inspect nearby cells or nodes
+4. generate extra interface geometry or constraints
+5. register those additions with the owning model
+
+That is why the event package also documents lifecycle mixins such as:
+
+- [`GeneratesMeshMixin`][femora.components.event.mixins.GeneratesMeshMixin]
+- [`GeneratesNodesMixin`][femora.components.event.mixins.GeneratesNodesMixin]
+- [`GeneratesConstraintsMixin`][femora.components.event.mixins.GeneratesConstraintsMixin]
+- [`HandlesDecompositionMixin`][femora.components.event.mixins.HandlesDecompositionMixin]
+
+Those mixins are not end-user features by themselves. They describe the kind
+of lifecycle work an advanced component performs.
+
+## Where To Read Next
+
+- Read [`event bus`][femora.components.event.event_bus] for the actual event
+  enum and subscription API.
+- Read the lifecycle mixin pages when you are implementing or studying an
+  advanced interface-like component.
+""",
+    ),
+}
+
+MANUAL_PACKAGE_PAGES: dict[str, dict] = {
+    "femora.components.event": {
+        "guide": {
+            "nav": ("guide",),
+            "slug_parts": ("guide", "index.md"),
+            "title": "Event Guide",
+            "order": 0,
+        },
+        "modules": {
+            "event_bus": {
+                "nav": ("event bus",),
+                "slug_parts": ("event-bus", "index.md"),
+                "title": "Event Bus",
+                "order": 1,
+                "options": {
+                    "members": ["FemoraEvent", "ModelEventBus", "EventBus"],
+                },
+            },
+        },
+        "classes": {
+            "GeneratesMeshMixin": {
+                "nav": ("lifecycle mixins", "mesh generation"),
+                "slug_parts": ("lifecycle-mixins", "mesh-generation", "index.md"),
+                "title": "Mesh Generation Mixin",
+                "order": 2,
+            },
+            "GeneratesNodesMixin": {
+                "nav": ("lifecycle mixins", "node generation"),
+                "slug_parts": ("lifecycle-mixins", "node-generation", "index.md"),
+                "title": "Node Generation Mixin",
+                "order": 3,
+            },
+            "GeneratesConstraintsMixin": {
+                "nav": ("lifecycle mixins", "constraint generation"),
+                "slug_parts": ("lifecycle-mixins", "constraint-generation", "index.md"),
+                "title": "Constraint Generation Mixin",
+                "order": 4,
+            },
+            "HandlesDecompositionMixin": {
+                "nav": ("lifecycle mixins", "decomposition updates"),
+                "slug_parts": ("lifecycle-mixins", "decomposition-updates", "index.md"),
+                "title": "Decomposition Update Mixin",
+                "order": 5,
+            },
+        },
+    },
+}
+
 
 def is_hidden_package_class(package_ident: str, class_name: str) -> bool:
     """Return whether a class should be omitted from generated package docs."""
@@ -238,9 +409,37 @@ def write_package_index(
     mkdocs_gen_files.set_edit_path(doc_path, edit_path)
 
 
-def write_class_page(doc_path: Path, ident: str, edit_path: Path, doc_controls: dict | None = None) -> None:
+def write_manual_event_index(doc_path: Path, description: str, edit_path: Path) -> None:
+    """Write the curated landing page for the event package."""
+    with mkdocs_gen_files.open(doc_path, "w") as fd:
+        front_matter, description_body = split_front_matter(description)
+        if front_matter:
+            fd.write(f"{front_matter}\n\n")
+        fd.write("# event\n\n")
+        if description_body:
+            fd.write(f"{description_body}\n\n")
+        fd.write("## Start here\n\n")
+        fd.write("- [guide](guide/)\n")
+        fd.write("- [event bus](event-bus/)\n\n")
+        fd.write("## lifecycle mixins\n\n")
+        fd.write("- [mesh generation](lifecycle-mixins/mesh-generation/)\n")
+        fd.write("- [node generation](lifecycle-mixins/node-generation/)\n")
+        fd.write("- [constraint generation](lifecycle-mixins/constraint-generation/)\n")
+        fd.write("- [decomposition updates](lifecycle-mixins/decomposition-updates/)\n")
+    mkdocs_gen_files.set_edit_path(doc_path, edit_path)
+
+
+def write_class_page(
+    doc_path: Path,
+    ident: str,
+    edit_path: Path,
+    doc_controls: dict | None = None,
+    page_title: str | None = None,
+) -> None:
     """Write one page for an individual public class."""
     with mkdocs_gen_files.open(doc_path, "w") as fd:
+        if page_title:
+            fd.write(f"---\ntitle: {page_title}\n---\n\n")
         fd.write(f"::: {ident}\n")
         effective_doc_controls = dict(doc_controls or {})
         if effective_doc_controls.get("members") == ["__init__"]:
@@ -260,11 +459,39 @@ def write_class_page(doc_path: Path, ident: str, edit_path: Path, doc_controls: 
     mkdocs_gen_files.set_edit_path(doc_path, edit_path)
 
 
+def write_module_page(
+    doc_path: Path,
+    ident: str,
+    edit_path: Path,
+    page_title: str | None = None,
+    options: dict | None = None,
+) -> None:
+    """Write one page for a module-level API reference."""
+    with mkdocs_gen_files.open(doc_path, "w") as fd:
+        if page_title:
+            fd.write(f"---\ntitle: {page_title}\n---\n\n")
+        fd.write(f"::: {ident}\n")
+        if options:
+            fd.write("    options:\n")
+            for key, value in options.items():
+                if isinstance(value, bool):
+                    rendered = "true" if value else "false"
+                    fd.write(f"      {key}: {rendered}\n")
+                elif isinstance(value, list):
+                    fd.write(f"      {key}:\n")
+                    for item in value:
+                        fd.write(f"        - {item}\n")
+                else:
+                    fd.write(f"      {key}: {value}\n")
+    mkdocs_gen_files.set_edit_path(doc_path, edit_path)
+
+
 files = sorted(src_root.rglob("*.py"))
 print(f"DEBUG: Found {len(files)} python files in {src_root}")
 
 package_infos: list[tuple[tuple[str, ...], Path, str]] = []
 package_classes: dict[tuple[str, ...], list[tuple[str, str]]] = {}
+manual_package_nav_entries: dict[str, list[tuple[int, tuple[str, ...], str]]] = {}
 
 for path in files:
     module_path = path.relative_to(src_root).with_suffix("")
@@ -297,20 +524,59 @@ for path in files:
             (parts[-1], class_name) for class_name, _ in visible_class_entries
         )
         for class_name, doc_controls in visible_class_entries:
-            class_doc_path = Path("reference", *doc_parts(parts[:-1]), class_name, "index.md")
-            if package_ident in GROUPED_PACKAGE_TITLES:
-                nav[
-                    display_parts(parts[:-1]) + (package_group_title(package_ident, parts[-1]), class_name)
-                ] = class_doc_path.relative_to("reference").as_posix()
+            manual_package = MANUAL_PACKAGE_PAGES.get(package_ident)
+            if manual_package and class_name in manual_package.get("classes", {}):
+                page_config = manual_package["classes"][class_name]
+                class_doc_path = Path("reference", *doc_parts(parts[:-1]), *page_config["slug_parts"])
+                manual_package_nav_entries.setdefault(package_ident, []).append(
+                    (
+                        page_config["order"],
+                        display_parts(parts[:-1]) + page_config["nav"],
+                        class_doc_path.relative_to("reference").as_posix(),
+                    )
+                )
+                write_class_page(
+                    class_doc_path,
+                    ".".join(parts) + "." + class_name,
+                    path,
+                    doc_controls,
+                    page_config["title"],
+                )
             else:
-                nav[display_parts(parts[:-1]) + (class_name,)] = class_doc_path.relative_to("reference").as_posix()
-            write_class_page(class_doc_path, ".".join(parts) + "." + class_name, path, doc_controls)
+                class_doc_path = Path("reference", *doc_parts(parts[:-1]), class_name, "index.md")
+                if package_ident in GROUPED_PACKAGE_TITLES:
+                    nav[
+                        display_parts(parts[:-1]) + (package_group_title(package_ident, parts[-1]), class_name)
+                    ] = class_doc_path.relative_to("reference").as_posix()
+                else:
+                    nav[display_parts(parts[:-1]) + (class_name,)] = class_doc_path.relative_to(
+                        "reference"
+                    ).as_posix()
+                write_class_page(class_doc_path, ".".join(parts) + "." + class_name, path, doc_controls)
     else:
-        doc_path = Path("reference", *doc_parts(parts)).with_suffix(".md")
-        nav[display_parts(parts)] = doc_path.relative_to("reference").as_posix()
-        with mkdocs_gen_files.open(doc_path, "w") as fd:
-            fd.write(f"::: {'.'.join(parts)}")
-        mkdocs_gen_files.set_edit_path(doc_path, path)
+        package_ident = ".".join(parts[:-1])
+        manual_package = MANUAL_PACKAGE_PAGES.get(package_ident)
+        if manual_package and parts[-1] in manual_package.get("modules", {}):
+            page_config = manual_package["modules"][parts[-1]]
+            doc_path = Path("reference", *doc_parts(parts[:-1]), *page_config["slug_parts"])
+            manual_package_nav_entries.setdefault(package_ident, []).append(
+                (
+                    page_config["order"],
+                    display_parts(parts[:-1]) + page_config["nav"],
+                    doc_path.relative_to("reference").as_posix(),
+                )
+            )
+            write_module_page(
+                doc_path,
+                ".".join(parts),
+                path,
+                page_config["title"],
+                page_config.get("options"),
+            )
+        else:
+            doc_path = Path("reference", *doc_parts(parts)).with_suffix(".md")
+            nav[display_parts(parts)] = doc_path.relative_to("reference").as_posix()
+            write_module_page(doc_path, ".".join(parts), path)
 
 for nav_parts, path, description in package_infos:
     doc_path = Path("reference", *doc_parts(nav_parts), "index.md")
@@ -319,14 +585,42 @@ for nav_parts, path, description in package_infos:
         (module_name, class_name, f"{class_name}/")
         for module_name, class_name in package_classes.get(nav_parts, [])
     ]
-    write_package_index(
-        doc_path=doc_path,
-        ident=".".join(nav_parts),
-        title=nav_parts[-1],
-        description=description,
-        class_links=class_links,
-        edit_path=path,
-    )
+    package_ident = ".".join(nav_parts)
+    if package_ident == "femora.components.event":
+        write_manual_event_index(doc_path, description, path)
+    else:
+        write_package_index(
+            doc_path=doc_path,
+            ident=package_ident,
+            title=nav_parts[-1],
+            description=description,
+            class_links=class_links,
+            edit_path=path,
+        )
+    if package_ident in PACKAGE_GUIDES:
+        guide_slug, guide_body = PACKAGE_GUIDES[package_ident]
+        manual_package = MANUAL_PACKAGE_PAGES.get(package_ident)
+        if manual_package:
+            guide_config = manual_package["guide"]
+            guide_doc_path = Path("reference", *doc_parts(nav_parts), *guide_config["slug_parts"])
+            manual_package_nav_entries.setdefault(package_ident, []).append(
+                (
+                    guide_config["order"],
+                    display_parts(nav_parts) + guide_config["nav"],
+                    guide_doc_path.relative_to("reference").as_posix(),
+                )
+            )
+        else:
+            guide_doc_path = Path("reference", *doc_parts(nav_parts), guide_slug, "index.md")
+            nav[display_parts(nav_parts) + ("guide",)] = guide_doc_path.relative_to("reference").as_posix()
+        with mkdocs_gen_files.open(guide_doc_path, "w") as fd:
+            fd.write(guide_body)
+        mkdocs_gen_files.set_edit_path(guide_doc_path, path)
+
+for package_ident, entries in manual_package_nav_entries.items():
+    del package_ident
+    for _order, nav_parts, rel_path in sorted(entries, key=lambda item: item[0]):
+        nav[nav_parts] = rel_path
 
 with mkdocs_gen_files.open("reference/SUMMARY.md", "w") as nav_file:
     nav_file.write("- [Overview](index.md)\n")

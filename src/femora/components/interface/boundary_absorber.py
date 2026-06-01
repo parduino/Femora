@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Callable, Optional
 
 import tqdm
+import vtk
 from numpy import (
     abs,
     arange,
@@ -27,6 +29,20 @@ from femora.constants import FEMORA_MAX_NDF
 
 if TYPE_CHECKING:
     from femora.core.model import Model
+
+
+@contextmanager
+def _suppress_vtk_clip_warning():
+    """Suppress noisy VTK clip warnings for the rectangular absorber path."""
+    previous_state = vtk.vtkObject.GetGlobalWarningDisplay()
+    vtk.vtkObject.GlobalWarningDisplayOff()
+    try:
+        yield
+    finally:
+        if previous_state:
+            vtk.vtkObject.GlobalWarningDisplayOn()
+        else:
+            vtk.vtkObject.GlobalWarningDisplayOff()
 
 
 def _normalize_absorber_kwargs(
@@ -165,7 +181,8 @@ def apply_rectangular_absorbing_layer(mesh_maker: "Model", config: dict) -> bool
 
     cube = Cube(bounds=bounds)
     cube = cube.clip(normal=[0, 0, 1], origin=[0, 0, bounds[5] - eps])
-    clipped = mesh.copy().clip_surface(cube, invert=False, crinkle=True)
+    with _suppress_vtk_clip_warning():
+        clipped = mesh.copy().clip_surface(cube, invert=False, crinkle=True)
 
     cell_centers = clipped.cell_centers(vertex=True)
     cell_centers_coords = cell_centers.points
