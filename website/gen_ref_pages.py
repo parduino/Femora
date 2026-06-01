@@ -110,6 +110,24 @@ GROUPED_PACKAGE_TITLES: dict[str, dict[str, str]] = {
     },
 }
 
+HIDDEN_PACKAGE_CLASSES: dict[str, set[str]] = {
+    "femora.components.analysis": {
+        "Algorithm",
+        "ConstraintHandler",
+        "Test",
+        "Integrator",
+        "StaticIntegrator",
+        "TransientIntegrator",
+        "Numberer",
+        "System",
+    },
+}
+
+
+def is_hidden_package_class(package_ident: str, class_name: str) -> bool:
+    """Return whether a class should be omitted from generated package docs."""
+    return class_name in HIDDEN_PACKAGE_CLASSES.get(package_ident, set())
+
 
 def package_group_title(package_ident: str, module_name: str) -> str:
     """Return the display heading for one grouped package module section."""
@@ -202,12 +220,17 @@ for path in files:
     # Keep the older class-page style, but flatten the navigation so packages
     # list classes directly instead of showing a file name before the class.
     if class_entries:
+        package_ident = ".".join(parts[:-1])
+        visible_class_entries = [
+            (class_name, doc_controls)
+            for class_name, doc_controls in class_entries
+            if not is_hidden_package_class(package_ident, class_name)
+        ]
         package_classes.setdefault(parts[:-1], []).extend(
-            (parts[-1], class_name) for class_name, _ in class_entries
+            (parts[-1], class_name) for class_name, _ in visible_class_entries
         )
-        for class_name, doc_controls in class_entries:
+        for class_name, doc_controls in visible_class_entries:
             class_doc_path = Path("reference", *doc_parts(parts[:-1]), class_name, "index.md")
-            package_ident = ".".join(parts[:-1])
             if package_ident in GROUPED_PACKAGE_TITLES:
                 nav[
                     display_parts(parts[:-1]) + (package_group_title(package_ident, parts[-1]), class_name)

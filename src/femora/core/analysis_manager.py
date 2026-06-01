@@ -64,6 +64,161 @@ class AnalysisManager:
         self._names[analysis.name] = analysis
         return analysis
 
+    def static(
+        self,
+        name: str,
+        constraint_handler: ConstraintHandler,
+        numberer: Numberer,
+        system: System,
+        algorithm: Algorithm,
+        test: Test,
+        integrator: StaticIntegrator,
+        num_steps: int,
+    ) -> Analysis:
+        """Create and register a static Analysis.
+
+        Args:
+            name: Unique analysis name.
+            constraint_handler: Constraint handler for boundary-condition enforcement.
+            numberer: Degree-of-freedom numberer.
+            system: Linear solver system.
+            algorithm: Nonlinear solution algorithm.
+            test: Convergence test.
+            integrator: Static integrator.
+            num_steps: Number of static analysis steps.
+
+        Returns:
+            The registered Analysis instance.
+        """
+        return self.add(
+            Analysis(
+                name=name,
+                analysis_type="Static",
+                constraint_handler=constraint_handler,
+                numberer=numberer,
+                system=system,
+                algorithm=algorithm,
+                test=test,
+                integrator=integrator,
+                num_steps=num_steps,
+            )
+        )
+
+    def transient(
+        self,
+        name: str,
+        constraint_handler: ConstraintHandler,
+        numberer: Numberer,
+        system: System,
+        algorithm: Algorithm,
+        test: Test,
+        integrator: TransientIntegrator,
+        dt: float,
+        num_steps: int | None = None,
+        final_time: float | None = None,
+        num_sublevels: int | None = None,
+        num_substeps: int | None = None,
+    ) -> Analysis:
+        """Create and register a transient Analysis.
+
+        Args:
+            name: Unique analysis name.
+            constraint_handler: Constraint handler for boundary-condition enforcement.
+            numberer: Degree-of-freedom numberer.
+            system: Linear solver system.
+            algorithm: Nonlinear solution algorithm.
+            test: Convergence test.
+            integrator: Transient integrator.
+            dt: Time-step increment.
+            num_steps: Optional number of transient steps.
+            final_time: Optional end time. Exactly one of `num_steps` or `final_time`
+                must be provided.
+            num_sublevels: Optional transient sublevel count for retry logic.
+            num_substeps: Optional transient substep count for retry logic.
+
+        Returns:
+            The registered Analysis instance.
+        """
+        return self.add(
+            Analysis(
+                name=name,
+                analysis_type="Transient",
+                constraint_handler=constraint_handler,
+                numberer=numberer,
+                system=system,
+                algorithm=algorithm,
+                test=test,
+                integrator=integrator,
+                num_steps=num_steps,
+                final_time=final_time,
+                dt=dt,
+                num_sublevels=num_sublevels,
+                num_substeps=num_substeps,
+            )
+        )
+
+    def variable_transient(
+        self,
+        name: str,
+        constraint_handler: ConstraintHandler,
+        numberer: Numberer,
+        system: System,
+        algorithm: Algorithm,
+        test: Test,
+        integrator: TransientIntegrator,
+        dt: float,
+        dt_min: float,
+        dt_max: float,
+        jd: int,
+        num_steps: int | None = None,
+        final_time: float | None = None,
+        num_sublevels: int | None = None,
+        num_substeps: int | None = None,
+    ) -> Analysis:
+        """Create and register a variable-transient Analysis.
+
+        Args:
+            name: Unique analysis name.
+            constraint_handler: Constraint handler for boundary-condition enforcement.
+            numberer: Degree-of-freedom numberer.
+            system: Linear solver system.
+            algorithm: Nonlinear solution algorithm.
+            test: Convergence test.
+            integrator: Transient integrator.
+            dt: Initial time-step increment.
+            dt_min: Minimum allowable time step.
+            dt_max: Maximum allowable time step.
+            jd: Desired number of iterations per step.
+            num_steps: Optional number of transient steps.
+            final_time: Optional end time. Exactly one of `num_steps` or `final_time`
+                must be provided.
+            num_sublevels: Optional transient sublevel count for retry logic.
+            num_substeps: Optional transient substep count for retry logic.
+
+        Returns:
+            The registered Analysis instance.
+        """
+        return self.add(
+            Analysis(
+                name=name,
+                analysis_type="VariableTransient",
+                constraint_handler=constraint_handler,
+                numberer=numberer,
+                system=system,
+                algorithm=algorithm,
+                test=test,
+                integrator=integrator,
+                num_steps=num_steps,
+                final_time=final_time,
+                dt=dt,
+                dt_min=dt_min,
+                dt_max=dt_max,
+                jd=jd,
+                num_sublevels=num_sublevels,
+                num_substeps=num_substeps,
+            )
+        )
+
     def default_transient(
         self,
         username: str,
