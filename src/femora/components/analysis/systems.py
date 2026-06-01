@@ -1,32 +1,6 @@
-from typing import Dict, List, Optional, Type, Union
+from typing import Optional
 
-from femora.core.tagged_component_manager import TaggedComponentManager
-from femora.core.analysis_component_base import AnalysisComponent
-
-
-class System(AnalysisComponent):
-    """Base class for OpenSees solver systems."""
-
-    _systems: Dict[str, Type["System"]] = {}
-
-    def __init__(self, system_type: str) -> None:
-        """Create a System base instance.
-
-        Args:
-            system_type: The type name of the system solver.
-        """
-        super().__init__()
-        self.system_type = system_type
-
-    @staticmethod
-    def register_system(name: str, system_class: Type["System"]) -> None:
-        """Register a new solver system class.
-
-        Args:
-            name: Lowercase registry name.
-            system_class: The System class type to register.
-        """
-        System._systems[name.lower()] = system_class
+from femora.core.analysis.system import System
 
 
 class FullGeneralSystem(System):
@@ -309,95 +283,6 @@ class MumpsSystem(System):
             cmd += f" -ICNTL7 {self.icntl7}"
         return cmd
     
-
-
-class SystemManager(TaggedComponentManager[System]):
-    """Manager for system solvers on the Analysis model."""
-
-    def __init__(self, analysis_manager) -> None:
-        """Initialize the SystemManager.
-
-        Args:
-            analysis_manager: The parent AnalysisManager instance.
-        """
-        super().__init__(analysis_manager, System, "_systems")
-
-    def fullgeneral(self, **kwargs) -> System:
-        """Add a FullGeneralSystem solver.
-
-        Args:
-            **kwargs: Keyword arguments passed to FullGeneralSystem.
-
-        Returns:
-            The solver system instance.
-        """
-        return self.add(FullGeneralSystem(**kwargs))
-
-    def bandgeneral(self, **kwargs) -> System:
-        """Add a BandGeneralSystem solver.
-
-        Args:
-            **kwargs: Keyword arguments passed to BandGeneralSystem.
-
-        Returns:
-            The solver system instance.
-        """
-        return self.add(BandGeneralSystem(**kwargs))
-
-    def bandspd(self, **kwargs) -> System:
-        """Add a BandSPDSystem solver.
-
-        Args:
-            **kwargs: Keyword arguments passed to BandSPDSystem.
-
-        Returns:
-            The solver system instance.
-        """
-        return self.add(BandSPDSystem(**kwargs))
-
-    def profilespd(self, **kwargs) -> System:
-        """Add a ProfileSPDSystem solver.
-
-        Args:
-            **kwargs: Keyword arguments passed to ProfileSPDSystem.
-
-        Returns:
-            The solver system instance.
-        """
-        return self.add(ProfileSPDSystem(**kwargs))
-
-    def superlu(self, **kwargs) -> System:
-        """Add a SuperLUSystem solver.
-
-        Args:
-            **kwargs: Keyword arguments passed to SuperLUSystem.
-
-        Returns:
-            The solver system instance.
-        """
-        return self.add(SuperLUSystem(**kwargs))
-
-    def umfpack(self, **kwargs) -> System:
-        """Add a UmfpackSystem solver.
-
-        Args:
-            **kwargs: Keyword arguments passed to UmfpackSystem.
-
-        Returns:
-            The solver system instance.
-        """
-        return self.add(UmfpackSystem(**kwargs))
-
-    def mumps(self, **kwargs) -> System:
-        """Add a MumpsSystem solver.
-
-        Args:
-            **kwargs: Keyword arguments passed to MumpsSystem.
-
-        Returns:
-            The solver system instance.
-        """
-        return self.add(MumpsSystem(**kwargs))
 
 
 # Register all systems

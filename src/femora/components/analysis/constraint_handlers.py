@@ -1,21 +1,6 @@
-from typing import Dict, List, Optional, Type, Union
+from typing import Optional
 
-from femora.core.tagged_component_manager import TaggedComponentManager
-from femora.core.analysis_component_base import AnalysisComponent
-
-
-class ConstraintHandler(AnalysisComponent):
-    """Base class for OpenSees constraint handlers."""
-
-    _handlers: Dict[str, Type["ConstraintHandler"]] = {}
-
-    def __init__(self, handler_type: str) -> None:
-        super().__init__()
-        self.handler_type = handler_type
-
-    @staticmethod
-    def register_handler(name: str, handler_class: Type["ConstraintHandler"]) -> None:
-        ConstraintHandler._handlers[name.lower()] = handler_class
+from femora.core.analysis.constraint_handler import ConstraintHandler
 
 
 class PlainConstraintHandler(ConstraintHandler):
@@ -243,26 +228,6 @@ class AutoConstraintHandler(ConstraintHandler):
             cmd += f" -userPenalty {self.user_penalty}"
         return cmd
     
-
-
-class ConstraintHandlerManager(TaggedComponentManager[ConstraintHandler]):
-    def __init__(self, analysis_manager) -> None:
-        super().__init__(analysis_manager, ConstraintHandler, "_handlers")
-
-    def plain(self, **kwargs) -> ConstraintHandler:
-        return self.add(PlainConstraintHandler(**kwargs))
-
-    def transformation(self, **kwargs) -> ConstraintHandler:
-        return self.add(TransformationConstraintHandler(**kwargs))
-
-    def penalty(self, **kwargs) -> ConstraintHandler:
-        return self.add(PenaltyConstraintHandler(**kwargs))
-
-    def lagrange(self, **kwargs) -> ConstraintHandler:
-        return self.add(LagrangeConstraintHandler(**kwargs))
-
-    def auto(self, **kwargs) -> ConstraintHandler:
-        return self.add(AutoConstraintHandler(**kwargs))
 
 
 # Register all constraint handlers

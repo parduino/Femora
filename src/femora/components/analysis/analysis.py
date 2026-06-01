@@ -1,12 +1,12 @@
 from typing import Optional
 
+from femora.core.analysis.algorithm import Algorithm
+from femora.core.analysis.constraint_handler import ConstraintHandler
+from femora.core.analysis.integrator import Integrator, StaticIntegrator, TransientIntegrator
+from femora.core.analysis.numberer import Numberer
+from femora.core.analysis.system import System
+from femora.core.analysis.test import Test
 from femora.core.analysis_component_base import AnalysisComponent
-from .numberers import Numberer
-from .integrators import Integrator, StaticIntegrator, TransientIntegrator
-from .algorithms import Algorithm
-from .systems import System
-from .constraint_handlers import ConstraintHandler
-from .convergence_tests import Test
 
 
 class Analysis(AnalysisComponent):
