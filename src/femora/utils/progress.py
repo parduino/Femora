@@ -35,15 +35,22 @@ class Progress:
 
     _bar: Optional[tqdm.tqdm] = None
     _last_value: int = 0
+    _base_desc: str = "Processing"
+    _leave: bool = True
 
     @classmethod
     def _ensure_bar(cls, desc: str) -> None:
         if cls._bar is None:
             # Lazily create the bar when the first update happens
+            cls._base_desc = desc
+            cls._leave = not desc.startswith("Assembly Section")
             cls._bar = tqdm.tqdm(
                 total=100,
                 desc=desc,
-                bar_format="{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [" "{elapsed}<{remaining}] {postfix}",
+                leave=cls._leave,
+                ncols=110,
+                dynamic_ncols=False,
+                bar_format="{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]",
             )
             cls._last_value = 0
 
@@ -74,7 +81,11 @@ class Progress:
         if cls._bar is None:  # for type checkers
             return
 
-        cls._bar.set_postfix_str(message)
+        phase = message.strip()
+        if phase:
+            cls._bar.set_description_str(f"{cls._base_desc} - {phase}")
+        else:
+            cls._bar.set_description_str(cls._base_desc)
         cls._bar.n = value_int
         cls._bar.refresh()
         cls._last_value = value_int
@@ -97,6 +108,8 @@ class Progress:
             cls._bar.close()
             cls._bar = None
             cls._last_value = 0
+            cls._base_desc = "Processing"
+            cls._leave = True
 
 
 # Convenience helpers --------------------------------------------------

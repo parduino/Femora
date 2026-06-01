@@ -1,4 +1,8 @@
-"""Mask package for Femora.
+"""---
+icon: material/filter-outline
+---
+
+Mask package for Femora.
 
 This package contains runtime mask component classes that enable post-assembly
 spatial and attribute-based queries on nodes and elements.

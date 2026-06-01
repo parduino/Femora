@@ -313,7 +313,7 @@ class ConventionalSteelBracedFrame:
             region=self.building_region,
         )
 
-    def create_rigid_diaphragms(self, model) -> None:
+    def create_rigid_diaphragms(self, model, verbose: bool = True) -> None:
         """Create floor rigid diaphragms to COM nodes and fix COM vertical/rocking DOFs."""
         mesh = model.assembled_mesh
         if mesh is None:
@@ -330,6 +330,14 @@ class ConventionalSteelBracedFrame:
         y_min = float(min(y_coords)) - 1e-4
         y_max = float(max(y_coords)) + 1e-4
         self._com_node_tags = []
+        structure_name = getattr(self, "name_prefix", None) or self.__class__.__name__
+
+        if verbose:
+            border = "-" * 66
+            print(f"\n[{structure_name}] Rigid diaphragm creation")
+            print(border)
+            print(f"{'Story':<8}{'Status':<12}{'Master':<12}{'Slaves':<10}{'Z':<12}")
+            print(border)
 
         for story in range(1, self.num_stories + 1):
             z_floor = float(z_coords[story])
@@ -342,13 +350,15 @@ class ConventionalSteelBracedFrame:
             )
             floor_indices = np.where(floor_mask & footprint_mask)[0]
             if not len(floor_indices):
-                print(f"  [Floor {story}] Warning: no floor nodes found at z={z_floor:.3f}")
+                if verbose:
+                    print(f"{story:>5d}   {'skipped':<12}{'-':<12}{'-':<10}{z_floor:<12.3f}")
                 continue
 
             floor_ndfs = ndfs[floor_indices]
             com_candidates = np.where(floor_ndfs >= 1000)[0]
             if not len(com_candidates):
-                print(f"  [Floor {story}] Warning: no COM ghost node found.")
+                if verbose:
+                    print(f"{story:>5d}   {'no COM':<12}{'-':<12}{'-':<10}{z_floor:<12.3f}")
                 continue
 
             com_global_idx = int(floor_indices[com_candidates[0]])
@@ -371,7 +381,11 @@ class ConventionalSteelBracedFrame:
                     slave_nodes=[slave_tag],
                 )
             model.constraint.sp.fix(master_tag, [0, 0, 1, 1, 1, 0])
-            print(f"  [Floor {story}] Created diaphragm: Master={master_tag}, Slaves={len(slave_tags)}")
+            if verbose:
+                print(f"{story:>5d}   {'created':<12}{master_tag:<12}{len(slave_tags):<10}{z_floor:<12.3f}")
+
+        if verbose:
+            print(border)
 
     def apply_fixed_base(self, model, tol: float = 1e-4) -> None:
         """Fix all base structural grid nodes for fixed-base period checks."""

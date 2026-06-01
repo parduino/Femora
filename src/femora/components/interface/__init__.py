@@ -1,4 +1,8 @@
-"""Interface package for Femora.
+"""---
+icon: material/vector-intersection
+---
+
+Interface package for Femora.
 
 This package contains runtime contact and boundary interface component classes that 
 couple model parts, nodes, or elements together (such as embedded beam-solid or 

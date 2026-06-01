@@ -839,7 +839,7 @@ class FEMA_SAC_SteelFrame:
             region=self.building_region,
         )
 
-    def create_rigid_diaphragms(self, model):
+    def create_rigid_diaphragms(self, model, verbose: bool = True):
         """
         Creates rigid diaphragm constraints for each floor.
         
@@ -866,8 +866,14 @@ class FEMA_SAC_SteelFrame:
         x_max = float(max(x_coords)) + 1e-4
         y_min = float(min(y_coords)) - 1e-4
         y_max = float(max(y_coords)) + 1e-4
-        
-        print(f"\nAdding Rigid Diaphragms for {self.num_stories} stories...")
+        structure_name = getattr(self, "name_prefix", None) or self.__class__.__name__
+
+        if verbose:
+            border = "-" * 66
+            print(f"\n[{structure_name}] Rigid diaphragm creation")
+            print(border)
+            print(f"{'Story':<8}{'Status':<12}{'Master':<12}{'Slaves':<10}{'Z':<12}")
+            print(border)
         
         for s in range(1, self.num_stories + 1):
             z_floor = z_coords[s]
@@ -883,7 +889,8 @@ class FEMA_SAC_SteelFrame:
             floor_indices = np.where(mask_z & mask_xy)[0]
             
             if len(floor_indices) == 0:
-                print(f"  [Floor {s}] No nodes found at z={z_floor:.2f}")
+                if verbose:
+                    print(f"{s:>5d}   {'skipped':<12}{'-':<12}{'-':<10}{z_floor:<12.3f}")
                 continue
             
             floor_points = points[floor_indices]
@@ -894,7 +901,8 @@ class FEMA_SAC_SteelFrame:
             com_local_indices = np.where(com_mask)[0]
             
             if len(com_local_indices) == 0:
-                print(f"  [Floor {s}] Warning: No Center-of-Mass ghost node found.")
+                if verbose:
+                    print(f"{s:>5d}   {'no COM':<12}{'-':<12}{'-':<10}{z_floor:<12.3f}")
                 continue
             
             # Take the first CoM node found (should be exactly one per floor)
@@ -930,9 +938,14 @@ class FEMA_SAC_SteelFrame:
                         master_node=master_tag,
                         slave_nodes=[slave_tag]
                     )
-                print(f"  [Floor {s}] Created diaphragm: Master={master_tag}, Slaves={len(slave_tags)}")
+                if verbose:
+                    print(f"{s:>5d}   {'created':<12}{master_tag:<12}{len(slave_tags):<10}{z_floor:<12.3f}")
             else:
-                print(f"  [Floor {s}] Warning: No slave nodes found for diaphragm.")
+                if verbose:
+                    print(f"{s:>5d}   {'no slaves':<12}{master_tag:<12}{0:<10}{z_floor:<12.3f}")
+
+        if verbose:
+            print(border)
 
             # 4. Add Fixities to CoM Node
             # We want: X=Free, Y=Free, Z=Fixed, Rx=Fixed, Ry=Fixed, Rz=Free

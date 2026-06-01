@@ -1,4 +1,8 @@
-"""Region component package for Femora.
+"""---
+icon: material/vector-square
+---
+
+Region component package for Femora.
 
 This package contains runtime region component classes that define structural
 sub-groups of elements and nodes in OpenSees. Regions allow the application

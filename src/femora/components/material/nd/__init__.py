@@ -1,4 +1,8 @@
-"""Continuum nD material components for Femora.
+"""---
+icon: material/cube-outline
+---
+
+Continuum nD material components for Femora.
 
 This subpackage contains ``nDMaterial`` component classes used with continuum
 elements such as bricks and quads. The classes wrap OpenSees models ranging

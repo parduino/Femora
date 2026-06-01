@@ -1,4 +1,8 @@
-"""Analysis components for Femora.
+"""---
+icon: material/calculator
+---
+
+Analysis components for Femora.
 
 This package contains the concrete runtime pieces used to assemble an OpenSees
 analysis stack. Together, these components define how a structural simulation

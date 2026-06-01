@@ -1,4 +1,8 @@
-"""Material component package for Femora.
+"""---
+icon: material/atom-variant
+---
+
+Material component package for Femora.
 
 This package contains runtime material component classes that are registered
 through [MaterialManager][femora.core.material_manager.MaterialManager] and

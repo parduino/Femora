@@ -1,4 +1,8 @@
-"""Beam-oriented section components for Femora.
+"""---
+icon: material/view-stream-outline
+---
+
+Beam-oriented section components for Femora.
 
 This subpackage contains ``section`` models commonly used with beam and
 truss elements, including aggregate elastic properties, uniaxial response

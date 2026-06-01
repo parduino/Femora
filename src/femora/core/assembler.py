@@ -3,6 +3,7 @@ import numpy as np
 import pyvista as pv
 import logging
 import sys
+import time
 from scipy.spatial import cKDTree
 
 from femora.core.meshpart_base import MeshPart
@@ -45,6 +46,40 @@ class Assembler:
         if self._mesh_maker is None:
             raise RuntimeError("Assembler is not bound to a Model")
         self._mesh_maker.events.emit(event, **payload)
+
+    def _print_assembly_start_banner(self) -> None:
+        """Print a compact start banner before assembly progress begins."""
+        BLUE = "\033[94m"
+        BOLD = "\033[1m"
+        RESET = "\033[0m"
+        border = "=" * 70
+        logo = (
+            "______                         \n"
+            "|  ___|                        \n"
+            "| |_ ___ _ __ ___   ___  _ __ __ _ \n"
+            "|  _/ _ \\ '_ ` _ \\ / _ \\| '__/ _` |\n"
+            "| ||  __/ | | | | | (_) | | | (_| |\n"
+            "\\_| \\___|_| |_| |_|\\___/|_|  \\__,_|\n"
+        )
+        message = (
+            f"\n{BLUE}{border}{RESET}\n"
+            f"{BOLD}{logo}{RESET}"
+            f"\n{BOLD}Starting assembly{RESET}\n"
+            f"Building the assembled Femora model mesh and runtime state."
+        )
+        print(message)
+
+    def _print_assembly_complete_banner(self) -> None:
+        """Print a compact completion banner after assembly summary."""
+        BLUE = "\033[94m"
+        BOLD = "\033[1m"
+        RESET = "\033[0m"
+        border = "=" * 70
+        message = (
+            f"Femora assembly finished successfully.\n"
+            f"{BLUE}{border}{RESET}\n"
+        )
+        print(message)
 
     def create_section(
         self, 
@@ -268,11 +303,14 @@ class Assembler:
         """
         
         mesh_maker = self._require_mesh_maker()
+        assembly_started_at = time.perf_counter()
         if mesh_maker.assembled_mesh is not None:
             mesh_maker.assembled_mesh = None
         
         if not self._assembly_sections:
             raise ValueError("No assembly sections have been created")
+
+        self._print_assembly_start_banner()
         
         # Progress setup
         if progress_callback is None:
@@ -381,7 +419,8 @@ class Assembler:
 
         progress_callback(100, "done")
         # Announce the number of cores used for assembly
-        self._announce_required_cores()
+        self._announce_required_cores(elapsed_seconds=time.perf_counter() - assembly_started_at)
+        self._print_assembly_complete_banner()
         
     def delete_assembled_mesh(self) -> None:
         """
@@ -843,7 +882,7 @@ class Assembler:
 
 
     # Big announcement box
-    def _announce_required_cores(self):
+    def _announce_required_cores(self, elapsed_seconds: float | None = None):
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s [%(levelname)s] %(message)s",
@@ -851,27 +890,29 @@ class Assembler:
                 logging.StreamHandler(sys.stdout)
             ]
         )
-        # this part should be gou through the Assembled Mesh and see how many cores are used to print
-        # the number of cores used in the assembly
         assembled_mesh = self._model_assembled_mesh()
         if assembled_mesh is None:
             logging.warning("No assembled mesh found. Cannot announce required cores.")
             return
-        cores = assembled_mesh.cell_data["Core"]
-        unique_cores = np.unique(cores) 
-        cores = len(unique_cores)
+        cores = len(np.unique(assembled_mesh.cell_data["Core"]))
+        n_points = assembled_mesh.n_points
+        n_cells = assembled_mesh.n_cells
+        n_sections = len(self._assembly_sections)
+        elapsed_text = f"{elapsed_seconds:.2f} s" if elapsed_seconds is not None else "n/a"
         RED = "\033[91m"
         BOLD = "\033[1m"
         RESET = "\033[0m"
         BLUE = "\033[94m"
-        message = f"{BOLD}{BLUE}!!! IMPORTANT RESOURCE NOTICE !!!{RESET}\n" \
-                f"{BOLD}This model requires {RED}{cores}{RESET}{BOLD} CPU cores to run effectively.{RESET}\n" \
-                f"Please ensure your environment has sufficient resources.\n"
-
-        border = "=" * 70
-        full_message = f"\n{BLUE}{border}\n{message}{BLUE}{border}{RESET}\n"
-
-        
+        border = "-" * 70
+        full_message = (
+            f"{BOLD}Resource notice{RESET}\n"
+            f"Assembly time: {BOLD}{elapsed_text}{RESET}\n"
+            f"Assembly sections: {BOLD}{n_sections}{RESET}\n"
+            f"Mesh points: {BOLD}{n_points}{RESET}\n"
+            f"Mesh cells: {BOLD}{n_cells}{RESET}\n"
+            f"Required CPU cores: {BOLD}{RED}{cores}{RESET}\n"
+            f"Ensure the execution environment has sufficient resources.\n"
+        )
 
         print(full_message)
 

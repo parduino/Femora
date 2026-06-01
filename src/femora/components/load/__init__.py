@@ -1,4 +1,8 @@
-"""Load component package for Femora.
+"""---
+icon: material/weight
+---
+
+Load component package for Femora.
 
 This package contains runtime load component classes that are registered
 through Femora's load managers and exported to OpenSees Tcl.

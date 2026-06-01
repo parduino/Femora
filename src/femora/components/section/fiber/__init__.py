@@ -1,4 +1,8 @@
-"""Fiber section components and discretization helpers for Femora.
+"""---
+icon: material/grain
+---
+
+Fiber section components and discretization helpers for Femora.
 
 This subpackage contains general fiber sections plus patch, layer, and fiber
 building blocks used to discretize arbitrary cross sections.

@@ -1,4 +1,8 @@
-"""Element component package for Femora.
+"""---
+icon: material/vector-triangle
+---
+
+Element component package for Femora.
 
 This package contains runtime finite-element definitions that are created
 through [ElementManager][femora.core.element_manager.ElementManager] and

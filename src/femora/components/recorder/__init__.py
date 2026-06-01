@@ -1,4 +1,8 @@
-"""Recorder component package for Femora.
+"""---
+icon: material/record-rec
+---
+
+Recorder component package for Femora.
 
 This package contains runtime recorder component classes that represent OpenSees
 ``recorder`` commands. Recorders capture and export structural responses (such

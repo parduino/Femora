@@ -1,4 +1,8 @@
-"""Shell and plate section components for Femora.
+"""---
+icon: material/layers-outline
+---
+
+Shell and plate section components for Femora.
 
 This subpackage contains ``section`` models used with shell and plate
 elements, including homogeneous elastic membrane-plate response and

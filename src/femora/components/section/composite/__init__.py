@@ -1,4 +1,8 @@
-"""Composite section components for Femora.
+"""---
+icon: material/set-center
+---
+
+Composite section components for Femora.
 
 This subpackage contains section models that combine other sections or add
 independent uniaxial responses to an existing section definition.

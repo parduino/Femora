@@ -1,4 +1,8 @@
-"""EE-UQ integration components for SimCenter.
+"""---
+icon: material/home-analytics
+---
+
+EE-UQ integration components for SimCenter.
 
 This package contains soil, foundation, and building model generation wrappers designed 
 to interface with the SimCenter EE-UQ application.

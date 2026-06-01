@@ -1,7 +1,7 @@
 site_name: Femora
 site_url: https://femora.io/docs/
-repo_url: https://github.com/amnp95/Femora
-repo_name: amnp95/Femora
+repo_url: https://github.com/GeotechUW/Femora
+repo_name: GeotechUW/Femora
 
 theme:
   name: material
