@@ -1,4 +1,8 @@
-"""Damping component package for Femora.
+"""---
+icon: material/trending-down
+---
+
+Damping component package for Femora.
 
 This package contains runtime damping model component classes that are registered
 through Femora's damping managers to represent dynamic energy dissipation behavior

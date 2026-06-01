@@ -10,7 +10,7 @@ import mkdocs_gen_files
 # Folders to completely hide from the generated API docs.
 SKIP_FOLDERS = {"gui", "constants", "constant", "styles", "utils"}
 
-# Modules to skip (legacy shims without valid imports — break mkdocstrings if scanned).
+# Modules to skip (legacy shims without valid imports - break mkdocstrings if scanned).
 SKIP_MODULE_NAMES = {"materialsOpenSees"}
 
 nav = mkdocs_gen_files.Nav()
@@ -18,10 +18,13 @@ nav = mkdocs_gen_files.Nav()
 script_dir = Path(__file__).parent
 src_root = (script_dir.parent / "src").resolve()
 TOP_LEVEL_LABELS = {
-    "components": "🧩 components",
-    "core": "⚙ core",
-    "tools": "🛠 tools",
+    "components": "components",
+    "core": "core",
+    "tools": "tools",
+    "io": "io",
 }
+
+
 def display_parts(parts: tuple[str, ...]) -> tuple[str, ...]:
     """Return navigation parts with the top-level ``femora`` package collapsed."""
     if parts and parts[0] == "femora":
@@ -94,6 +97,29 @@ def parse_module_docstring(path: Path) -> str:
     return ast.get_docstring(tree) or ""
 
 
+def split_front_matter(docstring: str) -> tuple[str, str]:
+    """Split YAML front matter from a docstring body, if present."""
+    if not docstring:
+        return "", ""
+
+    lines = docstring.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return "", docstring
+
+    closing_index = None
+    for index in range(1, len(lines)):
+        if lines[index].strip() == "---":
+            closing_index = index
+            break
+
+    if closing_index is None:
+        return "", docstring
+
+    front_matter = "\n".join(lines[: closing_index + 1])
+    body = "\n".join(lines[closing_index + 1 :]).lstrip()
+    return front_matter, body
+
+
 GROUPED_PACKAGE_TITLES: dict[str, dict[str, str]] = {
     "femora.components.analysis": {
         "analysis": "core analysis",
@@ -110,11 +136,64 @@ GROUPED_PACKAGE_TITLES: dict[str, dict[str, str]] = {
     },
 }
 
+HIDDEN_PACKAGE_CLASSES: dict[str, set[str]] = {
+    "femora.components.analysis": {
+        "Algorithm",
+        "ConstraintHandler",
+        "Test",
+        "Integrator",
+        "StaticIntegrator",
+        "TransientIntegrator",
+        "Numberer",
+        "System",
+    },
+}
+
+
+def is_hidden_package_class(package_ident: str, class_name: str) -> bool:
+    """Return whether a class should be omitted from generated package docs."""
+    return class_name in HIDDEN_PACKAGE_CLASSES.get(package_ident, set())
+
 
 def package_group_title(package_ident: str, module_name: str) -> str:
     """Return the display heading for one grouped package module section."""
     titles = GROUPED_PACKAGE_TITLES.get(package_ident, {})
     return titles.get(module_name, module_name.replace("_", " "))
+
+
+def parse_element_manager_groups() -> dict[str, str]:
+    """Return element module -> sub-manager group from the runtime API."""
+    manager_files = {
+        "beam": src_root / "femora" / "core" / "beam_element_manager.py",
+        "brick": src_root / "femora" / "core" / "brick_element_manager.py",
+        "quad": src_root / "femora" / "core" / "quad_element_manager.py",
+        "special": src_root / "femora" / "core" / "special_element_manager.py",
+    }
+    grouped_modules: dict[str, str] = {}
+
+    for group_name, path in manager_files.items():
+        try:
+            source = path.read_text(encoding="utf-8")
+            tree = ast.parse(source)
+        except Exception as exc:
+            print(f"WARNING: Could not parse {path} for element grouping: {exc}")
+            continue
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ImportFrom):
+                continue
+            if node.module is None or not node.module.startswith("femora.components.element."):
+                continue
+            module_name = node.module.rsplit(".", 1)[-1]
+            grouped_modules[module_name] = group_name
+
+    return grouped_modules
+
+
+ELEMENT_MANAGER_GROUPS = parse_element_manager_groups()
+GROUPED_PACKAGE_TITLES["femora.components.element"] = {
+    module_name: group_name for module_name, group_name in ELEMENT_MANAGER_GROUPS.items()
+}
 
 
 def write_package_index(
@@ -127,9 +206,12 @@ def write_package_index(
 ) -> None:
     """Write a minimal package landing page with links to class pages."""
     with mkdocs_gen_files.open(doc_path, "w") as fd:
+        front_matter, description_body = split_front_matter(description)
+        if front_matter:
+            fd.write(f"{front_matter}\n\n")
         fd.write(f"# {title}\n\n")
-        if description:
-            fd.write(f"{description}\n\n")
+        if description_body:
+            fd.write(f"{description_body}\n\n")
         if class_links:
             if ident in GROUPED_PACKAGE_TITLES:
                 grouped: dict[str, list[tuple[str, str]]] = {}
@@ -160,9 +242,12 @@ def write_class_page(doc_path: Path, ident: str, edit_path: Path, doc_controls: 
     """Write one page for an individual public class."""
     with mkdocs_gen_files.open(doc_path, "w") as fd:
         fd.write(f"::: {ident}\n")
-        if doc_controls:
+        effective_doc_controls = dict(doc_controls or {})
+        if effective_doc_controls.get("members") == ["__init__"]:
+            effective_doc_controls.setdefault("show_category_heading", False)
+        if effective_doc_controls:
             fd.write("    options:\n")
-            for key, value in doc_controls.items():
+            for key, value in effective_doc_controls.items():
                 if isinstance(value, bool):
                     rendered = "true" if value else "false"
                     fd.write(f"      {key}: {rendered}\n")
@@ -202,12 +287,17 @@ for path in files:
     # Keep the older class-page style, but flatten the navigation so packages
     # list classes directly instead of showing a file name before the class.
     if class_entries:
+        package_ident = ".".join(parts[:-1])
+        visible_class_entries = [
+            (class_name, doc_controls)
+            for class_name, doc_controls in class_entries
+            if not is_hidden_package_class(package_ident, class_name)
+        ]
         package_classes.setdefault(parts[:-1], []).extend(
-            (parts[-1], class_name) for class_name, _ in class_entries
+            (parts[-1], class_name) for class_name, _ in visible_class_entries
         )
-        for class_name, doc_controls in class_entries:
+        for class_name, doc_controls in visible_class_entries:
             class_doc_path = Path("reference", *doc_parts(parts[:-1]), class_name, "index.md")
-            package_ident = ".".join(parts[:-1])
             if package_ident in GROUPED_PACKAGE_TITLES:
                 nav[
                     display_parts(parts[:-1]) + (package_group_title(package_ident, parts[-1]), class_name)

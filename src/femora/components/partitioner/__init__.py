@@ -1,4 +1,8 @@
-"""Partitioner package for Femora.
+"""---
+icon: material/graph-outline
+---
+
+Partitioner package for Femora.
 
 This package contains components and algorithms for mesh partitioning and domain 
 decomposition, mapping mesh cells to specific processors or cores for parallel 

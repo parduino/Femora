@@ -1,4 +1,8 @@
-"""Section component package for Femora.
+"""---
+icon: material/view-column-outline
+---
+
+Section component package for Femora.
 
 This package contains runtime section component classes that are registered
 through [SectionManager][femora.core.section_manager.SectionManager] and

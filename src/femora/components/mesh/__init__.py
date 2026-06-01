@@ -1,4 +1,8 @@
-"""Mesh-part component package for Femora.
+"""---
+icon: material/grid
+---
+
+Mesh-part component package for Femora.
 
 This package contains concrete mesh-part component classes representing lines, surfaces,
 volumes, and composite/external structures in an OpenSees analysis. These mesh parts define

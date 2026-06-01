@@ -1,4 +1,8 @@
-"""Actions package for Femora.
+"""---
+icon: material/playlist-play
+---
+
+Actions package for Femora.
 
 This package contains runtime action component classes that generate procedural
 TCL commands in the OpenSees simulation workflow, such as wiping the domain,

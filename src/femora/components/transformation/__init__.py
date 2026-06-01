@@ -1,4 +1,8 @@
-"""Geometric transformation component package for Femora.
+"""---
+icon: material/rotate-3d-variant
+---
+
+Geometric transformation component package for Femora.
 
 This package contains runtime geometric transformation component classes that
 represent OpenSees coordinate transformation commands (``geomTransf``). These

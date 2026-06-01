@@ -1,4 +1,8 @@
-"""Constraint component package for Femora.
+"""---
+icon: material/link-variant
+---
+
+Constraint component package for Femora.
 
 This package contains runtime constraint component classes that define boundary
 conditions and kinematic constraints in OpenSees.

@@ -2,13 +2,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Dict, Optional, Union
 
-from femora.components.analysis.algorithms import Algorithm, AlgorithmManager
 from femora.components.analysis.analysis import Analysis
-from femora.components.analysis.constraint_handlers import ConstraintHandler, ConstraintHandlerManager
-from femora.components.analysis.integrators import Integrator, IntegratorManager, StaticIntegrator, TransientIntegrator
-from femora.components.analysis.numberers import Numberer
-from femora.components.analysis.systems import System, SystemManager
-from femora.components.analysis.convergence_tests import Test, TestManager
+from femora.core.analysis.algorithm import Algorithm
+from femora.core.analysis.algorithm_manager import AlgorithmManager
+from femora.core.analysis.constraint_handler import ConstraintHandler
+from femora.core.analysis.constraint_handler_manager import ConstraintHandlerManager
+from femora.core.analysis.integrator import Integrator, StaticIntegrator, TransientIntegrator
+from femora.core.analysis.integrator_manager import IntegratorManager
+from femora.core.analysis.numberer import Numberer
+from femora.core.analysis.system import System
+from femora.core.analysis.system_manager import SystemManager
+from femora.core.analysis.test import Test
+from femora.core.analysis.test_manager import TestManager
 from femora.core.numberer_manager import NumbererManager
 from femora.core.tagging import CompactRetagPolicy
 
@@ -58,6 +63,161 @@ class AnalysisManager:
         self._analyses[analysis.tag] = analysis
         self._names[analysis.name] = analysis
         return analysis
+
+    def static(
+        self,
+        name: str,
+        constraint_handler: ConstraintHandler,
+        numberer: Numberer,
+        system: System,
+        algorithm: Algorithm,
+        test: Test,
+        integrator: StaticIntegrator,
+        num_steps: int,
+    ) -> Analysis:
+        """Create and register a static Analysis.
+
+        Args:
+            name: Unique analysis name.
+            constraint_handler: Constraint handler for boundary-condition enforcement.
+            numberer: Degree-of-freedom numberer.
+            system: Linear solver system.
+            algorithm: Nonlinear solution algorithm.
+            test: Convergence test.
+            integrator: Static integrator.
+            num_steps: Number of static analysis steps.
+
+        Returns:
+            The registered Analysis instance.
+        """
+        return self.add(
+            Analysis(
+                name=name,
+                analysis_type="Static",
+                constraint_handler=constraint_handler,
+                numberer=numberer,
+                system=system,
+                algorithm=algorithm,
+                test=test,
+                integrator=integrator,
+                num_steps=num_steps,
+            )
+        )
+
+    def transient(
+        self,
+        name: str,
+        constraint_handler: ConstraintHandler,
+        numberer: Numberer,
+        system: System,
+        algorithm: Algorithm,
+        test: Test,
+        integrator: TransientIntegrator,
+        dt: float,
+        num_steps: int | None = None,
+        final_time: float | None = None,
+        num_sublevels: int | None = None,
+        num_substeps: int | None = None,
+    ) -> Analysis:
+        """Create and register a transient Analysis.
+
+        Args:
+            name: Unique analysis name.
+            constraint_handler: Constraint handler for boundary-condition enforcement.
+            numberer: Degree-of-freedom numberer.
+            system: Linear solver system.
+            algorithm: Nonlinear solution algorithm.
+            test: Convergence test.
+            integrator: Transient integrator.
+            dt: Time-step increment.
+            num_steps: Optional number of transient steps.
+            final_time: Optional end time. Exactly one of `num_steps` or `final_time`
+                must be provided.
+            num_sublevels: Optional transient sublevel count for retry logic.
+            num_substeps: Optional transient substep count for retry logic.
+
+        Returns:
+            The registered Analysis instance.
+        """
+        return self.add(
+            Analysis(
+                name=name,
+                analysis_type="Transient",
+                constraint_handler=constraint_handler,
+                numberer=numberer,
+                system=system,
+                algorithm=algorithm,
+                test=test,
+                integrator=integrator,
+                num_steps=num_steps,
+                final_time=final_time,
+                dt=dt,
+                num_sublevels=num_sublevels,
+                num_substeps=num_substeps,
+            )
+        )
+
+    def variable_transient(
+        self,
+        name: str,
+        constraint_handler: ConstraintHandler,
+        numberer: Numberer,
+        system: System,
+        algorithm: Algorithm,
+        test: Test,
+        integrator: TransientIntegrator,
+        dt: float,
+        dt_min: float,
+        dt_max: float,
+        jd: int,
+        num_steps: int | None = None,
+        final_time: float | None = None,
+        num_sublevels: int | None = None,
+        num_substeps: int | None = None,
+    ) -> Analysis:
+        """Create and register a variable-transient Analysis.
+
+        Args:
+            name: Unique analysis name.
+            constraint_handler: Constraint handler for boundary-condition enforcement.
+            numberer: Degree-of-freedom numberer.
+            system: Linear solver system.
+            algorithm: Nonlinear solution algorithm.
+            test: Convergence test.
+            integrator: Transient integrator.
+            dt: Initial time-step increment.
+            dt_min: Minimum allowable time step.
+            dt_max: Maximum allowable time step.
+            jd: Desired number of iterations per step.
+            num_steps: Optional number of transient steps.
+            final_time: Optional end time. Exactly one of `num_steps` or `final_time`
+                must be provided.
+            num_sublevels: Optional transient sublevel count for retry logic.
+            num_substeps: Optional transient substep count for retry logic.
+
+        Returns:
+            The registered Analysis instance.
+        """
+        return self.add(
+            Analysis(
+                name=name,
+                analysis_type="VariableTransient",
+                constraint_handler=constraint_handler,
+                numberer=numberer,
+                system=system,
+                algorithm=algorithm,
+                test=test,
+                integrator=integrator,
+                num_steps=num_steps,
+                final_time=final_time,
+                dt=dt,
+                dt_min=dt_min,
+                dt_max=dt_max,
+                jd=jd,
+                num_sublevels=num_sublevels,
+                num_substeps=num_substeps,
+            )
+        )
 
     def default_transient(
         self,

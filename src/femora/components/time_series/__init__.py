@@ -1,4 +1,8 @@
-"""Time series component package for Femora.
+"""---
+icon: material/chart-timeline-variant
+---
+
+Time series component package for Femora.
 
 This package contains runtime time-series definitions registered through
 [TimeSeriesManager][femora.core.time_series_manager.TimeSeriesManager] and

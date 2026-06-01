@@ -1,4 +1,8 @@
-"""Pattern component package for Femora.
+"""---
+icon: material/sine-wave
+---
+
+Pattern component package for Femora.
 
 This package contains runtime load and excitation pattern definitions
 registered through [PatternManager][femora.core.pattern_manager.PatternManager]

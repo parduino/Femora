@@ -1,4 +1,8 @@
-"""Specialized section components for Femora.
+"""---
+icon: material/star-outline
+---
+
+Specialized section components for Femora.
 
 This subpackage contains purpose-built ``section`` models for isolation,
 coupled bidirectional plasticity, and other specialized component behavior.

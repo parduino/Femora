@@ -1,21 +1,4 @@
-from typing import Dict, List, Type, Union
-
-from femora.core.tagged_component_manager import TaggedComponentManager
-from femora.core.analysis_component_base import AnalysisComponent
-
-
-class Algorithm(AnalysisComponent):
-    """Base class for OpenSees solution algorithms."""
-
-    _algorithms: Dict[str, Type["Algorithm"]] = {}
-
-    def __init__(self, algorithm_type: str) -> None:
-        super().__init__()
-        self.algorithm_type = algorithm_type
-
-    @staticmethod
-    def register_algorithm(name: str, algorithm_class: Type["Algorithm"]) -> None:
-        Algorithm._algorithms[name.lower()] = algorithm_class
+from femora.core.analysis.algorithm import Algorithm
 
 
 class LinearAlgorithm(Algorithm):
@@ -559,38 +542,6 @@ class ExpressNewtonAlgorithm(Algorithm):
             
         return cmd
     
-
-
-class AlgorithmManager(TaggedComponentManager[Algorithm]):
-    def __init__(self, analysis_manager) -> None:
-        super().__init__(analysis_manager, Algorithm, "_algorithms")
-
-    def linear(self, **kwargs) -> Algorithm:
-        return self.add(LinearAlgorithm(**kwargs))
-
-    def newton(self, **kwargs) -> Algorithm:
-        return self.add(NewtonAlgorithm(**kwargs))
-
-    def modifiednewton(self, **kwargs) -> Algorithm:
-        return self.add(ModifiedNewtonAlgorithm(**kwargs))
-
-    def newtonlinesearch(self, **kwargs) -> Algorithm:
-        return self.add(NewtonLineSearchAlgorithm(**kwargs))
-
-    def krylovnewton(self, **kwargs) -> Algorithm:
-        return self.add(KrylovNewtonAlgorithm(**kwargs))
-
-    def secantnewton(self, **kwargs) -> Algorithm:
-        return self.add(SecantNewtonAlgorithm(**kwargs))
-
-    def bfgs(self, **kwargs) -> Algorithm:
-        return self.add(BFGSAlgorithm(**kwargs))
-
-    def broyden(self, **kwargs) -> Algorithm:
-        return self.add(BroydenAlgorithm(**kwargs))
-
-    def expressnewton(self, **kwargs) -> Algorithm:
-        return self.add(ExpressNewtonAlgorithm(**kwargs))
 
 
 # Register all algorithms

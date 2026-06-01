@@ -1,4 +1,8 @@
-"""Uniaxial material components for Femora.
+"""---
+icon: material/arrow-expand-horizontal
+---
+
+Uniaxial material components for Femora.
 
 This subpackage contains ``uniaxialMaterial`` component classes used for
 springs, fibers, truss-style response, and other one-dimensional constitutive

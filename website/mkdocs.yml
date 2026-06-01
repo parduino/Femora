@@ -1,7 +1,7 @@
 site_name: Femora
 site_url: https://femora.io/docs/
-repo_url: https://github.com/amnp95/Femora
-repo_name: amnp95/Femora
+repo_url: https://github.com/GeotechUW/Femora
+repo_name: GeotechUW/Femora
 
 theme:
   name: material
@@ -44,7 +44,6 @@ markdown_extensions:
 
 extra_javascript:
   - javascripts/mathjax.js
-  - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 # --- END Math Config ---

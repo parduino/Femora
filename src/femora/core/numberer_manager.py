@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Dict, TYPE_CHECKING
 
-from femora.components.analysis.numberers import Numberer
+from femora.core.analysis.numberer import Numberer
+import femora.components.analysis.numberers
 
 if TYPE_CHECKING:
     from femora.core.analysis_manager import AnalysisManager

@@ -221,7 +221,7 @@ def apply_rectangular_absorbing_layer(mesh_maker: "Model", config: dict) -> bool
     absorbing = MultiBlock()
 
     total_cells = clipped.n_cells
-    tqdm_progress = tqdm.tqdm(range(total_cells))
+    tqdm_progress = tqdm.tqdm(range(total_cells), desc="Boundary absorber", leave=False)
     tqdm_progress.reset()
     material_tags = []
     absorbing_regions = []
@@ -407,7 +407,7 @@ def apply_rectangular_absorbing_layer(mesh_maker: "Model", config: dict) -> bool
         merge_points=False,
         tolerance=1e-6,
         inplace=False,
-        progress_bar=True,
+        progress_bar=False,
     )
     mesh_maker.assembled_mesh.set_active_scalars("AbsorbingRegion")
 
@@ -443,7 +443,7 @@ def apply_rectangular_absorbing_layer(mesh_maker: "Model", config: dict) -> bool
             produce_merge_map=False,
             average_point_data=False,
             merging_array_name="drm_absorbing_interface",
-            progress_bar=True,
+            progress_bar=False,
         )
         del mesh_maker.assembled_mesh.point_data["drm_absorbing_interface"]
 

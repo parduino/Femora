@@ -1,4 +1,8 @@
-"""Ground motion component package for Femora.
+"""---
+icon: material/waveform
+---
+
+Ground motion component package for Femora.
 
 This package contains runtime ground-motion definitions registered through
 [GroundMotionManager][femora.core.ground_motion_manager.GroundMotionManager]
