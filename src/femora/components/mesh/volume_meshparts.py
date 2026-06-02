@@ -1,5 +1,6 @@
 import numpy as np
 import pyvista as pv
+from typing import Optional
 
 from femora.core.element_base import Element
 from femora.core.meshpart_base import MeshPart
@@ -423,4 +424,3 @@ class GeometricStructuredRectangular3D(MeshPart):
             bool: True if compatible, False otherwise.
         """
         return element in cls._compatible_elements
-from typing import Optional
