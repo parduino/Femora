@@ -882,7 +882,7 @@ class Assembler:
 
 
     # Big announcement box
-    def _announce_required_cores(self, elapsed_seconds: float | None = None):
+    def _announce_required_cores(self, elapsed_seconds: Optional[float] = None):
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s [%(levelname)s] %(message)s",
