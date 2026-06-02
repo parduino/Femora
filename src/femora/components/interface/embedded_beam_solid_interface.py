@@ -251,7 +251,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         # t_start_loop = time.time()
         while solid_mesh.n_cells > 0:
             solid_mesh_largest = solid_mesh.extract_largest()
-            surf = solid_mesh_largest.extract_surface()
+            surf = solid_mesh_largest.extract_surface(algorithm="dataset_surface")
             beam_mesh.compute_implicit_distance(surf,inplace=True)
             beams = beam_mesh.point_data["implicit_distance"] <= 0
             beams = beam_mesh.extract_points(beams, include_cells=True, adjacent_cells=True, progress_bar=False)
