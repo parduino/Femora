@@ -65,7 +65,7 @@ class MPConstraintManager:
             raise ValueError("Assembled mesh is not created yet")
 
         mesh = self._mesh_maker.assembled_mesh.copy()
-        surface = mesh.extract_surface()
+        surface = mesh.extract_surface(algorithm="dataset_surface")
         xmin, xmax, ymin, ymax, zmin, zmax = surface.bounds
         eps = tol
         if direction == 3:
