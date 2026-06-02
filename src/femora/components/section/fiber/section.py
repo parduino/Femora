@@ -162,6 +162,7 @@ class FiberSection(Section):
             area: Cross-sectional area of the fiber.
             material: Uniaxial material reference for the fiber.
         """
+        material = self.resolve_material(material)
         fiber = FiberElement(y_loc, z_loc, area, material)
         self.fibers.append(fiber)
         if self.material is None:
@@ -188,6 +189,7 @@ class FiberSection(Section):
             y2: Maximum local y-coordinate of the rectangle.
             z2: Maximum local z-coordinate of the rectangle.
         """
+        material = self.resolve_material(material)
         patch = RectangularPatch(material, num_subdiv_y, num_subdiv_z, y1, z1, y2, z2)
         self.patches.append(patch)
         if self.material is None:
@@ -208,6 +210,7 @@ class FiberSection(Section):
             num_subdiv_jk: Subdivisions along the second direction (edge 2-3).
             vertices: Exactly 4 (y, z) vertex pairs defining the boundary.
         """
+        material = self.resolve_material(material)
         patch = QuadrilateralPatch(material, num_subdiv_ij, num_subdiv_jk, vertices)
         self.patches.append(patch)
         if self.material is None:
@@ -238,6 +241,7 @@ class FiberSection(Section):
             start_ang: Starting angle in degrees.
             end_ang: Ending angle in degrees.
         """
+        material = self.resolve_material(material)
         patch = CircularPatch(
             material,
             num_subdiv_circ,
@@ -274,6 +278,7 @@ class FiberSection(Section):
             y2: Y-coordinate of end point.
             z2: Z-coordinate of end point.
         """
+        material = self.resolve_material(material)
         layer = StraightLayer(material, num_fibers, area_per_fiber, y1, z1, y2, z2)
         self.layers.append(layer)
         if self.material is None:
@@ -302,6 +307,7 @@ class FiberSection(Section):
             start_ang: Optional starting angle in degrees.
             end_ang: Optional ending angle in degrees.
         """
+        material = self.resolve_material(material)
         layer = CircularLayer(
             material,
             num_fibers,

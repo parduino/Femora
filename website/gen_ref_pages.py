@@ -24,6 +24,36 @@ TOP_LEVEL_LABELS = {
     "io": "io",
 }
 
+COMPONENT_PACKAGE_ORDER = [
+    "material",
+    "section",
+    "transformation",
+    "element",
+    "damping",
+    "region",
+    "mesh",
+    "geometry_ops",
+    "interface",
+    "constraint",
+    "time_series",
+    "pattern",
+    "ground_motion",
+    "load",
+    "recorder",
+    "actions",
+    "analysis",
+    "mask",
+    "event",
+    "partitioner",
+    "simcenter",
+]
+COMPONENT_PACKAGE_ORDER_INDEX = {
+    name: index for index, name in enumerate(COMPONENT_PACKAGE_ORDER)
+}
+
+for package_name in COMPONENT_PACKAGE_ORDER:
+    nav[("components", package_name)] = f"components/{package_name}/index.md"
+
 
 def display_parts(parts: tuple[str, ...]) -> tuple[str, ...]:
     """Return navigation parts with the top-level ``femora`` package collapsed."""
@@ -40,6 +70,19 @@ def doc_parts(parts: tuple[str, ...]) -> tuple[str, ...]:
     if parts and parts[0] == "femora":
         return parts[1:]
     return parts
+
+
+def package_sort_key(item: tuple[tuple[str, ...], Path, str]) -> tuple:
+    """Return a stable nav sort key for package landing pages."""
+    nav_parts, _path, _description = item
+    if len(nav_parts) >= 3 and nav_parts[:2] == ("femora", "components"):
+        top_level_name = nav_parts[2]
+        return (
+            0,
+            COMPONENT_PACKAGE_ORDER_INDEX.get(top_level_name, len(COMPONENT_PACKAGE_ORDER)),
+            nav_parts[3:],
+        )
+    return (1, nav_parts)
 
 
 def should_skip(parts: tuple[str, ...]) -> bool:
@@ -122,17 +165,23 @@ def split_front_matter(docstring: str) -> tuple[str, str]:
 
 GROUPED_PACKAGE_TITLES: dict[str, dict[str, str]] = {
     "femora.components.analysis": {
-        "analysis": "core analysis",
-        "algorithms": "algorithms",
-        "convergence_tests": "convergence tests",
-        "constraint_handlers": "constraint handlers",
-        "integrators": "integrators",
-        "numberers": "numberers",
-        "systems": "systems",
+        "constraint_handlers": "⛓ constraint handlers",
+        "numberers": "⌗ numberers",
+        "systems": "⚙ systems",
+        "algorithms": "λ algorithms",
+        "convergence_tests": "✓ convergence tests",
+        "integrators": "∫ integrators",
+        "analysis": "◎ core analysis",
     },
     "femora.components.constraint": {
         "sp_constraints": "sp constraints",
         "mp_constraints": "mp constraints",
+    },
+    "femora.components.element": {
+        "beam": "─ beam",
+        "brick": "▣ brick",
+        "quad": "▭ quad",
+        "special": "✦ special",
     },
 }
 
@@ -362,8 +411,10 @@ def parse_element_manager_groups() -> dict[str, str]:
 
 
 ELEMENT_MANAGER_GROUPS = parse_element_manager_groups()
+ELEMENT_GROUP_TITLES = GROUPED_PACKAGE_TITLES["femora.components.element"]
 GROUPED_PACKAGE_TITLES["femora.components.element"] = {
-    module_name: group_name for module_name, group_name in ELEMENT_MANAGER_GROUPS.items()
+    module_name: ELEMENT_GROUP_TITLES.get(group_name, group_name)
+    for module_name, group_name in ELEMENT_MANAGER_GROUPS.items()
 }
 
 
@@ -492,6 +543,7 @@ print(f"DEBUG: Found {len(files)} python files in {src_root}")
 package_infos: list[tuple[tuple[str, ...], Path, str]] = []
 package_classes: dict[tuple[str, ...], list[tuple[str, str]]] = {}
 manual_package_nav_entries: dict[str, list[tuple[int, tuple[str, ...], str]]] = {}
+grouped_package_nav_entries: dict[str, list[tuple[int, tuple[str, ...], str]]] = {}
 
 for path in files:
     module_path = path.relative_to(src_root).with_suffix("")
@@ -545,9 +597,16 @@ for path in files:
             else:
                 class_doc_path = Path("reference", *doc_parts(parts[:-1]), class_name, "index.md")
                 if package_ident in GROUPED_PACKAGE_TITLES:
-                    nav[
-                        display_parts(parts[:-1]) + (package_group_title(package_ident, parts[-1]), class_name)
-                    ] = class_doc_path.relative_to("reference").as_posix()
+                    grouped_package_nav_entries.setdefault(package_ident, []).append(
+                        (
+                            list(GROUPED_PACKAGE_TITLES[package_ident].keys()).index(parts[-1])
+                            if parts[-1] in GROUPED_PACKAGE_TITLES[package_ident]
+                            else len(GROUPED_PACKAGE_TITLES[package_ident]),
+                            display_parts(parts[:-1])
+                            + (package_group_title(package_ident, parts[-1]), class_name),
+                            class_doc_path.relative_to("reference").as_posix(),
+                        )
+                    )
                 else:
                     nav[display_parts(parts[:-1]) + (class_name,)] = class_doc_path.relative_to(
                         "reference"
@@ -578,7 +637,7 @@ for path in files:
             nav[display_parts(parts)] = doc_path.relative_to("reference").as_posix()
             write_module_page(doc_path, ".".join(parts), path)
 
-for nav_parts, path, description in package_infos:
+for nav_parts, path, description in sorted(package_infos, key=package_sort_key):
     doc_path = Path("reference", *doc_parts(nav_parts), "index.md")
     nav[display_parts(nav_parts)] = doc_path.relative_to("reference").as_posix()
     class_links = [
@@ -620,6 +679,11 @@ for nav_parts, path, description in package_infos:
 for package_ident, entries in manual_package_nav_entries.items():
     del package_ident
     for _order, nav_parts, rel_path in sorted(entries, key=lambda item: item[0]):
+        nav[nav_parts] = rel_path
+
+for package_ident, entries in grouped_package_nav_entries.items():
+    del package_ident
+    for _order, nav_parts, rel_path in sorted(entries, key=lambda item: (item[0], item[1])):
         nav[nav_parts] = rel_path
 
 with mkdocs_gen_files.open("reference/SUMMARY.md", "w") as nav_file:
