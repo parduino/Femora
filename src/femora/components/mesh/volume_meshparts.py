@@ -45,7 +45,7 @@ class StructuredRectangular3D(MeshPart):
         self,
         user_name: str,
         element: Element,
-        region: RegionBase | None = None,
+        region: Optional[RegionBase] = None,
         *,
         x_min: float,
         x_max: float,
@@ -173,7 +173,7 @@ class CustomRectangularGrid3D(MeshPart):
         self,
         user_name: str,
         element: Element,
-        region: RegionBase | None = None,
+        region: Optional[RegionBase] = None,
         *,
         x_coords: str,
         y_coords: str,
@@ -285,7 +285,7 @@ class GeometricStructuredRectangular3D(MeshPart):
         self,
         user_name: str,
         element: Element,
-        region: RegionBase | None = None,
+        region: Optional[RegionBase] = None,
         *,
         x_min: float,
         x_max: float,
@@ -423,3 +423,4 @@ class GeometricStructuredRectangular3D(MeshPart):
             bool: True if compatible, False otherwise.
         """
         return element in cls._compatible_elements
+from typing import Optional
