@@ -110,8 +110,6 @@ class RecorderManager:
         line_cells_only: bool = True,
         region_name: str = "pile_mpco_region",
     ) -> Recorder:
-        import numpy as np
-
         from femora.components.recorder.recorders import MPCORecorder
 
         if node_responses is None:
@@ -119,14 +117,78 @@ class RecorderManager:
         if element_responses is None:
             element_responses = ["force"]
 
+        pile_region, cores_arg = self._create_pile_region_for_meshparts(
+            meshparts=meshparts,
+            line_cells_only=line_cells_only,
+            region_name=region_name,
+            caller="pile_mpco",
+        )
+
+        return self.add(
+            MPCORecorder(
+                file_name=file_name,
+                node_responses=node_responses,
+                element_responses=element_responses,
+                node_sensitivities=node_sensitivities or [],
+                regions=[pile_region],
+                delta_t=delta_t,
+                num_steps=num_steps,
+                cores=cores_arg,
+            )
+        )
+
+    def pile_vtkhdf(
+        self,
+        meshparts,
+        file_base_name: str,
+        *,
+        resp_types: Optional[List[str]] = None,
+        delta_t: Optional[float] = None,
+        r_tol_dt: Optional[float] = None,
+        line_cells_only: bool = True,
+        region_name: str = "pile_vtkhdf_region",
+    ) -> Recorder:
+        from femora.components.recorder.recorders import VTKHDFRecorder
+
+        if resp_types is None:
+            resp_types = ["disp", "vel", "accel", "force3D", "localForce3D"]
+
+        pile_region, cores_arg = self._create_pile_region_for_meshparts(
+            meshparts=meshparts,
+            line_cells_only=line_cells_only,
+            region_name=region_name,
+            caller="pile_vtkhdf",
+        )
+
+        return self.add(
+            VTKHDFRecorder(
+                file_base_name=file_base_name,
+                resp_types=resp_types,
+                delta_t=delta_t,
+                r_tol_dt=r_tol_dt,
+                region=pile_region,
+                cores=cores_arg,
+            )
+        )
+
+    def _create_pile_region_for_meshparts(
+        self,
+        *,
+        meshparts,
+        line_cells_only: bool,
+        region_name: str,
+        caller: str,
+    ):
+        import numpy as np
+
         mm = self._mesh_maker
         mesh = self._mesh_maker.assembled_mesh
         if mesh is None:
-            raise ValueError("pile_mpco requires an assembled mesh (call Assemble first).")
+            raise ValueError(f"{caller} requires an assembled mesh (call Assemble first).")
 
         resolved: Dict[str, object] = {}
         if not meshparts:
-            raise ValueError("pile_mpco: meshparts list must not be empty.")
+            raise ValueError(f"{caller}: meshparts list must not be empty.")
         for mp in meshparts:
             if isinstance(mp, str):
                 part = mm.meshpart.get(mp)
@@ -170,7 +232,7 @@ class RecorderManager:
 
         idxs = np.where(mask)[0]
         if idxs.size == 0:
-            raise ValueError("pile_mpco: no matching line-mesh cells for the given meshparts.")
+            raise ValueError(f"{caller}: no matching line-mesh cells for the given meshparts.")
 
         pile_region = mm.region.element()
         pile_region._name = region_name
@@ -190,18 +252,7 @@ class RecorderManager:
         if selected_cores:
             cores_arg = selected_cores[0] if len(selected_cores) == 1 else selected_cores
 
-        return self.add(
-            MPCORecorder(
-                file_name=file_name,
-                node_responses=node_responses,
-                element_responses=element_responses,
-                node_sensitivities=node_sensitivities or [],
-                regions=[pile_region],
-                delta_t=delta_t,
-                num_steps=num_steps,
-                cores=cores_arg,
-            )
-        )
+        return pile_region, cores_arg
 
 
 __all__ = ["RecorderManager"]
