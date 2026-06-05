@@ -90,6 +90,7 @@ class SectionManager:
     their own section collections.
     """
     _section_types: Dict[str, Type[Section]] = {}
+    _builtins_loaded = False
 
     def __init__(self, mesh_maker: Model):
         """Create an empty manager with tags starting at ``1``.
@@ -115,6 +116,7 @@ class SectionManager:
         self._names: Dict[str, Section] = {}
         self._start_tag = 1
         self._tagging = CompactRetagPolicy[Section]()
+        self._ensure_builtin_section_types_loaded()
         self.beam = _BeamSectionNamespace(self)
         self.composite = _CompositeSectionNamespace(self)
         self.fiber = _FiberSectionNamespace(self)
@@ -263,6 +265,15 @@ class SectionManager:
     def register_section_type(cls, name: str, section_class: Type[Section]) -> None:
         """Register a concrete section type for manager-owned creation."""
         cls._section_types[name] = section_class
+
+    @classmethod
+    def _ensure_builtin_section_types_loaded(cls) -> None:
+        """Load bundled section families once so manager namespaces just work."""
+        if cls._builtins_loaded:
+            return
+        import femora.components.section  # noqa: F401
+
+        cls._builtins_loaded = True
 
     @classmethod
     def get_section_types(cls) -> list[str]:

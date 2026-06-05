@@ -25,6 +25,14 @@ class MPConstraintManager:
         self._start_tag = 1
         self._tagging = CompactRetagPolicy[MPConstraint]()
 
+    @staticmethod
+    def _extract_surface_compat(mesh):
+        """Return a surface mesh across PyVista versions."""
+        try:
+            return mesh.extract_surface(algorithm="dataset_surface")
+        except TypeError:
+            return mesh.extract_surface()
+
     def __len__(self) -> int:
         return len(self._constraints)
 
@@ -65,7 +73,7 @@ class MPConstraintManager:
             raise ValueError("Assembled mesh is not created yet")
 
         mesh = self._mesh_maker.assembled_mesh.copy()
-        surface = mesh.extract_surface()
+        surface = self._extract_surface_compat(mesh)
         xmin, xmax, ymin, ymax, zmin, zmax = surface.bounds
         eps = tol
         if direction == 3:

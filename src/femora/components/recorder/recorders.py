@@ -533,6 +533,7 @@ class VTKHDFRecorder(Recorder):
                 resp_types: List of strings indicating response types to record (required).
                 delta_t: Optional time interval for recording.
                 r_tol_dt: Optional relative tolerance for time step matching.
+                region: Optional region tag, name, or RegionBase instance used to restrict VTKHDF output to one region. If not specified, the entire model will be recorded.
 
         Raises:
             ValueError: If file_base_name or resp_types are not specified, or if
@@ -543,13 +544,20 @@ class VTKHDFRecorder(Recorder):
         self.resp_types = kwargs.get("resp_types", [])
         self.delta_t = kwargs.get("delta_t", None)
         self.r_tol_dt = kwargs.get("r_tol_dt", None)
+        if "region" in kwargs and "regions" in kwargs:
+            raise ValueError("Use only one of region or regions for VTKHDFRecorder")
+        self.region = kwargs.get("region", kwargs.get("regions", None))
 
         if not self.file_base_name:
             raise ValueError("File base name must be specified")
         if not self.resp_types:
             raise ValueError("At least one response type must be specified")
         valid_resp_types = [
-            "disp", "vel", "accel", "stress3D6", "strain3D6", "stress2D3", "strain2D3",
+            "disp", "vel", "accel", 
+            "stress3D6", "strain3D6", 
+            "stress2D3", "strain2D3",
+            "force2D", "force3D", 
+            "localForce2D", "localForce3D",
         ]
         for resp_type in self.resp_types:
             if resp_type not in valid_resp_types:
@@ -589,6 +597,12 @@ class VTKHDFRecorder(Recorder):
         # Add response types
         for resp_type in self.resp_types:
             cmd += f" {resp_type}"
+
+        if self.region is not None:
+            region_tags = self._resolve_regions(self.region)
+            if len(region_tags) != 1:
+                raise ValueError("VTKHDFRecorder supports exactly one region")
+            cmd += f" -region {region_tags[0]}"
         
         return cmd
 

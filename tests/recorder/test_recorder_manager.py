@@ -1,4 +1,6 @@
 import pytest
+import numpy as np
+import pyvista as pv
 
 from femora.core.model import Model
 from femora.components.recorder.recorders import (
@@ -127,3 +129,94 @@ def test_clear_model_resets_recorders(mesh_maker):
     assert len(mesh_maker.recorder.get_all()) == 1
     mesh_maker.clear_model()
     assert len(mesh_maker.recorder.get_all()) == 0
+
+
+def test_vtkhdf_supports_force_response_types_and_region_tag(mesh_maker):
+    recorder = mesh_maker.recorder.vtkhdf(
+        file_base_name="results",
+        resp_types=["force2D", "force3D", "localForce2D", "localForce3D"],
+        region=7,
+    )
+
+    tcl = recorder.to_tcl()
+    assert "force2D force3D localForce2D localForce3D -region 7" in tcl
+
+
+def test_vtkhdf_supports_region_instance(mesh_maker):
+    region = mesh_maker.region.element()
+    recorder = mesh_maker.recorder.vtkhdf(
+        file_base_name="results",
+        resp_types=["disp"],
+        region=region,
+    )
+
+    assert f"-region {region.tag}" in recorder.to_tcl()
+
+
+def test_vtkhdf_rejects_multiple_regions(mesh_maker):
+    recorder = mesh_maker.recorder.vtkhdf(
+        file_base_name="results",
+        resp_types=["disp"],
+        regions=[1, 2],
+    )
+
+    with pytest.raises(ValueError, match="exactly one region"):
+        recorder.to_tcl()
+
+
+class _DummyMeshPart:
+    def __init__(self, user_name, tag):
+        self.user_name = user_name
+        self.tag = tag
+
+
+def _install_pile_mesh_fixture(mesh_maker):
+    points = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 1.0],
+        ]
+    )
+    cells = np.array([2, 0, 1, 2, 2, 3])
+    cell_types = np.array([pv.CellType.LINE, pv.CellType.LINE])
+    mesh = pv.UnstructuredGrid(cells, cell_types, points)
+    mesh.cell_data["MeshPartTag_celldata"] = np.array([10, 20])
+    mesh.cell_data["Core"] = np.array([0, 1])
+    mesh.cell_data["Region"] = np.array([0, 0])
+    mesh_maker.assembled_mesh = mesh
+
+    parts = {
+        "pile1": _DummyMeshPart("pile1", 10),
+        "pile2": _DummyMeshPart("pile2", 20),
+    }
+    mesh_maker.meshpart.get = lambda name: parts.get(name)
+    return mesh, parts
+
+
+def test_pile_vtkhdf_creates_region_and_vtkhdf_recorder(mesh_maker):
+    mesh, _ = _install_pile_mesh_fixture(mesh_maker)
+
+    recorder = mesh_maker.recorder.pile_vtkhdf(
+        ["pile1"],
+        file_base_name="piles",
+        resp_types=["disp", "force3D", "localForce3D"],
+        delta_t=0.01,
+    )
+
+    assert isinstance(recorder, VTKHDFRecorder)
+    assert mesh.cell_data["Region"][0] == recorder.region.tag
+    assert mesh.cell_data["Region"][1] == 0
+    tcl = recorder.to_tcl()
+    assert "recorder vtkhdf" in tcl
+    assert "disp force3D localForce3D" in tcl
+    assert f"-region {recorder.region.tag}" in tcl
+
+
+def test_pile_vtkhdf_uses_default_response_types(mesh_maker):
+    _install_pile_mesh_fixture(mesh_maker)
+
+    recorder = mesh_maker.recorder.pile_vtkhdf(["pile1"], file_base_name="piles")
+
+    assert recorder.resp_types == ["disp", "vel", "accel", "force3D", "localForce3D"]

@@ -1,5 +1,6 @@
 import numpy as np
 import pyvista as pv
+from typing import Optional
 
 from femora.core.element_base import Element
 from femora.core.meshpart_base import MeshPart
@@ -45,7 +46,7 @@ class StructuredRectangular3D(MeshPart):
         self,
         user_name: str,
         element: Element,
-        region: RegionBase | None = None,
+        region: Optional[RegionBase] = None,
         *,
         x_min: float,
         x_max: float,
@@ -173,7 +174,7 @@ class CustomRectangularGrid3D(MeshPart):
         self,
         user_name: str,
         element: Element,
-        region: RegionBase | None = None,
+        region: Optional[RegionBase] = None,
         *,
         x_coords: str,
         y_coords: str,
@@ -285,7 +286,7 @@ class GeometricStructuredRectangular3D(MeshPart):
         self,
         user_name: str,
         element: Element,
-        region: RegionBase | None = None,
+        region: Optional[RegionBase] = None,
         *,
         x_min: float,
         x_max: float,

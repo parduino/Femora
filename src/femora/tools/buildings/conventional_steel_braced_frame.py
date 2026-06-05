@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import contextlib
+import copy
+import io
 import math
 import os
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pyvista as pv
@@ -21,9 +24,10 @@ from femora.constants import FEMORA_MAX_NDF
 from femora.core.element_base import Element
 from femora.core.pattern_base import Pattern
 from femora.tools.sections import aisc
+from femora.tools.buildings.building import Building
 
 
-class ConventionalSteelBracedFrame:
+class ConventionalSteelBracedFrame(Building):
     """Generic conventional concentrically braced steel building archetype.
 
     The default model is a symmetric 5-story, 24 m by 24 m braced frame intended
@@ -399,7 +403,7 @@ class ConventionalSteelBracedFrame:
                 continue
             model.constraint.sp.fix(int(idx + model._start_nodetag), [1, 1, 1, 1, 1, 1])
 
-    def gravity_pattern(self, model, g: float) -> Pattern:
+    def create_gravity_pattern(self, model, g: float) -> Pattern:
         """Create a plain gravity load pattern using true floor masses times ``g``."""
         mesh = model.assembled_mesh
         if mesh is None:
@@ -431,6 +435,287 @@ class ConventionalSteelBracedFrame:
             if not node_mask.is_empty():
                 pattern.add_load.node(node_mask=node_mask, values=[0.0, 0.0, fz, 0.0, 0.0, 0.0])
         return pattern
+
+    def get_modes(
+        self,
+        num_modes: int,
+        *,
+        material: Optional[Union[Dict[str, object], Callable]] = None,
+        material_density: Optional[float] = None,
+        opensees_exe: Optional[str] = None,
+        print_results: bool = False,
+        plot: bool = False,
+        plot_scale: Optional[float] = None,
+    ) -> Dict[str, np.ndarray]:
+        """Return modal frequencies, periods, and eigenvectors.
+
+        This method builds a copy of the braced frame in a separate temporary
+        ``Model`` instance, applies fixed-base and rigid-diaphragm constraints,
+        runs OpenSees from a temporary Tcl script, and parses modal data from
+        OpenSees output.
+
+        Args:
+            num_modes: Number of eigen modes to request from OpenSees.
+            material: Material definition for the isolated modal model. Use
+                ``None`` to create the default A992 elastic isotropic steel
+                material. Pass a ``dict`` to create an elastic isotropic
+                material from values such as ``E``, ``nu``, and ``rho``. Pass a
+                callable when the material must be created manually inside the
+                temporary modal model.
+            material_density: Density used by ``build()`` to compute member
+                self-mass. This is separate from the material object because
+                member mass is a building-generation calculation, while
+                ``rho`` on the material is an OpenSees material parameter. If
+                omitted, Femora uses ``material["rho"]`` for dict materials,
+                attempts to infer density from callable-created materials, and
+                otherwise falls back to the default A992 density.
+            opensees_exe: Optional OpenSees executable path. If omitted, the
+                ``FEMORA_OPENSEES`` environment variable is used.
+            print_results: If ``True``, print a formatted table of modal
+                frequencies and periods.
+            plot: If ``True``, show PyVista mode-shape plots for the requested
+                modes using the isolated building mesh.
+            plot_scale: Optional deformation scale for plotting. If omitted,
+                a scale is estimated from the mesh size and eigenvector
+                magnitudes.
+
+        Returns:
+            Dictionary with ``frequencies``, ``periods``, ``node_tags``, and
+            ``eigenvectors``. The eigenvector array has shape
+            ``(num_modes, num_nodes, ndof)``.
+
+        !!! note "Material ownership"
+
+            ``get_modes()`` builds a separate temporary ``Model()`` so modal
+            analysis cannot accidentally mutate the user's active model. For
+            that reason, do not pass a ``Material`` object from another model.
+            Use a material dictionary or a callable factory so the material is
+            created inside the temporary modal model with the correct managers
+            and tags.
+
+        Examples:
+            Default A992 steel:
+
+            ```python
+            result = frame.get_modes(
+                num_modes=6,
+                opensees_exe=opensees_path,
+                print_results=True,
+            )
+            ```
+
+            Custom elastic isotropic material from a dictionary:
+
+            ```python
+            result = frame.get_modes(
+                num_modes=6,
+                material={
+                    "name": "CustomSteel",
+                    "E": 2.0e8,
+                    "nu": 0.3,
+                    "rho": 7.85,
+                },
+                opensees_exe=opensees_path,
+            )
+            ```
+
+            Advanced material factory:
+
+            ```python
+            result = frame.get_modes(
+                num_modes=6,
+                material=lambda model: model.material.nd.elastic_isotropic(
+                    "CustomSteel",
+                    E=2.0e8,
+                    nu=0.3,
+                    rho=7.85,
+                ),
+                material_density=7.85,
+            )
+            ```
+        """
+        if num_modes < 1:
+            raise ValueError("num_modes must be a positive integer")
+
+        executable = opensees_exe or os.environ.get("FEMORA_OPENSEES")
+        if not executable:
+            raise RuntimeError(
+                "OpenSees executable was not provided. Pass opensees_exe or set FEMORA_OPENSEES."
+            )
+
+        import femora as fm
+
+        cloned_frame = ConventionalSteelBracedFrame(
+            name_prefix=self.name_prefix,
+            num_stories=self.num_stories,
+            x_bays=copy.deepcopy(self.x_bays),
+            y_bays=copy.deepcopy(self.y_bays),
+            story_heights=copy.deepcopy(self.story_heights),
+            floor_masses=copy.deepcopy(self.floor_masses),
+            brace_bays_x=copy.deepcopy(self.brace_bays_x),
+            brace_bays_y=copy.deepcopy(self.brace_bays_y),
+            brace_pattern=self.brace_pattern,
+            brace_area_scale=self.brace_area_scale,
+            target_period=self.target_period,
+            column_sections=copy.deepcopy(self.column_sections),
+            beam_sections=copy.deepcopy(self.beam_sections),
+            brace_sections=copy.deepcopy(self.brace_sections),
+            brace_area=self.brace_area,
+            brace_E=self.brace_E,
+            n_ele_col=self.n_ele_col,
+            n_ele_beam=self.n_ele_beam,
+            length_unit_system=self.length_unit_system,
+            origin=copy.deepcopy(self.origin),
+            opensees_exe=executable,
+        )
+
+        with tempfile.TemporaryDirectory(prefix="femora_modes_") as tmpdir:
+            setup_output = io.StringIO()
+            try:
+                with contextlib.redirect_stdout(setup_output), contextlib.redirect_stderr(setup_output):
+                    run_dir = Path(tmpdir)
+                    model = fm.Model()
+                    model.clear_model()
+                    model.set_results_folder((run_dir / "Results").as_posix())
+
+                    kip = 4.44822
+                    inch = 0.0254
+                    lb = 0.453592
+                    ft = 12.0 * inch
+                    default_density = 490.0 * lb / (ft * ft * ft) / 1000.0
+                    steel_material, resolved_density = self._resolve_modal_material(
+                        model,
+                        material=material,
+                        material_density=material_density,
+                        default_name="Steel_A992",
+                        default_E=29000.0 * kip / (inch * inch),
+                        default_nu=0.3,
+                        default_density=default_density,
+                    )
+
+                    building_part = cloned_frame.build(
+                        model=model,
+                        material=steel_material,
+                        material_density=resolved_density,
+                    )
+                    first_mode_frequency = (
+                        1.0 / cloned_frame.target_period
+                        if cloned_frame.target_period > 0.0
+                        else 0.34
+                    )
+                    damping = model.damping.uniform(
+                        dampingRatio=0.05,
+                        freql=first_mode_frequency,
+                        freq2=10.0 * first_mode_frequency,
+                    )
+                    building_part.set_damping(damping)
+
+                    model.assembler.create_section(
+                        [cloned_frame.name_prefix],
+                        num_partitions=0,
+                        merge_points=True,
+                        partition_algorithm="kd-tree",
+                    )
+                    model.assembler.assemble(merge_points=False)
+                    cloned_frame.apply_fixed_base(model, tol=0.01)
+                    cloned_frame.create_rigid_diaphragms(model, verbose=False)
+
+                    gravity_load = cloned_frame.create_gravity_pattern(model, g=9.81)
+                    constraint_handler = model.analysis.constraint.transformation()
+                    numberer = model.analysis.numberer.rcm()
+                    system = model.analysis.system.bandgeneral()
+                    algorithm = model.analysis.algorithm.newton()
+                    test = model.analysis.test.energyincr(tol=1e-4, max_iter=10, print_flag=5)
+                    integrator = model.analysis.integrator.newmark(gamma=0.6, beta=0.3025)
+                    gravity = model.analysis.transient(
+                        name="gravity",
+                        constraint_handler=constraint_handler,
+                        numberer=numberer,
+                        system=system,
+                        algorithm=algorithm,
+                        test=test,
+                        integrator=integrator,
+                        dt=0.1,
+                        num_steps=300,
+                    )
+
+                    start_node = model.get_start_node_tag()
+                    end_node = model.get_max_node_tag()
+                    eigen_tcl = f"""
+wipeAnalysis
+constraints Transformation
+numberer RCM
+system FullGeneral
+test NormDispIncr 1.0e-8 10 0
+algorithm Linear
+integrator LoadControl 0.0
+analysis Static
+set numModes {num_modes}
+set eigenvalues [eigen -fullGenLapack $numModes]
+for {{set i 1}} {{$i <= [llength $eigenvalues]}} {{incr i}} {{
+    set lambda [lindex $eigenvalues [expr {{$i - 1}}]]
+    if {{$lambda <= 0.0}} {{
+        puts "FEMORA_EIGENVALUE $i $lambda nan nan"
+    }} else {{
+        set frequency [expr {{sqrt($lambda) / (2.0 * 3.141592653589793)}}]
+        set period [expr {{1.0 / $frequency}}]
+        puts "FEMORA_EIGENVALUE $i $lambda $frequency $period"
+    }}
+}}
+for {{set mode 1}} {{$mode <= $numModes}} {{incr mode}} {{
+    for {{set nodeTag {start_node}}} {{$nodeTag <= {end_node}}} {{incr nodeTag}} {{
+        set values [nodeEigenvector $nodeTag $mode]
+        puts "FEMORA_EIGENVECTOR $mode $nodeTag $values"
+    }}
+}}
+wipeAnalysis
+"""
+
+                    model.process.add_step(gravity_load, description="Apply gravity load")
+                    model.process.add_step(gravity, description="Gravity analysis")
+                    model.process.add_step(
+                        model.actions.tcl("loadConst -time 0.0"),
+                        description="Hold gravity loads",
+                    )
+                    model.process.add_step(model.actions.tcl(eigen_tcl), description="Eigen analysis")
+
+                    tcl_file = run_dir / "model.tcl"
+                    model.export_to_tcl(tcl_file.as_posix())
+            except Exception:
+                self._print_error_lines(setup_output.getvalue())
+                raise
+
+            completed = subprocess.run(
+                [executable, tcl_file.as_posix()],
+                cwd=run_dir,
+                capture_output=True,
+                text=True,
+            )
+            opensees_output = "\n".join(
+                output for output in (completed.stdout, completed.stderr) if output
+            )
+            if completed.returncode != 0:
+                if opensees_output:
+                    self._print_error_lines(opensees_output)
+                raise RuntimeError(f"OpenSees failed with exit code {completed.returncode}")
+
+            result = self._parse_eigen_stdout(
+                opensees_output,
+                num_modes=num_modes,
+                start_node=start_node,
+                end_node=end_node,
+            )
+            if print_results:
+                self._print_modal_table(
+                    result["frequencies"],
+                    result["periods"],
+                    title="Conventional Steel Braced Frame Modal Results",
+                )
+            if plot:
+                mesh = model.assembler.get_mesh()
+                self._plot_modal_shapes(mesh, result, scale=plot_scale)
+
+            return result
 
     def get_recorders(
         self,

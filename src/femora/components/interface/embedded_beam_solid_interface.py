@@ -48,6 +48,19 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         "members": ["__init__"],
     }
 
+    @staticmethod
+    def _extract_surface_compat(mesh: pv.DataSet) -> pv.PolyData:
+        """Return a surface mesh across PyVista versions.
+
+        Newer PyVista versions support the ``algorithm`` keyword, while older
+        versions raise ``TypeError`` for it. This helper keeps current behavior
+        explicit when supported and falls back cleanly otherwise.
+        """
+        try:
+            return mesh.extract_surface(algorithm="dataset_surface")
+        except TypeError:
+            return mesh.extract_surface()
+
     def __init__(
         self,
         name: str,
@@ -251,7 +264,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
         # t_start_loop = time.time()
         while solid_mesh.n_cells > 0:
             solid_mesh_largest = solid_mesh.extract_largest()
-            surf = solid_mesh_largest.extract_surface()
+            surf = self._extract_surface_compat(solid_mesh_largest)
             beam_mesh.compute_implicit_distance(surf,inplace=True)
             beams = beam_mesh.point_data["implicit_distance"] <= 0
             beams = beam_mesh.extract_points(beams, include_cells=True, adjacent_cells=True, progress_bar=False)
