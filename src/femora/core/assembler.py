@@ -1226,6 +1226,12 @@ class AssemblySection:
         first_mesh.cell_data["Region"]      = np.full(n_cells, regionTag, dtype=np.uint16)
         first_mesh.cell_data["MeshPartTag_celldata"]   = np.full(n_cells, meshTag, dtype=np.uint16)
         first_mesh.point_data["MeshPartTag_pointdata"] = np.full(n_points, meshTag, dtype=np.uint16)
+        self._meshpart_manager._mesh_maker._assign_femora_part_data(
+            first_mesh,
+            kind="meshpart",
+            name=first_meshpart.user_name,
+            source_tag=meshTag,
+        )
         # Merge subsequent meshes
         n_sections = len(self.meshparts_list)
         perc = 1 / n_sections * 100
@@ -1272,6 +1278,12 @@ class AssemblySection:
             
             second_mesh.cell_data["MeshPartTag_celldata"]   = np.full(n_cells_second, meshTag, dtype=np.uint16)
             second_mesh.point_data["MeshPartTag_pointdata"] = np.full(n_points_second, meshTag, dtype=np.uint16)
+            self._meshpart_manager._mesh_maker._assign_femora_part_data(
+                second_mesh,
+                kind="meshpart",
+                name=meshpart.user_name,
+                source_tag=meshTag,
+            )
             # Merge with tolerance and optional point merging
             self.mesh.append(second_mesh)
             perc = idx / n_sections * 100

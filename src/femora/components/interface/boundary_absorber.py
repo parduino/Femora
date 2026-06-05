@@ -14,6 +14,8 @@ from numpy import (
     concatenate,
     float32,
     full,
+    int16,
+    int32,
     meshgrid,
     ones,
     repeat,
@@ -333,6 +335,12 @@ def apply_rectangular_absorbing_layer(mesh_maker: "Model", config: dict) -> bool
     absorbing.cell_data["SectionTag"] = full(absorbing.n_cells, 0, dtype=uint16)
     absorbing.point_data["MeshPartTag_pointdata"] = full(absorbing.n_points, 0, dtype=uint16)
     absorbing.cell_data["MeshPartTag_celldata"] = full(absorbing.n_cells, 0, dtype=uint16)
+    absorber_part = mesh_maker._register_femora_part(
+        kind="absorber",
+        name=f"{boundary_type.lower()}_absorber",
+    )
+    absorbing.cell_data["FemoraPartTag"] = full(absorbing.n_cells, absorber_part.tag, dtype=int32)
+    absorbing.cell_data["FemoraPartKind"] = full(absorbing.n_cells, absorber_part.kind_id, dtype=int16)
     absorbing.cell_data["Core"] = full(absorbing.n_cells, 0, dtype=int)
 
     if boundary_type == "PML":

@@ -80,6 +80,8 @@ def test_model_export_to_vtk_writes_file(assembled_model, tmp_path):
     assert assembled_model.export_to_vtk(str(vtk_file)) is True
     assert vtk_file.exists()
     assert vtk_file.stat().st_size > 0
+    assert "FemoraPartTags" in assembled_model.assembled_mesh.field_data
+    assert "FemoraPartNames" in assembled_model.assembled_mesh.field_data
 
 
 def test_model_export_to_vtk_can_write_info_json(assembled_model, tmp_path):
@@ -93,19 +95,17 @@ def test_model_export_to_vtk_can_write_info_json(assembled_model, tmp_path):
     assert payload["schema_version"] == 1
     assert payload["format"] == "femora_vtk_info"
     assert payload["vtk_file"] == "model.vtk"
-    assert isinstance(payload["regions"], list)
-    assert isinstance(payload["meshparts"], list)
+    assert "regions" not in payload
+    assert "meshparts" not in payload
 
-    region = next(item for item in payload["regions"] if item["tag"] == 0)
-    assert region["user_name"] == "GlobalRegion"
-    assert region["type"] == "GlobalRegion"
-
-    meshpart = next(item for item in payload["meshparts"] if item["user_name"] == "block")
-    assert meshpart["tag"] == 1
-    assert meshpart["element_tag"] == 1
-    assert len(meshpart["bounds"]) == 6
-    assert "points" not in meshpart
-    assert "connectivity" not in meshpart
+    assert payload["femora_part_kinds"]["meshpart"] == 1
+    femora_part = next(item for item in payload["femora_parts"] if item["name"] == "block")
+    assert femora_part["tag"] == 1
+    assert femora_part["kind"] == "meshpart"
+    assert femora_part["kind_id"] == 1
+    assert femora_part["source_tag"] == 1
+    assert set(assembled_model.assembled_mesh.cell_data["FemoraPartTag"]) == {1}
+    assert set(assembled_model.assembled_mesh.cell_data["FemoraPartKind"]) == {1}
 
 
 def test_model_export_to_vtk_without_info_json_preserves_old_behavior(assembled_model, tmp_path):

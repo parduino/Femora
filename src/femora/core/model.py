@@ -1,3 +1,5 @@
+import numpy as np
+
 from femora.core.material_manager import MaterialManager
 from femora.core.element_base import Element
 from femora.core.element_manager import ElementManager
@@ -22,6 +24,7 @@ from femora.components.geometry_ops.spatial_transform_manager import SpatialTran
 from femora.core.mask_manager import MaskManager
 from femora.core.action_manager import ActionManager
 from femora.core.event_bus import ModelEventBus
+from femora.core.part_registry import FemoraPart, FemoraPartRegistry
 
 class Model:
     """
@@ -41,6 +44,7 @@ class Model:
         # Primary public assembled-mesh path for runtime, export, and downstream consumers.
         self.assembled_mesh = None
         self.events = ModelEventBus()
+        self._part_registry = FemoraPartRegistry()
         self.model_name = kwargs.get('model_name')
         self.model_path = kwargs.get('model_path')
         self._results_folder = ""
@@ -214,6 +218,40 @@ class Model:
             str: The path to the results folder
         """
         return self._results_folder if self._results_folder else ""
+
+    def get_femora_parts(self) -> list[dict]:
+        """Return a read-only snapshot of source parts registered for VTK export."""
+        return self._part_registry.get_all()
+
+    def _register_femora_part(
+        self,
+        *,
+        kind: str,
+        name: str,
+        source_tag: int | None = None,
+    ) -> FemoraPart:
+        return self._part_registry.get_or_create(
+            kind=kind,
+            name=name,
+            source_tag=source_tag,
+        )
+
+    def _assign_femora_part_data(
+        self,
+        mesh,
+        *,
+        kind: str,
+        name: str,
+        source_tag: int | None = None,
+    ) -> FemoraPart:
+        part = self._register_femora_part(
+            kind=kind,
+            name=name,
+            source_tag=source_tag,
+        )
+        mesh.cell_data["FemoraPartTag"] = np.full(mesh.n_cells, part.tag, dtype=np.int32)
+        mesh.cell_data["FemoraPartKind"] = np.full(mesh.n_cells, part.kind_id, dtype=np.int16)
+        return part
     
 
     def print_info(self):
@@ -308,6 +346,7 @@ class Model:
         self.mask.unregister_events()
         self.mask.clear()
         self.events.clear()
+        self._part_registry.clear()
         self.assembled_mesh = None
         self.assembler.reset()
         self.material.clear()

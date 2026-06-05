@@ -468,6 +468,18 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
         final_mesh.cell_data['MaterialTag'] = np.concatenate((base_mesh.cell_data['MaterialTag'], np.full(num_new_cells, 0, dtype=np.uint16)))
         final_mesh.cell_data['Region'] = np.concatenate((base_mesh.cell_data['Region'], np.full(num_new_cells, 0, dtype=np.uint16)))
         final_mesh.cell_data['MeshPartTag_celldata'] = np.concatenate((base_mesh.cell_data['MeshPartTag_celldata'], np.full(num_new_cells, 0, dtype=np.uint16)))
+        interface_part = mesh_maker._register_femora_part(
+            kind="interface",
+            name=self.name,
+        )
+        final_mesh.cell_data['FemoraPartTag'] = np.concatenate((
+            base_mesh.cell_data['FemoraPartTag'],
+            np.full(num_new_cells, interface_part.tag, dtype=np.int32),
+        ))
+        final_mesh.cell_data['FemoraPartKind'] = np.concatenate((
+            base_mesh.cell_data['FemoraPartKind'],
+            np.full(num_new_cells, interface_part.kind_id, dtype=np.int16),
+        ))
 
         # point_data 
         if num_new_points > 0:
