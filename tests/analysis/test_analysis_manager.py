@@ -83,6 +83,68 @@ def test_add_analysis_tags_and_tcl(mesh_maker):
     assert "wipeAnalysis" in tcl
 
 
+def test_transient_analysis_supports_linear_dt_ramp(mesh_maker):
+    am = mesh_maker.analysis
+    handler, numberer, system, algorithm, test, integrator = _build_transient_stack(am)
+
+    analysis = am.transient(
+        name="RampedTransient",
+        constraint_handler=handler,
+        numberer=numberer,
+        system=system,
+        algorithm=algorithm,
+        test=test,
+        integrator=integrator,
+        num_steps=10,
+        dt_min=0.001,
+        dt_max=0.1,
+    )
+
+    tcl = analysis.to_tcl()
+    assert "set dt_min 0.001" in tcl
+    assert "set dt_max 0.1" in tcl
+    assert "double($AnalysisStep)/($numSteps-1)*($dt_max-$dt_min)" in tcl
+    assert "set Ok [analyze 1 $dt]" in tcl
+
+
+def test_transient_dt_ramp_requires_complete_range(mesh_maker):
+    am = mesh_maker.analysis
+    handler, numberer, system, algorithm, test, integrator = _build_transient_stack(am)
+
+    with pytest.raises(ValueError, match="both dt_min and dt_max"):
+        am.transient(
+            name="BadRamp",
+            constraint_handler=handler,
+            numberer=numberer,
+            system=system,
+            algorithm=algorithm,
+            test=test,
+            integrator=integrator,
+            num_steps=10,
+            dt_min=0.001,
+        )
+
+
+def test_transient_dt_ramp_rejects_dt_ambiguity(mesh_maker):
+    am = mesh_maker.analysis
+    handler, numberer, system, algorithm, test, integrator = _build_transient_stack(am)
+
+    with pytest.raises(ValueError, match="either dt or dt_min/dt_max"):
+        am.transient(
+            name="AmbiguousRamp",
+            constraint_handler=handler,
+            numberer=numberer,
+            system=system,
+            algorithm=algorithm,
+            test=test,
+            integrator=integrator,
+            dt=0.01,
+            num_steps=10,
+            dt_min=0.001,
+            dt_max=0.1,
+        )
+
+
 def test_direct_submanager_api(mesh_maker):
     am = mesh_maker.analysis
     assert "Plain" in am.constraint.plain().to_tcl()
