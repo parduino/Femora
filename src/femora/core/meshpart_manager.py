@@ -31,6 +31,8 @@ class LineMeshNamespace(_MeshPartNamespace):
         z1: float = 0.0,
         number_of_lines: int = 1,
         merge_points: bool = True,
+        density: Optional[float] = None,
+        mass_per_length: Optional[float] = None,
     ) -> MeshPart:
         from femora.components.mesh.line_meshparts import SingleLineMesh
 
@@ -47,6 +49,8 @@ class LineMeshNamespace(_MeshPartNamespace):
                 z1=z1,
                 number_of_lines=number_of_lines,
                 merge_points=merge_points,
+                density=density,
+                mass_per_length=mass_per_length,
             )
         )
 
@@ -77,6 +81,8 @@ class LineMeshNamespace(_MeshPartNamespace):
         offset_2: float = 0.0,
         number_of_lines: int = 1,
         merge_points: bool = True,
+        density: Optional[float] = None,
+        mass_per_length: Optional[float] = None,
     ) -> MeshPart:
         from femora.components.mesh.line_meshparts import StructuredLineMesh
 
@@ -106,6 +112,8 @@ class LineMeshNamespace(_MeshPartNamespace):
                 offset_2=offset_2,
                 number_of_lines=number_of_lines,
                 merge_points=merge_points,
+                density=density,
+                mass_per_length=mass_per_length,
             )
         )
 

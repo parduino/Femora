@@ -5,11 +5,11 @@ import pyvista as pv
 
 from femora.constants import FEMORA_MAX_NDF
 from femora.core.element_base import Element
-from femora.core.meshpart_base import MeshPart
+from femora.core.line_meshpart_base import LineMeshPart
 from femora.core.region_base import RegionBase
 
 
-class StructuredLineMesh(MeshPart):
+class StructuredLineMesh(LineMeshPart):
     """Parametric structured grid of 1D line elements generated along a plane normal.
 
     This mesh part generates a grid of parallel line elements (beams or columns)
@@ -54,8 +54,6 @@ class StructuredLineMesh(MeshPart):
         "members": ["__init__", "is_element_compatible", "generate_mesh"],
     }
 
-    _compatible_elements = ["DispBeamColumn", "ForceBeamColumn", "ElasticBeamColumn", "NonlinearBeamColumn"]
-
     def __init__(
         self,
         user_name: str,
@@ -83,6 +81,8 @@ class StructuredLineMesh(MeshPart):
         offset_2: float = 0.0,
         number_of_lines: int = 1,
         merge_points: bool = True,
+        density: Optional[float] = None,
+        mass_per_length: Optional[float] = None,
     ) -> None:
         """Create a parametric structured grid of line elements.
 
@@ -111,6 +111,10 @@ class StructuredLineMesh(MeshPart):
             offset_2: Position offset along the second direction.
             number_of_lines: Number of element segments to divide each line.
             merge_points: If True, duplicate nodes at adjacent segment boundaries are merged.
+            density: Material density used by this meshpart to create nodal translational
+                and rotational Mass arrays from the element section properties.
+            mass_per_length: Compatibility alias for older line-mass workflows. Femora
+                converts it to density using section area; prefer density for new code.
 
         Raises:
             ValueError: If element is not compatible, grid sizes are negative, spacing or length
@@ -151,6 +155,10 @@ class StructuredLineMesh(MeshPart):
         self.offset_1 = float(offset_1)
         self.offset_2 = float(offset_2)
         self.number_of_lines = int(number_of_lines)
+        self.density = self._resolve_density(
+            density=density,
+            mass_per_length=mass_per_length,
+        )
         if not isinstance(merge_points, bool):
             raise TypeError("merge_points must be a boolean")
         self.merge_points = merge_points
@@ -247,12 +255,11 @@ class StructuredLineMesh(MeshPart):
         else:
             self.mesh = pv.PolyData().cast_to_unstructured_grid()
 
-        mass_per_length = self.element.get_mass_per_length()
         Mass = np.zeros((self.mesh.n_points, FEMORA_MAX_NDF), dtype=np.float32)
 
-        if mass_per_length > 0.0 and self.mesh.n_cells > 0:
-            section = getattr(self.element, '_section', None)
-            transf = getattr(self.element, '_transformation', None)
+        if self.density > 0.0 and self.mesh.n_cells > 0:
+            area, iy, iz, j = self._get_section_mass_properties()
+            mass_per_length = self.density * area
 
             for cell_idx in range(self.mesh.n_cells):
                 start = self.mesh.offset[cell_idx]
@@ -273,46 +280,14 @@ class StructuredLineMesh(MeshPart):
                 Mass[pid1, :3] += m
                 Mass[pid2, :3] += m
 
-                m_rot = m * (L**2) / 4.0
-                m_rx, m_ry, m_rz = m_rot, m_rot, m_rot
-
-                if section and hasattr(section, 'get_area') and hasattr(section, 'get_Iy') and hasattr(section, 'get_Iz'):
-                    A = section.get_area()
-                    if A > 0:
-                        rho = mass_per_length / A
-                        Iy = section.get_Iy()
-                        Iz = section.get_Iz()
-                        J = section.get_J() if hasattr(section, 'get_J') and section.get_J() is not None else (Iy + Iz)
-
-                        m_rot_torsion = rho * J * L / 2.0
-                        m_rot_iy = rho * Iy * L / 2.0
-                        m_rot_iz = rho * Iz * L / 2.0
-
-                        dir_norm = direction / L
-                        if transf and hasattr(transf, 'vecxz_x'):
-                            x_axis = dir_norm
-                            vecxz = np.array([transf.vecxz_x, transf.vecxz_y, transf.vecxz_z], dtype=float)
-                            vecxz_norm = np.linalg.norm(vecxz)
-                            vecxz = vecxz / vecxz_norm if vecxz_norm > 1e-12 else np.array([0.0, 0.0, 1.0])
-
-                            y_axis = np.cross(vecxz, x_axis)
-                            y_axis_norm = np.linalg.norm(y_axis)
-                            y_axis = y_axis / y_axis_norm if y_axis_norm > 1e-12 else np.array([0.0, 1.0, 0.0])
-
-                            z_axis = np.cross(x_axis, y_axis)
-                            z_axis_norm = np.linalg.norm(z_axis)
-                            z_axis = z_axis / z_axis_norm if z_axis_norm > 1e-12 else np.array([0.0, 0.0, 1.0])
-
-                            m_rx = (x_axis[0]**2)*m_rot_torsion + (y_axis[0]**2)*m_rot_iy + (z_axis[0]**2)*m_rot_iz
-                            m_ry = (x_axis[1]**2)*m_rot_torsion + (y_axis[1]**2)*m_rot_iy + (z_axis[1]**2)*m_rot_iz
-                            m_rz = (x_axis[2]**2)*m_rot_torsion + (y_axis[2]**2)*m_rot_iy + (z_axis[2]**2)*m_rot_iz
-                        else:
-                            if abs(dir_norm[2]) >= max(abs(dir_norm[0]), abs(dir_norm[1])):
-                                m_rx, m_ry, m_rz = m_rot_iz, m_rot_iy, m_rot_torsion
-                            elif abs(dir_norm[0]) >= max(abs(dir_norm[1]), abs(dir_norm[2])):
-                                m_rx, m_ry, m_rz = m_rot_torsion, m_rot_iy, m_rot_iz
-                            else:
-                                m_rx, m_ry, m_rz = m_rot_iy, m_rot_torsion, m_rot_iz
+                m_rx, m_ry, m_rz = self._line_rotational_mass(
+                    direction=direction,
+                    length=L,
+                    area=area,
+                    iy=iy,
+                    iz=iz,
+                    j=j,
+                )
 
                 Mass[pid1, 3] += m_rx
                 Mass[pid1, 4] += m_ry
@@ -325,7 +300,7 @@ class StructuredLineMesh(MeshPart):
         return self.mesh
 
 
-class SingleLineMesh(MeshPart):
+class SingleLineMesh(LineMeshPart):
     """Parametric 1D line mesh part defined between two points in 3D space.
 
     This mesh part discretizes a straight line between a start point `(x0, y0, z0)`
@@ -364,8 +339,6 @@ class SingleLineMesh(MeshPart):
         "members": ["__init__", "is_element_compatible", "generate_mesh"],
     }
 
-    _compatible_elements = ["DispBeamColumn", "ForceBeamColumn", "ElasticBeamColumn", "NonlinearBeamColumn"]
-
     def __init__(
         self,
         user_name: str,
@@ -380,6 +353,8 @@ class SingleLineMesh(MeshPart):
         z1: float = 0.0,
         number_of_lines: int = 1,
         merge_points: bool = True,
+        density: Optional[float] = None,
+        mass_per_length: Optional[float] = None,
     ) -> None:
         """Create a parametric single line mesh part.
 
@@ -395,6 +370,10 @@ class SingleLineMesh(MeshPart):
             z1: End point Z-coordinate.
             number_of_lines: Number of element segments along the line.
             merge_points: If True, duplicate nodes at segment boundaries are merged.
+            density: Material density used by this meshpart to create nodal translational
+                and rotational Mass arrays from the element section properties.
+            mass_per_length: Compatibility alias for older line-mass workflows. Femora
+                converts it to density using section area; prefer density for new code.
 
         Raises:
             ValueError: If element is not compatible, start and end points are identical,
@@ -422,6 +401,10 @@ class SingleLineMesh(MeshPart):
         self.y1 = float(y1)
         self.z1 = float(z1)
         self.number_of_lines = int(number_of_lines)
+        self.density = self._resolve_density(
+            density=density,
+            mass_per_length=mass_per_length,
+        )
         if not isinstance(merge_points, bool):
             raise TypeError("merge_points must be a boolean")
         self.merge_points = merge_points
@@ -492,70 +475,29 @@ class SingleLineMesh(MeshPart):
         else:
             self.mesh = pv.PolyData().cast_to_unstructured_grid()
 
-        mass_per_length = self.element.get_mass_per_length()
         L = np.linalg.norm(direction) / self.number_of_lines
-        m = mass_per_length * L / 2
         Mass = np.zeros((self.mesh.n_points, FEMORA_MAX_NDF), dtype=np.float32)
-        Mass[:, :3] = m
 
-        m_rot = m * (L**2) / 4.0
-        m_rx, m_ry, m_rz = m_rot, m_rot, m_rot
+        if self.density > 0.0 and self.mesh.n_cells > 0:
+            area, iy, iz, j = self._get_section_mass_properties()
+            mass_per_length = self.density * area
+            m = mass_per_length * L / 2
+            Mass[:, :3] = m
 
-        section = getattr(self.element, '_section', None)
-        transf = getattr(self.element, '_transformation', None)
+            m_rx, m_ry, m_rz = self._line_rotational_mass(
+                direction=direction,
+                length=L,
+                area=area,
+                iy=iy,
+                iz=iz,
+                j=j,
+            )
 
-        if section and hasattr(section, 'get_area') and hasattr(section, 'get_Iy') and hasattr(section, 'get_Iz'):
-            A = section.get_area()
-            if A > 0:
-                rho = mass_per_length / A
-                Iy = section.get_Iy()
-                Iz = section.get_Iz()
-                J = section.get_J() if hasattr(section, 'get_J') and section.get_J() is not None else (Iy + Iz)
+            Mass[:, 3] = m_rx
+            Mass[:, 4] = m_ry
+            Mass[:, 5] = m_rz
 
-                m_rot_torsion = rho * J * L / 2.0
-                m_rot_iy = rho * Iy * L / 2.0
-                m_rot_iz = rho * Iz * L / 2.0
-
-                dir_norm = direction / np.linalg.norm(direction)
-
-                if transf and hasattr(transf, 'vecxz_x'):
-                    x_axis = dir_norm
-                    vecxz = np.array([transf.vecxz_x, transf.vecxz_y, transf.vecxz_z])
-                    vecxz_norm = np.linalg.norm(vecxz)
-                    if vecxz_norm > 1e-12:
-                        vecxz = vecxz / vecxz_norm
-                    else:
-                        vecxz = np.array([0.0, 0.0, 1.0])
-
-                    y_axis = np.cross(vecxz, x_axis)
-                    y_axis_norm = np.linalg.norm(y_axis)
-                    if y_axis_norm > 1e-12:
-                        y_axis = y_axis / y_axis_norm
-                    else:
-                        y_axis = np.array([0.0, 1.0, 0.0])
-
-                    z_axis = np.cross(x_axis, y_axis)
-                    z_axis_norm = np.linalg.norm(z_axis)
-                    if z_axis_norm > 1e-12:
-                        z_axis = z_axis / z_axis_norm
-                    else:
-                        z_axis = np.array([0.0, 0.0, 1.0])
-
-                    m_rx = (x_axis[0]**2)*m_rot_torsion + (y_axis[0]**2)*m_rot_iy + (z_axis[0]**2)*m_rot_iz
-                    m_ry = (x_axis[1]**2)*m_rot_torsion + (y_axis[1]**2)*m_rot_iy + (z_axis[1]**2)*m_rot_iz
-                    m_rz = (x_axis[2]**2)*m_rot_torsion + (y_axis[2]**2)*m_rot_iy + (z_axis[2]**2)*m_rot_iz
-                else:
-                    if abs(dir_norm[2]) >= max(abs(dir_norm[0]), abs(dir_norm[1])):
-                        m_rx, m_ry, m_rz = m_rot_iz, m_rot_iy, m_rot_torsion
-                    elif abs(dir_norm[0]) >= max(abs(dir_norm[1]), abs(dir_norm[2])):
-                        m_rx, m_ry, m_rz = m_rot_torsion, m_rot_iy, m_rot_iz
-                    else:
-                        m_rx, m_ry, m_rz = m_rot_iy, m_rot_torsion, m_rot_iz
-
-        Mass[:, 3] = m_rx
-        Mass[:, 4] = m_ry
-        Mass[:, 5] = m_rz
-        if self.merge_points:
+        if self.density > 0.0 and self.merge_points:
             start_ind = pv.UnstructuredGrid(self.mesh).find_closest_point(start_point)
             end_ind = pv.UnstructuredGrid(self.mesh).find_closest_point(end_point)
             Mass = 2 * Mass
@@ -564,14 +506,3 @@ class SingleLineMesh(MeshPart):
         self.mesh.point_data['Mass'] = Mass
         return self.mesh
 
-    @classmethod
-    def is_elemnt_compatible(cls, element: str) -> bool:
-        """Check if the given element type name is compatible with line meshes.
-
-        Args:
-            element: Type name of the element.
-
-        Returns:
-            bool: True if compatible, False otherwise.
-        """
-        return element.lower() in [elem.lower() for elem in cls._compatible_elements]
