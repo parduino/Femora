@@ -1,7 +1,26 @@
 from typing import List, Dict, Optional, Union
 
+from femora.core.group import ElementGroup
 from femora.core.recorder_base import Recorder
 from femora.components.interface.embedded_beam_solid_interface import EmbeddedBeamSolidInterface
+
+
+def _resolve_element_group_tag(recorder: Recorder, group_input) -> int:
+    if isinstance(group_input, ElementGroup):
+        if group_input.tag is None:
+            raise ValueError(f"ElementGroup '{group_input.name}' has no OpenSees region tag")
+        return group_input.tag
+    if isinstance(group_input, str):
+        mesh_maker = recorder._mesh_maker()
+        if mesh_maker is None:
+            raise ValueError(f"Cannot resolve group name '{group_input}' without a manager-owned recorder")
+        group = mesh_maker.group.element.get(group_input)
+        if group is None:
+            raise ValueError(f"Element group '{group_input}' not found")
+        if group.tag is None:
+            raise ValueError(f"ElementGroup '{group.name}' has no OpenSees region tag")
+        return group.tag
+    raise TypeError("group must be an ElementGroup instance or an element group name")
 
 
 def _results_folder(recorder: Recorder) -> str:
@@ -534,6 +553,7 @@ class VTKHDFRecorder(Recorder):
                 delta_t: Optional time interval for recording.
                 r_tol_dt: Optional relative tolerance for time step matching.
                 region: Optional region tag, name, or RegionBase instance used to restrict VTKHDF output to one region. If not specified, the entire model will be recorded.
+                group: Optional ElementGroup or element group name used to restrict VTKHDF output.
 
         Raises:
             ValueError: If file_base_name or resp_types are not specified, or if
@@ -546,7 +566,15 @@ class VTKHDFRecorder(Recorder):
         self.r_tol_dt = kwargs.get("r_tol_dt", None)
         if "region" in kwargs and "regions" in kwargs:
             raise ValueError("Use only one of region or regions for VTKHDFRecorder")
+        group_keys = [key for key in ("group", "element_group") if key in kwargs]
+        if len(group_keys) > 1:
+            raise ValueError("Use only one of group or element_group for VTKHDFRecorder")
+        if ("region" in kwargs or "regions" in kwargs) and group_keys:
+            raise ValueError("Use only one of region, regions, or group for VTKHDFRecorder")
         self.region = kwargs.get("region", kwargs.get("regions", None))
+        self.element_group = kwargs.get("group", kwargs.get("element_group", None))
+        if self.element_group is not None and not isinstance(self.element_group, (ElementGroup, str)):
+            raise TypeError("group must be an ElementGroup instance or an element group name")
 
         if not self.file_base_name:
             raise ValueError("File base name must be specified")
@@ -603,6 +631,8 @@ class VTKHDFRecorder(Recorder):
             if len(region_tags) != 1:
                 raise ValueError("VTKHDFRecorder supports exactly one region")
             cmd += f" -region {region_tags[0]}"
+        elif self.element_group is not None:
+            cmd += f" -region {_resolve_element_group_tag(self, self.element_group)}"
         
         return cmd
 
@@ -646,6 +676,7 @@ class MPCORecorder(Recorder):
                 element_responses: Optional list of element response variables.
                 node_sensitivities: Optional list of node sensitivities.
                 regions: Optional list of region tags or names to restrict recording to.
+                groups: Optional list of ElementGroups or element group names used to restrict recording.
                 delta_t: Optional recording time step interval.
                 num_steps: Optional recording step interval.
 
@@ -659,6 +690,9 @@ class MPCORecorder(Recorder):
         self.element_responses = kwargs.get("element_responses", [])
         self.node_sensitivities = kwargs.get("node_sensitivities", [])
         self.regions = self._resolve_regions(kwargs.get("regions", []))
+        if "groups" in kwargs and "element_groups" in kwargs:
+            raise ValueError("Use only one of groups or element_groups for MPCORecorder")
+        self.element_groups = kwargs.get("groups", kwargs.get("element_groups", []))
         self.delta_t = kwargs.get("delta_t", None)
         self.num_steps = kwargs.get("num_steps", None)
 
@@ -727,6 +761,15 @@ class MPCORecorder(Recorder):
         for r in self.regions:
             if not isinstance(r, int):
                 raise TypeError("Each region tag must be an integer")
+        if self.element_groups is None:
+            self.element_groups = []
+        if isinstance(self.element_groups, (ElementGroup, str)):
+            self.element_groups = [self.element_groups]
+        if not isinstance(self.element_groups, list):
+            raise TypeError("groups must be a list of ElementGroup instances or element group names")
+        for group in self.element_groups:
+            if not isinstance(group, (ElementGroup, str)):
+                raise TypeError("Each group must be an ElementGroup instance or an element group name")
         if self.delta_t is not None and self.num_steps is not None:
             raise ValueError("Only one of delta_t or num_steps may be specified")
 
@@ -765,6 +808,8 @@ class MPCORecorder(Recorder):
 
         for r in self.regions:
             cmd += f" -R {r}"
+        for group in self.element_groups:
+            cmd += f" -R {_resolve_element_group_tag(self, group)}"
 
         if self.delta_t is not None:
             cmd += f" -T dt {self.delta_t}"

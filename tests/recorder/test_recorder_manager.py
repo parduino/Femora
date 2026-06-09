@@ -195,7 +195,7 @@ def _install_pile_mesh_fixture(mesh_maker):
     return mesh, parts
 
 
-def test_pile_vtkhdf_creates_region_and_vtkhdf_recorder(mesh_maker):
+def test_pile_vtkhdf_creates_element_group_and_vtkhdf_recorder(mesh_maker):
     mesh, _ = _install_pile_mesh_fixture(mesh_maker)
 
     recorder = mesh_maker.recorder.pile_vtkhdf(
@@ -206,12 +206,32 @@ def test_pile_vtkhdf_creates_region_and_vtkhdf_recorder(mesh_maker):
     )
 
     assert isinstance(recorder, VTKHDFRecorder)
-    assert mesh.cell_data["Region"][0] == recorder.region.tag
-    assert mesh.cell_data["Region"][1] == 0
+    assert mesh.cell_data["Region"].tolist() == [0, 0]
+    assert recorder.region is None
+    assert recorder.element_group.name == "pile_vtkhdf_region"
+    assert recorder.element_group.cell_indices.tolist() == [0]
+    assert mesh_maker.group.element.get("pile_vtkhdf_region") is recorder.element_group
     tcl = recorder.to_tcl()
     assert "recorder vtkhdf" in tcl
     assert "disp force3D localForce3D" in tcl
-    assert f"-region {recorder.region.tag}" in tcl
+    assert f"-region {recorder.element_group.tag}" in tcl
+
+
+def test_vtkhdf_accepts_element_group_name(mesh_maker):
+    _install_pile_mesh_fixture(mesh_maker)
+    group = mesh_maker.group.element.from_meshparts(
+        name="pile_group",
+        meshparts=["pile1"],
+        line_cells_only=True,
+    )
+
+    recorder = mesh_maker.recorder.vtkhdf(
+        file_base_name="piles",
+        resp_types=["disp"],
+        group="pile_group",
+    )
+
+    assert f"-region {group.tag}" in recorder.to_tcl()
 
 
 def test_pile_vtkhdf_uses_default_response_types(mesh_maker):

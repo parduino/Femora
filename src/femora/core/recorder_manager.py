@@ -117,10 +117,10 @@ class RecorderManager:
         if element_responses is None:
             element_responses = ["force"]
 
-        pile_region, cores_arg = self._create_pile_region_for_meshparts(
+        pile_group, cores_arg = self._create_pile_element_group_for_meshparts(
             meshparts=meshparts,
             line_cells_only=line_cells_only,
-            region_name=region_name,
+            group_name=region_name,
             caller="pile_mpco",
         )
 
@@ -130,7 +130,7 @@ class RecorderManager:
                 node_responses=node_responses,
                 element_responses=element_responses,
                 node_sensitivities=node_sensitivities or [],
-                regions=[pile_region],
+                element_groups=[pile_group],
                 delta_t=delta_t,
                 num_steps=num_steps,
                 cores=cores_arg,
@@ -153,10 +153,10 @@ class RecorderManager:
         if resp_types is None:
             resp_types = ["disp", "vel", "accel", "force3D", "localForce3D"]
 
-        pile_region, cores_arg = self._create_pile_region_for_meshparts(
+        pile_group, cores_arg = self._create_pile_element_group_for_meshparts(
             meshparts=meshparts,
             line_cells_only=line_cells_only,
-            region_name=region_name,
+            group_name=region_name,
             caller="pile_vtkhdf",
         )
 
@@ -166,83 +166,37 @@ class RecorderManager:
                 resp_types=resp_types,
                 delta_t=delta_t,
                 r_tol_dt=r_tol_dt,
-                region=pile_region,
+                element_group=pile_group,
                 cores=cores_arg,
             )
         )
 
-    def _create_pile_region_for_meshparts(
+    def _create_pile_element_group_for_meshparts(
         self,
         *,
         meshparts,
         line_cells_only: bool,
-        region_name: str,
+        group_name: str,
         caller: str,
     ):
-        import numpy as np
-
         mm = self._mesh_maker
         mesh = self._mesh_maker.assembled_mesh
         if mesh is None:
             raise ValueError(f"{caller} requires an assembled mesh (call Assemble first).")
 
-        resolved: Dict[str, object] = {}
-        if not meshparts:
-            raise ValueError(f"{caller}: meshparts list must not be empty.")
-        for mp in meshparts:
-            if isinstance(mp, str):
-                part = mm.meshpart.get(mp)
-                if part is None:
-                    raise ValueError(f"MeshPart '{mp}' not found")
-                resolved[mp] = part
-            else:
-                from femora.core.meshpart_base import MeshPart
-
-                if isinstance(mp, MeshPart):
-                    resolved[mp.user_name] = mp
-                else:
-                    raise TypeError("meshparts entries must be MeshPart instances or user_name strings")
-
-        tags = np.array([int(p.tag) for p in resolved.values()], dtype=np.int64)
-        mesh_tags = mesh.cell_data.get("MeshPartTag_celldata")
         cores_arr = mesh.cell_data.get("Core")
-        region_arr = mesh.cell_data.get("Region")
-        if mesh_tags is None or cores_arr is None or region_arr is None:
-            raise ValueError(
-                "Assembled mesh missing MeshPartTag_celldata, Core, or Region cell_data."
-            )
+        if cores_arr is None:
+            raise ValueError("Assembled mesh missing Core cell_data.")
 
-        mask = np.isin(mesh_tags.astype(np.int64, copy=False), tags)
-        if line_cells_only:
-            try:
-                import pyvista as pv
-            except Exception:
-                pv = None
-            if pv is not None:
-                celltypes = getattr(mesh, "celltypes", None)
-                if celltypes is not None:
-                    beam_types = set()
-                    if hasattr(pv, "CellType"):
-                        for name in ("LINE", "POLY_LINE"):
-                            if hasattr(pv.CellType, name):
-                                beam_types.add(getattr(pv.CellType, name))
-                    if beam_types:
-                        beam_mask = np.isin(celltypes, list(beam_types))
-                        mask = mask & beam_mask
+        pile_group = mm.group.element.from_meshparts(
+            name=group_name,
+            meshparts=meshparts,
+            line_cells_only=line_cells_only,
+        )
 
-        idxs = np.where(mask)[0]
-        if idxs.size == 0:
-            raise ValueError(f"{caller}: no matching line-mesh cells for the given meshparts.")
+        import numpy as np
 
-        pile_region = mm.region.element()
-        pile_region._name = region_name
-
-        rtag = int(pile_region.tag)
-        region_arr = np.asarray(region_arr)
-        region_arr[idxs] = rtag
-        mesh.cell_data["Region"] = region_arr
-
-        selected_cores = np.unique(cores_arr[idxs])
+        selected_cores = np.unique(cores_arr[pile_group.cell_indices])
         selected_cores = [
             int(c)
             for c in selected_cores
@@ -252,7 +206,7 @@ class RecorderManager:
         if selected_cores:
             cores_arg = selected_cores[0] if len(selected_cores) == 1 else selected_cores
 
-        return pile_region, cores_arg
+        return pile_group, cores_arg
 
 
 __all__ = ["RecorderManager"]

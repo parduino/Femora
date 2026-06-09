@@ -25,6 +25,7 @@ from femora.core.mask_manager import MaskManager
 from femora.core.action_manager import ActionManager
 from femora.core.event_bus import ModelEventBus
 from femora.core.part_registry import FemoraPart, FemoraPartRegistry
+from femora.core.group import GroupManager
 
 class Model:
     """
@@ -65,6 +66,7 @@ class Model:
             time_series_manager=self.time_series,
             ground_motion_manager=self.ground_motion,
         )
+        self.group = GroupManager(mesh_maker=self)
         self.recorder = RecorderManager(mesh_maker=self)
         self.interface = InterfaceManager(mesh_maker=self)
         self.transformation = TransformationManager(mesh_maker=self)
@@ -365,6 +367,7 @@ class Model:
         self.ground_motion.clear()
         self.analysis.clear()
         self.pattern.clear()
+        self.group.clear()
         self.recorder.clear()
         self.recorder.set_tag_start(1)
         self.process.clear()
