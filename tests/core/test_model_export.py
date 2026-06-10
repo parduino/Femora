@@ -2,6 +2,7 @@ import inspect
 import json
 from pathlib import Path
 
+import numpy as np
 import femora.components.element.std_brick  # noqa: F401 — register element types
 import femora.components.material.nd  # noqa: F401 — register material types
 import pytest
@@ -73,6 +74,22 @@ def test_model_export_to_tcl_writes_expected_sections(assembled_model, tmp_path)
     assert "# Regions" in content
     assert "# Process" in content
     assert "exit" in content
+
+
+def test_model_export_to_tcl_writes_recorder_element_groups_without_retagging_mesh(assembled_model, tmp_path):
+    group = assembled_model.group.element.from_cells(
+        name="recorder_group",
+        cell_indices=np.array([0], dtype=np.int64),
+    )
+    original_regions = assembled_model.assembled_mesh.cell_data["Region"].copy()
+
+    tcl_file = tmp_path / "model.tcl"
+    assert assembled_model.export_to_tcl(str(tcl_file)) is True
+
+    content = tcl_file.read_text(encoding="utf-8")
+    assert "# Element Groups" in content
+    assert f"region {group.tag} -ele 1" in content
+    np.testing.assert_array_equal(assembled_model.assembled_mesh.cell_data["Region"], original_regions)
 
 
 def test_model_export_to_vtk_writes_file(assembled_model, tmp_path):

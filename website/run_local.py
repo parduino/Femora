@@ -8,8 +8,8 @@ import sys
 import webbrowser
 
 # --- CONFIGURATION ---
-ROOT_DIR = os.getcwd()
-WEBSITE_DIR = os.path.join(ROOT_DIR, "website")
+WEBSITE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(WEBSITE_DIR)
 TEST_DIR = os.path.join(ROOT_DIR, "_local_test")
 NEXTJS_BUILD_OUTPUT = os.path.join(WEBSITE_DIR, "out")
 ZENSICAL_BUILD_OUTPUT = os.path.join(WEBSITE_DIR, "site")

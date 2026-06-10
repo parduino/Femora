@@ -97,9 +97,14 @@ class Analysis(AnalysisComponent):
                 others (mutually exclusive with final_time).
             final_time: Final analysis time. Optional for Transient/VariableTransient
                 (mutually exclusive with num_steps).
-            dt: Time step increment. Required for Transient/VariableTransient.
-            dt_min: Minimum time step. Required for VariableTransient.
-            dt_max: Maximum time step. Required for VariableTransient.
+            dt: Constant time step increment. Required for Transient unless both
+                dt_min and dt_max are provided. Required for VariableTransient.
+            dt_min: Minimum/first time step. For Transient, providing both dt_min
+                and dt_max creates a linear time-step ramp over num_steps. Required
+                for VariableTransient.
+            dt_max: Maximum/last time step. For Transient, providing both dt_min
+                and dt_max creates a linear time-step ramp over num_steps. Required
+                for VariableTransient.
             jd: Number of iterations desired at each step. Required for VariableTransient.
             num_sublevels: Number of sublevels for transient analysis failure recovery.
             num_substeps: Number of substeps to try at each sublevel.
@@ -147,20 +152,33 @@ class Analysis(AnalysisComponent):
         self.num_steps = num_steps
         self.final_time = final_time
 
-        # Time step parameters
-        if analysis_type in ["Transient", "VariableTransient"] and dt is None:
-            raise ValueError(f"{analysis_type} analysis requires a time step (dt).")
+        has_dt_range = dt_min is not None or dt_max is not None
+        if analysis_type == "Transient":
+            if has_dt_range and (dt_min is None or dt_max is None):
+                raise ValueError("Transient analysis requires both dt_min and dt_max when using a time-step ramp.")
+            if has_dt_range and dt is not None:
+                raise ValueError("Use either dt or dt_min/dt_max for Transient analysis, not both.")
+            if has_dt_range and final_time is not None:
+                raise ValueError("Transient dt_min/dt_max ramp requires num_steps, not final_time.")
+            if not has_dt_range and dt is None:
+                raise ValueError("Transient analysis requires dt, or both dt_min and dt_max.")
 
-        self.dt = dt
-
-        # VariableTransient specific parameters
         if analysis_type == "VariableTransient":
+            if dt is None:
+                raise ValueError("VariableTransient analysis requires a time step (dt).")
             if dt_min is None or dt_max is None:
                 raise ValueError("VariableTransient analysis requires dt_min and dt_max parameters.")
-
             if jd is None:
                 raise ValueError("VariableTransient analysis requires jd parameter (desired iterations per step).")
 
+        if dt is not None and dt <= 0.0:
+            raise ValueError("dt must be positive.")
+        if dt_min is not None and dt_min <= 0.0:
+            raise ValueError("dt_min must be positive.")
+        if dt_max is not None and dt_max <= 0.0:
+            raise ValueError("dt_max must be positive.")
+
+        self.dt = dt
         self.dt_min = dt_min
         self.dt_max = dt_max
         self.jd = jd
@@ -208,6 +226,19 @@ class Analysis(AnalysisComponent):
                 commands.append("while {[getTime] < %f} {" % self.final_time)
                 commands.append('\tif {$pid == 0} {puts "Time : [getTime]"}\n')
                 commands.append(f"\tset Ok [analyze 1 {self.dt}]\n")
+                commands.append("}")
+            elif self.analysis_type == "Transient" and self.dt_min is not None and self.dt_max is not None:
+                commands.append(f"set numSteps {self.num_steps}")
+                commands.append(f"set dt_min {self.dt_min}")
+                commands.append(f"set dt_max {self.dt_max}")
+                commands.append("for {set AnalysisStep 0} {$AnalysisStep < $numSteps} {incr AnalysisStep} {")
+                commands.append("\tif {$numSteps == 1} {")
+                commands.append("\t\tset dt $dt_min")
+                commands.append("\t} else {")
+                commands.append("\t\tset dt [expr {$dt_min + double($AnalysisStep)/($numSteps-1)*($dt_max-$dt_min)}]")
+                commands.append("\t}")
+                commands.append('\tif {$pid==0} {puts "$AnalysisStep/$numSteps dt=$dt"}')
+                commands.append("\tset Ok [analyze 1 $dt]")
                 commands.append("}")
             else:
                 commands.append(f"set AnalysisStep 0")

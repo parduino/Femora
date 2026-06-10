@@ -10,7 +10,7 @@
   <p>
     <a href="https://pypi.org/project/femora/"><img src="https://img.shields.io/pypi/v/femora?color=blue&label=PyPI" alt="PyPI Version"/></a>
     <a href="https://pypi.org/project/femora/"><img src="https://img.shields.io/pypi/pyversions/femora" alt="Python Versions"/></a>
-    <a href="https://github.com/amnp95/Femora/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"/></a>
+    <a href="https://github.com/amnp95/Femora/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="Apache-2.0 License"/></a>
     <a href="https://amnp95.github.io/Femora/"><img src="https://img.shields.io/badge/docs-online-brightgreen" alt="Documentation"/></a>
     <a href="https://github.com/amnp95/Femora/stargazers"><img src="https://img.shields.io/github/stars/amnp95/Femora?style=social" alt="GitHub Stars"/></a>
   </p>
@@ -36,7 +36,6 @@ Whether you are a researcher performing large-scale parametric studies or an eng
 - [Examples](#examples)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
-- [Code Style](#code-style)
 - [License](#license)
 - [Citing FEMORA](#citing-femora)
 - [Contact](#contact)
@@ -308,7 +307,7 @@ Contributions are welcome! Here's how to get started:
 1. **Fork** the repository on GitHub
 2. **Clone** your fork locally: `git clone https://github.com/<your-username>/Femora.git`
 3. **Create a branch** for your feature or fix: `git checkout -b feature/my-feature`
-4. **Make your changes** following the [code style guidelines](#code-style)
+4. **Make your changes** following the [contribution guide](CONTRIBUTING.md)
 5. **Test** your changes: `pytest tests/`
 6. **Submit a pull request** with a clear description of your changes
 
@@ -318,25 +317,9 @@ Please report bugs and request features via [GitHub Issues](https://github.com/a
 
 ---
 
-## Code Style
-
-FEMORA follows these style guidelines:
-
-- **Imports**: PEP 8 order (stdlib → third-party → local)
-- **Classes**: PascalCase with descriptive names
-- **Methods/Variables**: snake_case
-- **Private attributes**: Leading underscore (`_variable_name`)
-- **Type annotations**: For all function parameters and return values
-- **Documentation**: Google-style docstrings for all classes and methods
-- **Error handling**: Explicit exceptions with descriptive messages
-
-See [STYLE_GUIDE.md](STYLE_GUIDE.md) for the complete guide.
-
----
-
 ## License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Apache License 2.0** — see the [LICENSE](LICENSE) file for details.
 
 ---
 

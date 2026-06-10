@@ -7,10 +7,15 @@ from femora.core.section_base import Section  # We need a dummy section
 from femora.components.transformation.transformation import GeometricTransformation # And dummy transformation
 
 class DummySection(Section):
-    def __init__(self, tag=1):
+    def __init__(self, tag=1, j=2.0):
         super().__init__("section", "Elastic", f"dummy_section_{tag}")
         self.tag = tag
+        self.j = j
     def to_tcl(self): return ""
+    def get_area(self): return 1.0
+    def get_Iy(self): return 1.0
+    def get_Iz(self): return 1.0
+    def get_J(self): return self.j
 
 class DummyTransform(GeometricTransformation):
     def __init__(self, tag=1):
@@ -32,10 +37,10 @@ def test_single_line_mass(dummy_setup):
     rho = 10.0
     length = 2.0
     
-    elem = DispBeamColumnElement(ndof=3, section=sec, transformation=transf, massDens=rho)
+    elem = DispBeamColumnElement(ndof=3, section=sec, transformation=transf)
     
     # Create single line mesh length=2, x0=0, x1=2
-    mesh_part = SingleLineMesh("test_single", elem, x0=0, y0=0, z0=0, x1=length, y1=0, z1=0)
+    mesh_part = SingleLineMesh("test_single", elem, x0=0, y0=0, z0=0, x1=length, y1=0, z1=0, density=rho)
     
     # Check total mass
     # Total mass = 2.0 * 10.0 = 20.0
@@ -56,7 +61,7 @@ def test_structured_line_mass(dummy_setup):
     spacing = 1.0
     grid_size = 2 # 3 points: 0, 1, 2
     
-    elem = DispBeamColumnElement(ndof=6, section=sec, transformation=transf, massDens=rho)
+    elem = DispBeamColumnElement(ndof=6, section=sec, transformation=transf)
     
     # 1D line of columns
     # grid_size_1=0 -> 1 point, grid_size_2=0 -> 1 point ? No, grid_size is segments usually
@@ -67,6 +72,7 @@ def test_structured_line_mass(dummy_setup):
                                    grid_size_1=1, grid_size_2=0, 
                                    spacing_1=spacing, 
                                    length=length,
+                                   density=rho,
                                    )
     
     # We have 2 grid points (0,0) and (1,0).
@@ -86,4 +92,101 @@ def test_structured_line_mass(dummy_setup):
     # Verify all have 2.5 on translational DOFs
     for i in range(4):
         np.testing.assert_allclose(mass_array[i, :3], [2.5, 2.5, 2.5])
+
+
+def test_element_mass_does_not_create_line_meshpart_nodal_mass(dummy_setup):
+    sec, transf = dummy_setup
+    elem = DispBeamColumnElement(ndof=6, section=sec, transformation=transf, massDens=10.0)
+
+    mesh_part = SingleLineMesh("element_only", elem, x0=0, y0=0, z0=0, x1=2, y1=0, z1=0)
+
+    np.testing.assert_allclose(mesh_part.mesh.point_data["Mass"], 0.0)
+
+
+def test_line_meshpart_warns_when_element_and_meshpart_mass_are_both_active(dummy_setup):
+    sec, transf = dummy_setup
+    elem = DispBeamColumnElement(ndof=6, section=sec, transformation=transf, massDens=10.0)
+
+    with pytest.warns(RuntimeWarning, match="additive"):
+        SingleLineMesh("double_mass", elem, x0=0, y0=0, z0=0, x1=2, y1=0, z1=0, density=10.0)
+
+
+def test_line_meshpart_mass_per_length_compatibility_alias(dummy_setup):
+    sec, transf = dummy_setup
+    elem = DispBeamColumnElement(ndof=6, section=sec, transformation=transf)
+
+    with pytest.warns(FutureWarning, match="mass_per_length"):
+        mesh_part = SingleLineMesh(
+            "compat_mass",
+            elem,
+            x0=0,
+            y0=0,
+            z0=0,
+            x1=2,
+            y1=0,
+            z1=0,
+            mass_per_length=10.0,
+        )
+
+    np.testing.assert_allclose(mesh_part.density, 10.0)
+
+
+def test_line_meshpart_rotational_mass_uses_polar_inertia_not_section_j():
+    sec = DummySection(1, j=1000.0)
+    transf = DummyTransform(1)
+    elem = DispBeamColumnElement(ndof=6, section=sec, transformation=transf)
+
+    mesh_part = SingleLineMesh(
+        "polar_mass",
+        elem,
+        x0=0,
+        y0=0,
+        z0=0,
+        x1=2,
+        y1=0,
+        z1=0,
+        density=10.0,
+    )
+
+    mass_array = mesh_part.mesh.point_data["Mass"]
+    np.testing.assert_allclose(mass_array[0, 5], 10.0)
+
+
+def test_single_line_rotational_mass_uses_unit_direction_for_multiple_segments(dummy_setup):
+    sec, transf = dummy_setup
+    elem = DispBeamColumnElement(ndof=6, section=sec, transformation=transf)
+
+    mesh_part = SingleLineMesh(
+        "multi_segment",
+        elem,
+        x0=0,
+        y0=0,
+        z0=0,
+        x1=0,
+        y1=0,
+        z1=19,
+        number_of_lines=19,
+        density=10.0,
+    )
+
+    mass_array = mesh_part.mesh.point_data["Mass"]
+    np.testing.assert_allclose(mass_array[0, 5], 10.0)
+
+
+def test_structured_line_rotational_mass_uses_unit_direction_for_multiple_segments(dummy_setup):
+    sec, transf = dummy_setup
+    elem = DispBeamColumnElement(ndof=6, section=sec, transformation=transf)
+
+    mesh_part = StructuredLineMesh(
+        "structured_multi_segment",
+        elem,
+        grid_size_1=0,
+        grid_size_2=0,
+        length=19,
+        number_of_lines=19,
+        density=10.0,
+    )
+
+    mass_array = mesh_part.mesh.point_data["Mass"]
+    np.testing.assert_allclose(mass_array[0, 5], 10.0)
 

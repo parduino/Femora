@@ -52,7 +52,7 @@ jobs:
             ${{ steps.agent.outputs.refactored_files }}
 
             ## Changes
-            - Rewrote docstrings to match `STYLE_GUIDE.md`.
+            - Rewrote docstrings to match `.github/DOCSTRING_STYLE.md`.
             - Ensured classes and methods follow the current Femora docstring standard.
             - Processed a batched slice of the queue and removed those files from `.github/docstring_targets_copilot.yml`.
 

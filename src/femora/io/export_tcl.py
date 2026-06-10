@@ -281,6 +281,18 @@ def export_to_tcl(model, filename=None, progress_callback=None, decimals=5):
                 if progress_callback:
                     progress_callback((i / Regions.shape[0]) * 10 + 55, "writing regions")
 
+            element_groups = []
+            if hasattr(model, "group"):
+                element_groups = list(model.group.element.get_all().values())
+            if element_groups:
+                f.write("\n# Element Groups ======================================\n")
+                region_tags = [int(tag) for tag in model.region.get_all().keys()]
+                next_group_tag = max(region_tags + [int(tag) for tag in Regions] + [0]) + 1
+                for group in element_groups:
+                    group.assign_tag(next_group_tag)
+                    next_group_tag += 1
+                    f.write(f"{group.to_tcl(eleTags)} \n")
+
             if progress_callback:
                 progress_callback(65, "writing constraints")
 

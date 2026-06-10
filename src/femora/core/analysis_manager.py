@@ -113,9 +113,11 @@ class AnalysisManager:
         algorithm: Algorithm,
         test: Test,
         integrator: TransientIntegrator,
-        dt: float,
+        dt: float | None = None,
         num_steps: int | None = None,
         final_time: float | None = None,
+        dt_min: float | None = None,
+        dt_max: float | None = None,
         num_sublevels: int | None = None,
         num_substeps: int | None = None,
     ) -> Analysis:
@@ -129,10 +131,13 @@ class AnalysisManager:
             algorithm: Nonlinear solution algorithm.
             test: Convergence test.
             integrator: Transient integrator.
-            dt: Time-step increment.
+            dt: Constant time-step increment. Required unless both dt_min and dt_max
+                are provided.
             num_steps: Optional number of transient steps.
             final_time: Optional end time. Exactly one of `num_steps` or `final_time`
                 must be provided.
+            dt_min: Optional first time step for a linear time-step ramp.
+            dt_max: Optional last time step for a linear time-step ramp.
             num_sublevels: Optional transient sublevel count for retry logic.
             num_substeps: Optional transient substep count for retry logic.
 
@@ -152,6 +157,8 @@ class AnalysisManager:
                 num_steps=num_steps,
                 final_time=final_time,
                 dt=dt,
+                dt_min=dt_min,
+                dt_max=dt_max,
                 num_sublevels=num_sublevels,
                 num_substeps=num_substeps,
             )

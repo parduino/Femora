@@ -11,10 +11,10 @@ authors = [
     {name = "Amin Pakzad", email = "amnp95@uw.edu"},
     {name = "Pedro Arduino", email = "parduino@uw.edu"}
 ]
-license = {text = "MIT"}
+license = {text = "Apache-2.0"}
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
 ]
 

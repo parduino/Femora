@@ -7,7 +7,7 @@ import yaml
 
 @dataclass
 class Config:
-    STYLE_GUIDE_PATH: str = "STYLE_GUIDE.md"
+    STYLE_GUIDE_PATH: str = ".github/DOCSTRING_STYLE.md"
     TARGETS_PATH: str = ".github/docstring_targets_copilot.yml"
     MODEL_ENV_NAME: str = "COPILOT_MODEL"
     BATCH_SIZE: int = int(os.getenv("DOCSTRING_BATCH_SIZE", "3"))
@@ -78,7 +78,7 @@ Additional file-specific instructions:
     return f"""
 You are editing docstrings for the Femora project.
 
-Follow the STYLE_GUIDE below exactly.
+Follow the DOCSTRING_STYLE guide below exactly.
 
 Task:
 - Review the entire target file first.
@@ -107,7 +107,7 @@ Task:
 - The target file path is: {target_file}
 {extra_prompt_block}
 
-STYLE_GUIDE:
+DOCSTRING_STYLE:
 {style_guide}
 
 TARGET CODE:
