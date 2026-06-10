@@ -502,7 +502,7 @@ docstrings for a Femora file.
 ```text
 You are editing docstrings for the Femora project.
 
-Follow STYLE_GUIDE.md exactly.
+Follow `.github/DOCSTRING_STYLE.md` exactly.
 
 Task:
 - Review the entire target file first.

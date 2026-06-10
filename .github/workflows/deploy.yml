@@ -1,0 +1,52 @@
+name: Deploy Hybrid Site
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # --- 1. SETUP PYTHON (For MkDocs) ---
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+          cache: 'pip'
+
+      - name: Install MkDocs & Material
+        run: pip install mkdocs mkdocs-material mkdocstrings[python]
+
+      # --- 2. PREPARE THE OUTPUT FOLDER ---
+      - name: Prepare Public Folder
+        run: |
+          mkdir -p public
+          
+          # Copy your AI-Designed website files (HTML/CSS/JS) to the root
+          # We exclude the 'docs' folder here to avoid confusion, as we will build it next
+          rsync -av --exclude='docs' --exclude='mkdocs.yml' website/ public/
+
+      # --- 3. BUILD MKDOCS INTO SUBFOLDER ---
+      - name: Build Documentation
+        run: |
+          # Go into the website folder where mkdocs.yml lives
+          cd website
+          
+          # Build the site, but tell it to output to the public/docs folder we made above
+          mkdocs build --site-dir ../public/docs
+
+      # --- 4. DEPLOY TO GITHUB PAGES ---
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public

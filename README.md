@@ -36,7 +36,6 @@ Whether you are a researcher performing large-scale parametric studies or an eng
 - [Examples](#examples)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
-- [Code Style](#code-style)
 - [License](#license)
 - [Citing FEMORA](#citing-femora)
 - [Contact](#contact)
@@ -308,29 +307,13 @@ Contributions are welcome! Here's how to get started:
 1. **Fork** the repository on GitHub
 2. **Clone** your fork locally: `git clone https://github.com/<your-username>/Femora.git`
 3. **Create a branch** for your feature or fix: `git checkout -b feature/my-feature`
-4. **Make your changes** following the [code style guidelines](#code-style)
+4. **Make your changes** following the [contribution guide](CONTRIBUTING.md)
 5. **Test** your changes: `pytest tests/`
 6. **Submit a pull request** with a clear description of your changes
 
 For detailed instructions, see [CONTRIBUTING.md](CONTRIBUTING.md) and the [Developer Guide](https://amnp95.github.io/Femora/developer/index.html).
 
 Please report bugs and request features via [GitHub Issues](https://github.com/amnp95/Femora/issues).
-
----
-
-## Code Style
-
-FEMORA follows these style guidelines:
-
-- **Imports**: PEP 8 order (stdlib → third-party → local)
-- **Classes**: PascalCase with descriptive names
-- **Methods/Variables**: snake_case
-- **Private attributes**: Leading underscore (`_variable_name`)
-- **Type annotations**: For all function parameters and return values
-- **Documentation**: Google-style docstrings for all classes and methods
-- **Error handling**: Explicit exceptions with descriptive messages
-
-See [STYLE_GUIDE.md](STYLE_GUIDE.md) for the complete guide.
 
 ---
 
