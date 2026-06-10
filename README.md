@@ -10,7 +10,7 @@
   <p>
     <a href="https://pypi.org/project/femora/"><img src="https://img.shields.io/pypi/v/femora?color=blue&label=PyPI" alt="PyPI Version"/></a>
     <a href="https://pypi.org/project/femora/"><img src="https://img.shields.io/pypi/pyversions/femora" alt="Python Versions"/></a>
-    <a href="https://github.com/amnp95/Femora/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT License"/></a>
+    <a href="https://github.com/amnp95/Femora/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="Apache-2.0 License"/></a>
     <a href="https://amnp95.github.io/Femora/"><img src="https://img.shields.io/badge/docs-online-brightgreen" alt="Documentation"/></a>
     <a href="https://github.com/amnp95/Femora/stargazers"><img src="https://img.shields.io/github/stars/amnp95/Femora?style=social" alt="GitHub Stars"/></a>
   </p>
@@ -336,7 +336,7 @@ See [STYLE_GUIDE.md](STYLE_GUIDE.md) for the complete guide.
 
 ## License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Apache License 2.0** — see the [LICENSE](LICENSE) file for details.
 
 ---
 
