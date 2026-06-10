@@ -1,3 +1,10 @@
+# =============================================================================
+# Femora: Fast Efficient Meta-modeling for OpenSees-based Resilience Analysis
+# Copyright 2026 Amin Pakzad and Pedro Arduino
+# Developed at the UW Geotechnical Lab
+# SPDX-License-Identifier: Apache-2.0
+# =============================================================================
+
 """Event-bus API for Femora lifecycle coordination.
 
 This page documents the event objects that power Femora's advanced lifecycle

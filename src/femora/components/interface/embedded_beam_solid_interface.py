@@ -1,3 +1,10 @@
+﻿# =============================================================================
+# Femora: Fast Efficient Meta-modeling for OpenSees-based Resilience Analysis
+# Copyright 2026 Amin Pakzad and Pedro Arduino
+# Developed at the UW Geotechnical Lab
+# SPDX-License-Identifier: Apache-2.0
+# =============================================================================
+
 from __future__ import annotations
 
 from typing import List
@@ -566,7 +573,7 @@ class EmbeddedBeamSolidInterface(InterfaceBase, HandlesDecompositionMixin):
 
 
 if __name__ == "__main__":
-    """Quick demo – builds a cube soil mesh and a central pile, then creates
+    """Quick demo â€“ builds a cube soil mesh and a central pile, then creates
     the EmbeddedBeamSolidInterface and exports a TCL file named
     `embedded_demo.tcl`.
     """
@@ -579,7 +586,7 @@ if __name__ == "__main__":
     soil_mat = model.material.nd.elastic_isotropic(user_name="Soil", E=30e6, nu=0.3, rho=2000)
     brick_ele = model.element.brick.std(ndof=3, material=soil_mat)
 
-    # Beam – needs section + transformation
+    # Beam â€“ needs section + transformation
     beam_sec = model.section.beam.elastic(user_name="PileSection", E=2e11, A=0.05, Iz=1e-4, Iy=1e-4)
     transf = model.transformation.transformation3d("Linear", 0, 1, 0)  # Local y-axis as vecXZ
     beam_ele = model.element.beam.disp(ndof=6, section=beam_sec, transformation=transf)
@@ -663,4 +670,4 @@ if __name__ == "__main__":
         show_grid=True,
     )
 
-    # print("Demo finished → embedded_demo.tcl generated.")
+    # print("Demo finished â†’ embedded_demo.tcl generated.")

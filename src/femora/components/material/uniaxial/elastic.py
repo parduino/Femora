@@ -1,3 +1,10 @@
+﻿# =============================================================================
+# Femora: Fast Efficient Meta-modeling for OpenSees-based Resilience Analysis
+# Copyright 2026 Amin Pakzad and Pedro Arduino
+# Developed at the UW Geotechnical Lab
+# SPDX-License-Identifier: Apache-2.0
+# =============================================================================
+
 """Uniaxial linear elastic material used with OpenSees truss, spring, and fiber models."""
 
 from __future__ import annotations
