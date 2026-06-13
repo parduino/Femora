@@ -11,19 +11,32 @@ theme:
     repo: fontawesome/brands/github
   features:
     - navigation.tabs
+    - navigation.footer
     - content.code.copy
     - content.code.annotate
-  palette: 
-    - scheme: default
+  palette:
+    # System preference
+    - media: "(prefers-color-scheme)"
+      primary: custom
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
       primary: custom
       toggle:
         icon: material/toggle-switch
         name: Switch to dark mode
-    - scheme: slate
+
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
       primary: custom
       toggle:
         icon: material/toggle-switch-off-outline
-        name: Switch to light mode
+        name: Switch to system preference
 
 # --- NEW: Math Support Configuration ---
 markdown_extensions:
@@ -33,7 +46,13 @@ markdown_extensions:
   - pymdownx.details
   - pymdownx.inlinehilite
   - pymdownx.snippets
-  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.arithmatex:
       generic: true
   - attr_list
@@ -83,10 +102,21 @@ plugins:
               filters: public
 
 nav:
-  - Website: https://femora.io/
   - Home: index.md
-  - User Guide:
-      - Installation: installation.md
-      - 'Getting Started': getting_started.md
-      - 'Advanced Meshing': advanced.md
-  - API Reference: reference/  
+  - Installation: installation.md
+  - 'Getting Started': getting_started.md
+  - Concepts:
+      - Overview: concepts/index.md
+      - Model: concepts/model.md
+      - Managers: concepts/managers.md
+      - 'Building Blocks': concepts/building-blocks.md
+      - 'Mesh Parts': concepts/mesh-parts.md
+      - 'Constraints and Interfaces': concepts/constraints-and-interfaces.md
+      - Assembly: concepts/assembly.md
+      - 'Tags, Sources, Regions, and Groups': concepts/tags-sources-regions-and-groups.md
+      - 'Loads, Time Series, and Patterns': concepts/loads-time-series-and-patterns.md
+      - 'Damping, Recorders, and Outputs': concepts/damping-recorders-and-outputs.md
+      - 'Process and Analysis': concepts/process-and-analysis.md
+      - 'Partitioning and Parallel Execution': concepts/partitioning-and-parallel-execution.md
+  - 'Tutorials and Examples': advanced.md
+  - 'API Reference': reference/

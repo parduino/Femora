@@ -1,3 +1,10 @@
+# =============================================================================
+# Femora: Fast Efficient Meta-modeling for OpenSees-based Resilience Analysis
+# Copyright 2026 Amin Pakzad and Pedro Arduino
+# Developed at the UW Geotechnical Lab
+# SPDX-License-Identifier: Apache-2.0
+# =============================================================================
+
 """
 Compute 1‑D shear‑wave transfer functions for a layered soil column
 using the classic Kramer (1996) frequency‑domain transfer‑matrix method.

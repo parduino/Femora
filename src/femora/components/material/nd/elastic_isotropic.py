@@ -1,3 +1,10 @@
+﻿# =============================================================================
+# Femora: Fast Efficient Meta-modeling for OpenSees-based Resilience Analysis
+# Copyright 2026 Amin Pakzad and Pedro Arduino
+# Developed at the UW Geotechnical Lab
+# SPDX-License-Identifier: Apache-2.0
+# =============================================================================
+
 """Isotropic linear elastic continuum material for OpenSees nD elements."""
 
 from __future__ import annotations

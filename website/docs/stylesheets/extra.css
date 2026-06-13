@@ -38,6 +38,13 @@
     --md-typeset-a-color: var(--femora-accent-text);
     --md-typeset-table-color: color-mix(in oklab, black 10%, transparent 90%);
     --md-typeset-table-color--light: color-mix(in oklab, black 5%, transparent 95%);
+
+    /* Diagram variables */
+    --diagram-root-bg: var(--femora-muted-surface-light);
+    --diagram-root-border: var(--femora-primary);
+    --diagram-card-bg: var(--femora-card-light);
+    --diagram-card-fg: var(--femora-fg-light);
+    --diagram-card-border: var(--femora-border-light);
 }
 
 [data-md-color-scheme="slate"] {
@@ -57,6 +64,13 @@
     --md-typeset-a-color: var(--femora-primary);
     --md-typeset-table-color: color-mix(in oklab, white 12%, transparent 88%);
     --md-typeset-table-color--light: color-mix(in oklab, white 6%, transparent 94%);
+
+    /* Diagram variables */
+    --diagram-root-bg: #4a342c;
+    --diagram-root-border: var(--femora-primary);
+    --diagram-card-bg: var(--femora-card-dark);
+    --diagram-card-fg: var(--femora-fg-dark);
+    --diagram-card-border: var(--femora-border-dark);
 }
 
 .md-header {
@@ -174,3 +188,73 @@
 [data-md-color-scheme="slate"] .md-typeset .grid.cards > ol > li {
     box-shadow: none;
 }
+
+/* Custom Mermaid theme-aware styling */
+.mermaid .root rect, .mermaid .root circle, .mermaid .root polygon {
+    fill: var(--diagram-root-bg) !important;
+    stroke: var(--diagram-root-border) !important;
+}
+.mermaid .root .label, .mermaid .root text, .mermaid .root tspan, .mermaid .root div {
+    color: var(--diagram-card-fg) !important;
+    fill: var(--diagram-card-fg) !important;
+}
+
+.mermaid .manager rect, .mermaid .manager circle, .mermaid .manager polygon,
+.mermaid .stage rect, .mermaid .stage circle, .mermaid .stage polygon {
+    fill: var(--diagram-card-bg) !important;
+    stroke: var(--diagram-card-border) !important;
+}
+.mermaid .manager .label, .mermaid .manager text, .mermaid .manager tspan, .mermaid .manager div,
+.mermaid .stage .label, .mermaid .stage text, .mermaid .stage tspan, .mermaid .stage div {
+    color: var(--diagram-card-fg) !important;
+    fill: var(--diagram-card-fg) !important;
+}
+
+.mermaid .compile rect, .mermaid .compile circle, .mermaid .compile polygon {
+    fill: var(--diagram-root-bg) !important;
+    stroke: var(--diagram-root-border) !important;
+}
+.mermaid .compile .label, .mermaid .compile text, .mermaid .compile tspan, .mermaid .compile div {
+    color: var(--diagram-card-fg) !important;
+    fill: var(--diagram-card-fg) !important;
+}
+
+/* Style connection paths/links so they are visible in dark mode */
+.mermaid .edgePath .path {
+    stroke: var(--diagram-card-fg) !important;
+}
+.mermaid .edgePath .arrowheadPath {
+    fill: var(--diagram-card-fg) !important;
+}
+
+/* Make diagram font size larger and more readable */
+.mermaid .node .label,
+.mermaid .node text,
+.mermaid .node tspan,
+.mermaid .node div {
+    font-size: 14px !important;
+    line-height: 1.4 !important;
+}
+
+/* Reusable embedded interactive visual styling */
+.femora-embed {
+    margin: 1rem 0 0.4rem;
+    border: 1px solid color-mix(in oklab, currentColor 10%, transparent 90%);
+    border-radius: 1rem;
+    overflow: hidden;
+    background: color-mix(in oklab, var(--md-default-bg-color) 92%, currentColor 4%);
+}
+
+.femora-embed iframe {
+    display: block;
+    width: 100%;
+    height: 480px;
+    border: 0;
+}
+
+@media screen and (max-width: 768px) {
+    .femora-embed iframe {
+        height: 340px;
+    }
+}
+

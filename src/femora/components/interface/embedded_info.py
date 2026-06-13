@@ -1,3 +1,10 @@
+﻿# =============================================================================
+# Femora: Fast Efficient Meta-modeling for OpenSees-based Resilience Analysis
+# Copyright 2026 Amin Pakzad and Pedro Arduino
+# Developed at the UW Geotechnical Lab
+# SPDX-License-Identifier: Apache-2.0
+# =============================================================================
+
 from typing import List, Tuple, Set, FrozenSet, Optional, Union
 from dataclasses import dataclass, field
 import hashlib
@@ -136,11 +143,11 @@ class EmbeddedInfo:
         if self.is_conflict(other):
             return False
 
-        # Original similarity – same beams
+        # Original similarity â€“ same beams
         if self.beams == other.beams:
             return True
 
-        # New similarity – overlapping solids
+        # New similarity â€“ overlapping solids
         return bool(self._solids_set & other._solids_set)
     
     def __hash__(self) -> int:
@@ -174,7 +181,7 @@ class EmbeddedInfo:
             # Equal already handled; so same beams, no conflict
             return "similar"
 
-        # Different beams – decide similarity by solid overlap
+        # Different beams â€“ decide similarity by solid overlap
         if self._solids_set & other._solids_set:
             return "similar"
 

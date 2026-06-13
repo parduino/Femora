@@ -1,3 +1,9 @@
+# =============================================================================
+# Femora: Fast Efficient Meta-modeling for OpenSees-based Resilience Analysis
+# Copyright 2026 Amin Pakzad and Pedro Arduino
+# Developed at the UW Geotechnical Lab
+# SPDX-License-Identifier: Apache-2.0
+# =============================================================================
 
 def custom_building(structure_info, soil_info, foundation_info, pile_info):
     """Construct a 3D parallel finite element soil-structure interaction model of a building.

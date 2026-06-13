@@ -1,3 +1,10 @@
+# =============================================================================
+# Femora: Fast Efficient Meta-modeling for OpenSees-based Resilience Analysis
+# Copyright 2026 Amin Pakzad and Pedro Arduino
+# Developed at the UW Geotechnical Lab
+# SPDX-License-Identifier: Apache-2.0
+# =============================================================================
+
 """
 Browser-based plotting GUI for soil/foundation/piles using PyVista + trame.
 Redesigned based on working test.py patterns for better reliability.
