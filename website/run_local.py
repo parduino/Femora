@@ -2,6 +2,7 @@ import argparse
 import http.server
 import os
 import shutil
+import socket
 import socketserver
 import subprocess
 import sys
@@ -21,6 +22,22 @@ SSI_EXPORT_SCRIPT = os.path.join(ROOT_DIR, "scripts", "export_ssi_viewer.py")
 SSI_EXPORT_HTML = os.path.join(WEBSITE_DIR, "public", "ssi-viewer", "index.html")
 PORT = 8000
 NEXT_DEV_PORT = 3000
+
+
+def npm_command():
+    """Return the platform-appropriate npm executable."""
+    return "npm.cmd" if os.name == "nt" else "npm"
+
+
+def find_available_port(start_port):
+    """Return the first available localhost TCP port starting from ``start_port``."""
+    port = start_port
+    while True:
+      with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+          sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+          if sock.connect_ex(("127.0.0.1", port)) != 0:
+              return port
+      port += 1
 
 
 def print_step(message):
@@ -46,7 +63,7 @@ def install_node_deps():
     node_modules = os.path.join(WEBSITE_DIR, "node_modules")
     if not os.path.exists(node_modules):
         print_step("Installing Node.js dependencies")
-        subprocess.run("npm install", cwd=WEBSITE_DIR, shell=True, check=True)
+        subprocess.run([npm_command(), "install"], cwd=WEBSITE_DIR, check=True)
     else:
         print("Node modules already installed.")
 
@@ -105,7 +122,7 @@ def build_nextjs():
     print_step("Building Next.js Landing Page")
 
     try:
-        subprocess.run("npm run build", cwd=WEBSITE_DIR, shell=True, check=True)
+        subprocess.run([npm_command(), "run", "build"], cwd=WEBSITE_DIR, check=True)
     except subprocess.CalledProcessError:
         print("Next.js build failed.")
         print("Run `npm run build` inside the website folder to see the error.")
@@ -247,11 +264,16 @@ def run_website_dev(skip_ssi=False, force_ssi=False):
     if not skip_ssi:
         build_ssi_viewer(force=force_ssi)
 
-    print_step(f"Launching Next.js Dev Server at http://localhost:{NEXT_DEV_PORT}")
-    webbrowser.open(f"http://localhost:{NEXT_DEV_PORT}")
+    dev_port = find_available_port(NEXT_DEV_PORT)
+    print_step(f"Launching Next.js Dev Server at http://localhost:{dev_port}")
+    webbrowser.open(f"http://localhost:{dev_port}")
 
     try:
-        subprocess.run("npm run dev", cwd=WEBSITE_DIR, shell=True, check=True)
+        subprocess.run(
+            [npm_command(), "run", "dev", "--", "--port", str(dev_port)],
+            cwd=WEBSITE_DIR,
+            check=True,
+        )
     except subprocess.CalledProcessError:
         print("Next.js dev server failed.")
         sys.exit(1)

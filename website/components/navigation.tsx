@@ -14,16 +14,19 @@ export function Navigation() {
           </div>
 
           <div className="hidden md:flex items-center gap-8">
-            <Link href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Features
             </Link>
-            <Link href="#modes" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/#modes" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Workflows
             </Link>
-            <Link href="#docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/tools" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Tools
+            </Link>
+            <Link href="/#docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Documentation
             </Link>
-            <Link href="#ai" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/#ai" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               AI Direction
             </Link>
           </div>

@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { BookOpen, Code, GraduationCap, Wrench, ArrowRight } from "lucide-react"
+import { BookOpen, Code, GraduationCap, ArrowRight } from "lucide-react"
 
 const docSections = [
   {
@@ -21,12 +21,6 @@ const docSections = [
     description: "Practical 3D examples for site response, SSI, DRM workflows, and assembly strategies",
     link: "/docs/advanced/",
   },
-  {
-    icon: Wrench,
-    title: "Installation",
-    description: "Environment setup, repository workflow, and local documentation build steps",
-    link: "/docs/installation/",
-  },
 ]
 
 export function Documentation() {
@@ -39,11 +33,11 @@ export function Documentation() {
             <span className="block text-primary">Documentation</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto text-pretty">
-            {"From quick starts to advanced 3D assembly workflows, the docs are meant to support both everyday use and research-scale modeling."}
+            {"Use the documentation to learn the workflow, browse the API surface, and work through real examples. Use the Tools area when you want an interactive helper instead of a guide."}
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto mb-12">
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-10">
           {docSections.map((section, index) => (
             <Card key={index} className="glass-strong p-6 hover:bg-card/50 transition-all group cursor-pointer" asChild>
               <a href={section.link}>
@@ -62,6 +56,14 @@ export function Documentation() {
               </a>
             </Card>
           ))}
+        </div>
+
+        <div className="mb-12 text-center text-sm text-muted-foreground">
+          Need environment setup details or local build steps?{" "}
+          <a href="/docs/installation/" className="text-primary hover:underline">
+            Open Installation
+          </a>
+          .
         </div>
 
         <div className="glass-strong rounded-2xl p-8 md:p-12 max-w-4xl mx-auto">
@@ -86,6 +88,11 @@ export function Documentation() {
               <Button size="lg" variant="outline" asChild>
                 <a href="https://github.com/GeotechUW/Femora" target="_blank" rel="noopener noreferrer">
                   View on GitHub
+                </a>
+              </Button>
+              <Button size="lg" variant="outline" asChild>
+                <a href="/tools">
+                  Open Tools
                 </a>
               </Button>
             </div>

@@ -1,4 +1,4 @@
-import { Github, FileText } from "lucide-react"
+import { FileText, Github } from "lucide-react"
 
 export function Footer() {
   return (
@@ -36,6 +36,11 @@ export function Footer() {
               <li>
                 <a href="/docs/reference/" className="text-muted-foreground transition-colors hover:text-foreground">
                   API Reference
+                </a>
+              </li>
+              <li>
+                <a href="/tools" className="text-muted-foreground transition-colors hover:text-foreground">
+                  Tools
                 </a>
               </li>
             </ul>
@@ -106,7 +111,7 @@ export function Footer() {
         </div>
 
         <div className="flex flex-col items-center justify-between gap-4 border-t border-border/50 pt-8 text-sm text-muted-foreground md:flex-row">
-          <p>{"© 2025 Femora. Open-source platform developed by Amin Pakzad & Pedro Arduino"}</p>
+          <p>{"Copyright 2025 Femora. Open-source platform developed by Amin Pakzad and Pedro Arduino"}</p>
           <div className="flex gap-6">
             <a
               href="https://github.com/GeotechUW/Femora/blob/main/LICENSE"

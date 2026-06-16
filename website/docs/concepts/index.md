@@ -60,7 +60,7 @@ Femora is easiest to understand if you divide the workflow into three phases:
 | Assembly | Compile mesh parts and interfaces into one global assembled model. | Femora creates final topology, tags, partitions, and source metadata. |
 | After assembly | Add behavior, selections, recorders, analyses, process steps, and exports. | These objects usually refer to the assembled model or solver workflow. |
 
-This split is important because some objects must exist before assembly, while others only make full sense after the global mesh exists. Building blocks and mesh parts prepare the model. Assembly resolves the global model. Constraints, groups, damping, recorders, analyses, and process steps describe what happens to that assembled model.
+This split is important because some objects must exist before assembly, while others only make full sense after the global mesh exists. Building blocks, mesh parts, and interfaces prepare the model. Assembly resolves the global model. Constraints, groups, damping, recorders, analyses, and process steps describe what happens to that assembled model.
 
 ---
 
@@ -167,9 +167,9 @@ Mesh parts are source geometry before assembly. The assembler combines them into
 
     Define independent geometric sources that use building blocks.
 
--   :material-vector-link: **[Constraints and Interfaces](constraints-and-interfaces.md)**
+-   :material-vector-link: **[Interfaces](constraints-and-interfaces.md)**
 
-    Understand boundary constraints and mesh-part relationships.
+    Understand assembly-time relationships between independent mesh parts.
 
 -   :material-source-merge: **[Assembly](assembly.md)**
 

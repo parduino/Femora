@@ -17,7 +17,7 @@ The **Assembler** is the compiler that:
 1. Gathers all independent parts.
 2. Combines their coordinate meshes into a single global grid: `model.assembled_mesh`.
 3. Performs a spatial sweep, merging coincident points that lie within a specified distance (`tolerance=1e-5`) to establish continuous elements.
-4. Triggers the event bus (`PRE_ASSEMBLE`, `POST_ASSEMBLE`) to allow sub-managers (such as constraints, interfaces, and boundary absorbers) to calculate node contacts and apply mathematical constraints to the unified grid.
+4. Triggers the event bus (`PRE_ASSEMBLE`, `POST_ASSEMBLE`) to allow sub-managers (such as interfaces, boundary absorbers, and later assembled-model behaviors) to update the unified grid.
 
 ---
 
@@ -88,5 +88,5 @@ Upon compilation, the Assembler builds:
 ## Related Concepts
 
 * [Mesh Parts](mesh-parts.md): Define the source geometries compiled by the assembler.
-* [Constraints and Interfaces](constraints-and-interfaces.md): Learn how connections execute during assembly events.
+* [Interfaces](constraints-and-interfaces.md): Learn how mesh-part relationships execute during assembly events.
 * [Tags, Sources, Regions, and Groups](tags-sources-regions-and-groups.md): See how to organize the assembled grid.

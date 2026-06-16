@@ -42,6 +42,11 @@ The next page explains mesh parts in detail. This page prepares the objects that
 ???+ note "Building block first, geometry second"
     A mesh part usually needs an element template. The element template usually needs a material, section, or transformation first.
 
+???+ tip "Femora checks consistency"
+    Femora does not only store building blocks. It also validates many of the relationships between them. For example, referenced dependencies usually need to belong to the same `Model`, some section families require compatible material families, and invalid transformation inputs are rejected early.
+
+    This helps catch many modeling mistakes before export or analysis. It does not mean Femora automatically proves that every chosen formulation is mechanically appropriate. That part still depends on engineering judgment.
+
 ---
 
 ## How To Think

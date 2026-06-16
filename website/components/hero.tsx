@@ -54,6 +54,11 @@ export function Hero() {
                   View Documentation
                 </a>
               </Button>
+              <Button size="lg" variant="outline" asChild>
+                <a href="/tools">
+                  Open Tools
+                </a>
+              </Button>
             </div>
 
             <div className="flex items-center gap-8 pt-4">
