@@ -151,6 +151,80 @@ This is different from manually writing node-by-node constraints after export. T
 
     In this pattern, the interface logic inspects the assembled boundary and then creates the absorbing treatment after assembly begins.
 
+=== "Embedded nodes in a host mesh"
+
+    Embedded node interfaces are useful when the constrained part should be tied to surrounding retained cells through node-based embedding logic instead of the beam-solid workflow.
+
+    ```python
+    from femora.core.model import Model
+
+    model = Model()
+
+    interface = model.interface.node_interface(
+        name="building_foundation_interface",
+        constrained_node="building",
+        retained_nodes=["foundation"],
+        rot=False,
+        p=False,
+        offset=0.0,
+    )
+
+    model.assembler.assemble()
+    ```
+
+    The constrained part is sampled after assembly, host cells are searched, and Femora generates the embedded interface contribution from those discovered relationships.
+
+---
+
+## Inspecting Interfaces After Assembly
+
+After `model.assembler.assemble()`, the embedded interfaces can be plotted directly to inspect what Femora actually selected.
+
+=== "Beam-solid plot"
+
+    ```python
+    interface = model.interface.beam_solid_interface(
+        name="pile_soil_interface",
+        beam_part="pile",
+        solid_parts=["soil_box"],
+        radius=0.50,
+    )
+
+    model.assembler.assemble()
+    interface.plot()
+    ```
+
+=== "Embedded-node plot"
+
+    ```python
+    interface = model.interface.node_interface(
+        name="building_foundation_interface",
+        constrained_node="building",
+        retained_nodes=["foundation"],
+    )
+
+    model.assembler.assemble()
+    interface.plot()
+    ```
+
+The plot helpers are useful because they show the **resolved interface result**, not just the declaration. That makes it much easier to confirm that the right cells, points, and search region were actually used.
+
+???+ tip "Read the plot like a debugging view"
+    For a beam-solid interface, the usual reading is:
+
+    - black line cells: the beam path owned by the interface
+    - orange solid cells: the surrounding host cells selected by the search
+    - blue envelope: the geometric radius/envelope used for discovery
+
+    For an embedded-node interface, the usual reading is:
+
+    - black geometry: the constrained mesh part
+    - orange cells: the retained host cells that received the embedded search hits
+    - blue points: constrained points used by the interface
+    - red markers: generated interface cells added to the assembled model
+
+    If those highlights do not match what you intended physically, the interface definition should be adjusted before export or analysis.
+
 ---
 
 ## What Femora Stores

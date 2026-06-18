@@ -111,7 +111,7 @@ nav:
       - Managers: concepts/managers.md
       - 'Building Blocks': concepts/building-blocks.md
       - 'Mesh Parts': concepts/mesh-parts.md
-      - Interfaces: concepts/constraints-and-interfaces.md
+      - Interfaces: concepts/interfaces.md
       - Assembly: concepts/assembly.md
       - 'Tags, Sources, Regions, and Groups': concepts/tags-sources-regions-and-groups.md
       - 'Loads, Time Series, and Patterns': concepts/loads-time-series-and-patterns.md

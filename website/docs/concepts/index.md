@@ -167,7 +167,7 @@ Mesh parts are source geometry before assembly. The assembler combines them into
 
     Define independent geometric sources that use building blocks.
 
--   :material-vector-link: **[Interfaces](constraints-and-interfaces.md)**
+-   :material-vector-link: **[Interfaces](interfaces.md)**
 
     Understand assembly-time relationships between independent mesh parts.
 

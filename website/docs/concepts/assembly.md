@@ -88,5 +88,5 @@ Upon compilation, the Assembler builds:
 ## Related Concepts
 
 * [Mesh Parts](mesh-parts.md): Define the source geometries compiled by the assembler.
-* [Interfaces](constraints-and-interfaces.md): Learn how mesh-part relationships execute during assembly events.
+* [Interfaces](interfaces.md): Learn how mesh-part relationships execute during assembly events.
 * [Tags, Sources, Regions, and Groups](tags-sources-regions-and-groups.md): See how to organize the assembled grid.
