@@ -51,7 +51,7 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
 
     __doc_controls__ = {
         "show_docstring_attributes": True,
-        "members": ["__init__"],
+        "members": ["__init__", "plot"],
     }
 
     def _subscribe_events(self) -> None:
@@ -141,6 +141,7 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
         self._friction_interface_kt = friction_interface_kt
         self._friction_interface_mu = friction_interface_mu
         self._friction_interface_int_type = friction_interface_int_type
+        self._interface_part_tag: int | None = None
 
         if self._friction_interface :
             if not self._use_mesh_part_points:
@@ -165,11 +166,188 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
         except TypeError:
             return mesh.extract_surface()
 
+    def _collect_embedding_data(
+        self,
+        assembled_mesh: pv.UnstructuredGrid,
+    ) -> tuple[pv.UnstructuredGrid, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Collect selected host cells and constrained points for embedding.
 
+        Returns:
+            A tuple containing:
+            - tetrahedralized working mesh
+            - original assembled cell ids for selected host cells
+            - selected offset points
+            - selected point ids on the constrained part
+            - selected normals for those points
+        """
+        tetrahedra_mesh = self._tetrahedralize(assembled_mesh)
+        offset_points, point_ids, normals = self._create_offset_mesh(assembled_mesh)
 
-    
+        tetra_mask = tetrahedra_mesh.celltypes == pv.CellType.TETRA
+        retained_mask = np.zeros(tetrahedra_mesh.n_cells, dtype=bool)
+        for part in self.retained_nodes:
+            retained_mask |= tetrahedra_mesh.cell_data['MeshPartTag_celldata'] == part.tag
+        cell_mask = tetra_mask & retained_mask
 
+        tetrahedra_mesh.cell_data['CellIndex'] = np.arange(tetrahedra_mesh.n_cells, dtype=int)
+        tetrahedra_mesh_filtered = tetrahedra_mesh.extract_cells(cell_mask)
+        cell_ids = tetrahedra_mesh_filtered.find_containing_cell(offset_points)
+        point_mask = cell_ids != -1
 
+        selected_cells = cell_ids[point_mask]
+        selected_points = offset_points[point_mask]
+        selected_normals = normals[point_mask]
+        selected_point_ids = point_ids[point_mask]
+
+        if selected_point_ids.size == 0:
+            msg = (
+                f"Interface '{self.name}': No intersection found between constrained node "
+                f"'{self.constrained_node.user_name}' and retained nodes.\n"
+                "Possible reasons:\n"
+                "1. The constrained mesh part is not inside the retained mesh parts.\n"
+                f"2. The normal_filter {self._normal_filter} (tol={self._filter_tolerance}) "
+                "might be too restrictive or in a wrong direction."
+            )
+            raise ValueError(msg)
+
+        original_cells = tetrahedra_mesh_filtered.cell_data['CellIndex'][selected_cells]
+        return (
+            tetrahedra_mesh,
+            np.asarray(original_cells, dtype=int),
+            np.asarray(selected_points),
+            np.asarray(selected_point_ids, dtype=int),
+            np.asarray(selected_normals),
+        )
+
+    def plot(
+        self,
+        *,
+        show_mesh: bool = True,
+        show_selected_hosts: bool = True,
+        show_generated_interface: bool = True,
+        show_normals: bool = True,
+        show_edges: bool = True,
+        mesh_opacity: float = 0.08,
+        host_opacity: float = 0.55,
+        interface_opacity: float = 0.90,
+        constrained_color: str = "black",
+        host_color: str = "orange",
+        point_color: str = "deepskyblue",
+        interface_color: str = "crimson",
+        normal_color: str = "seagreen",
+        off_screen: bool = False,
+        screenshot: str | None = None,
+        window_size: tuple[int, int] = (1400, 900),
+        return_plotter: bool = False,
+    ) -> pv.Plotter | None:
+        """Plot the assembled embedded-node interface selection.
+
+        The plot shows the constrained mesh part, the selected retained host
+        cells that contain constrained points, the constrained points used by
+        the interface, optional normals, and the generated interface cells when
+        they are present in the assembled mesh.
+        """
+        if self._owner is None:
+            raise RuntimeError(
+                f"EmbeddedNodeInterface '{self.name}' must be managed before plotting."
+            )
+
+        mesh = self._owner._mesh_maker.assembler.get_mesh()
+        if mesh is None:
+            raise RuntimeError("The model must be assembled before plotting an interface.")
+
+        (
+            _tetrahedra_mesh,
+            original_cells,
+            selected_points,
+            _selected_point_ids,
+            selected_normals,
+        ) = self._collect_embedding_data(mesh.copy())
+
+        constrained_mask = mesh.cell_data['MeshPartTag_celldata'] == self.constrained_node.tag
+        constrained_mesh = mesh.extract_cells(constrained_mask, progress_bar=False)
+        host_mesh = mesh.extract_cells(original_cells, progress_bar=False)
+
+        interface_mesh = None
+        if (
+            show_generated_interface
+            and self._interface_part_tag is not None
+            and 'FemoraPartTag' in mesh.cell_data
+        ):
+            interface_mask = mesh.cell_data['FemoraPartTag'] == self._interface_part_tag
+            if np.any(interface_mask):
+                interface_mesh = mesh.extract_cells(interface_mask, progress_bar=False)
+
+        plotter = pv.Plotter(off_screen=off_screen, window_size=window_size)
+        plotter.add_text(
+            (
+                f"{self.name}: selected points={selected_points.shape[0]}, "
+                f"host cells={original_cells.size}"
+            ),
+            font_size=12,
+        )
+
+        if show_mesh:
+            plotter.add_mesh(
+                mesh,
+                style="wireframe",
+                color="lightgray",
+                opacity=mesh_opacity,
+            )
+
+        if show_selected_hosts:
+            plotter.add_mesh(
+                host_mesh,
+                color=host_color,
+                opacity=host_opacity,
+                show_edges=show_edges,
+            )
+
+        plotter.add_mesh(
+            constrained_mesh,
+            color=constrained_color,
+            line_width=8,
+            point_size=10,
+            render_points_as_spheres=True,
+        )
+        plotter.add_mesh(
+            pv.PolyData(selected_points),
+            color=point_color,
+            point_size=14,
+            render_points_as_spheres=True,
+        )
+
+        if show_normals and selected_points.size > 0:
+            arrow_scale = max(float(self.offset), 1.0) * 0.35
+            glyph_source = pv.Arrow()
+            glyphs = pv.PolyData(selected_points)
+            glyphs["vectors"] = selected_normals
+            glyphs = glyphs.glyph(
+                orient="vectors",
+                scale=False,
+                factor=arrow_scale,
+                geom=glyph_source,
+            )
+            plotter.add_mesh(glyphs, color=normal_color)
+
+        if interface_mesh is not None:
+            interface_points = interface_mesh.cell_centers(vertex=True)
+            plotter.add_mesh(
+                interface_points,
+                color=interface_color,
+                point_size=12,
+                render_points_as_spheres=True,
+                opacity=interface_opacity,
+            )
+
+        plotter.view_isometric()
+        if screenshot:
+            plotter.screenshot(screenshot)
+        if return_plotter:
+            return plotter
+        plotter.show()
+        plotter.close()
+        return None
 
 
     def _create_offset_mesh(self, asembelled_mesh: pv.UnstructuredGrid) -> pv.PolyData:
@@ -318,52 +496,9 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
         if asembelled_mesh is None:
             raise ValueError("Assembled mesh not found; please run Assembler first.")
         
-        # 2) tetrahedralize the asembelled mesh
-        tetrahedra_mesh = self._tetrahedralize(asembelled_mesh)
-
-        # 3) offset the constrained node
-        offset_points, point_ids, normals = self._create_offset_mesh(asembelled_mesh)
-
-
-        # 4) filter out only the tetrahedrons that are from the retained nodes
-        mask1 = tetrahedra_mesh.celltypes == pv.CellType.TETRA
-        mask2 = np.zeros(tetrahedra_mesh.n_cells, dtype=bool)
-        for part in self.retained_nodes:
-            mask2 |= tetrahedra_mesh.cell_data['MeshPartTag_celldata'] == part.tag
-
-        mask = mask1 & mask2
-        
-        # 5) create a node index array for points
-        # node_index = np.arange(0, tetrahedra_mesh.n_points, dtype=int)
-        cell_index = np.arange(0, tetrahedra_mesh.n_cells, dtype=int)
-        # tetrahedra_mesh.point_data['NodeIndex'] = node_index 
-        tetrahedra_mesh.cell_data['CellIndex'] = cell_index
-        
-
-        # 6) extract cells that are from the retained nodes
-        tetrahedra_mesh_filtered = tetrahedra_mesh.extract_cells(mask)
-
-        # 7) find the nodes that are inside the tetrahedra elements
-        cell_ids = tetrahedra_mesh_filtered.find_containing_cell(offset_points)
-        # delete the -1 values
-        mask = cell_ids != -1
-        
-
-
-        # 8) filter cells and points
-        selected_cells = cell_ids[mask]
-        selected_points = offset_points[mask]
-        selected_normals = normals[mask]
-        point_ids = point_ids[mask]
-
-        if point_ids.size == 0:
-            msg = f"Interface '{self.name}': No intersection found between constrained node '{self.constrained_node.user_name}' and retained nodes.\n"
-            msg += "Possible reasons:\n"
-            msg += "1. The constrained mesh part is not inside the retained mesh parts.\n"
-            msg += f"2. The normal_filter {self._normal_filter} (tol={self._filter_tolerance}) might be too restrictive or in a wrong direction."
-            raise ValueError(msg)
-
-        original_cells = tetrahedra_mesh_filtered.cell_data['CellIndex'][selected_cells]
+        tetrahedra_mesh, original_cells, selected_points, point_ids, selected_normals = (
+            self._collect_embedding_data(asembelled_mesh)
+        )
 
 
         # 9) create tet elements
@@ -479,6 +614,7 @@ class EmbeddedNodeInterface(InterfaceBase, GeneratesMeshMixin):
             kind="interface",
             name=self.name,
         )
+        self._interface_part_tag = int(interface_part.tag)
         final_mesh.cell_data['FemoraPartTag'] = np.concatenate((
             base_mesh.cell_data['FemoraPartTag'],
             np.full(num_new_cells, interface_part.tag, dtype=np.int32),
