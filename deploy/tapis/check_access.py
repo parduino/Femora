@@ -34,6 +34,8 @@ def check_systems(client):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--files", action="store_true", help="Also check directory listing access")
+    parser.add_argument("--queues", action="store_true", help="List live Tapis logical queue limits")
+    parser.add_argument("--system", default="stampede3", help="Execution system for queue discovery")
     parser.add_argument("--stampede-dir", default="/work2/08189/amnp95/stampede3/femora-tapis",
                         help="Absolute native path to the shared installation")
     args = parser.parse_args()
@@ -68,6 +70,16 @@ def main():
         password = None
         print("Authentication succeeded. Tokens remain in this process only.")
         status = check_systems(client)
+        if args.queues:
+            from femora.jobs.platforms import TACCValidator
+            queues = TACCValidator(client).queues(args.system)
+            print(f"Logical queues exposed by {args.system}:")
+            for queue in queues:
+                print(f"  {queue.name} (Slurm: {queue.hpc_queue}): "
+                      f"nodes={queue.min_nodes}..{queue.max_nodes}, "
+                      f"cores/node={queue.min_cores_per_node}..{queue.max_cores_per_node}, "
+                      f"minutes={queue.min_minutes}..{queue.max_minutes}")
+            print("Missing/negative limits are not verified hardware capacities.")
         if args.files:
             status = max(status, check_files(client, username, args.stampede_dir))
         return status

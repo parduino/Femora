@@ -145,7 +145,13 @@ def perform(client, args):
         client.apps.createAppVersion(**data)
         print(f"Registered: {data['id']} version {data['version']}")
     else:
-        job = client.jobs.submitJob(**data)
+        from femora.jobs.platforms import TACCSubmitter
+
+        def show_validation(report):
+            for issue in report.issues:
+                print(f"{issue.severity}: {issue.field}: {issue.message}")
+
+        job = TACCSubmitter(client).submit_request(data, on_validation=show_validation)
         print(f"Submitted job UUID: {job.uuid}")
         print("Record this UUID. Do not repeat submit to check progress.")
 

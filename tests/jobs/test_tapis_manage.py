@@ -65,7 +65,7 @@ def test_bad_remote_paths(path):
         helper().remote_path(path)
 
 
-def test_register_and_submit_separate(tmp_path):
+def test_register_and_submit_separate(tmp_path, monkeypatch):
     path = tmp_path / "app.json"
     path.write_text(json.dumps(dict(id="pilot", version="0.1")))
     client = Mock()
@@ -73,8 +73,12 @@ def test_register_and_submit_separate(tmp_path):
     client.apps.createAppVersion.assert_called_once_with(id="pilot", version="0.1")
     client.jobs.submitJob.assert_not_called()
     path.write_text(json.dumps(dict(appId="pilot", appVersion="0.1")))
+    submitter = Mock()
+    submitter.submit_request.return_value = SimpleNamespace(uuid="job")
+    monkeypatch.setattr("femora.jobs.platforms.TACCSubmitter", lambda c: submitter)
     helper().perform(client, SimpleNamespace(command="submit", definition=path))
-    client.jobs.submitJob.assert_called_once_with(appId="pilot", appVersion="0.1")
+    assert submitter.submit_request.call_args.args[0] == dict(appId="pilot", appVersion="0.1")
+    client.jobs.submitJob.assert_not_called()
 
 
 def test_status_only_reads():

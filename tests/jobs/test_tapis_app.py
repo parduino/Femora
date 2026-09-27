@@ -42,6 +42,8 @@ def test_package_contract(tmp_path):
         {"name": "allocation", "arg": "-A TEST-123"}
     ]
     assert job["nodeCount"] == 1 and job["coresPerNode"] == 48
+    assert job["execSystemLogicalQueue"] == "skx"
+    assert job["execSystemId"] == "test.stampede3"
     with ZipFile(target / "app.zip") as archive:
         assert set(archive.namelist()) == {"site.sh", "tapisjob_app.sh", "run_workflow.py"}
         assert archive.getinfo("tapisjob_app.sh").external_attr >> 16 & stat.S_IXUSR

@@ -119,6 +119,11 @@ to the storage URL supplied as `--bundle-url`. It is not the app archive.
 
 `manage.py` performs one explicit operation per invocation, prompts privately for
 login, and retains tokens only until exit. Write operations require typing `yes`.
+Submission now runs `TACCSubmitter` preflight against the registered app and live
+system queue limits before sending the job. The client-side Femora checkout must
+include `jobs.platforms`; the deployed app does not need to change. Known errors
+block submission; unchecked bundle requirements, permissions, and environment
+checks are printed as unverified. Upload is still a separate explicit operation.
 It neither shares the app nor automatically retries writes. Uploads check for
 existing destinations, but this is not an atomic create-only operation; never
 upload concurrently to the same path. File paths below are relative to each
@@ -224,6 +229,13 @@ verify Tapis reports failure while retaining logs. Repeat with a second authoriz
 user to check identity, allocation charging, shared module access, and archive
 permissions. Live registration/schema/scheduler validation still requires Tapis;
 the local tests do not replace this acceptance test.
+
+To test a different exposed queue, set `execSystemLogicalQueue` in a separate job
+JSON, for example `skx-dev`, and keep `coresPerNode` within its reported limit and
+`maxMinutes` within its wall-time limit. This overrides the app's default queue
+without re-registering it. Do not change `execSystemId` to use an app installation
+on a different machine. New generated job JSON files include system and queue
+explicitly; older job files fall back to the registered app defaults.
 
 ## References
 

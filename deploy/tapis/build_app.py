@@ -64,6 +64,7 @@ def build(args):
     }
     job = {
         "name": "femora-mpi-smoke", "appId": args.app_id, "appVersion": args.version,
+        "execSystemId": args.exec_system, "execSystemLogicalQueue": args.queue,
         "nodeCount": args.nodes, "coresPerNode": args.cores_per_node, "maxMinutes": args.minutes,
         "archiveSystemId": args.archive_system,
         "archiveSystemDir": args.archive_dir.rstrip("/") + "/${JobUUID}",
