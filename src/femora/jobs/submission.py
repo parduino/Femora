@@ -7,21 +7,23 @@ from typing import Any, Mapping, Sequence, TypeVar
 
 from .bundle import bundle as create_bundle
 from .platforms.base import JobHandle, Platform
+from .platforms.resolve import resolve_platform
 
 S = TypeVar("S")
 
 
-def submit(*, platform: Platform[S], settings: S, source: str | Path | None = None,
+def submit(*, platform: Platform[S] | str, settings: S | Mapping[str, Any], source: str | Path | None = None,
            bundle: str | Path | None = None, inputs: Mapping[str, Any] | None = None,
-           files: Sequence[str | Path] = (), entrypoint: str = "build_workflow",
+           files: Sequence[str | Path] | Mapping[str, str | Path] = (), entrypoint: str = "build_workflow",
            function=None) -> JobHandle:
     """Package an existing workflow file, or submit a trusted existing bundle.
 
     The source is not executed locally. Put calls to submit under a __main__
     guard so importing the bundled factory remotely does not submit recursively.
     All model construction, simulation, and postprocessing remain remote tasks.
-    Platform owns validation, staging, and submission; no provider name dispatch
-    or credentials are embedded in the workflow.
+    Use platform="tacc" with a settings dictionary for interactive login, or
+    supply an authenticated Platform and its settings object. Provider adapters
+    own validation, staging, and submission. Never store passwords in settings.
     """
     if sum(value is not None for value in (source, bundle, function)) != 1:
         raise ValueError("Supply exactly one of source, bundle, or function")
@@ -37,9 +39,13 @@ def submit(*, platform: Platform[S], settings: S, source: str | Path | None = No
     if bundle is not None:
         if inputs is not None or files or entrypoint != "build_workflow":
             raise ValueError("inputs/files/entrypoint apply only when packaging source")
+        if not Path(bundle).is_file():
+            raise FileNotFoundError(bundle)
+        platform, settings = resolve_platform(platform, settings)
         return platform.submit(Path(bundle), settings)
     with TemporaryDirectory(prefix="femora-submit-") as directory:
         archive = create_bundle(source=source, destination=Path(directory) / "workflow.zip",
                                 inputs={} if inputs is None else inputs,
                                 files=files, entrypoint=entrypoint)
+        platform, settings = resolve_platform(platform, settings)
         return platform.submit(archive, settings)

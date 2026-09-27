@@ -129,3 +129,113 @@ can monitor this job, or authenticate again and use `TACCPlatform.job(uuid)`.
 Do not rerun `--submit` just to check progress. The `--bundle` mode remains available.
 See `src/femora/jobs/platforms/README.md` for the platform-independent interface,
 factory packaging restrictions, and job-handle methods.
+
+## Check public job handles
+
+Use an existing job UUID to exercise `TACCJob.status()` and `download()` directly:
+
+```powershell
+python examples/workflows/tacc_job_handle.py check YOUR_JOB_UUID --output example_outputs/job-handle-output.zip
+```
+
+Omit `--output` for status only. The helper prompts privately, never submits a
+job, refuses to overwrite downloads, and does not extract the output archive.
+No app or allocation settings are required to reconnect to an existing job.
+
+Only for a separate disposable job, cancellation can be tested explicitly:
+
+```powershell
+python examples/workflows/tacc_job_handle.py cancel DISPOSABLE_JOB_UUID
+python examples/workflows/tacc_job_handle.py check DISPOSABLE_JOB_UUID
+```
+
+Cancellation requires typing the full UUID. Terminal jobs are not cancelled.
+An accepted cancellation request is not proof of cancellation: check for the
+terminal `cancelled` state afterward. The helper does not create the disposable
+job automatically. Do not use a valuable simulation for this test.
+
+Create a separate disposable job with:
+
+```powershell
+python examples/workflows/tacc_cancel_smoke.py --submit --app-id amnp95-femora-workflow-stampede3 --allocation DesignSafe-SimCenter
+```
+
+This explicitly requests one SKX development node (48 cores, ten-minute wall
+limit). Two OpenSeesMP ranks wait for five minutes, emitting heartbeats; a later
+stage writes `not-cancelled.txt` if allowed to finish. It reserves a whole node,
+so cancel promptly. The command requires confirmation and private login, and
+prints check/cancel commands containing the new UUID. Do not resubmit to monitor.
+For an offline bundle only, use `--bundle example_outputs/tapis-cancel.zip`.
+
+Cancelling while queued tests scheduler cancellation. To test stopping active
+work, first check for `running` (Tapis `RUNNING`), then cancel and check again
+until `cancelled` (Tapis `CANCELLED`). If it finishes first, that is not a passed
+cancellation test. Output archiving may be incomplete after cancellation;
+the terminal scheduler/Tapis state is the primary check, not a missing marker.
+
+## Dynamic pile boundary study
+
+The existing `examples/soil_structure_interaction/dynamic_pile_soil_interaction.py`
+defines the model, workflow, and a guarded `fm.submit(...)` call at the bottom.
+Edit the app ID and your allocation/settings there, then run:
+
+```powershell
+python examples/soil_structure_interaction/dynamic_pile_soil_interaction.py
+```
+
+Running the file prompts for private login and submits a job. There are no CLI
+flags or example-specific submission helpers. Importing it does not log in or
+submit. The model and DRM functions are workflow tasks and accept a task context.
+The pilot settings request one 48-slot skx-dev node for 120 minutes; this is a
+wall-time request, not a measured completion estimate.
+
+The library packages the factory's source and its explicitly declared files.
+The `files` mapping specifies remote-relative destinations and local source
+paths for the postprocessor and motion inputs. It does not copy arbitrary
+dependencies or install Femora; the remote environment must have the required
+model/interface APIs. Never put credentials in workflow inputs or files.
+
+All model construction happens remotely. A separate input stage generates DRM
+using the physical soil box alone. Then the build stage creates the three cases,
+each reading the same DRM file; Fixed has no special input-generation role.
+The solve stage runs Fixed with 8 ranks, Rayleigh with 16, and PML with 16
+concurrently. Absorber partitions are included in these budgets. PML has three
+absorbing layers without a buffer; Rayleigh has five. The transient step uses
+`model.analysis.transient`.
+
+Postprocessing creates a comparison plot and three pile-head CSV histories.
+Selected downloads also include Tcl models, logs, and raw recorder files.
+Comment out `workflow.outputs("build/*/results/**/*")` in the example if raw files
+are not needed in the download. This does not disable recording; unarchived
+files remain subject to remote scratch retention.
+Check/download with the existing job-handle helper using the printed UUID.
+
+### Task Arguments
+
+Python tasks can reuse one function with different keyword arguments:
+
+```python
+def build_model(context, boundary):
+    drm_file = context.result("input", "drm")
+    output_dir = context.output_dir
+    # Build the selected case, export model.tcl into output_dir, and return its path.
+
+workflow.add("build", tasks=[
+    fm.tasks.Python("fixed", build_model, kwargs={"boundary": "Fixed"}),
+    fm.tasks.Python("rayleigh", build_model, kwargs={"boundary": "Rayleigh"}),
+    fm.tasks.Python("pml", build_model, kwargs={"boundary": "PML"}),
+])
+```
+
+The runner calls `build_model(context, boundary="Fixed")` for the first task.
+`kwargs` belongs to that task, whereas `context.inputs` contains the inputs
+submitted for the whole workflow. Use importable functions and pickleable
+argument values; this does not add support for lambdas or closures. Existing
+Python tasks without `kwargs` behave as before.
+
+The pile tutorial now writes DRM into `input/drm/drmload.h5drm` and returns that
+path to subsequent tasks. Models export into their own `build/<case>` task
+folders and return their Tcl paths. Solver tasks explicitly use
+`build/<case>/model.tcl`; they do not automatically resolve Python task results.
+Recorders write under `build/<case>/results`, and postprocessing reads that layout.
+Update the remote Femora installation before submitting workflows using `kwargs`.

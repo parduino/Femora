@@ -126,9 +126,11 @@ class PML3DElement(Element):
 
         self.PML_Thickness = float(PML_Thickness)
 
-        if meshType.lower() not in ["box", "general"]:
+        mesh_type_key = meshType.lower()
+        if mesh_type_key not in ["box", "general"]:
             raise ValueError("meshType must be either 'box' or 'general'")
-        self.meshType = meshType.lower()
+        # OpenSees validates these tokens case-sensitively.
+        self.meshType = {"box": "Box", "general": "General"}[mesh_type_key]
 
         if isinstance(meshTypeParameters, str):
             values = [float(x.strip()) for x in meshTypeParameters.split(",")]

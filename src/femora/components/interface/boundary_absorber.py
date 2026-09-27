@@ -465,6 +465,9 @@ def apply_rectangular_absorbing_layer(mesh_maker: "Model", config: dict) -> bool
         tree = pykdtree(mesh_maker.assembled_mesh.points)
         _distances, indices = tree.query(interfacepoints, k=2)
 
+        # Array-constrained cleaning only merges geometrically coincident points;
+        # snap the generated shell interface to the source mesh before cleaning.
+        mesh_maker.assembled_mesh.points[indices] = interfacepoints[:, None, :]
         mesh_maker.assembled_mesh.point_data["drm_absorbing_interface"] = arange(
             mesh_maker.assembled_mesh.n_points, dtype=int
         )

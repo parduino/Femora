@@ -65,7 +65,7 @@ def test_pml_3d_initialization_valid():
 
     assert ele.tag is None
     assert ele.PML_Thickness == 1.0
-    assert ele.meshType == "box"
+    assert ele.meshType == "Box"
     assert ele.m == 2.0 # Default checked
 
 def test_pml_3d_invalid_inputs():
@@ -103,7 +103,7 @@ def test_pml_3d_to_tcl():
     # m=2.0, R=1e-8
     
     # Checking specific parts might be safer than full string match due to float precision
-    assert "element PML 100 1 2 3 4 5 6 7 8 1 0.5 \"general\" 0.1 0.2 0.3 0.4 0.5 0.6" in tcl
+    assert "element PML 100 1 2 3 4 5 6 7 8 1 0.5 \"General\" 0.1 0.2 0.3 0.4 0.5 0.6" in tcl
     assert "\"-Newmark\" 0.5 0.25" in tcl
     assert "-m 2.0 -R 1e-08" in tcl
 

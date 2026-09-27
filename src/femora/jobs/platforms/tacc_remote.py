@@ -119,8 +119,8 @@ class TACCPlatform:
     """Complete Platform implementation using an existing registered Femora app.
 
     input_directory is storage-root-relative. Each submission gets a UUID child.
-    Caller supplies an authenticated client; this class never prompts or saves
-    credentials. Resources remain in TACCSettings, not in the workflow.
+    Supply an authenticated client, or explicitly call login() for an interactive
+    connection. Credentials are never saved. Resources remain in TACCSettings.
     """
 
     def __init__(self, client, *, app_id, app_version, storage_system, input_directory,
@@ -137,6 +137,45 @@ class TACCPlatform:
 
     def validate(self, workflow, settings):
         return TACCValidator(self._client).validate(workflow, settings)
+
+    @classmethod
+    def login(cls, *, app_id, app_version="0.1.0",
+              base_url="https://designsafe.tapis.io",
+              storage_system="designsafe.storage.default", input_directory=None):
+        """Prompt privately for a connection; no upload or submission occurs here."""
+        import getpass
+        import sys
+        from tapipy.tapis import Tapis
+
+        url = urlsplit(base_url)
+        if url.scheme != "https" or not url.netloc or url.username or url.password or url.query or url.fragment:
+            raise ValueError("Login requires an HTTPS tenant URL")
+        if not sys.stdin.isatty():
+            raise ValueError("Interactive login requires a terminal; otherwise pass an authenticated client")
+        print(f"Login: {base_url} (credentials are not saved)")
+        username = input("Username: ").strip()
+        password = None
+        client = None
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", getpass.GetPassWarning)
+                password = getpass.getpass("Password (hidden): ")
+            if not username or not password:
+                raise ValueError("Username and password are required")
+            directory = input_directory if input_directory is not None else f"{username}/femora-workflows/submissions"
+            _path(directory)
+            client = Tapis(base_url=base_url, username=username, password=password)
+            client.get_tokens()
+            return cls(client, app_id=app_id, app_version=app_version,
+                       storage_system=storage_system, input_directory=directory)
+        except Exception as error:
+            if client is not None:
+                client.access_token = client.refresh_token = None
+            raise RuntimeError(f"Login failed ({type(error).__name__}); private details omitted") from None
+        finally:
+            password = None
+            if client is not None:
+                client.password = None
 
     def job(self, job_id):
         """Reconnect to an existing job without submitting again."""

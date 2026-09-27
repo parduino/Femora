@@ -81,7 +81,7 @@ def _run_process(argv: list[str], context: TaskContext, env: Mapping[str, str] |
 def _run_task(task: Task, context: TaskContext, backend: TACC | None = None, offset: int = 0) -> Any:
     context.output_dir.mkdir(parents=True, exist_ok=True)
     if isinstance(task, Python):
-        return task.function(context)
+        return task.function(context, **task.kwargs)
     if isinstance(task, Command):
         argv = list(task.argv)
         env = task.env

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path, PurePath, PureWindowsPath
 from typing import Any, Callable, Mapping, Sequence
 
@@ -34,17 +34,27 @@ class TaskContext:
 
 @dataclass(frozen=True)
 class Python:
-    """Run a Python function in its own process."""
+    """Run function(context, **kwargs) in its own process.
+
+    Use an importable function and pickleable argument values. Context is passed
+    by the runner; kwargs supplies task-specific values, not workflow inputs.
+    """
 
     name: str
-    function: Callable[[TaskContext], Any]
+    function: Callable[..., Any]
     cores: int = 1
+    kwargs: Mapping[str, Any] = field(default_factory=dict, kw_only=True)
 
     def __post_init__(self) -> None:
         _task_name(self.name)
         if not callable(self.function):
             raise TypeError("task function must be callable")
         _positive_cores(self.cores)
+        if not isinstance(self.kwargs, Mapping):
+            raise TypeError("Python task kwargs must be a mapping")
+        if any(not isinstance(key, str) for key in self.kwargs):
+            raise TypeError("Python task kwargs keys must be strings")
+        object.__setattr__(self, "kwargs", dict(self.kwargs))
 
 
 @dataclass(frozen=True)

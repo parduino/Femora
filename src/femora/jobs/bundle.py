@@ -50,7 +50,7 @@ def bundle(
     source: str | Path,
     destination: str | Path,
     inputs: Mapping[str, Any],
-    files: Sequence[str | Path] = (),
+    files: Sequence[str | Path] | Mapping[str, str | Path] = (),
     entrypoint: str = "build_workflow",
     overwrite: bool = False,
 ) -> Path:
@@ -60,6 +60,9 @@ def bundle(
     an ``inputs`` parameter to choose stages and tasks from the saved inputs.
     Inputs must be JSON-serializable. Data file paths are relative to the source
     file's directory and appear at the same relative paths in the run workspace.
+    Alternatively, map workspace-relative destinations to explicit local source
+    paths (relative to the workflow source or absolute). Only declared files are
+    uploaded; mapping destinations must still stay inside the remote workspace.
     The bundle does not include Python packages or the OpenSees executable.
     """
     script = Path(source).expanduser().resolve()
@@ -73,10 +76,12 @@ def bundle(
 
     root = script.parent
     data: dict[str, Path] = {}
-    for value in files:
-        relative = _safe_relative(value)
-        path = (root / relative).resolve()
-        if not path.is_relative_to(root) or not path.is_file():
+    mapped = isinstance(files, Mapping)
+    entries = files.items() if mapped else ((value, value) for value in files)
+    for destination_name, value in entries:
+        relative = _safe_relative(destination_name)
+        path = (root / value).expanduser().resolve()
+        if (not mapped and not path.is_relative_to(root)) or not path.is_file():
             raise ValueError(f"bundle data file was not found inside {root}: {value}")
         if relative in data:
             raise ValueError(f"duplicate bundle data file: {relative}")

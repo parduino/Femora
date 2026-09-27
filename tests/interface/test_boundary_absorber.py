@@ -6,6 +6,7 @@
 # =============================================================================
 
 import pytest
+import numpy as np
 
 from femora.core.model import Model
 from femora.components.material.nd import ElasticIsotropicMaterial
@@ -71,6 +72,8 @@ def test_boundary_absorber_applies_after_assembly(mesh_maker):
     assert mesh_maker.assembled_mesh.n_cells > 1
     assert "AbsorbingRegion" in mesh_maker.assembled_mesh.cell_data
     assert int(mesh_maker.assembled_mesh.cell_data["AbsorbingRegion"].max()) > 0
+    points = mesh_maker.assembled_mesh.points
+    assert np.unique(np.round(points, decimals=8), axis=0).shape[0] == len(points)
 
 
 def test_interface_manager_has_boundary_namespace(mesh_maker):

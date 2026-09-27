@@ -721,7 +721,8 @@ class TransferFunction:
         drmbox_x0 = np.array([0,0,0])
 
 
-        file_name = "drmload.h5drm"
+        file_name = os.fspath(filename)
+        os.makedirs(os.path.dirname(os.path.abspath(file_name)), exist_ok=True)
         with h5py.File(file_name, "w") as f:
             # DRM_Data group
             drm_data = f.create_group("DRM_Data")
@@ -1037,15 +1038,22 @@ class TransferFunction:
             return fig
 
 
-    def _deconvolve(self,time_history: TimeHistory,
-                        soil_profile: List[Dict] = None,
-                        return_all: bool = False) -> TimeHistory:
+    def deconvolve(self, time_history: TimeHistory,
+                   soil_profile: List[Dict] = None,
+                   return_all: bool = False) -> TimeHistory:
         """
-        Deconvolve the time history from the surface motion to get the incident wave.
+        Deconvolve a surface motion to obtain the corresponding incident motion.
+
         Args:
-            time_history (TimeHistory): Input time history.
+            time_history (TimeHistory): Surface acceleration time history.
+            soil_profile (List[Dict], optional): Profile used to calculate the
+                transfer function. The instance profile is used by default.
+            return_all (bool): Return the aligned surface motion and spectral
+                intermediate values in addition to the incident motion.
+
         Returns:
-            TimeHistory: Deconvolved time history object containing the incident wave.
+            TimeHistory: Deconvolved incident acceleration. When ``return_all``
+                is true, returns ``(incident, surface, spectral_data)``.
         """
 
         acc = time_history.acceleration
@@ -1111,8 +1119,20 @@ class TransferFunction:
 
 
         
-        incident = TimeHistory(time,incident_acc)
-        surface  = TimeHistory(time, acc)
+        incident = TimeHistory(
+            time,
+            incident_acc,
+            unit_in_g=time_history.unit_in_g,
+            gravity=time_history.gravity,
+            metadata={**time_history.metadata, "operation": "deconvolution"},
+        )
+        surface = TimeHistory(
+            time,
+            acc,
+            unit_in_g=time_history.unit_in_g,
+            gravity=time_history.gravity,
+            metadata=dict(time_history.metadata),
+        )
         if return_all:
             tfs = { "TF": TF,
                     "outputFFT": incident_acc_fft,
@@ -1121,6 +1141,16 @@ class TransferFunction:
             return incident, surface, tfs
         else:
             return incident
+
+    def _deconvolve(self, time_history: TimeHistory,
+                    soil_profile: List[Dict] = None,
+                    return_all: bool = False) -> TimeHistory:
+        """Compatibility alias for :meth:`deconvolve`."""
+        return self.deconvolve(
+            time_history,
+            soil_profile=soil_profile,
+            return_all=return_all,
+        )
         
 
     def plot_deconvolved_motion(self, 
@@ -1135,7 +1165,11 @@ class TransferFunction:
             matplotlib.figure.Figure: The figure object containing the plot.
         """
 
-        bedrock, surface, tfs = self._deconvolve(time_history, soil_profile=soil_profile, return_all=True)
+        bedrock, surface, tfs = self.deconvolve(
+            time_history,
+            soil_profile=soil_profile,
+            return_all=True,
+        )
 
         time = bedrock.time
         incident_acc = bedrock.acceleration

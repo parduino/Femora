@@ -109,3 +109,35 @@ This lower-level adapter accepts an already-staged workflow URL. It does not exe
 bundle locally or claim its task requirements were validated: the remote runner
 checks those. `TACCPlatform` wraps this adapter with local bundle integrity checks,
 uploading and the concrete `TACCJob` handle.
+
+For interactive use, `TACCPlatform.login(app_id="...", app_version="0.1.0")`
+prompts for a username and hidden password and returns a configured target.
+The default tenant/storage are DesignSafe; other Tapis deployments can supply
+`base_url`, `storage_system`, and `input_directory`. Login alone never submits.
+Passwords are cleared after authentication, tokens remain in memory for job
+operations, and no credentials are written to disk. Noninteractive applications
+should continue passing an authenticated client to the constructor.
+
+`fm.submit(function=build_workflow, platform=target, settings=settings, files=...)`
+packages supporting files itself. In addition to the existing relative-path
+list, `files` accepts a mapping from workspace-relative destinations to explicit
+local files, for example `{"motions/input.acc": Path("/local/data/input.acc")}`.
+Mapping sources may be outside the workflow directory; destinations may not
+escape the remote workspace. Only declared files are included. Keep the submit
+call under `if __name__ == "__main__":` to prevent remote recursive submission.
+# Simple Submission
+
+Use `fm.submit(platform="tacc", settings={...}, function=build_workflow)`
+to select the TACC adapter automatically. The dictionary requires `app_id`,
+`system`, `queue`, `allocation`, `nodes`, `cores_per_node`, and `minutes`.
+Optional connection settings are `app_version` (default `0.1.0`), `base_url`
+(default `https://designsafe.tapis.io`), `storage_system` (default
+`designsafe.storage.default`), and `input_directory` (default: your username
+followed by `/femora-workflows/submissions`).
+
+Login prompts for credentials; never put passwords or tokens in the dictionary.
+You can load this dictionary from JSON with `json.load()` before submitting.
+Passing a JSON filename directly as `settings` is not supported.
+Only the `tacc` name is currently supported. Provider-specific conversion lives
+under `jobs/platforms`, not in the workflow or runner. Authenticated platform
+objects with typed settings remain supported for noninteractive use and reuse.
