@@ -4,8 +4,9 @@ from . import backends, platforms, tasks
 from .bundle import bundle, replay
 from .runner import ProcessResult, RunResult, WorkflowExecutionError, execute
 from .workflow import Workflow
+from .submission import submit
 
 __all__ = [
     "ProcessResult", "RunResult", "Workflow", "WorkflowExecutionError",
-    "backends", "platforms", "bundle", "execute", "replay", "tasks",
+    "backends", "platforms", "bundle", "execute", "replay", "tasks", "submit",
 ]

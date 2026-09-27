@@ -106,3 +106,26 @@ FEMORA_TEST_TACC_MPI=1 python -m pytest /path/to/Femora/tests/jobs/test_tacc.py 
 
 Use a new `--basetemp` directory: pytest clears it. Unit tests mock the TACC
 launcher and are not evidence of a successful cluster run.
+
+## Submit from the same file
+
+With an already registered Femora Tapis app, the MPI example now supports the
+public API directly from your local terminal:
+
+```powershell
+python examples/workflows/tacc_mpi_smoke.py --submit --app-id amnp95-femora-workflow-stampede3 --allocation DesignSafe-SimCenter
+```
+
+These identifiers are for the current pilot; other users must select their own
+allocation and an accessible app. The command asks for confirmation and a private
+DesignSafe login, validates the `skx-dev` request, packages its own top-level
+`build_workflow` function, uploads to a unique user input directory, and submits
+one job. No manual ZIP creation or job JSON is needed. Default resources are the
+explicit SKX pilot settings (one node, 48 cores, 20 minutes), not a universal TACC
+default. Use `--queue` and `--cores-per-node` to select another exposed queue.
+
+Record the UUID. Existing `deploy/tapis/manage.py status` and `download` commands
+can monitor this job, or authenticate again and use `TACCPlatform.job(uuid)`.
+Do not rerun `--submit` just to check progress. The `--bundle` mode remains available.
+See `src/femora/jobs/platforms/README.md` for the platform-independent interface,
+factory packaging restrictions, and job-handle methods.

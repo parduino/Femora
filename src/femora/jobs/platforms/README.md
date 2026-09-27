@@ -3,8 +3,10 @@
 This initial layer supplies provider-neutral `Platform`, `PlatformValidator`,
 `JobHandle`, and `JobStatus` contracts, plus structured validation reports.
 It is separate from `jobs.backends`, which launches tasks inside an allocation.
-No public `fm.submit()` or complete bundle-uploading `Platform` is implemented yet.
-The tested deployment scripts remain the submission route during this phase.
+`fm.submit()` now accepts a configured platform object and either a top-level
+workflow factory (`function=`), source file (`source=`), or existing ZIP (`bundle=`).
+`TACCPlatform` implements staging, validated submission, and job handles. No
+AWS/Azure implementation or provider-string registry is claimed yet.
 
 `TACCValidator` implements the read-only validator contract, not the complete
 `Platform` interface. It accepts an already authenticated Tapis client; credentials
@@ -34,9 +36,59 @@ known errors, not that every check passed. Allocation eligibility, storage acces
 installed software, and memory needs remain explicitly unverified. Scheduling
 can still fail after preflight. No remote resources are created by validation.
 
-The future submission implementation must revalidate before remote writes and
-validate the actual packaged workflow, not an unrelated local workflow instance.
-Its job request must carry the selected logical queue and resource settings.
+Submission revalidates resource settings before uploading, and again before job
+submission. It does not import the factory locally: generated task requirements
+are unverified until the remote runner constructs and checks the real workflow.
+The job request carries the selected logical queue and resource settings.
+
+## Public API
+
+In your existing workflow file, keep the factory and tasks at module scope and
+put local plotting, authentication, and submission under the main guard:
+
+```python
+import femora as fm
+from femora.jobs.platforms import TACCPlatform, TACCSettings
+
+# def build_workflow(): ... existing stages and task callbacks ...
+
+if __name__ == "__main__":
+    # Obtain authenticated_client privately; never hardcode credentials here.
+    target = TACCPlatform(
+        authenticated_client,
+        app_id="YOUR_REGISTERED_APP", app_version="0.1.0",
+        storage_system="designsafe.storage.default",
+        input_directory="YOUR_USERNAME/femora-workflows/submissions",
+    )
+    job = fm.submit(
+        function=build_workflow, platform=target,
+        settings=TACCSettings("stampede3", "skx-dev", "YOUR_ALLOCATION", 1, 48, 20),
+    )
+    print(job.id)
+    print(job.status())
+    # After termination: job.download("outputs.zip")
+    # To cancel explicitly: job.cancel()
+```
+
+The API packages the whole function's source file, not a pickle of live objects.
+Use `inputs={...}` for JSON-serializable factory inputs and `files=[...]` for
+declared source-relative data. Existing bundle mode rejects these overrides.
+Do not include secrets in source, inputs, or data. Factories must be top-level
+functions in real Python files; closures and notebook cells are not supported.
+Companion importable packages must be installed remotely; declaring a data file
+does not automatically turn it into an importable package.
+
+Use `target.job(saved_uuid)` after authenticating in another session to reconnect
+without resubmitting. Handles retain the client in memory, not saved credentials.
+Downloads stream to an exclusive `.part` file, validate ZIP format, and refuse
+overwrites; they do not extract output. Keep credentials refreshed through the
+client for long-lived sessions. A new submit call always means a new job.
+
+Each input bundle goes into a UUID-specific storage directory; staged inputs are
+retained on failures. Submission transport failures raise `RemoteSubmissionError`
+with the job name and input URL so users can investigate before retrying. This is
+not an exactly-once submission guarantee. Live acceptance of this new public API
+is still required even though the lower-level Tapis app was tested successfully.
 
 ## Staged-job submission
 
@@ -53,7 +105,7 @@ extra scheduler option so raw flags cannot bypass resource validation. Missing
 or inaccessible app/system metadata blocks submission; missing individual limits
 remain explicitly unverified. No automatic write retry is performed.
 
-This adapter accepts an already-staged workflow URL. It does not execute the
+This lower-level adapter accepts an already-staged workflow URL. It does not execute the
 bundle locally or claim its task requirements were validated: the remote runner
-checks those. It is deliberately not presented as a complete `Platform`, since
-packaging/uploading and a concrete job handle remain future integration work.
+checks those. `TACCPlatform` wraps this adapter with local bundle integrity checks,
+uploading and the concrete `TACCJob` handle.

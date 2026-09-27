@@ -81,6 +81,55 @@ def build_workflow():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--bundle", type=Path, required=True)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--bundle", type=Path)
+    mode.add_argument("--submit", action="store_true")
+    parser.add_argument("--allocation")
+    parser.add_argument("--app-id")
+    parser.add_argument("--app-version", default="0.1.0")
+    parser.add_argument("--queue", default="skx-dev")
+    parser.add_argument("--cores-per-node", type=int, default=48)
     args = parser.parse_args()
-    print(fm.jobs.bundle(source=__file__, destination=args.bundle, inputs={}))
+    if args.bundle:
+        print(fm.jobs.bundle(source=__file__, destination=args.bundle, inputs={}))
+    else:
+        if not args.allocation or not args.app_id:
+            parser.error("--submit requires --allocation and --app-id")
+        import getpass
+        import sys
+        import warnings
+        from tapipy.tapis import Tapis
+        from femora.jobs.platforms import TACCPlatform, TACCSettings, RemoteSubmissionError, SubmissionValidationError
+
+        if not sys.stdin.isatty():
+            parser.error("Use an interactive terminal for private login")
+        print(f"Submit to Stampede3/{args.queue}, 1 node, {args.cores_per_node} cores, "
+              f"20 minutes, allocation {args.allocation}")
+        if input("Type yes to submit: ").strip() != "yes":
+            raise SystemExit("Cancelled")
+        username = input("DesignSafe username: ").strip()
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", getpass.GetPassWarning)
+            password = getpass.getpass("Password (hidden): ")
+        client = Tapis(base_url="https://designsafe.tapis.io", username=username, password=password)
+        try:
+            client.get_tokens()
+            password = None
+            client.password = None
+            target = TACCPlatform(
+                client, app_id=args.app_id, app_version=args.app_version,
+                storage_system="designsafe.storage.default",
+                input_directory=f"{username}/femora-workflows/submissions",
+            )
+            job = fm.submit(function=build_workflow, platform=target, settings=TACCSettings(
+                system="stampede3", queue=args.queue, allocation=args.allocation,
+                nodes=1, cores_per_node=args.cores_per_node, minutes=20,
+            ))
+            print(f"Job UUID: {job.id}")
+        except (RemoteSubmissionError, SubmissionValidationError) as error:
+            raise SystemExit(str(error)) from None
+        except Exception as error:
+            raise SystemExit(f"Remote operation failed ({type(error).__name__}); credentials omitted.") from None
+        finally:
+            password = None
+            client.password = client.access_token = client.refresh_token = None
