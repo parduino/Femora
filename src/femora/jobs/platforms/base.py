@@ -1,8 +1,8 @@
 """Provider-neutral contracts; no scheduler or authentication assumptions."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal, Protocol, TypeVar
+from typing import Iterable, Literal, Protocol, TypeVar
 
 from ..workflow import Workflow
 
@@ -47,6 +47,25 @@ class JobHandle(Protocol):
     def status(self) -> JobStatus: ...
     def cancel(self) -> None: ...
     def download(self, destination: Path) -> Path: ...
+
+
+@dataclass(frozen=True)
+class JobSummary:
+    """Safe provider-neutral discovery data, not a raw SDK response."""
+
+    id: str
+    name: str
+    submitted_at: str
+    status: JobStatus
+    connection: dict = field(default_factory=dict)
+    resources: dict = field(default_factory=dict)
+
+
+class JobDiscovery(Protocol):
+    """Optional adapter capability; discovery is read-only."""
+
+    def list_jobs(self) -> Iterable[JobSummary]: ...
+    def tracking_metadata(self) -> dict: ...
 
 
 class PlatformValidator(Protocol[Settings]):

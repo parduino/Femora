@@ -17,6 +17,7 @@ from femora.jobs.platforms.tacc import SubmissionValidationError
 def client():
     client = Mock()
     client.base_url = "https://designsafe.tapis.io"
+    client.username = "test-user"
     client.apps.getApp.return_value = {"jobAttributes": {
         "execSystemId": "stampede3", "isMpi": False}}
     client.systems.getSystem.return_value = {

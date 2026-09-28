@@ -24,7 +24,7 @@ fm.execute(workflow, workspace="results", backend=fm.jobs.backends.TACC())
 Or replay a trusted bundle:
 
 ```bash
-python -m femora.jobs replay workflow.zip --workspace results --backend tacc
+femora jobs replay workflow.zip --workspace results --backend tacc
 ```
 
 The backend uses `SLURM_NTASKS` as its rank-slot budget (not the machine's CPU
@@ -86,7 +86,7 @@ export OPENBLAS_NUM_THREADS=1
 RUN_DIR=$(mktemp -d "$SCRATCH/femora-mpi.XXXXXX")
 cd "$RUN_DIR"
 python /work2/08189/amnp95/stampede3/femora-tapis/Femora/examples/workflows/tacc_mpi_smoke.py --bundle mpi.zip
-python -m femora.jobs replay mpi.zip --workspace results --backend tacc --cores 5
+femora jobs replay mpi.zip --workspace results --backend tacc --cores 5
 cat results/compare/summary/comparison.txt
 ```
 
@@ -172,6 +172,86 @@ work, first check for `running` (Tapis `RUNNING`), then cancel and check again
 until `cancelled` (Tapis `CANCELLED`). If it finishes first, that is not a passed
 cancellation test. Output archiving may be incomplete after cancellation;
 the terminal scheduler/Tapis state is the primary check, not a missing marker.
+
+## Tracking Submitted Jobs
+
+The installed `femora jobs` command uses the same implementation as
+`python -m femora.jobs`, which remains supported. After updating an editable
+checkout, refresh the command entry point once with `python -m pip install -e .`.
+On a cluster, load the Femora environment module before using the command.
+
+The tracker can discover remote Femora jobs after login, even on a computer
+with no submission history. Local records are an offline cache, not the only
+way to find a job. Successful `fm.submit()` calls also record jobs immediately.
+Records contain IDs, account/tenant, resource settings, and cached status, never
+passwords or tokens. Each computer has its own cache; override its path with
+`FEMORA_JOBS_DB` if needed.
+
+```bash
+femora jobs list
+femora jobs list --json
+femora jobs list --remote
+femora jobs track
+```
+
+The interactive tracker works in an SSH terminal without a graphical desktop.
+Use Up/Down to navigate and Enter for details. L logs in and discovers jobs;
+it works even with an empty list. With a selected job it reconnects to that
+account. R discovers jobs and refreshes connected accounts, D prompts for a ZIP download path,
+C requires the full job UUID before requesting cancellation, Esc returns, and
+Q exits. Login tokens stay in memory for this session only. Connected accounts
+are polled every 30 seconds; timestamps distinguish cached values from freshly
+fetched status. Network operations run in background workers. A cancellation
+request is not confirmation; refresh until the provider reports cancellation.
+
+The TACC adapter lists jobs owned by the authenticated account, with pagination.
+It identifies Femora by standard `[owner-]femora-workflow-SYSTEM` app IDs, not by
+the user-editable job name. For a deployment with a different app ID, specify
+it explicitly; app versions do not restrict discovery:
+
+```bash
+femora jobs track --app-id my-custom-femora-app
+femora jobs list --remote --app-id my-custom-femora-app
+```
+
+`--tenant` selects a different Tapis tenant. Discovery does not list arbitrary
+Slurm jobs submitted outside Tapis, or jobs belonging to other accounts.
+Network failures leave cached records available; a job absent from a remote
+listing is not automatically removed or treated as cancelled.
+
+Use `list` or `list --json` in noninteractive/batch sessions instead of `track`.
+Older jobs from recognized Femora apps are discovered automatically. You can
+also import a known UUID without any remote operation:
+
+```bash
+femora jobs add JOB_UUID --name my-study --username MY_USERNAME
+femora jobs status JOB_UUID
+```
+
+The same tracking functions are available in Python:
+
+```python
+fm.jobs.list()                         # Local cached records, no authentication
+fm.jobs.list(platform=adapter)         # Discover remote jobs using an authenticated adapter
+fm.jobs.sync(adapter)                  # Explicit discovery and cache update (same operation)
+job = fm.jobs.connect("JOB_UUID")      # Interactive authentication when needed
+job.status()                          # Fetch and cache current status
+job.details()                         # Selected remote job details and paths
+job.wait(poll_interval=30)             # Wait without submitting another job
+job.download("results.zip")
+```
+
+Here `adapter` is an authenticated platform created using `TACCPlatform.login(...)`.
+Provider adapters implement the
+optional `JobDiscovery` contract and return normalized `JobSummary` objects.
+Tapis pagination, owner filtering, and app identification stay in the TACC
+adapter; the registry and terminal interface do not parse Tapis responses.
+
+Pass `platform=authenticated_adapter` to `connect()` to reuse an existing
+connection. Registry errors after submission issue a warning rather than
+reporting the remote submission as failed: keep the returned UUID and do not
+resubmit. No remote writes occur when simply listing, importing, or opening
+the tracker. Download and cancellation happen only on explicit user actions.
 
 ## Workflow Composition
 

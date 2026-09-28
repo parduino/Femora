@@ -26,6 +26,8 @@ dependencies = [
     "imageio-ffmpeg",
     "pykdtree>=1.4.1",
     "pymetis",
+    "platformdirs",
+    "textual",
     "pyvista>=0.45.0",
     "tapipy>=1.8.2",
     "vtk>=9.5.0",
@@ -104,4 +106,4 @@ Documentation = "https://amnp95.github.io/Femora"
 Repository = "https://github.com/amnp95/Femora"
 
 [project.scripts]
-femora = "femora.main:main"
+femora = "femora.cli:main"

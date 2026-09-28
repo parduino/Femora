@@ -8,6 +8,7 @@ from typing import Any, Mapping, Sequence, TypeVar
 from .bundle import bundle as create_bundle
 from .platforms.base import JobHandle, Platform
 from .platforms.resolve import resolve_platform
+from .tracking import record_submission
 
 S = TypeVar("S")
 
@@ -42,10 +43,14 @@ def submit(*, platform: Platform[S] | str, settings: S | Mapping[str, Any], sour
         if not Path(bundle).is_file():
             raise FileNotFoundError(bundle)
         platform, settings = resolve_platform(platform, settings)
-        return platform.submit(Path(bundle), settings)
+        handle = platform.submit(Path(bundle), settings)
+        record_submission(platform, handle, settings, Path(bundle).stem)
+        return handle
     with TemporaryDirectory(prefix="femora-submit-") as directory:
         archive = create_bundle(source=source, destination=Path(directory) / "workflow.zip",
                                 inputs={} if inputs is None else inputs,
                                 files=files, entrypoint=entrypoint)
         platform, settings = resolve_platform(platform, settings)
-        return platform.submit(archive, settings)
+        handle = platform.submit(archive, settings)
+        record_submission(platform, handle, settings, Path(source).stem)
+        return handle

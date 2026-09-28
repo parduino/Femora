@@ -6,11 +6,22 @@ from urllib.parse import quote, urlsplit
 from uuid import uuid4
 import hashlib
 import json
+import re
 import warnings
 from zipfile import ZipFile, is_zipfile
 
-from .base import JobStatus
+from .base import JobStatus, JobSummary
 from .tacc import TACCSettings, TACCSubmitter, TACCValidator, SubmissionValidationError, _get
+
+
+def _job_status(job):
+    native = _get(job, "status", "UNKNOWN")
+    states = {"FINISHED": "succeeded", "FAILED": "failed", "CANCELLED": "cancelled",
+              "RUNNING": "running", "ARCHIVING": "running"}
+    pending = {"PENDING", "PROCESSING_INPUTS", "STAGING_INPUTS", "STAGING_JOB",
+               "SUBMITTING_JOB", "QUEUED", "BLOCKED", "PAUSED"}
+    return JobStatus(states.get(native, "pending" if native in pending else "unknown"),
+                     native, _get(job, "lastMessage", "") or "")
 
 
 class RemoteSubmissionError(RuntimeError):
@@ -72,15 +83,18 @@ class TACCJob:
 
     def status(self) -> JobStatus:
         job = self._client.jobs.getJob(jobUuid=self.id)
-        native = _get(job, "status", "UNKNOWN")
-        states = {"FINISHED": "succeeded", "FAILED": "failed", "CANCELLED": "cancelled",
-                  "RUNNING": "running", "ARCHIVING": "running"}
-        pending = {"PENDING", "PROCESSING_INPUTS", "STAGING_INPUTS", "STAGING_JOB", "SUBMITTING_JOB", "QUEUED", "BLOCKED", "PAUSED"}
-        state = states.get(native, "pending" if native in pending else "unknown")
-        return JobStatus(state, native, _get(job, "lastMessage", "") or "")
+        return _job_status(job)
 
     def cancel(self) -> None:
         self._client.jobs.cancelJob(jobUuid=self.id)
+
+    def details(self):
+        job = self._client.jobs.getJob(jobUuid=self.id)
+        return {key: _get(job, key) for key in (
+            "name", "status", "remoteJobId", "execSystemId", "execSystemLogicalQueue",
+            "nodeCount", "coresPerNode", "maxMinutes", "execSystemExecDir",
+            "execSystemOutputDir", "archiveSystemId", "archiveSystemDir", "lastMessage",
+        )}
 
     def download(self, destination: Path) -> Path:
         import requests
@@ -180,6 +194,56 @@ class TACCPlatform:
     def job(self, job_id):
         """Reconnect to an existing job without submitting again."""
         return TACCJob(job_id, self._client)
+
+    def tracking_metadata(self):
+        return {"platform": "tacc", "connection": {
+            "base_url": self._client.base_url, "username": self._client.username,
+            "app_id": self.app_id, "app_version": self.app_version,
+        }}
+
+    def list_jobs(self, *, page_size=100):
+        """Discover owned Femora jobs, including jobs submitted on other machines.
+
+        An exact configured app ID supports custom deployments. Standard
+        [owner-]femora-workflow-SYSTEM IDs also recognize older deployments.
+        Job names are deliberately not used as identification.
+        """
+        if not isinstance(page_size, int) or not 1 <= page_size <= 1000:
+            raise ValueError("page_size must be between 1 and 1000")
+        offset, seen = 0, set()
+        while True:
+            page = self._client.jobs.getJobList(
+                listType="MY_JOBS", limit=page_size, skip=offset,
+                orderBy="created(desc),uuid(asc)")
+            if not page:
+                return
+            new_ids = set()
+            for job in page:
+                identifier = _get(job, "uuid")
+                if not isinstance(identifier, str) or not identifier:
+                    raise ValueError("Invalid job discovery response")
+                if identifier in seen or identifier in new_ids:
+                    continue
+                new_ids.add(identifier)
+                app_id = _get(job, "appId", "")
+                if _get(job, "owner") != self._client.username:
+                    continue
+                if not isinstance(app_id, str) or not (
+                    (self.app_id != "job-tracking" and app_id == self.app_id)
+                    or re.fullmatch(r"(?:.+-)?femora-workflow-[A-Za-z0-9_-]+", app_id)
+                ):
+                    continue
+                yield JobSummary(
+                    id=identifier, name=_get(job, "name") or identifier,
+                    submitted_at=_get(job, "created") or "", status=_job_status(job),
+                    connection={"app_id": app_id, "app_version": _get(job, "appVersion") or "0.1.0"},
+                    resources={"system": _get(job, "execSystemId")} if _get(job, "execSystemId") else {},
+                )
+            if not new_ids:
+                raise RuntimeError("Job listing pagination did not advance")
+            seen.update(new_ids)
+            # Keep going until an empty page: a service may cap page size.
+            offset += len(page)
 
     def submit(self, bundle: Path, settings: TACCSettings) -> TACCJob:
         bundle = Path(bundle)
