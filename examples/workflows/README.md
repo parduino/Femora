@@ -173,42 +173,27 @@ until `cancelled` (Tapis `CANCELLED`). If it finishes first, that is not a passe
 cancellation test. Output archiving may be incomplete after cancellation;
 the terminal scheduler/Tapis state is the primary check, not a missing marker.
 
-## Dynamic pile boundary study
+## Workflow Composition
 
-The existing `examples/soil_structure_interaction/dynamic_pile_soil_interaction.py`
-defines the model, workflow, and a guarded `fm.submit(...)` call at the bottom.
-Edit the app ID and your allocation/settings there, then run:
+A workflow can create inputs, build models, run programs, and postprocess their
+results in successive stages. Postprocessing is an ordinary task: users choose
+their own functions or programs for plots, movies, summaries, or other outputs.
+The workflow runner does not require a particular renderer or postprocessor.
 
-```powershell
-python examples/soil_structure_interaction/dynamic_pile_soil_interaction.py
-```
+The `files` mapping declares which local files are packaged and where they
+appear relative to the remote workspace. It does not automatically include
+imported dependencies or install packages. The execution environment must
+provide the software used by each task. Never package credentials.
 
-Running the file prompts for private login and submits a job. There are no CLI
-flags or example-specific submission helpers. Importing it does not log in or
-submit. The model and DRM functions are workflow tasks and accept a task context.
-The pilot settings request one 48-slot skx-dev node for 120 minutes; this is a
-wall-time request, not a measured completion estimate.
+Use `workflow.outputs(...)` to select files for collection using paths or glob
+patterns relative to the workspace. This selects existing files; it does not
+create them, disable recorders, or delete unselected results. Remote files remain
+subject to the execution platform's storage-retention policy.
 
-The library packages the factory's source and its explicitly declared files.
-The `files` mapping specifies remote-relative destinations and local source
-paths for the postprocessor and motion inputs. It does not copy arbitrary
-dependencies or install Femora; the remote environment must have the required
-model/interface APIs. Never put credentials in workflow inputs or files.
-
-All model construction happens remotely. A separate input stage generates DRM
-using the physical soil box alone. Then the build stage creates the three cases,
-each reading the same DRM file; Fixed has no special input-generation role.
-The solve stage runs Fixed with 8 ranks, Rayleigh with 16, and PML with 16
-concurrently. Absorber partitions are included in these budgets. PML has three
-absorbing layers without a buffer; Rayleigh has five. The transient step uses
-`model.analysis.transient`.
-
-Postprocessing creates a comparison plot and three pile-head CSV histories.
-Selected downloads also include Tcl models, logs, and raw recorder files.
-Comment out `workflow.outputs("build/*/results/**/*")` in the example if raw files
-are not needed in the download. This does not disable recording; unarchived
-files remain subject to remote scratch retention.
-Check/download with the existing job-handle helper using the printed UUID.
+Keep `fm.submit(...)` under an `if __name__ == "__main__":` guard so importing
+the source on the remote machine does not submit another job.
+For a complete scientific example, see
+[the dynamic-pile workflow](../soil_structure_interaction/dynamic_pile_soil_interaction.py).
 
 ### Task Arguments
 

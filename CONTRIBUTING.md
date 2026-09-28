@@ -15,7 +15,6 @@ pip install -e .
 Install optional dependency groups only when they are relevant to your work:
 
 ```bash
-pip install -e ".[metis]"
 pip install -e ".[gui]"
 pip install -e ".[all]"
 ```

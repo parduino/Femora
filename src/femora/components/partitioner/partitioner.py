@@ -592,7 +592,7 @@ def _partition_metis(mesh: pv.UnstructuredGrid, num_partitions: int) -> np.ndarr
     """Partition a mesh graph using METIS K-way nodal or graph partitioning.
 
     This is a high-performance graph partitioner leveraging METIS. It minimizes edge cuts 
-    and ensures balanced domains. Requires the optional `pymetis` library.
+    and ensures balanced domains. Uses the default `pymetis` dependency.
 
     Args:
         mesh: The PyVista UnstructuredGrid to partition.

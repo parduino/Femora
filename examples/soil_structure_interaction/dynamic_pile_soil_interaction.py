@@ -47,10 +47,8 @@ PILE_BOTTOM = -5.0
 PILE_HEAD = 2.0
 PILE_ELEMENTS = 16
 PILE_DIAMETER = 1.0
-FINAL_TIME = 6.0
+FINAL_TIME = 12.0
 DYNAMIC_DT = 0.001
-RAYLEIGH_FREQUENCIES = (0.01, 100.0)
-RAYLEIGH_RATIO = 0.03
 
 POSTPROCESS = "dynamic_pile_soil_interaction_postprocess.py"
 
@@ -88,19 +86,13 @@ def create_drm(context):
             "h": 2.0,
             "vs": 190.0,
             "rho": 19.9 * 1000.0 / gravity,
-            "damping": RAYLEIGH_RATIO,
-            "damping_type": "rayleigh",
-            "f1": RAYLEIGH_FREQUENCIES[0],
-            "f2": RAYLEIGH_FREQUENCIES[1],
+            "damping": 0.0,
         },
         {
             "h": 6.0,
             "vs": 240.0,
             "rho": 19.1 * 1000.0 / gravity,
-            "damping": RAYLEIGH_RATIO,
-            "damping_type": "rayleigh",
-            "f1": RAYLEIGH_FREQUENCIES[0],
-            "f2": RAYLEIGH_FREQUENCIES[1],
+            "damping": 0.0,
         },
     ]
     transfer_function = TransferFunction(
@@ -150,15 +142,9 @@ def build_model(context, boundary):
     model.set_results_folder(RESULTS_DIR.resolve().as_posix())
 
     gravity = 9.81
-    soil_damping = model.damping.frequency_rayleigh(
-        user_name="soil_rayleigh_damping",
-        f1=RAYLEIGH_FREQUENCIES[0],
-        f2=RAYLEIGH_FREQUENCIES[1],
-        damping_factor=RAYLEIGH_RATIO,
-    )
+    # Physical soil is undamped; damping is assigned only to outer absorbers.
     soil_region = model.region.element(
         user_name="physical_soil",
-        damping=soil_damping,
     )
 
     soil_layers = (
@@ -294,7 +280,7 @@ def build_model(context, boundary):
             num_partitions=absorber_parts,
             partition_algo="kd-tree",
             geometry="Rectangular",
-            rayleigh_damping=0.95,
+            rayleigh_damping=0.10,
             match_damping=False,
             boundary_type="PML",
         )
@@ -437,7 +423,8 @@ def compare_cases(context):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module.generate_results(
-        results_root=context.workspace / "build", output_dir=context.output_dir, require_all=True,
+        results_root=context.workspace / "build", output_dir=context.output_dir,
+        require_all=True, movies=True,
     )
 
 
@@ -508,10 +495,9 @@ def build_workflow():
     # * matches within one path component; ** searches nested directories.
     workflow.outputs("compare/responses/*", "**/stdout.log", "build/*/model.tcl")
 
-    # Keep raw recorder files too, including nested files under each results
-    # folder. These can be large. Comment out this line if you do not want raw
-    # results in the download; recorders will still write them remotely.
-    workflow.outputs("build/*/results/**/*")
+    # Plots, CSVs, and movies are collected above. Raw files stay in the remote
+    # workspace for postprocessing. Uncomment to also download the large files.
+    # workflow.outputs("build/*/results/**/*")
     return workflow
 
 

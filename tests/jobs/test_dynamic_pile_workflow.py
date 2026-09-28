@@ -50,7 +50,7 @@ def test_stage_order_and_rank_budget():
     assert [task.ranks for task in solve.tasks] == [8, 16, 16]
     assert sum(task.cores for task in solve.tasks) == 40
     assert not compare.parallel
-    assert "build/*/results/**/*" in workflow.output_patterns
+    assert "build/*/results/**/*" not in workflow.output_patterns
     assert [task.kwargs for task in build.tasks] == [
         {"boundary": "Fixed"}, {"boundary": "Rayleigh"}, {"boundary": "PML"},
     ]
@@ -138,6 +138,7 @@ def test_drm_is_independent_of_model_construction(tmp_path, monkeypatch):
     assert box.n_cells == 24 * 10 * 12
     assert box.bounds == model.SOIL_BOUNDS
     assert np.any(np.isclose(box.points[:, 2], -2.0))
+    assert all(layer["damping"] == 0.0 for layer in model.TransferFunction.call_args.kwargs["soil_profile"])
     constructor.assert_not_called()
 
 
@@ -161,6 +162,31 @@ def test_comparison_writes_plot_and_histories(tmp_path, monkeypatch):
     assert len(artifacts) == 4
     assert all(path.is_file() for path in artifacts)
     assert artifacts[1].read_text().splitlines()[0] == "time_s,dx_m,dy_m,dz_m"
+    renderer = Mock(side_effect=lambda root, output: (
+        output / "boundary_comparison.mp4", output / "boundary_comparison_preview.png",
+        output / "movie_settings.json",
+    ))
+    monkeypatch.setattr(post, "render_comparison_movie", renderer)
+    artifacts = post.generate_results(tmp_path, require_all=True, movies=True)
+    assert len(artifacts) == 7
+    renderer.assert_called_once_with(tmp_path, tmp_path / "post_processing")
+
+
+def test_movie_defaults_use_perspective_and_half_speed():
+    import ast
+    import inspect
+    post = load("dynamic_pile_soil_interaction_postprocess")
+    assert inspect.signature(post.render_comparison_movie).parameters["stride"].default == 5
+    tree = ast.parse(inspect.getsource(post.render_comparison_movie))
+    calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call)]
+    assert any(ast.unparse(node.func) == "plotter.disable_parallel_projection" for node in calls)
+    assert not any(ast.unparse(node.func) == "plotter.enable_parallel_projection" for node in calls)
+    projection = next(node for node in calls if ast.unparse(node.func) == "plotter.disable_parallel_projection")
+    camera = next(node for node in ast.walk(tree) if isinstance(node, ast.Assign)
+                  and ast.unparse(node.targets[0]) == "plotter.camera_position")
+    assert camera.lineno > projection.lineno
+    writer = next(node for node in calls if ast.unparse(node.func) == "plotter.open_movie")
+    assert next(kw.value.value for kw in writer.keywords if kw.arg == "framerate") == 20
 
 
 def test_example_uses_native_transient_and_preserves_boundary_layers():
@@ -176,6 +202,13 @@ def test_example_uses_native_transient_and_preserves_boundary_layers():
     assert len(absorbers) == 2
     assert [next(kw.value.value for kw in node.keywords if kw.arg == "num_layers")
             for node in absorbers] == [3, 5]
+    assert [next(kw.value.value for kw in node.keywords if kw.arg == "rayleigh_damping")
+            for node in absorbers] == [0.10, 0.95]
+    assert all(next(kw.value.value for kw in node.keywords if kw.arg == "match_damping") is False
+               for node in absorbers)
+    assert not any(ast.unparse(node.func) == "model.damping.frequency_rayleigh" for node in calls)
+    model = load("dynamic_pile_soil_interaction")
+    assert model.FINAL_TIME == 12.0
 
 
 def test_import_does_not_login_or_submit(monkeypatch):

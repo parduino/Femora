@@ -36,11 +36,8 @@ pip install "femora[jupyter]"
 
 ### METIS / Partitioning Support
 
-If you need partition-related workflows that depend on `pymetis`:
-
-```bash
-pip install "femora[metis]"
-```
+METIS partitioning support (`pymetis`) is included in the default installation.
+No additional dependency group is required.
 
 ### Extended Local Tooling
 

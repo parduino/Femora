@@ -105,9 +105,6 @@ pip install femora[gui]
 # Full installation with all optional dependencies
 pip install femora[all]
 
-# With METIS domain decomposition support
-pip install femora[metis]
-
 # For Jupyter notebook usage
 pip install femora[jupyter]
 ```
@@ -121,7 +118,6 @@ cd Femora
 pip install -e .            # Basic (headless) installation
 pip install -e ".[gui]"     # With GUI support
 pip install -e ".[all]"     # Full installation with all dependencies
-pip install -e ".[metis]"   # With METIS partitioner
 ```
 
 ### Option 3: Using Conda

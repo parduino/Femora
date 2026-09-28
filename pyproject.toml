@@ -22,7 +22,10 @@ requires-python = ">=3.9"
 
 dependencies = [
     "h5py>=3.13.0",
+    "imageio",
+    "imageio-ffmpeg",
     "pykdtree>=1.4.1",
+    "pymetis",
     "pyvista>=0.45.0",
     "tapipy>=1.8.2",
     "vtk>=9.5.0",
@@ -47,10 +50,6 @@ colab = [
 docs = [
     "jupytext>=1.17",
     "nbformat>=5.10",
-]
-
-metis = [
-    "pymetis",
 ]
 
 gui = [
