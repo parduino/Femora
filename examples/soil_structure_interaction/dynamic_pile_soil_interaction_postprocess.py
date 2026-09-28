@@ -170,6 +170,28 @@ def render_comparison_movie(results_root, output_dir, stride=5):
     return output, preview, metadata
 
 
+def plot_head_comparison(responses, output_file):
+    """Compare each absorber to the same fixed baseline without three-way overlap."""
+    figure, axes = plt.subplots(1, 2, figsize=(11.0, 4.0), sharex=True, sharey=True,
+                               constrained_layout=True)
+    for axis, absorber, title in zip(axes, ("pml", "rayleigh"),
+                                     ("Fixed vs PML", "Fixed vs Rayleigh")):
+        for mode in ("fixed", absorber):
+            if mode not in responses:
+                continue
+            time, displacement = responses[mode]
+            label, color = BOUNDARY_STYLES[mode]
+            axis.plot(time, 1000.0 * displacement[:, 0], color=color, linewidth=1.1, label=label)
+        axis.set_title(title)
+        axis.set_xlabel("Time (s)")
+        axis.grid(True, linestyle="--", alpha=0.3)
+        if axis.lines:
+            axis.legend(loc="upper right", fontsize=8)
+    axes[0].set_ylabel("Pile-head x displacement (mm)")
+    figure.savefig(output_file, dpi=180, bbox_inches="tight")
+    plt.close(figure)
+
+
 def generate_results(results_root=OUTPUT_DIR, output_dir=None, require_all=False,
                      movies=False) -> tuple[Path, ...]:
     """Generate a comparison plot for every available boundary case."""
@@ -189,24 +211,12 @@ def generate_results(results_root=OUTPUT_DIR, output_dir=None, require_all=False
     output_dir.mkdir(parents=True, exist_ok=True)
     output_file = output_dir / "boundary_comparison.png"
     artifacts = []
-    figure, axes = plt.subplots(3, 1, figsize=(8.0, 7.0), sharex=True, constrained_layout=True)
-    labels = ("$d_x$ (m)", "$d_y$ (m)", "$d_z$ (m)")
     for mode, (time, displacement) in responses.items():
         history_file = output_dir / f"{mode}_pile_head.csv"
         np.savetxt(history_file, np.column_stack((time, displacement)), delimiter=",",
                    header="time_s,dx_m,dy_m,dz_m", comments="")
         artifacts.append(history_file)
-        legend_label, color = BOUNDARY_STYLES[mode]
-        for axis, component, label in zip(axes, displacement.T, labels):
-            axis.plot(time, component, color=color, linewidth=1.3, label=legend_label)
-    for axis, label in zip(axes, labels):
-        axis.set_ylabel(label)
-        axis.grid(True, linestyle="--", alpha=0.45)
-        axis.legend(loc="best")
-    axes[0].set_title("Pile-head displacement for boundary treatments")
-    axes[-1].set_xlabel("Time (s)")
-    figure.savefig(output_file, dpi=180, bbox_inches="tight")
-    plt.close(figure)
+    plot_head_comparison(responses, output_file)
     if movies:
         artifacts.extend(render_comparison_movie(results_root, output_dir))
     return (output_file, *artifacts)

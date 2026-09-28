@@ -1,5 +1,9 @@
 # Workflow execution
 
+Start with the [step-by-step workflow guide](../../website/docs/concepts/workflows.md)
+for task context, workspace folders, return values, and remote submission.
+Its small runnable example is `workflow_basics.py`; it needs no solver.
+
 Stages run in order. A parallel stage starts its tasks concurrently and waits
 for all of them before continuing. A failed stage prevents subsequent stages;
 the other already-running tasks are allowed to finish. Logs and the manifest

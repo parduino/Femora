@@ -73,6 +73,7 @@ extra_javascript:
 # --- END Math Config ---
 
 extra_css:
+  - stylesheets/workflows.css
   - stylesheets/extra.css
 
 plugins:
@@ -134,6 +135,7 @@ nav:
       - 'Recorders and Actions': concepts/recorders-and-actions.md
       - Analysis: concepts/analysis.md
       - Process: concepts/process.md
+      - 'Workflows and Remote Jobs': concepts/workflows.md
   - 'Tutorials & Examples':
       - Overview: tutorials-and-examples/index.md
       - Tutorials:
@@ -146,6 +148,7 @@ nav:
           - 'Deconvolved Ricker-Wave Site Response': examples/deconvolved-ricker-site-response.md
           - 'Nonlinear Layered Soil Column': examples/nonlinear-layered-soil-column.md
           - 'Laterally Loaded Pile': examples/laterally-loaded-pile.md
+          - 'Boundary Effects in Dynamic Pile-Soil Interaction': examples/dynamic-pile-soil-interaction.md
   - 'Technical Reference':
       - 'Mesh Data Schema': technical-reference/mesh-data-schema.md
   - 'API Reference': reference/

@@ -172,6 +172,31 @@ def test_comparison_writes_plot_and_histories(tmp_path, monkeypatch):
     renderer.assert_called_once_with(tmp_path, tmp_path / "post_processing")
 
 
+def test_comparison_plot_pairs_each_absorber_with_fixed(tmp_path, monkeypatch):
+    import matplotlib
+    matplotlib.use("Agg")
+    post = load("dynamic_pile_soil_interaction_postprocess")
+    original = post.plt.subplots
+    captured = []
+
+    def subplots(*args, **kwargs):
+        figure, axes = original(*args, **kwargs)
+        captured.extend(axes)
+        return figure, axes
+
+    monkeypatch.setattr(post.plt, "subplots", subplots)
+    responses = {mode: (np.array([0.0, 1.0]), np.ones((2, 3)) * 0.001)
+                 for mode in ("fixed", "pml", "rayleigh")}
+    post.plot_head_comparison(responses, tmp_path / "comparison.png")
+    assert [axis.get_title() for axis in captured] == ["Fixed vs PML", "Fixed vs Rayleigh"]
+    assert [line.get_label() for line in captured[0].lines] == [
+        "Fixed boundary", "PML absorbing boundary"]
+    assert [line.get_label() for line in captured[1].lines] == [
+        "Fixed boundary", "Rayleigh absorbing boundary"]
+    assert all(np.allclose(line.get_ydata(), 1.0) for axis in captured for line in axis.lines)
+    assert (tmp_path / "comparison.png").is_file()
+
+
 def test_movie_defaults_use_perspective_and_half_speed():
     import ast
     import inspect
