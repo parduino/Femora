@@ -25,7 +25,7 @@ DRM files are created there rather than uploaded from your computer.
 
 ## Model
 
-![Two embedded piles connected by an elevated beam, with a center mass and absorbing boundaries](../assets/examples/two-pile-bent-drm/model.svg)
+![Two embedded piles connected by an elevated beam, with a center mass and absorbing boundaries](../assets/examples/two-pile-bent-drm/model.svg){ style="display: block; width: 100%; max-width: 640px; margin: 0 auto;" }
 
 The physical soil box is 16 m long, 6 m wide, and 8 m deep. It uses homogeneous
 elastic soil with Young's modulus 200 MPa, Poisson's ratio 0.4, and density
@@ -211,7 +211,7 @@ The figure below comes from the 16-rank remote run with the 5% supplementary
 PML damping described above. It shows node displacements in the global x
 direction, not displacement relative to the surrounding soil.
 
-![X-displacement histories of the left pile head, beam center, and right pile head](../assets/examples/two-pile-bent-drm/bent_comparison.png)
+![X-displacement histories of the left pile head, beam center, and right pile head](../assets/examples/two-pile-bent-drm/bent_comparison.png){ style="display: block; width: 100%; max-width: 720px; margin: 0 auto;" }
 
 All three locations reach their largest displacement near 0.196 s, then
 oscillate with decreasing amplitude. The two pile heads move almost together,
@@ -236,7 +236,7 @@ The head histories describe the frame's overall motion. To see what happens
 below the heads, we next extract displacement along each pile using its
 structural beam nodes, rather than nearby soil nodes.
 
-![Signed minimum and maximum x and y displacement along both piles over the full four-second record](../assets/examples/two-pile-bent-drm/pile_displacement_envelopes.png)
+![Signed minimum and maximum x and y displacement along both piles over the full four-second record](../assets/examples/two-pile-bent-drm/pile_displacement_envelopes.png){ style="display: block; width: 100%; max-width: 720px; margin: 0 auto;" }
 
 Solid curves show the maximum signed displacement at each elevation; dashed
 curves show the minimum. Both use the full four-second record. The x motion
@@ -251,7 +251,7 @@ VTKHDF recorders. VTKHDF support for `force3D` and `localForce3D` depends on
 the OpenSees version and build;
 the postprocessor uses XML for the bending plots below.
 
-![Signed minimum and maximum Mx and My envelopes for both piles, with adjacent end moments averaged at shared nodes](../assets/examples/two-pile-bent-drm/pile_moment_envelopes.png)
+![Signed minimum and maximum Mx and My envelopes for both piles, with adjacent end moments averaged at shared nodes](../assets/examples/two-pile-bent-drm/pile_moment_envelopes.png){ style="display: block; width: 100%; max-width: 720px; margin: 0 auto;" }
 
 The bending envelopes show **global Mx and My** in kN m. My dominates because
 the incoming motion acts in the x direction. Solid curves show maxima and
