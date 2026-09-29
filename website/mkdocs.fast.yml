@@ -43,5 +43,6 @@ nav:
           - 'Nonlinear Layered Soil Column': examples/nonlinear-layered-soil-column.md
           - 'Laterally Loaded Pile': examples/laterally-loaded-pile.md
           - 'Boundary Effects in Dynamic Pile-Soil Interaction': examples/dynamic-pile-soil-interaction.md
+          - 'Two-Pile Bent Under DRM Excitation': examples/two-pile-bent-drm.md
   - 'Technical Reference':
       - 'Mesh Data Schema': technical-reference/mesh-data-schema.md
